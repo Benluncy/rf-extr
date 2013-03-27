@@ -48,7 +48,7 @@ VPATH			:= include/:src/:../include/
 LIBS			:=  -ldl -lpthread #-L
 INCFLAG			:= -I include/
 CFLAGS			:= -Wall ${INCFLAG}
-OBJS			:= 
+OBJS			:= ini.o tokens.o
 PROGS			:= vd
 
 .PHONY			: clean succ
