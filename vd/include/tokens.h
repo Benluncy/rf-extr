@@ -8,7 +8,7 @@
 struct tokens
 {
 	int max;
-	char tokens[TOKEN_MAX_LEN][10];
+	char tokens[TOKEN_MAX_LEN][20];
 	int ac[TOKEN_MAX_LEN];
 	
 };
@@ -16,7 +16,7 @@ struct tokens tkRepo;
 
 int tokenInit();
 inline char *id2Token(int id);
-int tokenToId(const char *token);
+int token2Id(const char *token);
 
 int tokenPush(unsigned int *tp,unsigned int id);
 unsigned int tokenPop(unsigned int *tp);

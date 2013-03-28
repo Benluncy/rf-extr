@@ -3,6 +3,16 @@
 
 
 int parseFile(const char * fileName);
+int initContent();
+int cleanContent();
+
+
+char *getContent();
+char *getPcontent();
+unsigned int *getOffset();
+unsigned int *getTags();
+int getClen();
+int getPclen();
 
 
 

@@ -45,7 +45,7 @@ SAY			:= @echo
 ########################COMPILE SETTINGS################################
 VPATH			:= include/:src/:../include/
 	export	VPATH
-LIBS			:=  -ldl -lpthread #-L
+LIBS			:= -L lib/ -ldl -lpthread  -lm 
 INCFLAG			:= -I include/
 CFLAGS			:= -Wall ${INCFLAG}
 OBJS			:= ini.o tokens.o
