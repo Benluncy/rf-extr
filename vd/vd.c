@@ -153,9 +153,9 @@ int parseFile(const char * fileName)
 						if(tmp != 0)
 						{
 							printf("PUSH[%d]\n",tmp);
-							listStack(nowTag);
 							//printf("in : [%d][%s]\n",tmp,id2Token(tmp));
 							tokenPush(&nowTag,tmp);
+							listStack(nowTag);
 							i+=j+1;
 							//continue;
 							fcontinue = 1;
@@ -174,7 +174,7 @@ int parseFile(const char * fileName)
 		k++;
 	}
 	
-	pclen = j+1;
+	pclen = k+1;
 	return 1;
 }
 
@@ -209,8 +209,6 @@ int cleanContent()
 
 int main(int argc,char *argv[])
 {
-	//char *cp; // content;
-	//int *tp; // token
 	initContent();
 	parseFile(test_file);
 	FILE *fp = fopen("output.txt","w");
@@ -225,43 +223,48 @@ int main(int argc,char *argv[])
 	unsigned int *mytags; // record the tag
 	unsigned int nowTag;
 	
+	unsigned int z = 0;
+	
+	// environment
 	mycontent = getContent();
 	myclen = getClen();
-	//#define DOT {printf(" . ");fflush(NULL);}
-	#define DOT {;}
+	mypcontent = getPcontent();
+	myoffset = getOffset();
+	mytags = getTags();
+	mypclen = getPclen();
+	
+	//
 	for(i=0;i<myclen;i++)
 	{
-		fprintf(fp,"[%c:%d]",mycontent[i],i);
-		DOT;
+		fprintf(fp,"%c",mycontent[i],i);
+		
 	}
-	//#define NEXT {printf(">");fflush(NULL);}
-	#define NEXT {;}
 	fprintf(fp,"\n\n\n\n===================================================\n\n");
-	NEXT;
-	mypcontent = getPcontent();
-	NEXT;
-	myoffset = getOffset();
-	NEXT;
-	mytags = getTags();
-	NEXT;
-	mypclen = getPclen();
+
 	printf("fine");
 	fflush(NULL);
+	int z;
+	int z2;
 	for(i=0;i<mypclen;i++)
 	{
-		memset(info,0,sizeof(info));
+		//memset(info,0,sizeof(info));
 		nowTag = mytags[i];
-		//printf("now tag: %d\n",nowTag);
-		while((tmp = tokenPop(&nowTag)) > 0 )
+		if(nowTag > 0)
 		{
-			DOT;
-			//printf("%d , %d\n",tmp,nowTag);
-			printf(".");
-			sprintf(info,"%s:%s",info,id2Token(tmp));
+			z = myoffset[i];
+			z2 = 
 		}
-		fprintf(fp,"[%c:%d:%s]",mypcontent[i],myoffset[i],info);
-		DOT;
+		putchar(pcontent[i]);
+		//printf("now tag: %d\n",nowTag);
+		//while((tmp = tokenPop(&nowTag)) > 0 )
+		//{
+		//	sprintf(info,"%s:%s",info,id2Token(tmp));
+		//}
+		//fprintf(fp,"[%c:%d:%s]",mypcontent[i],myoffset[i],info);
 	}	
+	
+	for(i=0;i<100;i++) putchar(pcontent[i]);
+	for(i=0;i<100;i++) putchar(pcontent[i]);
 	
 	cleanContent();
 	printf("it works\n");
