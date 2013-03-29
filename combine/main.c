@@ -36,7 +36,7 @@ int StackData(const char *content,int len,const char *toCompare,int cLen,int thr
 					//if(editDistanceT(toCompare,cLen,content+i,j,threshold) >= 0)
 					if(editDistanceS(toCompare,cLen,content+i,j) < threshold)
 					{
-						printf("great ! %d",editDistanceS(toCompare,cLen,content+i,j));
+						printf("great ! OOF[%d][%d] ",i,editDistanceS(toCompare,cLen,content+i,j));
 						for(k=0;k<j;k++)
 						{
 							putchar(*(content+k+i));
@@ -109,6 +109,7 @@ int readFile(const char* fileName,int isDir)
 	{
 		fprintf(stderr,"[[error parsing file : #%s#]]",fileName);
 		getchar();
+		getchar();
 		return 0;
 	}
 	
@@ -140,6 +141,7 @@ int readFile(const char* fileName,int isDir)
 		while(myStack.top > 0)
 		{
 			myStack.top --;
+			printf("=>%d - %d\n",myStack.data[myStack.top],refOffset);
 			if(myStack.data[myStack.top] == refOffset)
 			{
 				sample = x;
@@ -174,7 +176,7 @@ int main(void)
         	return -1;
         }
         
-        dirTraversal("data",1,readFile);
+        dirTraversal("data/",1,readFile);
         printf("done(%d)\n",fileNum);
         fclose(fp);
         return 0;

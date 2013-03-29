@@ -48,8 +48,8 @@ VPATH			:= include/:src/:../include/
 LIBS			:= -L lib/ -ldl -lpthread  -lm 
 INCFLAG			:= -I include/
 CFLAGS			:= -Wall ${INCFLAG}
-OBJS			:= ini.o tokens.o virtualcontent.o minEditDistance.o dirTraversal.o
-PROGS			:= main
+OBJS			:= ini.o tokens.o
+PROGS			:= vd
 
 .PHONY			: clean succ
 ########################################################################
@@ -57,7 +57,7 @@ all			: ${PROGS} succ
 
 rebuild			: clean all
 
-main			: ${OBJS}
+vd			: ${OBJS}
 	${CC} ${CFLAGS} $@.c -o $@ ${OBJS} ${LIBS}
 
 
@@ -67,6 +67,6 @@ succ			:
 clean    : 
 	${DEL} ${PROGS}
 	${DEL} ${OBJS} 
-	${DEL} *~ include/*~ src/*~ data/*~
+	${DEL} *~ include/*~ src/*~
 	${DEL} *.swp
 

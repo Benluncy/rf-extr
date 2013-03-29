@@ -1,29 +1,3 @@
-/**
- * The MIT License (MIT)
- *
- *
- * Copyright (C) 2013 Yu Jing (yujing5b5d@gmail.com)
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files (the "Software"),
- * to deal in the Software without restriction, including without limitation
- * the rights to use, copy, modify, merge, publish, distribute,sublicense,
- * and/or sell copies of the Software, and to permit persons to whom the
- * Software is furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included
- * in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
- * OR IMPLIED,INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
- * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
- *
- */
- 
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -82,9 +56,9 @@ int readFileToParse(const char * fileName)
 inline int getTokenId(char *tkname,int len)
 {
 	int i;
-	//printf("[");
-	//for(i=0;i<len;i++) putchar(tkname[i]);
-	//printf("]\n");
+	printf("[");
+	for(i=0;i<len;i++) putchar(tkname[i]);
+	printf("]\n");
 	for(i = 0 ; i < tkRepo.max ; i++)
 	{
 		if(tkRepo.ac[i])
@@ -100,12 +74,11 @@ inline int getTokenId(char *tkname,int len)
 
 int listStack(unsigned int repo)
 {
-	return 0;
 	int i;
 	printf("in stack : ");
 	while((i=tokenPop(&repo)) != 0)
 	{
-		printf("%10s\t",id2Token(i));
+		printf("%d\t",i);
 	}
 	printf("\n");
 	return 1;
@@ -149,21 +122,14 @@ int parseFile(const char * fileName)
 							listStack(nowTag);
 							//printf("out : [%d][%s]\n",tmp,id2Token(tmp));
 							tmp2 = tokenPop(&nowTag);
-							//printf("POP\t[%d][%d?]\n",tmp2,tmp);
+							printf("POP\t[%d][%d?]\n",tmp2,tmp);
 
 							if(tmp != tmp2)
 							{
 								//fprintf(stderr,"tmp,tmp2: [%d]:[%d]%s\n",tmp,tmp2,id2Token(tmp));
 								fprintf(stderr,"~error: %s(%d) require : %d\n",id2Token(tmp),tmp,tmp2);
-								putchar('\n');
-								printf(". . . ");
-								for(j=0;j<30;j++)
-									putchar(content[i+j]);
-								printf(". . . ");
-								putchar('\n');
 								tokenPush(&nowTag,tmp2);
-								return 0;
-								//break;
+								break;
 							}else
 							{
 								i+=j+2;
@@ -186,7 +152,7 @@ int parseFile(const char * fileName)
 						//putchar('\t');
 						if(tmp != 0)
 						{
-							//printf("PUSH[%d]\n",tmp);
+							printf("PUSH[%d]\n",tmp);
 							//printf("in : [%d][%s]\n",tmp,id2Token(tmp));
 							tokenPush(&nowTag,tmp);
 							listStack(nowTag);
@@ -239,7 +205,7 @@ int cleanContent()
 }
 
 
-/*
+
 
 int main(int argc,char *argv[])
 {
@@ -314,4 +280,4 @@ int main(int argc,char *argv[])
 	return 0;
 }
 
-*/
+
