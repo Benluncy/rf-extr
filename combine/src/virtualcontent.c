@@ -79,7 +79,7 @@ int readFileToParse(const char * fileName)
 	return 1;
 }
 
-inline int getTokenId(char *tkname,int len)
+inline int getTokenId(char *tkname,unsigned int len)
 {
 	int i;
 	//printf("[");
@@ -89,6 +89,7 @@ inline int getTokenId(char *tkname,int len)
 	{
 		if(tkRepo.ac[i])
 		{
+			if(len != strlen(tkRepo.tokens[i])) continue;
 			if(strncmp(tkRepo.tokens[i],tkname,len) == 0)
 			{
 				return token2Id(tkRepo.tokens[i]);
@@ -128,10 +129,27 @@ int parseFile(const char * fileName)
 	readFileToParse(fileName);
 	flen = clen;
 	
+	//int mark = strcmp("data/A correspondence matching technique of dense checkerboard pattern for one-shot geometry acquisition.txt",fileName) == 0;
+	
+	/*
+	if(mark)
+	{
+	printf("\n!!be careful!!\n");
+	printf("\n=====================================================================================\n");
+	getchar();
+	}
+	*/
+	
 	nowTag = 0;
 	for(i=0;i<flen;i++)
 	{
 		fcontinue = 0;
+		/*
+		if(mark)
+		{
+			putchar(content[i]);
+		}
+		*/
 		//putchar(*(content+i));
 		if(content[i] == '<')
 		{
@@ -166,6 +184,13 @@ int parseFile(const char * fileName)
 								//break;
 							}else
 							{
+								/*
+								if(mark)
+								{
+									printf("\n\n\nout:%s\n\n",id2Token(tmp));
+									getchar();
+								}
+								*/
 								i+=j+2;
 								//continue;
 								fcontinue = 1;
@@ -186,6 +211,16 @@ int parseFile(const char * fileName)
 						//putchar('\t');
 						if(tmp != 0)
 						{
+							/*
+							int zz;
+							if(mark)
+							{
+							printf("\n\nCDATA[[");
+							for(zz=i;zz<i+j+1;zz++) putchar(content[zz]);
+							printf("]]\n\n\nin:%s\n\n",id2Token(tmp));
+							
+							}
+							*/
 							//printf("PUSH[%d]\n",tmp);
 							//printf("in : [%d][%s]\n",tmp,id2Token(tmp));
 							tokenPush(&nowTag,tmp);
@@ -207,8 +242,17 @@ int parseFile(const char * fileName)
 		//putchar(pcontent[k]);
 		k++;
 	}
-	
+	/*
+	if(mark)
+	{
+	printf("\n=====================================================================================\n");
+	printf("\n=====================================================================================\n");
+	getchar();getchar();getchar();
+	getchar();
+	}
+	*/
 	pclen = k+1;
+	
 	return 1;
 }
 

@@ -43,11 +43,11 @@ MV			:= mv
 SAY			:= @echo
 
 ########################COMPILE SETTINGS################################
-VPATH			:= include/:src/:../include/
+VPATH			:= include/:src/:../include/	
 	export	VPATH
 LIBS			:= -L lib/ -ldl -lpthread  -lm 
 INCFLAG			:= -I include/
-CFLAGS			:= -Wall ${INCFLAG}
+CFLAGS			:= -Wall ${INCFLAG} #-std=c99
 OBJS			:= ini.o tokens.o virtualcontent.o minEditDistance.o dirTraversal.o
 PROGS			:= main
 
@@ -59,6 +59,27 @@ rebuild			: clean all
 
 main			: ${OBJS}
 	${CC} ${CFLAGS} $@.c -o $@ ${OBJS} ${LIBS}
+	
+
+#virtualcontent.o	: tokens.o ini.o	
+#${CC} ${CFLAGS} src/virtualcontent.c -c -o $@ tokens.o 
+#	${CC} ${CFLAGS} include/virtualcontent.h -c -o $@ tokens.o 
+
+#tokens.o		: ini.o
+#${CC} ${CFLAGS} src/tokens.c -c -o $@ ini.o
+#	${CC} ${CFLAGS} include/tokens.h -c -o $@ ini.o 
+	
+#ini.o			:
+#${CC} ${CFLAGS} src/ini.c -c -o $@  
+#	${CC} ${CFLAGS} include/ini.h -c -o $@ 
+	
+#dirTraversal.o		:
+#${CC} ${CFLAGS} src/dirTraversal.c -c -o $@  
+#	${CC} ${CFLAGS} include/dirTraversal.h -c -o $@ 
+	
+#minEditDistance.o		:
+#${CC} ${CFLAGS} src/minEditDistance.c -c -o $@  
+#	${CC} ${CFLAGS} include/minEditDistance.h -c -o $@ 
 
 
 succ			:

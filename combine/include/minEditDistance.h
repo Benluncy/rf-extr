@@ -9,13 +9,13 @@ enum true_or_false{false,true};
 
 //inline int editDistance(const char *t,const char * s);
 //inline int editDistanceS(const char *t,const char * s); // not sinsitive
-inline int editDistance(const char *t,int tlen,const char * s,int slen);
-inline int editDistanceS(const char *t,int tlen,const char * s,int slen);
+int editDistance(const char *t,int tlen,const char * s,int slen);
+int editDistanceS(const char *t,int tlen,const char * s,int slen);
 
 /**
  * author fang
  */
-inline int editDistanceT(const char *t,int tlen,const char * s,int slen,int threshold);
+int editDistanceT(const char *t,int tlen,const char * s,int slen,int threshold);
 
 
 #endif // __MINIMUM_EDIT_DISTANCE_H__
