@@ -9,11 +9,11 @@ int fileNum = 0;
 
 #define MAX_STACK 2000
 
-struct offsetStack
+typedef struct offsetStack
 {
 	int top;
 	int data[MAX_STACK];
-}myStack;
+} StackInfo;
 
 #define MIDDLEOF(a,b,c)  (a >= b && a <= c)
 
@@ -27,13 +27,13 @@ int isData(char ch)
 }
 
 
-int StackData(const char *content,int len,const char *toCompare,int cLen,int threshold)
+int StackData(StackInfo *myStack,const char *content,int len,const char *toCompare,int cLen,int threshold)
 {
 	int i,j;
 	//int k;
 	int minLen = cLen-threshold;
 	int maxLen = cLen+threshold;
-	myStack.top = 0;
+	myStack->top = 0;
 	int unlock = 1;
 	int min;
 	int minid;
@@ -80,10 +80,10 @@ int StackData(const char *content,int len,const char *toCompare,int cLen,int thr
 				if(min < threshold + 1)
 				{
 					i += minid;
-					if(myStack.top < MAX_STACK)
+					if(myStack->top < MAX_STACK)
 					{
-						myStack.data[myStack.top] = i;
-						myStack.top ++ ;
+						myStack->data[myStack->top] = i;
+						myStack->top ++ ;
 					
 						//i += j;
 						//break;
@@ -161,6 +161,34 @@ int printfContext(int refOffset)
 
 FILE *fp;
 
+inline int allZero(StackInfo info[5],int len)
+{
+	int i;
+	for(i=0;i<len;i++)
+	{
+		if(info[i].top >0 ) return 0;
+	}
+	return 1;
+}
+
+inline int maxTop(StackInfo info[5],int len)
+{
+	int i = 0;
+	int max = -1;
+	int maxid = -1;
+	for(i=0;i<len;i++)
+	{
+		if(info[i].top <= 0 ) continue;
+		if(info[i].data[info[i].top-1] > max)
+		{
+			max = info[i].data[info[i].top-1];
+			maxid = i;
+		}
+	}
+	return maxid;
+}
+
+
 int bingo = 0;
 int readFile(const char* fileName,int isDir)
 {
@@ -194,19 +222,36 @@ int readFile(const char* fileName,int isDir)
 	
 	int sample;
 	//int last;
-	int s;
+	int threshold;
 	int x;
 	unsigned int refOffset;
 	
 
 	//last = 0;
-	fprintf(fp,"+1 ");
 	int tmp = 0;
+	StackInfo info[5];
+	for(threshold=0;threshold<5;threshold++) 
+		StackData(&info[threshold],getPcontent(), getPclen(),"REFERENCES",strlen("REFERENCES"),threshold);
+	
+	int i[5];
+	int maxid;
+	
+	int isPositive;
+	
+	refOffset = getReferenceAreaOffset();
+	while(!allZero(info,5))
+	{
+		maxid = maxTop(info,5);
+		
+	}
+	
+	
+	/*
 	for(s = 0 ; s < 5 ; s ++)
 	{
 		//BIBLIOGRAPHY
 		//CONFERENCES
-		StackData(getPcontent(), getPclen(),"REFERENCES",strlen("REFERENCES"),s);
+		StackData(&info[s],getPcontent(), getPclen(),"REFERENCES",strlen("REFERENCES"),s);
 
 		refOffset = getReferenceAreaOffset();
 		
@@ -215,6 +260,7 @@ int readFile(const char* fileName,int isDir)
 
 		printf("STEP Zero\n");
 		printfContext(refOffset);
+		
 		
 		while(myStack.top > 0)
 		{
@@ -247,15 +293,16 @@ int readFile(const char* fileName,int isDir)
 		fprintf(fp,"%d:%d ",s,sample);
 		printf("\n@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n");
 		//getchar();
-	}
 	
+	}
+	*/
 
 	// problems:
 	// [data/A decomposition method for the analysis and design of finite state protocols.txt]
 	//  wJ~J~mgCES
 	printf("[%s]'s value: %d ..\n",fileName,tmp);
 	
-	fprintf(fp,"\n");
+	//fprintf(fp,"\n");
 	
 	printf("ok :%s len %d: plen : %d\n",fileName,getClen(),getPclen());	
 	//printf("\n\n**********************************************************************************\n");
