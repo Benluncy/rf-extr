@@ -27,7 +27,7 @@ typedef struct filterData
 } FilterData;
 typedef FilterData * _FilterData;
 
-typedef int (*isAccepted)(const char *str,int threshold,int *fitLen); // for stack data
+typedef int (*AcceptStr)(const char *str,int threshold,int *fitLen); // for stack data
 
 _FilterData pFilterData;
 
@@ -119,15 +119,18 @@ int isData(char ch)
 
 
 
-
+int stackData(StackInfo *myStack,int (*callback)(const char *str,int threshold,int *fitLen),int threshold);
 
 //int stackData(StackInfo *myStack,const char *content,int len,const char *toCompare,int cLen,int threshold)
-int stackData(StackInfo *myStack,int (*isAccpet)(const char* fileName,int isDir),int threshold)
+int stackData(StackInfo *myStack,
+		AcceptStr acceptStr,
+		int threshold)
 {
 	int i,j;
 	//int k;
-	int minLen = cLen-threshold;
-	int maxLen = cLen+threshold+1;
+	//int minLen = cLen-threshold;
+	//int maxLen = cLen+threshold+1;
+	int fitLen;
 	myStack->top = 0;
 	int unlock = 1;
 	int min;
@@ -140,6 +143,7 @@ int stackData(StackInfo *myStack,int (*isAccpet)(const char* fileName,int isDir)
 		{
 			if(unlock)
 			{
+				/*
 				min = threshold + 1;
 				minid = minLen;
 				for(j=minLen;j<maxLen;j++)
@@ -165,6 +169,17 @@ int stackData(StackInfo *myStack,int (*isAccpet)(const char* fileName,int isDir)
 					
 						//i += j;
 						//break;
+					}
+				}
+				*/
+				//(const char *str,int threshold,int *fitLen)
+				if(acceptStr(content+i,threshold,&fitLen))
+				{
+					i += fitLen;
+					if(myStack->top < MAX_STACK)
+					{
+						myStack->data[myStack->top] = i;
+						myStack->top ++ ;
 					}
 				}
 				unlock = 0;
@@ -215,7 +230,7 @@ unsigned int getReferenceAreaOffset()
 		}
 		
 	}
-	printf("end refernces stack:\n");
+	//printf("end refernces stack:\n");
 	return 0;
 }
 
@@ -224,17 +239,11 @@ int printfContext(int refOffset)
 	int x;
 	
 	printf("\n>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n");
-	for(x=refOffset-100;x<refOffset;x++)
-	{
-		putchar(*(getPcontent()+x));
-	}		
+	for(x=refOffset-100;x<refOffset;x++) putchar(*(getPcontent()+x));
 	printf("\n================================================================\n");
-	for(x=refOffset;x<refOffset+100;x++)
-		putchar(*(getPcontent()+x));
-
+	for(x=refOffset;x<refOffset+100;x++) putchar(*(getPcontent()+x));
 	printf("\n<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n");
-	//getchar();
-	//getchar();
+	//getchar(); getchar();
 	return 1;
 }
 
@@ -407,7 +416,7 @@ int readFile(const char* fileName,int isDir)
 	
 	//fprintf(fp,"\n");
 	
-	//printf("ok :%s len %d: plen : %d\n",fileName,getClen(),getPclen());	
+
 	printf("\t[done]\n");
 	//printf("\n\n**********************************************************************************\n");
 
