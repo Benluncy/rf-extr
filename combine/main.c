@@ -17,9 +17,98 @@ typedef struct offsetStack
 	int data[MAX_STACK];
 } StackInfo;
 
-#define MIDDLEOF(a,b,c)  (a >= b && a <= c)
+typedef struct filterData
+{
+	int acc; // acc = 1 accept , acc = 0 reject
+	char cmpStr[1024];
+	int cmpLen;
+	struct filterData * next;
+	
+} FilterData;
+typedef FilterData * _FilterData;
 
-#define _OFFSET_DIFF(a,b) (a > b? (a - b) :( b - a))
+typedef int (*isAccepted)(const char *str,int threshold,int *fitLen); // for stack data
+
+_FilterData pFilterData;
+
+
+
+
+#define MIDDLEOF(a,b,c)  (a >= b && a <= c) // a is at the range of  [b,c]
+#define VALUESDIFF(a,b) (a > b? (a - b) :( b - a)) //calculate difference distance of a and b
+
+
+/**
+ * Start FilterData Info Handle
+ */
+int initFilterData()
+{
+	pFilterData = NULL;
+	return 1;	
+}
+
+int cleanFilterData()
+{
+	_FilterData head = pFilterData;
+	_FilterData p;
+	while(head != NULL)
+	{
+		p = head;
+		head = head->next;
+		free(p);
+	}
+	return 1;
+}
+
+/**
+ * 	int accept ;  // acc =1 accept , acc = 0 , reject 
+ *	char *cmpStr;
+ *	int cmpLen;
+ */
+int insertFilterData(int accept,const char *cmpStr,int cmpLen)
+{
+	_FilterData head = pFilterData;
+	_FilterData p = head;
+	if(head == NULL)
+	{
+		head = (_FilterData)malloc(sizeof(FilterData ));
+		head->acc = accept;
+		//head->cmpStr = strdup(cmpStr);
+		sprintf(head->cmpStr,"%s",cmpStr);
+		head->cmpLen = cmpLen;
+		head->next = NULL;
+	}else
+	{
+		while(p->next != NULL) p=p->next;
+		p->next = (_FilterData)malloc(sizeof(FilterData ));
+		p = p->next;
+		
+		
+	}
+}
+
+/**
+ * Judge Is Accpeted
+ */
+int isAccpted(const char *str,int threshold,int *fitLen)
+{
+	_FilterData head = pFilterData;
+	_FilterData p;
+	while((p=head) != NULL)
+	{
+		p = p-> next;
+		free(head);
+		head = p;
+	}
+	return 1;
+}
+
+
+
+/**
+ * Data File Handle
+ */
+
 
 int isData(char ch)
 {
@@ -27,7 +116,13 @@ int isData(char ch)
 		return 1;
 	else return 0;
 }
-int dataHandle(StackInfo *myStack,const char *content,int len,const char *toCompare,int cLen,int threshold,const char *toReject,int rLen)
+
+
+
+
+
+//int stackData(StackInfo *myStack,const char *content,int len,const char *toCompare,int cLen,int threshold)
+int stackData(StackInfo *myStack,int (*isAccpet)(const char* fileName,int isDir),int threshold)
 {
 	int i,j;
 	//int k;
@@ -52,28 +147,11 @@ int dataHandle(StackInfo *myStack,const char *content,int len,const char *toComp
 					//if(editDistanceT(toCompare,cLen,content+i,j,threshold) >= 0)
 					if((ed = editDistanceS(toCompare,cLen,content+i,j)) <= threshold)
 					{
-						//printf("great ! OOF[%d][%d] ",i,editDistanceS(toCompare,cLen,content+i,j));
-						//printf("\n~~[[");
-						//for(k=0;k<j;k++)
-						//{
-						//	putchar(*(content+k+i));
-						//}
-						//printf("]]\n");
-						
-						//while(!isData(*(content+j+i))) j++; 
-						
 						if(min > ed)
 						{
 								min = ed;
 								minid = j;
 						}
-					
-
-						//else
-						//{
-						//	return 0;
-						//}
-				
 					}
 					
 				}
@@ -99,11 +177,6 @@ int dataHandle(StackInfo *myStack,const char *content,int len,const char *toComp
 	return 1;
 }
 
-
-int stackData(StackInfo *myStack,const char *content,int len,const char *toCompare,int cLen,int threshold)
-{
-	return dataHandle(myStack,content,len,toCompare,cLen,threshold,NULL,0);
-}
 
 unsigned int getReferenceAreaOffset()
 {
@@ -254,11 +327,11 @@ int readFile(const char* fileName,int isDir)
 		
 		maxid = maxTop(info,FEATURE_SIZE);
 		maxoffset = info[maxid].data[info[maxid].top-1];
-		isPositive = _OFFSET_DIFF(refOffset,maxoffset) < 10 ;
+		isPositive = VALUESDIFF(refOffset,maxoffset) < 10 ;
 		for(i=0;i<FEATURE_SIZE;i++)
 		{
 			status[i] = 0;
-			if(_OFFSET_DIFF(info[i].data[info[i].top-1],maxoffset)<10)
+			if(VALUESDIFF(info[i].data[info[i].top-1],maxoffset)<10)
 			{
 				info[i].top--;
 				status[i] = count[i];
@@ -300,10 +373,10 @@ int readFile(const char* fileName,int isDir)
 			
 			printfContext(myStack.data[myStack.top]);
 			
-			printf("!!![[offset: %d]]\n",_OFFSET_DIFF(myStack.data[myStack.top],refOffset));
+			printf("!!![[offset: %d]]\n",VALUESDIFF(myStack.data[myStack.top],refOffset));
 			
 			//if(myStack.data[myStack.top] == refOffset)
-			if(_OFFSET_DIFF(myStack.data[myStack.top],refOffset)<10)
+			if(VALUESDIFF(myStack.data[myStack.top],refOffset)<10)
 			{
 				printf("fine!\n&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&\n");
 				sample = x;
@@ -311,7 +384,7 @@ int readFile(const char* fileName,int isDir)
 				bingo ++;
 				tmp++;
 				break;
-			}else if(_OFFSET_DIFF(myStack.data[myStack.top],refOffset)<30)
+			}else if(VALUESDIFF(myStack.data[myStack.top],refOffset)<30)
 			{
 				printf("not fine!\n&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&\n");
 				getchar();
