@@ -7,6 +7,8 @@
 #include "tokens.h"
 int fileNum = 0;
 
+#define FEATURE_SIZE 5
+
 #define MAX_STACK 2000
 
 typedef struct offsetStack
@@ -25,14 +27,12 @@ int isData(char ch)
 		return 1;
 	else return 0;
 }
-
-
-int StackData(StackInfo *myStack,const char *content,int len,const char *toCompare,int cLen,int threshold)
+int dataHandle(StackInfo *myStack,const char *content,int len,const char *toCompare,int cLen,int threshold,const char *toReject,int rLen)
 {
 	int i,j;
 	//int k;
 	int minLen = cLen-threshold;
-	int maxLen = cLen+threshold;
+	int maxLen = cLen+threshold+1;
 	myStack->top = 0;
 	int unlock = 1;
 	int min;
@@ -99,6 +99,12 @@ int StackData(StackInfo *myStack,const char *content,int len,const char *toCompa
 	return 1;
 }
 
+
+int stackData(StackInfo *myStack,const char *content,int len,const char *toCompare,int cLen,int threshold)
+{
+	return dataHandle(myStack,content,len,toCompare,cLen,threshold,NULL,0);
+}
+
 unsigned int getReferenceAreaOffset()
 {
 	int i;
@@ -106,7 +112,7 @@ unsigned int getReferenceAreaOffset()
 	unsigned int myTags;
 	unsigned int nowTag;
 	//unsigned int mytags = getTags();
-	printf("##reference stack:");
+	//printf("##reference stack:");
 	for(i=0;i<mypclen;i++)
 	{
 		//memset(info,0,sizeof(info));
@@ -128,7 +134,7 @@ unsigned int getReferenceAreaOffset()
 		myTags = *(getTags()+i);
 		while((nowTag=tokenPop(&myTags)) > 0)
 		{
-			printf("!%d!",nowTag);
+			//printf("!%d!",nowTag);
 			if(nowTag == 1)
 			{
 				return i;
@@ -161,7 +167,7 @@ int printfContext(int refOffset)
 
 FILE *fp;
 
-inline int allZero(StackInfo info[5],int len)
+inline int allZero(StackInfo info[],int len)
 {
 	int i;
 	for(i=0;i<len;i++)
@@ -171,7 +177,7 @@ inline int allZero(StackInfo info[5],int len)
 	return 1;
 }
 
-inline int maxTop(StackInfo info[5],int len)
+inline int maxTop(StackInfo info[],int len)
 {
 	int i = 0;
 	int max = -1;
@@ -189,7 +195,7 @@ inline int maxTop(StackInfo info[5],int len)
 }
 
 
-int bingo = 0;
+//int bingo = 0;
 int readFile(const char* fileName,int isDir)
 {
         if(isDir)
@@ -198,7 +204,7 @@ int readFile(const char* fileName,int isDir)
                 return 1;
         }
 
-        printf("file to parse:%s\n",fileName);
+        printf("handling : %s . . . ",fileName);
         
  	initContent();
 	if(!parseFile(fileName))
@@ -208,7 +214,7 @@ int readFile(const char* fileName,int isDir)
 		return 0;
 	}
 	
-	//int i;
+	int i;
 	//unsigned int tmp;
 	//unsigned int nowTag;
 	
@@ -220,29 +226,51 @@ int readFile(const char* fileName,int isDir)
 	//unsigned int *mytags getTags(); // record the tag
 	
 	
-	int sample;
+	//int sample;
 	//int last;
 	int threshold;
-	int x;
 	unsigned int refOffset;
 	
 
 	//last = 0;
-	int tmp = 0;
-	StackInfo info[5];
-	for(threshold=0;threshold<5;threshold++) 
-		StackData(&info[threshold],getPcontent(), getPclen(),"REFERENCES",strlen("REFERENCES"),threshold);
+	//int tmp = 0;
+	StackInfo info[FEATURE_SIZE];
+	for(threshold=0;threshold<FEATURE_SIZE;threshold++) 
+		stackData(&info[threshold],getPcontent(), getPclen(),"REFERENCES",strlen("REFERENCES"),threshold);
 	
-	int i[5];
+	unsigned int count[FEATURE_SIZE];
+	unsigned int status[FEATURE_SIZE];
 	int maxid;
+	int maxoffset;
 	
 	int isPositive;
 	
 	refOffset = getReferenceAreaOffset();
-	while(!allZero(info,5))
+	for(i=0;i<FEATURE_SIZE;i++) count[i]=1;
+	while(!allZero(info,FEATURE_SIZE))
 	{
-		maxid = maxTop(info,5);
+		//init	
+		//for(i=0;i<FEATURE_SIZE;i++) status[i] = 0;
 		
+		maxid = maxTop(info,FEATURE_SIZE);
+		maxoffset = info[maxid].data[info[maxid].top-1];
+		isPositive = _OFFSET_DIFF(refOffset,maxoffset) < 10 ;
+		for(i=0;i<FEATURE_SIZE;i++)
+		{
+			status[i] = 0;
+			if(_OFFSET_DIFF(info[i].data[info[i].top-1],maxoffset)<10)
+			{
+				info[i].top--;
+				status[i] = count[i];
+				count[i]++;
+			}
+			
+		}
+		
+		fprintf(fp,"%c1 ",isPositive?'+':'-');
+		for(i=1;i<=FEATURE_SIZE;i++)
+			fprintf(fp,"%d:%d ",i,status[i]);
+		fprintf(fp,"\n");
 	}
 	
 	
@@ -251,6 +279,8 @@ int readFile(const char* fileName,int isDir)
 	{
 		//BIBLIOGRAPHY
 		//CONFERENCES
+		//!@#$!@$ENCES
+		//
 		StackData(&info[s],getPcontent(), getPclen(),"REFERENCES",strlen("REFERENCES"),s);
 
 		refOffset = getReferenceAreaOffset();
@@ -300,11 +330,12 @@ int readFile(const char* fileName,int isDir)
 	// problems:
 	// [data/A decomposition method for the analysis and design of finite state protocols.txt]
 	//  wJ~J~mgCES
-	printf("[%s]'s value: %d ..\n",fileName,tmp);
+	//printf("[%s]'s value: %d ..\n",fileName,tmp);
 	
 	//fprintf(fp,"\n");
 	
-	printf("ok :%s len %d: plen : %d\n",fileName,getClen(),getPclen());	
+	//printf("ok :%s len %d: plen : %d\n",fileName,getClen(),getPclen());	
+	printf("\t[done]\n");
 	//printf("\n\n**********************************************************************************\n");
 
         //printf("\n\n");
@@ -328,7 +359,8 @@ int main(void)
         }
         //for(i=0;i<100;i++)
         dirTraversal("data/",1,readFile);
-        printf("done(%d/%d)\n",bingo,fileNum);
+        //printf("done(%d/%d)\n",bingo,fileNum);
+        printf("done \n total : %d\n",fileNum);
         fclose(fp);
         return 0;
 }
