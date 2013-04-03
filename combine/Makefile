@@ -57,6 +57,9 @@ all			: ${PROGS} succ
 
 rebuild			: clean all
 
+run			: 
+	./main
+
 main			: ${OBJS}
 	${CC} ${CFLAGS} $@.c -o $@ ${OBJS} ${LIBS}
 	

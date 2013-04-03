@@ -45,10 +45,11 @@ int isAccpted(const char *str,int threshold,int *fitLen);
 
 
 // 
-int isData(char ch); // [A,Z]||[a,z]||[0,9]
+//inline int isData(char ch); // [A,Z]||[a,z]||[0,9]
 
 // data handle
-int stackData(StackInfo *myStack,int (*callback)(const char *str,int threshold,int *fitLen),int threshold);
+int stackData(StackInfo *myStack,int (*callback)(const char *str,int threshold,int *fitLen),
+							const char *content,int len,int threshold);
 
 
 #endif // __MAIN_H__

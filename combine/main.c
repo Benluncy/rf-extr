@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 #include "minEditDistance.h"
 #include "virtualcontent.h"
 #include "dirTraversal.h"
@@ -7,6 +8,8 @@
 #include "main.h"
 
 int fileNum = 0;
+FILE *fp; // sample.txt
+
 
 /**
  * Start FilterData Info Handle
@@ -38,25 +41,29 @@ int cleanFilterData()
  */
 int insertFilterData(int accept,const char *cmpStr,int cmpLen)
 {
-	_FilterData head = pFilterData;
-	_FilterData p = head;
-	if(head == NULL)
+	_FilterData p = pFilterData;
+	
+	if(pFilterData == NULL)
 	{
-		head = (_FilterData)malloc(sizeof(FilterData ));
-		head->acc = accept;
-		head->cmpLen = cmpLen;
+		pFilterData = (_FilterData)malloc(sizeof(FilterData));
+		pFilterData->acc = accept;
+		pFilterData->cmpLen = cmpLen;
 		//head->cmpStr = strdup(cmpStr);
-		sprintf(head->cmpStr,"%s",cmpStr);
-		head->next = NULL;
+		sprintf(pFilterData->cmpStr,"%s",cmpStr);
+		pFilterData->next = NULL;
+		//printf("head, done \n");
+		fflush(NULL);
 	}else
 	{
-		while(p->next != NULL) p=p->next;
-		p->next = (_FilterData)malloc(sizeof(FilterData ));
+		//printf("inserting ...");
+		while(p->next != NULL){ p=p->next;}
+		p->next = (_FilterData)malloc(sizeof(FilterData));
 		p = p->next;
 		p->acc =accept;
 		p->cmpLen = cmpLen;
 		sprintf(p->cmpStr,"%s",cmpStr);
 		p->next = NULL;
+		//printf("done\n");
 	}
 	return 1;
 }
@@ -70,13 +77,14 @@ int isAccpted(const char *str,int threshold,int *fitLen)
 	int accMin = threshold + 1;
 	int rejMin = threshold + 1;
 	int accMinOffset=0; 
-	int rejMinOffset=0;
+	//int rejMinOffset=0;
 	int i;
 	int tmpMin;
 	int tmpMinOffset;
 	int minLen;
 	int maxLen;
 	int ed;
+	//int succflag = 0;
 	while(p != NULL)
 	{
 		minLen = p->cmpLen - threshold;
@@ -84,58 +92,59 @@ int isAccpted(const char *str,int threshold,int *fitLen)
 		tmpMin = threshold + 1;
 		for(i=minLen;i<maxLen;i++)
 		{
-			if((ed = editDistanceS(toCompare,cLen,content+i,j)) <= threshold)
+			if((ed = editDistanceS(p->cmpStr,p->cmpLen,str,i)) <= threshold)
 			{
-				
+			//debug info
+			/*
+			succflag = 1;
+			printf("{\n[%s][",p->cmpStr);
+			int z;
+			for(z=0;z<i;z++)
+			{
+				putchar(str[z]);
+			}
+			printf("]\n[%d],[%d]\n",p->cmpLen,i);
+			printf("ed: %d\n}\n",editDistanceS(p->cmpStr,p->cmpLen,str,i));
+			*/
+			// end of debug info
+				if(tmpMin > ed)
+				{
+					tmpMin = ed;
+					tmpMinOffset = i;
+				}
 			}
 		}
 		
-		
-		if(p->acc) accMinOffset = acc;
+		if(p->acc == 1 && accMin > tmpMin)
+		{
+			accMinOffset = tmpMinOffset;
+			accMin = tmpMin;
+			//printf("acc -- ");
+		}else if(p->acc == 0 && rejMin > tmpMin) 
+		{
+			//rejMinOffset = tmpMinOffset;
+			rejMin = tmpMin;
+		}
+		//rejMinOffset = rejMin < tmpMin ? rejMinOffset : tmpMinOffset;
 		p = p-> next;
 	}
-	fitLen = accMinOffset;
-	return (accMin < rejMin) && (accMin < threshold );
+	*fitLen = accMinOffset;
+	/*
+	if(succflag == 1)
+	{
+		printf("\naccMin:%d rejMin:%d threshold:%d\n",accMin,rejMin,threshold);
+		getchar();
+	}
+	*/
+	return (accMin <= rejMin) && (accMin < threshold );
 }
-/**
-//references
-				min = threshold + 1;
-				minid = minLen;
-				for(j=minLen;j<maxLen;j++)
-				{
-					//if(editDistanceT(toCompare,cLen,content+i,j,threshold) >= 0)
-					if((ed = editDistanceS(toCompare,cLen,content+i,j)) <= threshold)
-					{
-						if(min > ed)
-						{
-								min = ed;
-								minid = j;
-						}
-					}
-					
-				}
-				if(min < threshold + 1)
-				{
-					i += minid;
-					if(myStack->top < MAX_STACK)
-					{
-						myStack->data[myStack->top] = i;
-						myStack->top ++ ;
-					
-						//i += j;
-						//break;
-					}
-				}
-*/
 
 
 
 /**
  * Data File Handle
  */
-
-
-int isData(char ch)
+inline int isData(char ch)
 {
 	if(MIDDLEOF(ch,'A','Z') || MIDDLEOF(ch,'a','z') || MIDDLEOF(ch,'0','9')	)
 		return 1;
@@ -148,28 +157,32 @@ int isData(char ch)
 //int stackData(StackInfo *myStack,const char *content,int len,const char *toCompare,int cLen,int threshold)
 int stackData(StackInfo *myStack,
 		AcceptStr acceptStr,
+		const char *content,
+		int len,
 		int threshold)
 {
-	int i,j;
+	int i;
 	//int k;
 	//int minLen = cLen-threshold;
 	//int maxLen = cLen+threshold+1;
 	int fitLen;
 	myStack->top = 0;
 	int unlock = 1;
-	int min;
-	int minid;
-	int ed;
+	//int min;
+	//int minid;
+	//int ed;
 	for(i=0;i<len;i++)
 	{
-		if(( MIDDLEOF(content[i],'A','Z') || MIDDLEOF(content[i],'a','z')
-			|| MIDDLEOF(content[i],'0','9') ))
+		//if(( MIDDLEOF(content[i],'A','Z') || MIDDLEOF(content[i],'a','z')
+		//	|| MIDDLEOF(content[i],'0','9') ))
+		if(isData(content[i]))
 		{
 			if(unlock)
 			{
 				//(const char *str,int threshold,int *fitLen)
 				if(acceptStr(content+i,threshold,&fitLen))
 				{
+					//printf("accept ... ");
 					i += fitLen;
 					if(myStack->top < MAX_STACK)
 					{
@@ -222,7 +235,7 @@ int printfContext(int refOffset)
 	return 1;
 }
 
-FILE *fp;
+
 
 inline int allZero(StackInfo info[],int len)
 {
@@ -276,7 +289,11 @@ int readFile(const char* fileName,int isDir)
 	unsigned int refOffset;
 	StackInfo info[FEATURE_SIZE];
 	for(threshold=0;threshold<FEATURE_SIZE;threshold++) 
-		stackData(&info[threshold],getPcontent(), getPclen(),"REFERENCES",strlen("REFERENCES"),threshold);
+		stackData(&info[threshold],isAccpted,getPcontent(),getPclen(),threshold);
+	//	stackData(&info[threshold],getPcontent(), getPclen(),"REFERENCES",strlen("REFERENCES"),threshold);
+	//int stackData(StackInfo *myStack,
+	//	AcceptStr acceptStr,
+	//	int threshold);
 	
 	unsigned int count[FEATURE_SIZE];
 	unsigned int status[FEATURE_SIZE];
@@ -322,8 +339,10 @@ int main(int argc,char *argv[])
 	fp = fopen("sample.txt","w");
 	//char ch;
 	//int i;
+	initFilterData();
 	insertFilterData(1,"REFERENCES",strlen("REFERENCES"));
-	insertFilterData(0,"CONFERENCES",strlenn("CONFERENCES"));
+	insertFilterData(0,"CONFERENCES",strlen("CONFERENCES"));
+	insertFilterData(1,"BIBLIOGRAPHY",strlen("BIBLIOGRAPHY"));
 	if(fp == NULL)
 	{
 		fprintf(stderr,"error opening .. \n");
@@ -333,6 +352,7 @@ int main(int argc,char *argv[])
 	dirTraversal("data/",1,readFile);
 	//printf("done(%d/%d)\n",bingo,fileNum);
 	printf("done \n total : %d\n",fileNum);
+	cleanFilterData();
 	fclose(fp);
 	return 0;
 }
