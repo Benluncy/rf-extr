@@ -77,7 +77,7 @@ int isAccpted(const char *str,int threshold,int *fitLen)
 	int accMin = threshold + 1;
 	int rejMin = threshold + 1;
 	int accMinOffset=0; 
-	//int rejMinOffset=0;
+	int rejMinOffset=0;
 	int i;
 	int tmpMin;
 	int tmpMinOffset;
@@ -122,13 +122,15 @@ int isAccpted(const char *str,int threshold,int *fitLen)
 			//printf("acc -- ");
 		}else if(p->acc == 0 && rejMin > tmpMin) 
 		{
-			//rejMinOffset = tmpMinOffset;
+			rejMinOffset = tmpMinOffset;
 			rejMin = tmpMin;
 		}
 		//rejMinOffset = rejMin < tmpMin ? rejMinOffset : tmpMinOffset;
 		p = p-> next;
 	}
-	*fitLen = accMinOffset;
+	*fitLen = accMin <= rejMin ? 
+			(accMin <= threshold ? accMinOffset : 0 ): 
+			(rejMin <= threshold ? rejMinOffset : 0 );
 	/*
 	if(succflag == 1)
 	{
@@ -189,6 +191,9 @@ int stackData(StackInfo *myStack,
 						myStack->data[myStack->top] = i;
 						myStack->top ++ ;
 					}
+				}else
+				{
+					i += fitLen;
 				}
 				unlock = 0;
 			}
@@ -343,6 +348,9 @@ int main(int argc,char *argv[])
 	insertFilterData(1,"REFERENCES",strlen("REFERENCES"));
 	insertFilterData(0,"CONFERENCES",strlen("CONFERENCES"));
 	insertFilterData(1,"BIBLIOGRAPHY",strlen("BIBLIOGRAPHY"));
+	insertFilterData(1,"BIBLIOGRAPHIES",strlen("BIBLIOGRAPHIES"));
+	insertFilterData(0,"AUTHOR BIOGRAPHY",strlen("AUTHOR BIOGRAPHY"));
+	insertFilterData(0,"AUTHOR BIOGRAPHIES",strlen("AUTHOR BIOGRAPHIES"));
 	if(fp == NULL)
 	{
 		fprintf(stderr,"error opening .. \n");
