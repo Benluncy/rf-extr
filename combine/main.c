@@ -10,7 +10,6 @@
 int fileNum = 0;
 FILE *fp; // sample.txt
 
-
 /**
  * Start FilterData Info Handle
  */
@@ -290,10 +289,6 @@ int readFile(const char* fileName,int isDir)
 	StackInfo info[FEATURE_SIZE];
 	for(threshold=0;threshold<FEATURE_SIZE;threshold++) 
 		stackData(&info[threshold],isAccpted,getPcontent(),getPclen(),threshold);
-	//	stackData(&info[threshold],getPcontent(), getPclen(),"REFERENCES",strlen("REFERENCES"),threshold);
-	//int stackData(StackInfo *myStack,
-	//	AcceptStr acceptStr,
-	//	int threshold);
 	
 	unsigned int count[FEATURE_SIZE];
 	unsigned int status[FEATURE_SIZE];

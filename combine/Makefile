@@ -62,6 +62,9 @@ run			:
 
 main			: ${OBJS}
 	${CC} ${CFLAGS} $@.c -o $@ ${OBJS} ${LIBS}
+
+doclassify		: ${OBJS}
+	${CC} ${CFLAGS} $@.c -o $@ ${OBJS} ${LIBS}
 	
 
 #virtualcontent.o	: tokens.o ini.o	
@@ -89,7 +92,7 @@ succ			:
 	${SAY} "Complete !" 
 
 clean    : 
-	${DEL} ${PROGS}
+	${DEL} ${PROGS} doclassify
 	${DEL} ${OBJS} 
 	${DEL} *~ include/*~ src/*~ data/*~
 	${DEL} *.swp
