@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <time.h>
 #include "minEditDistance.h"
 #include "virtualcontent.h"
 #include "dirTraversal.h"
@@ -8,7 +9,8 @@
 #include "main.h"
 
 int fileNum = 0;
-FILE *fp; // sample.txt
+FILE *fpTrain; // train.txt
+FILE *fpTest; // test.txt
 
 /**
  * Start FilterData Info Handle
@@ -89,7 +91,7 @@ int isAccpted(const char *str,int threshold,int *fitLen)
 		minLen = p->cmpLen - threshold;
 		maxLen = p->cmpLen + threshold+1;
 		tmpMin = threshold + 1;
-		for(i=minLen;i<maxLen;i++)
+		for(i=minLen;i<=maxLen;i++)
 		{
 			if((ed = editDistanceS(p->cmpStr,p->cmpLen,str,i)) <= threshold)
 			{
@@ -137,7 +139,7 @@ int isAccpted(const char *str,int threshold,int *fitLen)
 		getchar();
 	}
 	*/
-	return (accMin <= rejMin) && (accMin < threshold );
+	return (accMin <= rejMin) && (accMin <= threshold );
 }
 
 
@@ -268,15 +270,26 @@ inline int maxTop(StackInfo info[],int len)
 
 int id = 1;
 //int bingo = 0;
-int readFile(const char* fileName,int isDir)
+int generateSample(const char* fileName,int isDir)
 {
+	FILE *fp;
+	int trainOrTest;
         if(isDir)
         {
                 printf("ignore dir:%s\n",fileName);
                 return 1;
         }
-
-        printf("handling : %s . . . ",fileName);
+	if(rand()%3)
+	{
+		fp = fpTrain;
+		trainOrTest = 1;
+	}else
+	{
+		trainOrTest = 0;
+		fp = fpTest;
+	}
+	
+        printf("%s:%s . . . ",trainOrTest?"train":"test",fileName);
         
  	initContent();
 	if(!parseFile(fileName))
@@ -322,8 +335,14 @@ int readFile(const char* fileName,int isDir)
 		}
 		
 		fprintf(fp,"%c1 qid:%d ",isPositive?'+':'-',id);
-		for(i=1;i<=FEATURE_SIZE;i++)
-			fprintf(fp,"%d:%d ",i,status[i]);
+		//printf("\n");
+		for(i=0;i<FEATURE_SIZE;i++)
+		{
+			fprintf(fp,"%d:%d ",i*5+(status[i]>5?5:status[i]),status[i]>0);
+			//printf("%d:%d ",i,status[i]);
+			//printf("%d:%d ",i*5+(status[i]>5?5:status[i]),status[i]>0);
+		}
+		//printf("\n");
 		fprintf(fp,"\n");
 	}
 	id++;
@@ -338,27 +357,32 @@ int readFile(const char* fileName,int isDir)
 int main(int argc,char *argv[])
 {
 	//int insertFilterData(int accept,const char *cmpStr,int cmpLen);
-	fp = fopen("sample.txt","w");
+	//fp = fopen("sample.txt","w");
 	//char ch;
 	//int i;
+	fpTrain = fopen("train.txt","w"); // train.txt
+	fpTest = fopen("test.txt","w"); // test.txt     
+	srand((unsigned int)time(NULL));
+
 	initFilterData();
 	insertFilterData(1,"REFERENCES",strlen("REFERENCES"));
 	insertFilterData(0,"CONFERENCES",strlen("CONFERENCES"));
-	insertFilterData(1,"BIBLIOGRAPHY",strlen("BIBLIOGRAPHY"));
+	//insertFilterData(1,"BIBLIOGRAPHY",strlen("BIBLIOGRAPHY"));
 	insertFilterData(1,"BIBLIOGRAPHIES",strlen("BIBLIOGRAPHIES"));
-	insertFilterData(0,"AUTHOR BIOGRAPHY",strlen("AUTHOR BIOGRAPHY"));
+	//insertFilterData(0,"AUTHOR BIOGRAPHY",strlen("AUTHOR BIOGRAPHY"));
 	insertFilterData(0,"AUTHOR BIOGRAPHIES",strlen("AUTHOR BIOGRAPHIES"));
-	if(fp == NULL)
+	if(fpTrain == NULL || fpTest == NULL)
 	{
-		fprintf(stderr,"error opening .. \n");
+		fprintf(stderr,"error opening sample file\n");
 		return -1;
 	}
 	//for(i=0;i<100;i++)
-	dirTraversal("data/",1,readFile);
+	dirTraversal("data/",1,generateSample);
 	//printf("done(%d/%d)\n",bingo,fileNum);
 	printf("done \n total : %d\n",fileNum);
 	cleanFilterData();
-	fclose(fp);
+	fclose(fpTrain);
+	fclose(fpTest);
 	return 0;
 }
 
