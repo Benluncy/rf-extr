@@ -153,8 +153,6 @@ inline int isData(char ch)
 }
 
 
-
-
 //int stackData(StackInfo *myStack,const char *content,int len,const char *toCompare,int cLen,int threshold)
 int stackData(StackInfo *myStack,
 		AcceptStr acceptStr,
@@ -268,7 +266,7 @@ inline int maxTop(StackInfo info[],int len)
 	return maxid;
 }
 
-
+int id = 1;
 //int bingo = 0;
 int readFile(const char* fileName,int isDir)
 {
@@ -302,6 +300,8 @@ int readFile(const char* fileName,int isDir)
 	
 	int isPositive;
 	
+	fprintf(fp,"#paper %d (%s)\n",id,fileName);
+	
 	refOffset = getReferenceAreaOffset();
 	for(i=0;i<FEATURE_SIZE;i++) count[i]=1;
 	while(!allZero(info,FEATURE_SIZE))
@@ -321,11 +321,13 @@ int readFile(const char* fileName,int isDir)
 			
 		}
 		
-		fprintf(fp,"%c1 ",isPositive?'+':'-');
+		fprintf(fp,"%c1 qid:%d ",isPositive?'+':'-',id);
 		for(i=1;i<=FEATURE_SIZE;i++)
 			fprintf(fp,"%d:%d ",i,status[i]);
 		fprintf(fp,"\n");
 	}
+	id++;
+	
 	printf("\t[done]\n");
         cleanContent();
         fileNum++;
