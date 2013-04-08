@@ -300,6 +300,7 @@ int generateSample(const char* fileName,int isDir)
 	}
 	
 	int i;
+	int j;
 	int threshold;
 	unsigned int refOffset;
 	StackInfo info[FEATURE_SIZE];
@@ -338,7 +339,14 @@ int generateSample(const char* fileName,int isDir)
 		//printf("\n");
 		for(i=0;i<FEATURE_SIZE;i++)
 		{
-			fprintf(fp,"%d:%d ",i*5+(status[i]>5?5:status[i]),status[i]>0);
+			for(j=0;j<4;j++)
+			{
+				fprintf(fp,"%d:%d ",i*5+j+1,status[i]==(j+1));
+				//printf("%d:%d ",i*5+j+1,status[i]==(j+1));
+			}
+			fprintf(fp,"%d:%d ",i*5+5,status[i]>=5);
+			//printf("%d:%d ",i*5+5,status[i]>=5);
+			//fprintf(fp,"%d:%d ",i*5+(status[i]>5?5:status[i]),status[i]>0);
 			//printf("%d:%d ",i,status[i]);
 			//printf("%d:%d ",i*5+(status[i]>5?5:status[i]),status[i]>0);
 		}
