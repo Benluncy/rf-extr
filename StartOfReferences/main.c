@@ -1,6 +1,7 @@
 #include "hftctl.h"
 #include "hftnameandpp.h"
 #include "dirTraversal.h"
+#include "hftnameandpp.h"
 #include "main.h"
 #include <stdio.h>
 #include <string.h>
@@ -9,9 +10,6 @@
 
 int main(int argc,char *argv[])
 {
-	char *string="asdfadfasdfsaf pp. 12-34 ";
-	
-	return 0;
 	//int insertFilterData(int accept,const char *cmpStr,int cmpLen);
 	//fp = fopen("sample.txt","w");
 	//char ch;

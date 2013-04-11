@@ -48,7 +48,8 @@ VPATH			:= include/:src/:../include/
 LIBS			:= -L lib/ -ldl -lpthread  -lm 
 INCFLAG			:= -I include/
 CFLAGS			:= -Wall ${INCFLAG} #-std=c99
-OBJS			:= hftctl.o ini.o tokens.o virtualcontent.o \
+OBJS			:= hftctl.o hftnameandpp.o\
+				ini.o tokens.o virtualcontent.o \
 				 minEditDistance.o dirTraversal.o
 PROGS			:= main
 

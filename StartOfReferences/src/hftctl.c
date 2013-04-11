@@ -4,6 +4,7 @@
 #include <time.h>
 #include "minEditDistance.h"
 #include "virtualcontent.h"
+#include "hftnameandpp.h"
 #include "tokens.h"
 
 #include "hftctl.h"
@@ -289,8 +290,8 @@ int generateSample(const char* fileName,int isDir)
 		fp = fpTest;
 	}
 	
-        printf("%s:%s . . . ",trainOrTest?"train":"test",fileName);
-        
+        printf("[%d] %s:%s . . . ",id,(trainOrTest?"train":"test"),fileName);
+        fflush(NULL);
  	initContent();
 	if(!parseFile(fileName))
 	{
@@ -350,6 +351,26 @@ int generateSample(const char* fileName,int isDir)
 			//printf("%d:%d ",i,status[i]);
 			//printf("%d:%d ",i*5+(status[i]>5?5:status[i]),status[i]>0);
 		}
+;
+		fprintf(fp,"26:%d ",(hasPPafterTheOffset(maxoffset,200)?1:0));
+		fprintf(fp,"27:%d ",(hasYearafterTheOffset(maxoffset,200)?1:0));
+		fprintf(fp,"28:%d ",(hasNameafterTheOffset0(maxoffset,100)?1:0));
+		fprintf(fp,"29:%d ",(hasNameafterTheOffset1(maxoffset,100)?1:0));
+		fprintf(fp,"30:%d ",(hasNameafterTheOffset2(maxoffset,200)?1:0));
+		fprintf(fp,"31:%f ",(double)maxoffset/getPclen()); // percent of the location
+		//printf("[%d]",hasPPafterTheOffset(maxoffset,100)?1:0);
+		//printf("[%d]",hasYearafterTheOffset(maxoffset,100)?1:0);
+		/*
+		if(isPositive)
+		{
+			printf("[true:%d:%d:%d%d%d]",hasPPafterTheOffset(maxoffset,200),
+						hasYearafterTheOffset(maxoffset,200),
+						hasNameafterTheOffset0(maxoffset,100),
+						hasNameafterTheOffset1(maxoffset,100),
+						hasNameafterTheOffset2(maxoffset,200));
+			fflush(NULL);
+		}
+		*/
 		//printf("\n");
 		fprintf(fp,"\n");
 	}

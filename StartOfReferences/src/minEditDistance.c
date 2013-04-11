@@ -151,7 +151,7 @@ inline int editDistanceS(const char *t,int tlen,const char * s,int slen) //compa
 inline int fitPattern(char a,char b)
 {
 	const char *de="!@#$%^&*()\"\':;,./<>?~`";
-	int len = strlen(sp);
+	int len = strlen(de);
 	int i;
 	switch(a)
 	{
@@ -160,7 +160,7 @@ inline int fitPattern(char a,char b)
 			return (b>='a' && b <= 'z') || (b >= 'A' && b <= 'Z');
 		case 'n': // Num
 		case 'N':
-			return (b>='0' && b <= '9');
+			return (b>='0' && b <= '9') || b=='I' || b=='i'||b=='l'||b=='L';//b == 1?
 		case 'd': // Data (ascii or number)
 		case 'D':
 			return (fitPattern('a',b)||fitPattern('n',b));
@@ -195,7 +195,7 @@ int editDistanceP(const char *t,int tlen,const char * s,int slen)
 	{
 		for(j = 1 ; j < m ; j ++)
 		{
-			if(fitPattern(s[j-1],t[i-1]))
+			if(fitPattern(t[i-1],s[j-1]))
 			{
 				matrix[i][j] = matrix[i-1][j-1];
 			}else
@@ -209,7 +209,7 @@ int editDistanceP(const char *t,int tlen,const char * s,int slen)
 	return matrix[n-1][m-1];
 }
 
-
+// UNDONE
 inline int editDistanceT(const char *t,int tlen,const char * s,int slen,int threshold) 
 {
 	if (tlen - slen > threshold || slen - tlen > threshold) return -1;
