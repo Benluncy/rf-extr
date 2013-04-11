@@ -17,6 +17,10 @@ int editDistanceS(const char *t,int tlen,const char * s,int slen);
  */
 int editDistanceT(const char *t,int tlen,const char * s,int slen,int threshold);
 
+/**
+ * pattern 
+ */
+int editDistanceP(const char *t,int tlen,const char * s,int slen);
 
 #endif // __MINIMUM_EDIT_DISTANCE_H__
 

@@ -48,7 +48,8 @@ VPATH			:= include/:src/:../include/
 LIBS			:= -L lib/ -ldl -lpthread  -lm 
 INCFLAG			:= -I include/
 CFLAGS			:= -Wall ${INCFLAG} #-std=c99
-OBJS			:= ini.o tokens.o virtualcontent.o minEditDistance.o dirTraversal.o
+OBJS			:= hftctl.o ini.o tokens.o virtualcontent.o \
+				 minEditDistance.o dirTraversal.o
 PROGS			:= main
 
 .PHONY			: clean succ
@@ -65,7 +66,7 @@ main			: ${OBJS}
 
 doclassify		: ${OBJS}
 	${CC} ${CFLAGS} $@.c -o $@ ${OBJS} ${LIBS}
-	
+
 
 #virtualcontent.o	: tokens.o ini.o	
 #${CC} ${CFLAGS} src/virtualcontent.c -c -o $@ tokens.o 
