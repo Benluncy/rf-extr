@@ -12,11 +12,14 @@ inline int isPageNumber(const char *content)
 	//for(i=0;i<10;i++)
 	//	putchar(content[i]);
 	//printf("]");
-	if(editDistanceP("nen",3,content,3)<=0||
-		editDistanceP("nnenn",5,content,5)<=1 ||
-			editDistanceP("nnnennn",7,content,7)<=1 ||
-				editDistanceP("nnnnennnn",9,content,9)<=1)
-			return 1;
+	if(editDistanceP("nen",3,content,3)<=0)
+		return 3;
+	if(editDistanceP("nnenn",5,content,5)<=1)
+		return 5;
+	if(editDistanceP("nnnennn",7,content,7)<=1)
+		return 7;
+	if(editDistanceP("nnnnennnn",9,content,9)<=1)
+		return 9;
 	return 0;
 }
 /**
@@ -32,11 +35,12 @@ int hasPPafterTheOffset(int offset,int limit)
 	offend = offend >= getPclen() ? getPclen()-1 : offend; 
 	//char *content = getPcontent();
 	char *content = getPcontent();
+	int pageOffset;
 	for(i=offset;i<offend;i++)
 	{
 		if(fitPattern('n',content[i]))
-			if(isPageNumber(content+i))
-				return 1;
+			if((pageOffset = isPageNumber(content+i)) != 0)
+				return i+pageOffset;
 		//putchar(content[i]);
 		//fflush(NULL);
 		/*
@@ -68,6 +72,50 @@ int hasPPafterTheOffset(int offset,int limit)
 	return 0;
 }
 
+int hasPPafterTheOffset2(int offset,int limit)
+{
+	int i;
+	int j;
+	int offend = offset + limit;
+	offend = offend >= getPclen() ? getPclen()-1 : offend; 
+	//char *content = getPcontent();
+	char *content = getPcontent();
+	int pageOffset;
+	for(i=offset;i<offend;i++)
+	{
+		//if(fitPattern('n',content[i]))
+		//	if((pageOffset = isPageNumber(content+i)) != 0)
+		//		return i+pageOffset;
+		if(content[i]=='p' || content[i] == 'P')
+		{
+			if(content[i+1] == 'p'  || content[i] == 'P')
+			{
+				for(j=3;!fitPattern('n',content[i+j]);j++)
+				{
+					if(j > 4 && 
+						(fitPattern('a',content[i+j]) ||
+							 fitPattern('e',content[i+j])))
+						continue;
+				}
+				if((pageOffset = isPageNumber(content+i+j))!= 0) 
+					return i+j+pageOffset;
+			}else if(editDistanceS("page",4,content+i,4) <= 1) // threshold == 1
+			{
+				for(j=4;!fitPattern('n',content[i+j]);j++)
+				{
+					if(j > 6 && 
+						(fitPattern('a',content[i+j]) ||
+							 fitPattern('e',content[i+j])))
+						continue;
+				}	
+				if((pageOffset = isPageNumber(content+i+j))!= 0) 
+					return i+j+pageOffset;
+			}
+		}
+	}
+	return 0;
+}
+
 int hasYearafterTheOffset(int offset,int limit)
 {
 	int i;
@@ -79,14 +127,11 @@ int hasYearafterTheOffset(int offset,int limit)
 	{
 		//putchar(content[i]);
 		//fflush(NULL);
-		if(content[i]=='1' && content[i+1]=='9')
+		if((content[i]=='1' && content[i+1]=='9')||
+			(content[i]=='2' && content[i+1]=='0'))
 		{
 			if(fitPattern('n',content[i+2])&&fitPattern('n',content[i+3])) 
-				return 1;
-		}else if(content[i]=='2' && content[i+1]=='0')
-		{
-			if(fitPattern('n',content[i+2])&&fitPattern('n',content[i+3])) 
-				return 1;
+				return i+4;
 		}
 	}
 	return 0;
@@ -124,7 +169,7 @@ int hasNameafterTheOffset0(int offset,int limit)
 	//			printf("0『");
 	//			for(j=tag;j<=i+1;j++) putchar(content[j]);
 	//			printf("』");
-				return 1;
+				return i+2;
 			}
 		}
 	}
@@ -162,7 +207,7 @@ int hasNameafterTheOffset1(int offset,int limit)
 	//			printf("1『");
 	//			for(j=tag;j<=i+1;j++) putchar(content[j]);
 	//			printf("』");
-				return 1;
+				return i+2;
 			}
 		}
 	}
@@ -200,7 +245,7 @@ int hasNameafterTheOffset2(int offset,int limit)
 	//			printf("2『");
 	//			for(j=tag;j<=i+1;j++) putchar(content[j]);
 	//			printf("』");
-				return 1;
+				return i+2;
 			}
 		}
 	}

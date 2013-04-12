@@ -1,15 +1,20 @@
 #include "hftctl.h"
 #include "hftnameandpp.h"
 #include "dirTraversal.h"
-#include "hftnameandpp.h"
+#include "persistence.h"
 #include "main.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 #include <time.h>
 
+#include "persistence.h"
+
+
 int main(int argc,char *argv[])
 {
+	dbInit();
+	
 	//int insertFilterData(int accept,const char *cmpStr,int cmpLen);
 	//fp = fopen("sample.txt","w");
 	//char ch;

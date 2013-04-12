@@ -5,13 +5,16 @@
 #include "minEditDistance.h"
 #include "virtualcontent.h"
 #include "hftnameandpp.h"
+#include "persistence.h"
 #include "tokens.h"
 
 #include "hftctl.h"
 
 
 int fileNum = 0;
-
+featureDataContainer myFeatureDataContainer;
+featureData myFeatureData;
+int id = 1;
 
 /**
  * Start FilterData Info Handle
@@ -206,7 +209,7 @@ int stackData(StackInfo *myStack,
 }
 
 
-unsigned int getReferenceAreaOffset()
+unsigned int getReferenceHeadOffset()
 {
 	int i;
 	int mypclen = getPclen();
@@ -269,7 +272,34 @@ inline int maxTop(StackInfo info[],int len)
 	return maxid;
 }
 
-int id = 1;
+
+
+int gen26ToEnd(FILE *fp,int maxoffset)
+{
+	fprintf(fp,"26:%d ",(hasPPafterTheOffset(maxoffset,200)?1:0));
+	fprintf(fp,"27:%d ",(hasYearafterTheOffset(maxoffset,200)?1:0));
+	fprintf(fp,"28:%d ",(hasNameafterTheOffset0(maxoffset,100)?1:0));
+	fprintf(fp,"29:%d ",(hasNameafterTheOffset1(maxoffset,100)?1:0));
+	fprintf(fp,"30:%d ",(hasNameafterTheOffset2(maxoffset,200)?1:0));
+	fprintf(fp,"31:%f ",(double)maxoffset/getPclen()); // percent of the location
+	//printf("[%d]",hasPPafterTheOffset(maxoffset,100)?1:0);
+	//printf("[%d]",hasYearafterTheOffset(maxoffset,100)?1:0);
+	/*
+	if(isPositive)
+	{
+		printf("[true:%d:%d:%d%d%d]",hasPPafterTheOffset(maxoffset,200),
+					hasYearafterTheOffset(maxoffset,200),
+					hasNameafterTheOffset0(maxoffset,100),
+					hasNameafterTheOffset1(maxoffset,100),
+					hasNameafterTheOffset2(maxoffset,200));
+		fflush(NULL);
+	}
+		*/
+	return 1;
+}
+
+
+
 //int bingo = 0;
 int generateSample(const char* fileName,int isDir)
 {
@@ -280,7 +310,7 @@ int generateSample(const char* fileName,int isDir)
                 printf("ignore dir:%s\n",fileName);
                 return 1;
         }
-	if(rand()%3)
+	if(rand()%2) //train is 50% and test is 50%
 	{
 		fp = fpTrain;
 		trainOrTest = 1;
@@ -292,6 +322,8 @@ int generateSample(const char* fileName,int isDir)
 	
         printf("[%d] %s:%s . . . ",id,(trainOrTest?"train":"test"),fileName);
         fflush(NULL);
+        
+        // parse tag or etc ,move data to RAM
  	initContent();
 	if(!parseFile(fileName))
 	{
@@ -300,85 +332,122 @@ int generateSample(const char* fileName,int isDir)
 		return 0;
 	}
 	
-	int i;
-	int j;
-	int threshold;
-	unsigned int refOffset;
-	StackInfo info[FEATURE_SIZE];
-	for(threshold=0;threshold<FEATURE_SIZE;threshold++) 
-		stackData(&info[threshold],isAccpted,getPcontent(),getPclen(),threshold);
-	
-	unsigned int count[FEATURE_SIZE];
-	unsigned int status[FEATURE_SIZE];
-	int maxid;
-	int maxoffset;
-	
-	int isPositive;
-	
-	fprintf(fp,"#paper %d (%s)\n",id,fileName);
-	
-	refOffset = getReferenceAreaOffset();
-	for(i=0;i<FEATURE_SIZE;i++) count[i]=1;
-	while(!allZero(info,FEATURE_SIZE))
+	// search from db
+	//int hasInfoInDB = getFeature(fileName,&myFeatureDataContainer);
+	//if(hasInfoInDB)
+	if(!getFeature(fileName,&myFeatureDataContainer))
 	{
-		maxid = maxTop(info,FEATURE_SIZE);
-		maxoffset = info[maxid].data[info[maxid].top-1];
-		isPositive = VALUESDIFF(refOffset,maxoffset) < 10 ;
-		for(i=0;i<FEATURE_SIZE;i++)
+		int i;
+		int j;
+		int threshold;
+		unsigned int refOffset;
+		StackInfo info[FEATURE_SIZE];
+		for(threshold=0;threshold<FEATURE_SIZE;threshold++) 
+			stackData(&info[threshold],isAccpted,getPcontent(),getPclen(),threshold);
+	
+		unsigned int count[FEATURE_SIZE];
+		unsigned int status[FEATURE_SIZE];
+		int maxid;
+		int maxoffset;
+	
+		int isPositive;
+	
+		fprintf(fp,"#paper %d (%s)\n",id,fileName);
+		
+		// DB data set
+		myFeatureData.qid = id;
+	
+		refOffset = getReferenceHeadOffset();
+		for(i=0;i<FEATURE_SIZE;i++) count[i]=1;
+		int featureNumber = 0;
+		while(!allZero(info,FEATURE_SIZE))
 		{
-			status[i] = 0;
-			if(VALUESDIFF(info[i].data[info[i].top-1],maxoffset)<10)
-			{
-				info[i].top--;
-				status[i] = count[i];
-				count[i]++;
-			}
+			featureNumber ++ ;
 			
+			maxid = maxTop(info,FEATURE_SIZE);
+			maxoffset = info[maxid].data[info[maxid].top-1];
+			isPositive = VALUESDIFF(refOffset,maxoffset) < 10 ;
+			
+			myFeatureData.positive = isPositive;
+			myFeatureData.offset = maxoffset;
+			
+			for(i=0;i<FEATURE_SIZE;i++)
+			{
+				status[i] = 0;
+				myFeatureData.t[i] = 0;
+				if(VALUESDIFF(info[i].data[info[i].top-1],maxoffset)<10)
+				{
+					info[i].top--;
+					status[i] = count[i];
+					count[i]++;
+					
+					//DB data set
+					myFeatureData.t[i] = count[i];
+				}
+			
+			}
+			if(!insertFeature(fileName,myFeatureData))
+			{
+				fprintf(stderr,"[DB] insertFeature()(1): error %d",__LINE__);
+				getchar();
+			}
+		
+			fprintf(fp,"%c1 qid:%d ",isPositive?'+':'-',id);
+			//printf("\n");
+			for(i=0;i<FEATURE_SIZE;i++)
+			{
+				for(j=0;j<4;j++)
+				{
+					fprintf(fp,"%d:%d ",i*5+j+1,status[i]==(j+1));
+					//printf("%d:%d ",i*5+j+1,status[i]==(j+1));
+				}
+				fprintf(fp,"%d:%d ",i*5+5,status[i]>=5);
+				//printf("%d:%d ",i*5+5,status[i]>=5);
+				//fprintf(fp,"%d:%d ",i*5+(status[i]>5?5:status[i]),status[i]>0);
+				//printf("%d:%d ",i,status[i]);
+				//printf("%d:%d ",i*5+(status[i]>5?5:status[i]),status[i]>0);
+			}
+
+			gen26ToEnd(fp,maxoffset);
+			//printf("\n");
+			fprintf(fp,"\n");
 		}
 		
-		fprintf(fp,"%c1 qid:%d ",isPositive?'+':'-',id);
-		//printf("\n");
-		for(i=0;i<FEATURE_SIZE;i++)
+		//db insert
+		if(!insertFeatureInfo(fileName,featureNumber))
 		{
-			for(j=0;j<4;j++)
+			fprintf(stderr,"[DB] insertFeatureInfo()(2): error %d",__LINE__);
+			getchar();
+		}
+	}else
+	{
+		for(int i=0;i<myFeatureDataContainer.top;i++)
+		{
+			//printf("%d~",myFeatureDataContainer.data[i].qid);
+			fprintf(fp,"%c1 ",myFeatureDataContainer.data[i].positive?'+':'-');
+			for(int j=0;j<5;j++)
 			{
-				fprintf(fp,"%d:%d ",i*5+j+1,status[i]==(j+1));
-				//printf("%d:%d ",i*5+j+1,status[i]==(j+1));
+				for(int k=0;k<FEATURE_SIZE;k++)
+				{
+					fprintf(fp,"%d:%d ",j*5+k+1,
+						myFeatureDataContainer.data[i].t[j]==(k+1));
+				}
+			//	printf("%d ",myFeatureDataContainer.data[i].t[j]);	
 			}
-			fprintf(fp,"%d:%d ",i*5+5,status[i]>=5);
-			//printf("%d:%d ",i*5+5,status[i]>=5);
-			//fprintf(fp,"%d:%d ",i*5+(status[i]>5?5:status[i]),status[i]>0);
-			//printf("%d:%d ",i,status[i]);
-			//printf("%d:%d ",i*5+(status[i]>5?5:status[i]),status[i]>0);
+			
+			//printf("%d %d\n",myFeatureDataContainer.data[i].positive,
+			//			myFeatureDataContainer.data[i].offset);
+			gen26ToEnd(fp,myFeatureDataContainer.data[i].offset);
+			fprintf(fp,"\n");
 		}
-;
-		fprintf(fp,"26:%d ",(hasPPafterTheOffset(maxoffset,200)?1:0));
-		fprintf(fp,"27:%d ",(hasYearafterTheOffset(maxoffset,200)?1:0));
-		fprintf(fp,"28:%d ",(hasNameafterTheOffset0(maxoffset,100)?1:0));
-		fprintf(fp,"29:%d ",(hasNameafterTheOffset1(maxoffset,100)?1:0));
-		fprintf(fp,"30:%d ",(hasNameafterTheOffset2(maxoffset,200)?1:0));
-		fprintf(fp,"31:%f ",(double)maxoffset/getPclen()); // percent of the location
-		//printf("[%d]",hasPPafterTheOffset(maxoffset,100)?1:0);
-		//printf("[%d]",hasYearafterTheOffset(maxoffset,100)?1:0);
-		/*
-		if(isPositive)
-		{
-			printf("[true:%d:%d:%d%d%d]",hasPPafterTheOffset(maxoffset,200),
-						hasYearafterTheOffset(maxoffset,200),
-						hasNameafterTheOffset0(maxoffset,100),
-						hasNameafterTheOffset1(maxoffset,100),
-						hasNameafterTheOffset2(maxoffset,200));
-			fflush(NULL);
-		}
-		*/
-		//printf("\n");
-		fprintf(fp,"\n");
+		
 	}
-	id++;
+	
 	
 	printf("\t[done]\n");
         cleanContent();
         fileNum++;
+        id++;
         return 1;
 }
 

@@ -7,6 +7,8 @@ enum true_or_false{false,true};
 #endif //__cplusplus
 
 
+
+
 //inline int editDistance(const char *t,const char * s);
 //inline int editDistanceS(const char *t,const char * s); // not sinsitive
 int editDistance(const char *t,int tlen,const char * s,int slen);
@@ -24,6 +26,9 @@ int editDistanceT(const char *t,int tlen,const char * s,int slen,int threshold);
  */
 int editDistanceP(const char *t,int tlen,const char * s,int slen);
 
+
+//inline
+int isSame(char a,char b);
 
 /**
  * a is pattern

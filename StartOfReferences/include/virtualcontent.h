@@ -3,18 +3,19 @@
 
 
 int parseFile(const char * fileName);
-int initContent();
-int cleanContent();
+int initContent(void);
+int cleanContent(void);
 
 
-char *getContent();
-char *getPcontent();
-unsigned int *getOffset();
-unsigned int *getTags();
-int getClen();
-int getPclen();
+char *getContent(void);
+char *getPcontent(void);
+unsigned int *getOffset(void);
+unsigned int *getTags(void);
+int getClen(void);
+int getPclen(void);
 
-
+//inline
+int getTokenId(char *tkname,unsigned int len);
 
 #endif // __VD_H__
 

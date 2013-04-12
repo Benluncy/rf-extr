@@ -43,13 +43,13 @@ int insertFilterData(int accept,const char *cmpStr,int cmpLen);
 int isAccpted(const char *str,int threshold,int *fitLen);
 
 // is ascii or num
-inline int isData(char ch);
+int isData(char ch);
 
 //
 int stackData(StackInfo *myStack,AcceptStr acceptStr,const char *content,int len,int threshold);
 
 //in fact , it is only the offset at start of references area
-unsigned int getReferenceAreaOffset(void);
+unsigned int getReferenceHeadOffset(void);
 
 // for debug
 int printfContext(int refOffset);
@@ -57,7 +57,8 @@ int printfContext(int refOffset);
 //
 
 //stack
-inline int allZero(StackInfo info[],int len);
+int allZero(StackInfo info[],int len);
+int maxTop(StackInfo info[],int len);
 
 // sample generater
 int generateSample(const char* fileName,int isDir);

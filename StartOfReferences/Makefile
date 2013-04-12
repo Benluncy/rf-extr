@@ -47,8 +47,9 @@ VPATH			:= include/:src/:../include/
 	export	VPATH
 LIBS			:= -L lib/ -ldl -lpthread  -lm 
 INCFLAG			:= -I include/
-CFLAGS			:= -Wall ${INCFLAG} #-std=c99
-OBJS			:= hftctl.o hftnameandpp.o\
+CFLAGS			:= -Wall ${INCFLAG} -std=c99
+GNUFLAGS		:= -Wall ${INCFLAG} -std=gnu99
+OBJS			:= hftctl.o hftnameandpp.o sqlite3.o persistence.o\
 				ini.o tokens.o virtualcontent.o \
 				 minEditDistance.o dirTraversal.o
 PROGS			:= main
@@ -67,6 +68,9 @@ main			: ${OBJS}
 
 doclassify		: ${OBJS}
 	${CC} ${CFLAGS} $@.c -o $@ ${OBJS} ${LIBS}
+
+dirTraversal.o		: 
+	${CC} ${GNUFLAGS} -c -o $@ src/dirTraversal.c 
 
 
 #virtualcontent.o	: tokens.o ini.o	
@@ -93,9 +97,12 @@ doclassify		: ${OBJS}
 succ			:
 	${SAY} "Complete !" 
 
-clean    : 
+clean			: 
 	${DEL} ${PROGS} doclassify
 	${DEL} ${OBJS} 
 	${DEL} *~ include/*~ src/*~ data/*~
 	${DEL} *.swp
+
+dbclean			:
+	${DEL} db/features.db
 

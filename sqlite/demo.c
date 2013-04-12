@@ -116,54 +116,54 @@ int result_handle(void* data,int n_columns,char** column_values,char** column_na
 
 int main(int argc , char * argv[])
 {
-    int status;
-    char * str_err_msg= NULL;
-    db_report = stdout;
-    printf("sqlite version : %s\n%s\n",sqlite3_libversion(),sqlite3_sourceid());
-    //_hdb db;
+	int status;
+	char * str_err_msg= NULL;
+	db_report = stdout;
+	printf("sqlite version : %s\n%s\n",sqlite3_libversion(),sqlite3_sourceid());
+	//_hdb db;
 	connect_db("demo.db");
-//	/**
-    PREPARE("create table usrpwd(usr QString, pwd QString)");
-    status = sqlite3_exec(db,
-                          QUERY,
-                          0,
-                          0,
-                          &str_err_msg);
-    printf("c->status: %d ~ %s \n",status,str_err_msg);
-    /* */
-   // /**
-    	PREPARE("insert into usrpwd values('hkkk','khhh')");
-    	status = sqlite3_exec(db,
-    						QUERY,
-    						0,
-    						0,
-    						&str_err_msg);
-    	printf("c->status: %d ~ %s \n",status,str_err_msg);
-    //**/
+	//	/**
+	PREPARE("create table usrpwd(usr QString, pwd QString)");
+	status = sqlite3_exec(db,
+				QUERY,
+				0,
+				0,
+				&str_err_msg);
+	printf("c->status: %d ~ %s \n",status,str_err_msg);
+	/* */
+	// /**
+	PREPARE("insert into usrpwd values('hkkk','khhh')");
+	status = sqlite3_exec(db,
+				QUERY,
+				0,
+				0,
+				&str_err_msg);
+	printf("c->status: %d ~ %s \n",status,str_err_msg);
+	//**/
 
-    PREPARE("select * from usrpwd ");
+	PREPARE("select * from usrpwd ");
 
-    status = sqlite3_exec(db,
-                          QUERY,
-                          result_handle, // int (*callback)(void*,int,char**,char**),
-                          0,
-                          &str_err_msg);
-    printf("c->status: %d ~ %s \n",status,str_err_msg);
+	status = sqlite3_exec(db,
+	QUERY,
+	result_handle, // int (*callback)(void*,int,char**,char**),
+	0,
+	&str_err_msg);
+	printf("c->status: %d ~ %s \n",status,str_err_msg);
 
 
 
-    status = sqlite3_close(db);
-    if(status != SQLITE_OK )
-        printf("error:%d\n",sqlite3_errcode(db));
-    return 0;
+	status = sqlite3_close(db);
+	if(status != SQLITE_OK )
+	printf("error:%d\n",sqlite3_errcode(db));
+	return 0;
 }
 
 //! _hdb db;
 int connect_db(const char *file_name)
 {
 	int status = sqlite3_open(file_name,&db);
-    fprintf(db_report,"error:%d\n",sqlite3_errcode(db));
-    return status ? 0 : 1;
+	fprintf(db_report,"error:%d\n",sqlite3_errcode(db));
+	return status ? 0 : 1;
 }
 
 //!int create_table(const char *table_name,int num,int type[],char *column_name[100])
@@ -171,12 +171,12 @@ int create_table(const char *table_name,int num,char *column_name[100]) // defau
 {
 	char query[1024];
 	int i;
-	sprintf(query,"create table %s{",table_name);
+	sprintf(query,"create table %s(",table_name);
 	for(i = 0 ; i < num; i++)
 	{
-		sprintf(query,"QString %s,",column_name[i]);
+		sprintf(query,"%s QString,",column_name[i]);
 	}
-	sprintf(query,"};");
+	sprintf(query,")");
 	return 1;
 }
 
