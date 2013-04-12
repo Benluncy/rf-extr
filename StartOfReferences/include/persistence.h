@@ -13,7 +13,7 @@ typedef struct sFeatureData
 typedef struct
 {
 	int top;
-	featureData data[20];
+	featureData data[200];
 } featureDataContainer;
 
 
@@ -27,6 +27,7 @@ int doCreateTable(void);
 
 int insertFeatureInfo(const char *fileName,int num);
 int insertFeature(const char* fileName,featureData data);
+int cleanFeature(const char* fileName);
 int getFeature(const char *fileName,featureDataContainer *data);
 
 char *queryEscape(const char *str);

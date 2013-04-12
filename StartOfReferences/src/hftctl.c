@@ -273,15 +273,109 @@ inline int maxTop(StackInfo info[],int len)
 }
 
 
-
-int gen26ToEnd(FILE *fp,int maxoffset)
+int rateWrite(FILE *fp,int start,double rate)
 {
-	fprintf(fp,"26:%d ",(hasPPafterTheOffset(maxoffset,200)?1:0));
-	fprintf(fp,"27:%d ",(hasYearafterTheOffset(maxoffset,200)?1:0));
-	fprintf(fp,"28:%d ",(hasNameafterTheOffset0(maxoffset,100)?1:0));
-	fprintf(fp,"29:%d ",(hasNameafterTheOffset1(maxoffset,100)?1:0));
-	fprintf(fp,"30:%d ",(hasNameafterTheOffset2(maxoffset,200)?1:0));
-	fprintf(fp,"31:%f ",(double)maxoffset/getPclen()); // percent of the location
+	int iRate = rate * 5;
+	for(int i=0;i<5;i++)
+	{
+		fprintf(fp,"%d:%d ",start+i,iRate == i ? 1 : 0 );
+	}
+	return 1;
+}
+
+int gen26ToEnd(FILE *fp,int offset)
+{
+	//26 ~ 31
+	fprintf(fp,"26:%d ",(hasPPafterTheOffset(offset,200)?1:0));
+	fprintf(fp,"27:%d ",(hasPPafterTheOffset2(offset,200)?1:0));
+	fprintf(fp,"28:%d ",(hasYearafterTheOffset(offset,200)?1:0));
+	fprintf(fp,"29:%d ",(hasNameafterTheOffset0(offset,100)?1:0));
+	fprintf(fp,"30:%d ",(hasNameafterTheOffset1(offset,100)?1:0));
+	fprintf(fp,"31:%d ",(hasNameafterTheOffset2(offset,200)?1:0));
+
+	fprintf(fp,"32:%d ",(hasPPafterTheOffset(offset,100)?1:0));
+	fprintf(fp,"33:%d ",(hasPPafterTheOffset2(offset,100)?1:0));
+	fprintf(fp,"34:%d ",(hasYearafterTheOffset(offset,30)?1:0));
+	fprintf(fp,"35:%d ",(hasNameafterTheOffset0(offset,30)?1:0));
+	fprintf(fp,"36:%d ",(hasNameafterTheOffset1(offset,30)?1:0));
+	fprintf(fp,"37:%d ",(hasNameafterTheOffset2(offset,30)?1:0));	
+	//32
+	//fprintf(fp,"32:%f ",(double)offset/getPclen()); // percent of the location
+	rateWrite(fp,42,(double)offset/getPclen());
+	
+	//33,34
+	int totalPP = 0;
+	int ppnumBeforeOffset = 0;
+	int nowOffset = 0;
+	while((nowOffset=hasPPafterTheOffset(nowOffset,getPclen())) != 0) totalPP++;
+	while((nowOffset=hasPPafterTheOffset(nowOffset,getPclen())) != 0)
+	{
+		if(nowOffset > offset) break;
+		ppnumBeforeOffset++;
+	}
+	//fprintf(fp,"33:%f ",totalPP == 0 ? 0 : (double)ppnumBeforeOffset/totalPP);
+	rateWrite(fp,47,totalPP == 0 ? -1 : (double)ppnumBeforeOffset/totalPP);
+	
+	nowOffset = 0;
+	ppnumBeforeOffset = 0;
+	while((nowOffset=hasPPafterTheOffset2(nowOffset,getPclen())) != 0) totalPP++;
+	while((nowOffset=hasPPafterTheOffset2(nowOffset,getPclen())) != 0)
+	{
+		if(nowOffset > offset) break;
+		ppnumBeforeOffset++;
+	}
+	//fprintf(fp,"34:%f ",totalPP == 0 ? 0 : (double)ppnumBeforeOffset/totalPP);
+	rateWrite(fp,52,totalPP == 0 ? -1 : (double)ppnumBeforeOffset/totalPP);
+	
+	// 35
+	int totalYear = 0;
+	int yearnumBeforeOffset = 0;
+	nowOffset = 0;
+	while((nowOffset=hasYearafterTheOffset(nowOffset,getPclen()))) totalYear++;
+	while((nowOffset=hasYearafterTheOffset(nowOffset,getPclen())))
+	{
+		if(nowOffset > offset) break;
+		yearnumBeforeOffset ++;
+	}
+	//fprintf(fp,"35:%f ",totalYear == 0 ? 0 : (double)yearnumBeforeOffset/totalYear);
+	rateWrite(fp,57,totalYear == 0 ? -1 : (double)yearnumBeforeOffset/totalYear);
+	
+	// 36 ~ 38 
+	int totalName = 0;
+	int namenumBeforeOffset = 0;
+	nowOffset = 0;
+	while((nowOffset = hasNameafterTheOffset0(nowOffset,getPclen()))) totalName++;
+	while((nowOffset = hasNameafterTheOffset0(nowOffset,getPclen())))
+	{
+		if(nowOffset > offset) break;
+		namenumBeforeOffset ++;
+	}
+	//fprintf(fp,"36:%f ",totalName == 0 ? 0 : (double)namenumBeforeOffset/totalName);
+	rateWrite(fp,62,totalName == 0 ? -1 : (double)namenumBeforeOffset/totalName);
+	
+	
+	nowOffset = 0;
+	namenumBeforeOffset = 0;
+	while((nowOffset = hasNameafterTheOffset1(nowOffset,getPclen()))) totalName++;
+	while((nowOffset = hasNameafterTheOffset1(nowOffset,getPclen())))
+	{
+		if(nowOffset > offset) break;
+		namenumBeforeOffset ++;
+	}
+	//fprintf(fp,"37:%f ",totalName == 0 ? 0 : (double)namenumBeforeOffset/totalName);
+	rateWrite(fp,67,totalName == 0 ? -1 : (double)namenumBeforeOffset/totalName);
+	
+	nowOffset = 0;
+	namenumBeforeOffset = 0;
+	while((nowOffset = hasNameafterTheOffset2(nowOffset,getPclen()))) totalName++;
+	while((nowOffset = hasNameafterTheOffset2(nowOffset,getPclen())))
+	{
+		if(nowOffset > offset) break;
+		namenumBeforeOffset ++;
+	}
+	//fprintf(fp,"38:%f ",totalName == 0 ? 0 : (double)namenumBeforeOffset/totalName);
+	rateWrite(fp,72,totalName == 0 ? -1 : (double)namenumBeforeOffset/totalName);
+	
 	//printf("[%d]",hasPPafterTheOffset(maxoffset,100)?1:0);
 	//printf("[%d]",hasYearafterTheOffset(maxoffset,100)?1:0);
 	/*
@@ -305,6 +399,7 @@ int generateSample(const char* fileName,int isDir)
 {
 	FILE *fp;
 	int trainOrTest;
+	//if(strcmp("data/oraby/A model for estimating trace-sample miss ratios.txt",fileName)!=0) return 1;
         if(isDir)
         {
                 printf("ignore dir:%s\n",fileName);
@@ -319,6 +414,8 @@ int generateSample(const char* fileName,int isDir)
 		trainOrTest = 0;
 		fp = fpTest;
 	}
+	
+	
 	
         printf("[%d] %s:%s . . . ",id,(trainOrTest?"train":"test"),fileName);
         fflush(NULL);
@@ -335,6 +432,7 @@ int generateSample(const char* fileName,int isDir)
 	// search from db
 	//int hasInfoInDB = getFeature(fileName,&myFeatureDataContainer);
 	//if(hasInfoInDB)
+	
 	if(!getFeature(fileName,&myFeatureDataContainer))
 	{
 		int i;
@@ -344,7 +442,7 @@ int generateSample(const char* fileName,int isDir)
 		StackInfo info[FEATURE_SIZE];
 		for(threshold=0;threshold<FEATURE_SIZE;threshold++) 
 			stackData(&info[threshold],isAccpted,getPcontent(),getPclen(),threshold);
-	
+			
 		unsigned int count[FEATURE_SIZE];
 		unsigned int status[FEATURE_SIZE];
 		int maxid;
@@ -360,6 +458,7 @@ int generateSample(const char* fileName,int isDir)
 		refOffset = getReferenceHeadOffset();
 		for(i=0;i<FEATURE_SIZE;i++) count[i]=1;
 		int featureNumber = 0;
+		
 		while(!allZero(info,FEATURE_SIZE))
 		{
 			featureNumber ++ ;
@@ -388,7 +487,7 @@ int generateSample(const char* fileName,int isDir)
 			}
 			if(!insertFeature(fileName,myFeatureData))
 			{
-				fprintf(stderr,"[DB] insertFeature()(1): error %d",__LINE__);
+				fprintf(stderr,"[DB] insertFeature()(1): error --%d",__LINE__);
 				getchar();
 			}
 		
@@ -409,6 +508,8 @@ int generateSample(const char* fileName,int isDir)
 			}
 
 			gen26ToEnd(fp,maxoffset);
+
+			
 			//printf("\n");
 			fprintf(fp,"\n");
 		}

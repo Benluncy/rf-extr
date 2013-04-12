@@ -30,6 +30,7 @@ inline char *queryEscape(const char *str)
 				target[j] = str[i];
 				j++;
 		}
+	target[j]='\0';
 	return target;
 }
 
@@ -107,11 +108,31 @@ int insertFeature(const char* fileName,featureData data)
 	status = sqlite3_exec(featureSrc,query,0,0,&err_msg);
 	if(err_msg != NULL)
 	{
-		fprintf(stderr,"[DB]<insertFeature>:%s --%d\n",err_msg,__LINE__);
+		fprintf(stderr,"query>>%s\n\n[DB]<insertFeature>:%s --%d\n",query,err_msg,__LINE__);
 		if(DEBUGING) getchar();
 	}
 	return status == 0;
 }
+
+int cleanFeature(const char* fileName)
+{
+	char query[1024];
+	char *err_msg = NULL;
+	int status;
+	sprintf(query,"delete from OneToFive where fileName='%s'",queryEscape(fileName));
+	
+	//DEBUG	
+	if(DEBUGING) printf("\n---[[query|%s]]---\n",query);
+	
+	status = sqlite3_exec(featureSrc,query,0,0,&err_msg);
+	if(err_msg != NULL)
+	{
+		fprintf(stderr,"query>>%s\n\n[DB]<cleanFeature>:%s --%d\n",query,err_msg,__LINE__);
+		if(DEBUGING) getchar();
+	}
+	return status == 0;
+}
+
 
 int insertFeatureInfo(const char *fileName,int num)
 {

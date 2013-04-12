@@ -4,7 +4,7 @@
 void setContent(const char * content);
 
 //
-int isPageNumber(const char *content);
+int isPageNumber(const char *content,int limit);
 
 int hasPPafterTheOffset(int offset,int limit);
 int hasPPafterTheOffset2(int offset,int limit);
