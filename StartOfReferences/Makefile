@@ -49,9 +49,10 @@ LIBS			:= -L lib/ -ldl -lpthread  -lm
 INCFLAG			:= -I include/
 CFLAGS			:= -Wall ${INCFLAG} -std=c99
 GNUFLAGS		:= -Wall ${INCFLAG} -std=gnu99
-OBJS			:= hftctl.o hftnameandpp.o sqlite3.o persistence.o\
+OBJS			:= hftctl.o hftnameandpp.o sqlite3.o persistence.o \
 				ini.o tokens.o virtualcontent.o \
-				 minEditDistance.o dirTraversal.o
+				minEditDistance.o dirTraversal.o\
+				debuginfo.o
 PROGS			:= main
 
 .PHONY			: clean succ

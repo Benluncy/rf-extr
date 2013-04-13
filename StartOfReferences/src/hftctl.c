@@ -7,13 +7,25 @@
 #include "hftnameandpp.h"
 #include "persistence.h"
 #include "tokens.h"
-
 #include "hftctl.h"
 
+//for debug
+#include "debuginfo.h"
+
+_FilterData pFilterData;
+
+FILE *fpTrain; // train.txt
+FILE *fpTest; // test.txt
 
 int fileNum = 0;
 featureDataContainer myFeatureDataContainer;
 featureData myFeatureData;
+OffsetCallback functionList[6]={hasPPafterTheOffset,hasPPafterTheOffset2,
+			hasYearafterTheOffset,hasNameafterTheOffset0,
+			hasNameafterTheOffset1,hasNameafterTheOffset2,};
+
+
+
 int id = 1;
 
 /**
@@ -221,21 +233,6 @@ unsigned int getReferenceHeadOffset()
 	return 0;
 }
 
-int printfContext(int refOffset)
-{
-	int x;
-	
-	printf("\n>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n");
-	for(x=refOffset-100;x<refOffset;x++) putchar(*(getPcontent()+x));
-	printf("\n================================================================\n");
-	for(x=refOffset;x<refOffset+100;x++) putchar(*(getPcontent()+x));
-	printf("\n<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n");
-	//getchar(); getchar();
-	return 1;
-}
-
-
-
 inline int allZero(StackInfo info[],int len)
 {
 	int i;
@@ -274,112 +271,81 @@ int rateWrite(FILE *fp,int start,double rate)
 	return 1;
 }
 
-int gen26ToEnd(FILE *fp,int offset)
+inline int offsetStat(int offset,int *totalData,int *beforeData,
+					OffsetCallback offsetFunction)
+{
+	*totalData = 0;
+	*beforeData = 0;
+	int nowOffset = 0;
+	//while((nowOffset=offsetFunction(nowOffset,getPclen())) != 0) (*totalData)++;
+	while((nowOffset=offsetFunction(nowOffset,getPclen())) != 0)
+	{
+		(*totalData)++;
+		if(nowOffset < offset) (*beforeData)++;
+	}
+	return 1;
+	
+}
+
+inline int offsetBetweenStat(int offsetEnd,int offsetStart,int *dataBetween,
+					OffsetCallback offsetFunction)
+{
+	*dataBetween = 0;
+	if(offsetEnd < offsetStart)
+	{
+		int tmp = offsetEnd;
+		offsetEnd = offsetStart;
+		offsetStart = tmp ; 
+	}
+	while((offsetStart=offsetFunction(offsetStart,getPclen())) != 0)
+	{
+		if(offsetStart >= offsetEnd) break;
+		(*dataBetween) ++ ;
+	}
+	return 1;
+}
+
+int gen26ToEnd(FILE *fp,featureData fd)
 {
 	//26 ~ 31
-	fprintf(fp,"26:%d ",(hasPPafterTheOffset(offset,200)?1:0));
-	fprintf(fp,"27:%d ",(hasPPafterTheOffset2(offset,200)?1:0));
-	fprintf(fp,"28:%d ",(hasYearafterTheOffset(offset,200)?1:0));
-	fprintf(fp,"29:%d ",(hasNameafterTheOffset0(offset,100)?1:0));
-	fprintf(fp,"30:%d ",(hasNameafterTheOffset1(offset,100)?1:0));
-	fprintf(fp,"31:%d ",(hasNameafterTheOffset2(offset,200)?1:0));
+	int offset = fd.offset;
 
-	fprintf(fp,"32:%d ",(hasPPafterTheOffset(offset,100)?1:0));
-	fprintf(fp,"33:%d ",(hasPPafterTheOffset2(offset,100)?1:0));
-	fprintf(fp,"34:%d ",(hasYearafterTheOffset(offset,30)?1:0));
-	fprintf(fp,"35:%d ",(hasNameafterTheOffset0(offset,30)?1:0));
-	fprintf(fp,"36:%d ",(hasNameafterTheOffset1(offset,30)?1:0));
-	fprintf(fp,"37:%d ",(hasNameafterTheOffset2(offset,30)?1:0));	
+
+	//printf("prevOffset:%d nextOffset: %d",prevOffset,nextOffset);
+	//getchar();
+	
+	int start = 26;
+	int lmt = -200;
+	fp = stdout;
+	for(;lmt<=200;lmt+=100)
+	{
+		fprintf(fp,"%d:%d ",start++,(hasPPafterTheOffset(offset,lmt)?1:0));
+		fprintf(fp,"%d:%d ",start++,(hasPPafterTheOffset2(offset,lmt)?1:0));
+		fprintf(fp,"%d:%d ",start++,(hasYearafterTheOffset(offset,lmt)?1:0));
+		fprintf(fp,"%d:%d ",start++,(hasNameafterTheOffset0(offset,lmt)?1:0));
+		fprintf(fp,"%d:%d ",start++,(hasNameafterTheOffset1(offset,lmt)?1:0));
+		fprintf(fp,"%d:%d ",start++,(hasNameafterTheOffset2(offset,lmt)?1:0));		
+	}
+	
 	//32
 	//fprintf(fp,"32:%f ",(double)offset/getPclen()); // percent of the location
-	rateWrite(fp,42,(double)offset/getPclen());
+	rateWrite(fp,start++,(double)offset/getPclen());
 	
+	//==========================================================================================
 	//33,34
-	int totalPP = 0;
-	int ppnumBeforeOffset = 0;
-	int nowOffset = 0;
-	while((nowOffset=hasPPafterTheOffset(nowOffset,getPclen())) != 0) totalPP++;
-	while((nowOffset=hasPPafterTheOffset(nowOffset,getPclen())) != 0)
-	{
-		if(nowOffset > offset) break;
-		ppnumBeforeOffset++;
-	}
-	//fprintf(fp,"33:%f ",totalPP == 0 ? 0 : (double)ppnumBeforeOffset/totalPP);
-	rateWrite(fp,47,totalPP == 0 ? -1 : (double)ppnumBeforeOffset/totalPP);
+	//int totalPP = 0;
+	//int ppnumBeforeOffset = 0;
+	//int nowOffset = 0;
 	
-	nowOffset = 0;
-	ppnumBeforeOffset = 0;
-	while((nowOffset=hasPPafterTheOffset2(nowOffset,getPclen())) != 0) totalPP++;
-	while((nowOffset=hasPPafterTheOffset2(nowOffset,getPclen())) != 0)
+	for(int i=0;i<6;i++)
 	{
-		if(nowOffset > offset) break;
-		ppnumBeforeOffset++;
+		rateWrite(fp,start,fd.fid[i][1] == 0 ? -1 : 
+					(double)fd.fid[i][0]/fd.fid[i][1]);
+		
+		
+		start+=5; //TODO ADD 
 	}
-	//fprintf(fp,"34:%f ",totalPP == 0 ? 0 : (double)ppnumBeforeOffset/totalPP);
-	rateWrite(fp,52,totalPP == 0 ? -1 : (double)ppnumBeforeOffset/totalPP);
 	
-	// 35
-	int totalYear = 0;
-	int yearnumBeforeOffset = 0;
-	nowOffset = 0;
-	while((nowOffset=hasYearafterTheOffset(nowOffset,getPclen()))) totalYear++;
-	while((nowOffset=hasYearafterTheOffset(nowOffset,getPclen())))
-	{
-		if(nowOffset > offset) break;
-		yearnumBeforeOffset ++;
-	}
-	//fprintf(fp,"35:%f ",totalYear == 0 ? 0 : (double)yearnumBeforeOffset/totalYear);
-	rateWrite(fp,57,totalYear == 0 ? -1 : (double)yearnumBeforeOffset/totalYear);
-	
-	// 36 ~ 38 
-	int totalName = 0;
-	int namenumBeforeOffset = 0;
-	nowOffset = 0;
-	while((nowOffset = hasNameafterTheOffset0(nowOffset,getPclen()))) totalName++;
-	while((nowOffset = hasNameafterTheOffset0(nowOffset,getPclen())))
-	{
-		if(nowOffset > offset) break;
-		namenumBeforeOffset ++;
-	}
-	//fprintf(fp,"36:%f ",totalName == 0 ? 0 : (double)namenumBeforeOffset/totalName);
-	rateWrite(fp,62,totalName == 0 ? -1 : (double)namenumBeforeOffset/totalName);
-	
-	
-	nowOffset = 0;
-	namenumBeforeOffset = 0;
-	while((nowOffset = hasNameafterTheOffset1(nowOffset,getPclen()))) totalName++;
-	while((nowOffset = hasNameafterTheOffset1(nowOffset,getPclen())))
-	{
-		if(nowOffset > offset) break;
-		namenumBeforeOffset ++;
-	}
-	//fprintf(fp,"37:%f ",totalName == 0 ? 0 : (double)namenumBeforeOffset/totalName);
-	rateWrite(fp,67,totalName == 0 ? -1 : (double)namenumBeforeOffset/totalName);
-	
-	nowOffset = 0;
-	namenumBeforeOffset = 0;
-	while((nowOffset = hasNameafterTheOffset2(nowOffset,getPclen()))) totalName++;
-	while((nowOffset = hasNameafterTheOffset2(nowOffset,getPclen())))
-	{
-		if(nowOffset > offset) break;
-		namenumBeforeOffset ++;
-	}
-	//fprintf(fp,"38:%f ",totalName == 0 ? 0 : (double)namenumBeforeOffset/totalName);
-	rateWrite(fp,72,totalName == 0 ? -1 : (double)namenumBeforeOffset/totalName);
-	
-	//printf("[%d]",hasPPafterTheOffset(maxoffset,100)?1:0);
-	//printf("[%d]",hasYearafterTheOffset(maxoffset,100)?1:0);
-	/*
-	if(isPositive)
-	{
-		printf("[true:%d:%d:%d%d%d]",hasPPafterTheOffset(maxoffset,200),
-					hasYearafterTheOffset(maxoffset,200),
-					hasNameafterTheOffset0(maxoffset,100),
-					hasNameafterTheOffset1(maxoffset,100),
-					hasNameafterTheOffset2(maxoffset,200));
-		fflush(NULL);
-	}
-		*/
 	return 1;
 }
 
@@ -421,13 +387,10 @@ int generateSample(const char* fileName,int isDir)
 	}
 	
 	// search from db
-	//int hasInfoInDB = getFeature(fileName,&myFeatureDataContainer);
-	//if(hasInfoInDB)
-	fprintf(fp,"#paper %d[%s]\n",id,fileName);
-	if(!getFeature(fileName,&myFeatureDataContainer))
+	if(!getFeature(fileName,&myFeatureDataContainer)) // get One To Five from DB
 	{
 		int i;
-		int j;
+		//int j;
 		int threshold;
 		unsigned int refOffset;
 		StackInfo info[FEATURE_SIZE];
@@ -435,7 +398,7 @@ int generateSample(const char* fileName,int isDir)
 			stackData(&info[threshold],isAccpted,getPcontent(),getPclen(),threshold);
 			
 		unsigned int count[FEATURE_SIZE];
-		unsigned int status[FEATURE_SIZE];
+		//unsigned int status[FEATURE_SIZE];
 		int maxid;
 		int maxoffset;
 	
@@ -446,12 +409,12 @@ int generateSample(const char* fileName,int isDir)
 	
 		refOffset = getReferenceHeadOffset();
 		for(i=0;i<FEATURE_SIZE;i++) count[i]=1;
-		int featureNumber = 0;
+		
+		//data
+		myFeatureDataContainer.top = 0;
 		
 		while(!allZero(info,FEATURE_SIZE))
-		{
-			featureNumber ++ ;
-			
+		{	
 			maxid = maxTop(info,FEATURE_SIZE);
 			maxoffset = info[maxid].data[info[maxid].top-1];
 			isPositive = VALUESDIFF(refOffset,maxoffset) < 10 ;
@@ -461,12 +424,12 @@ int generateSample(const char* fileName,int isDir)
 			
 			for(i=0;i<FEATURE_SIZE;i++)
 			{
-				status[i] = 0;
+				//status[i] = 0;
 				myFeatureData.t[i] = 0;
 				if(VALUESDIFF(info[i].data[info[i].top-1],maxoffset)<10)
 				{
 					info[i].top--;
-					status[i] = count[i];
+					//status[i] = count[i];
 					count[i]++;
 					
 					//DB data set
@@ -480,58 +443,130 @@ int generateSample(const char* fileName,int isDir)
 				getchar();
 			}
 		
-			fprintf(fp,"%c1 qid:%d ",isPositive?'+':'-',id);
-			//printf("\n");
-			for(i=0;i<FEATURE_SIZE;i++)
-			{
-				for(j=0;j<4;j++)
-				{
-					fprintf(fp,"%d:%d ",i*5+j+1,status[i]==(j+1));
-					//printf("%d:%d ",i*5+j+1,status[i]==(j+1));
-				}
-				fprintf(fp,"%d:%d ",i*5+5,status[i]>=5);
-				//printf("%d:%d ",i*5+5,status[i]>=5);
-				//fprintf(fp,"%d:%d ",i*5+(status[i]>5?5:status[i]),status[i]>0);
-				//printf("%d:%d ",i,status[i]);
-				//printf("%d:%d ",i*5+(status[i]>5?5:status[i]),status[i]>0);
-			}
-
-			gen26ToEnd(fp,maxoffset);
-
+			myFeatureDataContainer.data[myFeatureDataContainer.top] = myFeatureData;
+			myFeatureDataContainer.top ++ ;
 			
-			//printf("\n");
-			fprintf(fp,"\n");
 		}
 		
 		//db insert
-		if(!insertFeatureInfo(fileName,featureNumber))
+		if(!insertFeatureInfo(fileName,myFeatureDataContainer.top))
 		{
 			fprintf(stderr,"[DB] insertFeatureInfo()(2): error %d",__LINE__);
 			getchar();
 		}
-	}else
+	}
+	
+	printf(" . ");fflush(NULL);//TODO TIPS
+	
+	// generate feature info data
+	int beforeData;
+	int totalData;
+	for(int i=0;i<myFeatureDataContainer.top;i++)
 	{
-		for(int i=0;i<myFeatureDataContainer.top;i++)
+		
+		for(int j=0;j<6;j++)
 		{
-			//printf("%d~",myFeatureDataContainer.data[i].qid);
-			fprintf(fp,"%c1 ",myFeatureDataContainer.data[i].positive?'+':'-');
-			for(int j=0;j<5;j++)
-			{
-				for(int k=0;k<FEATURE_SIZE;k++)
-				{
-					fprintf(fp,"%d:%d ",j*5+k+1,
-						myFeatureDataContainer.data[i].t[j]==(k+1));
-				}
-			//	printf("%d ",myFeatureDataContainer.data[i].t[j]);	
-			}
+			offsetStat(myFeatureDataContainer.data[i].offset,
+					&totalData,&beforeData,functionList[j]);
+			myFeatureDataContainer.data[i].fid[j][0] = beforeData;
+			myFeatureDataContainer.data[i].fid[j][1] = totalData;
+		}
+	}
+	
+	//density and etc
+	
+	printf(" . ");fflush(NULL);//TODO TIPS
+	
+	// adjacencyOffset setting ... 
+	for(int i=0;i<myFeatureDataContainer.top;i++)
+	{
+		myFeatureDataContainer.data[i].adjacencyOffset[0] = 0;
+		myFeatureDataContainer.data[i].adjacencyOffset[1] = getPclen();
+		for(int j=0;j<myFeatureDataContainer.top;j++)
+		{
+			if(i == j) continue;
+			if(myFeatureDataContainer.data[i].offset < 
+						myFeatureDataContainer.data[i].offset &&
+					myFeatureDataContainer.data[i].adjacencyOffset[0] < 
+						myFeatureDataContainer.data[i].offset)
+				myFeatureDataContainer.data[i].adjacencyOffset[0] = 
+					myFeatureDataContainer.data[i].offset ;
+			else if(myFeatureDataContainer.data[i].offset > 
+						myFeatureDataContainer.data[i].offset &&
+					myFeatureDataContainer.data[i].adjacencyOffset[1] > 
+						myFeatureDataContainer.data[i].offset)
+				myFeatureDataContainer.data[i].adjacencyOffset[1] = 
+					myFeatureDataContainer.data[i].offset ;
+		}
+	}
+	
+	
+	printf(" . ");fflush(NULL);//TODO TIPS
+	
+	//density setting ... 
+	for(int i=0;i<myFeatureDataContainer.top;i++)
+	{
+		for(int j=0;j<6;j++)
+		{
+			myFeatureDataContainer.data[i].density[j][0][0] = 
+			myFeatureDataContainer.data[i].density[j][0][1] = 
 			
-			//printf("%d %d\n",myFeatureDataContainer.data[i].positive,
-			//			myFeatureDataContainer.data[i].offset);
-			gen26ToEnd(fp,myFeatureDataContainer.data[i].offset);
-			fprintf(fp,"\n");
+			offsetStat(myFeatureDataContainer.data[i].offset,
+					&totalData,&beforeData,functionList[j]);
+			myFeatureDataContainer.data[i].density[j][1][0] = 
+			myFeatureDataContainer.data[i].density[j][1][1] = 
+			
+			myFeatureDataContainer.data[i].density[j][2][0] = 
+			myFeatureDataContainer.data[i].density[j][2][1] = 
 		}
 		
 	}
+	
+	
+	// sequence setting ... 
+	printf(" . ");fflush(NULL);//TODO TIPS
+	for(int i=0;i<myFeatureDataContainer.top;i++)
+	{
+		for(int k=0;k<6;k++) 
+			for(int l=0;l<3;l++)
+				myFeatureDataContainer.data[i].seq[k][l] = 1 ;
+		for(int j=0;j<myFeatureDataContainer.top;j++)
+		{
+			if(i==j) continue;
+			for(int k=0;k<6;k++)
+			{
+				for(int l=0;l<3;l++)
+				{
+					if(myFeatureDataContainer.data[i].density[k][l][0]/
+						myFeatureDataContainer.data[i].density[k][l][1]
+						< myFeatureDataContainer.data[j].density[k][l][0] /
+							 myFeatureDataContainer.data[j].density[k][l][1])
+						myFeatureDataContainer.data[i].seq[k][l] ++;
+				}
+				
+			}
+		}
+	}
+	
+	
+	printf(" . ");fflush(NULL);//TODO TIPS
+	// write sample
+	fprintf(fp,"#paper %d[%s]\n",id,fileName);
+	for(int i=0;i<myFeatureDataContainer.top;i++)
+	{
+		fprintf(fp,"%c1 ",myFeatureDataContainer.data[i].positive?'+':'-');
+		for(int j=0;j<FEATURE_SIZE;j++)
+		{
+			for(int k=0;k<5;k++)
+			{
+				fprintf(fp,"%d:%d ",j*5+k+1,
+					myFeatureDataContainer.data[i].t[j]==(k+1));
+			}
+		}
+		gen26ToEnd(fp,myFeatureDataContainer.data[i]);
+		fprintf(fp,"\n");
+	}
+		
 	
 	
 	printf("\t[done]\n");
@@ -543,4 +578,10 @@ int generateSample(const char* fileName,int isDir)
 
 
 int getFileNum(){return fileNum;}
+
+void setTrainFile(FILE *fp){ fpTrain = fp;}
+void setTestFile(FILE *fp){fpTest = fp;}
+FILE * getTrainFile(){return fpTrain;}
+FILE * getTestFile(){return fpTest;}
+
 

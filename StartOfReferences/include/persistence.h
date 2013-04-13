@@ -8,6 +8,10 @@ typedef struct sFeatureData
 	int t[5];
 	int positive;
 	int offset;
+	int adjacencyOffset[2]; //0: prev 1:next 
+	int fid[6][2];//feature info data fid[x][0] == beforeData fid[x][1] == totalData
+	int seq[6][3];//0:all 1:before 2:next
+	double density[6][3][2];
 } featureData;
 
 typedef struct
@@ -33,3 +37,4 @@ int getFeature(const char *fileName,featureDataContainer *data);
 char *queryEscape(const char *str);
 
 #endif // __PERSISTENCE_H__
+

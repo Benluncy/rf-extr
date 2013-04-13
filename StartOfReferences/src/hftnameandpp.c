@@ -41,6 +41,13 @@ int hasPPafterTheOffset(int offset,int limit)
 	//char *content = getPcontent();
 	char *content = getPcontent();
 	int pageOffset;
+	int tmpForSwap;
+	if(limit < 0)
+	{
+		tmpForSwap = offend;
+		offend = offset;
+		offset = tmpForSwap;
+	}
 	for(i=offset;i<offend;i++)
 	{
 		if(fitPattern('n',content[i]))
@@ -86,6 +93,13 @@ int hasPPafterTheOffset2(int offset,int limit)
 	//char *content = getPcontent();
 	char *content = getPcontent();
 	int pageOffset;
+	int tmpForSwap;
+	if(limit < 0)
+	{
+		tmpForSwap = offend;
+		offend = offset;
+		offset = tmpForSwap;
+	}
 	for(i=offset;i<offend;i++)
 	{
 		//if(fitPattern('n',content[i]))
@@ -130,6 +144,13 @@ int hasYearafterTheOffset(int offset,int limit)
 	offend = offend >= getPclen() ? getPclen()-1 : offend; 
 	//char *content = getPcontent();
 	char *content = getPcontent();
+	int tmpForSwap;
+	if(limit < 0)
+	{
+		tmpForSwap = offend;
+		offend = offset;
+		offset = tmpForSwap;
+	}
 	for(i=offset;i<offend-3;i++) // 19xx i_max = 1
 	{
 		//putchar(content[i]);
@@ -156,6 +177,13 @@ int hasNameafterTheOffset0(int offset,int limit)
 	offend = offend >= getPclen() ? getPclen()-1 : offend; 
 	//char *content = getPcontent();
 	char *content = getPcontent();
+	int tmpForSwap;
+	if(limit < 0)
+	{
+		tmpForSwap = offend;
+		offend = offset;
+		offset = tmpForSwap;
+	}
 	for(i=offset;i<offend;i++)
 	{
 		//putchar(content[i]);
@@ -197,6 +225,13 @@ int hasNameafterTheOffset1(int offset,int limit)
 	offend = offend >= getPclen() ? getPclen()-1 : offend; 
 	//char *content = getPcontent();
 	char *content = getPcontent();
+	int tmpForSwap;
+	if(limit < 0)
+	{
+		tmpForSwap = offend;
+		offend = offset;
+		offset = tmpForSwap;
+	}
 	for(i=offset;i<offend;i++)
 	{
 		//putchar(content[i]);
@@ -238,6 +273,13 @@ int hasNameafterTheOffset2(int offset,int limit)
 	offend = offend >= getPclen() ? getPclen()-1 : offend; 
 	//char *content = getPcontent();
 	char *content = getPcontent();
+	int tmpForSwap;
+	if(limit < 0)
+	{
+		tmpForSwap = offend;
+		offend = offset;
+		offset = tmpForSwap;
+	}
 	for(i=offset;i<offend;i++)
 	{
 		//putchar(content[i]);

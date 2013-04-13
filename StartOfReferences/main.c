@@ -18,8 +18,8 @@ int main(int argc,char *argv[])
 	//fp = fopen("sample.txt","w");
 	//char ch;
 	//int i;
-	fpTrain = fopen("train.txt","w"); // train.txt
-	fpTest = fopen("test.txt","w"); // test.txt     
+	setTrainFile(fopen("train.txt","w")); // train.txt
+	setTestFile(fopen("test.txt","w")); // test.txt     
 	srand((unsigned int)time(NULL));
 
 	initFilterData();
@@ -29,7 +29,7 @@ int main(int argc,char *argv[])
 	insertFilterData(1,"BIBLIOGRAPHIES",strlen("BIBLIOGRAPHIES"));
 	//insertFilterData(0,"AUTHOR BIOGRAPHY",strlen("AUTHOR BIOGRAPHY"));
 	insertFilterData(0,"AUTHOR BIOGRAPHIES",strlen("AUTHOR BIOGRAPHIES"));
-	if(fpTrain == NULL || fpTest == NULL)
+	if(getTrainFile() == NULL || getTestFile() == NULL)
 	{
 		fprintf(stderr,"error opening sample file\n");
 		return -1;
@@ -39,8 +39,8 @@ int main(int argc,char *argv[])
 	//printf("done(%d/%d)\n",bingo,fileNum);
 	printf("done \n total : %d\n",getFileNum());
 	cleanFilterData();
-	fclose(fpTrain);
-	fclose(fpTest);
+	fclose(getTrainFile());
+	fclose(getTestFile());
 	return 0;
 }
 
