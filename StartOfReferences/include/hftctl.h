@@ -42,8 +42,7 @@ int insertFilterData(int accept,const char *cmpStr,int cmpLen);
 //judge
 int isAccpted(const char *str,int threshold,int *fitLen);
 
-// is ascii or num
-int isData(char ch);
+
 
 //
 int stackData(StackInfo *myStack,AcceptStr acceptStr,const char *content,int len,int threshold);

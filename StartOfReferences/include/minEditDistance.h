@@ -30,6 +30,9 @@ int editDistanceP(const char *t,int tlen,const char * s,int slen);
 //inline
 int isSame(char a,char b);
 
+// is ascii or num
+int isData(char ch);
+
 /**
  * a is pattern
  * b is data

@@ -148,15 +148,6 @@ int isAccpted(const char *str,int threshold,int *fitLen)
 
 
 
-/**
- * Data File Handle
- */
-inline int isData(char ch)
-{
-	if(MIDDLEOF(ch,'A','Z') || MIDDLEOF(ch,'a','z') || MIDDLEOF(ch,'0','9')	)
-		return 1;
-	else return 0;
-}
 
 
 //int stackData(StackInfo *myStack,const char *content,int len,const char *toCompare,int cLen,int threshold)
@@ -432,7 +423,7 @@ int generateSample(const char* fileName,int isDir)
 	// search from db
 	//int hasInfoInDB = getFeature(fileName,&myFeatureDataContainer);
 	//if(hasInfoInDB)
-	
+	fprintf(fp,"#paper %d[%s]\n",id,fileName);
 	if(!getFeature(fileName,&myFeatureDataContainer))
 	{
 		int i;
@@ -449,8 +440,6 @@ int generateSample(const char* fileName,int isDir)
 		int maxoffset;
 	
 		int isPositive;
-	
-		fprintf(fp,"#paper %d (%s)\n",id,fileName);
 		
 		// DB data set
 		myFeatureData.qid = id;

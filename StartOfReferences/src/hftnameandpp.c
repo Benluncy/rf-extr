@@ -1,6 +1,7 @@
 #include "hftnameandpp.h"
 #include "minEditDistance.h"
 #include "virtualcontent.h"
+#include "hftctl.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -266,5 +267,16 @@ int hasNameafterTheOffset2(int offset,int limit)
 	}
 	return 0;
 }
+
+/**
+ * Data File Handle
+ */
+inline int isData(char ch)
+{
+	if(MIDDLEOF(ch,'A','Z') || MIDDLEOF(ch,'a','z') || MIDDLEOF(ch,'0','9')	)
+		return 1;
+	else return 0;
+}
+
 
 
