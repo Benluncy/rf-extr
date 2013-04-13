@@ -10,8 +10,8 @@ typedef struct sFeatureData
 	int offset;
 	int adjacencyOffset[2]; //0: prev 1:next 
 	int fid[6][2];//feature info data fid[x][0] == beforeData fid[x][1] == totalData
-	int seq[6][3];//0:all 1:before 2:next
-	double density[6][3][2];
+	int seq[6][2];//6:method 2:all local 
+	double density[6][2][2];//6:method 2: all local 2: prev next
 } featureData;
 
 typedef struct

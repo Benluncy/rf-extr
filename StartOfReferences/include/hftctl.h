@@ -31,7 +31,7 @@ typedef int (*AcceptStr)(const char *str,int threshold,int *fitLen); // for stac
 typedef int (*OffsetCallback)(int offset,int limit); // for offset callback
 
 int offsetStat(int nowOffset,int *totalData,int *beforeData,OffsetCallback offsetFunction);
-int offsetBetweenStat(int offsetEnd,int offsetStart,int *dataBetween,OffsetCallback offsetFunction)
+int offsetBetweenStat(int offsetEnd,int offsetStart,int *dataBetween,OffsetCallback offsetFunction);
 
 //feature
 int initFilterData(void);
