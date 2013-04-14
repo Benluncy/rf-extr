@@ -14,4 +14,6 @@ int hasYearafterTheOffset(int offset,int limit);
 int hasNameafterTheOffset0(int offset,int limit);
 int hasNameafterTheOffset1(int offset,int limit);
 int hasNameafterTheOffset2(int offset,int limit);
+
+//int hasSeqOfTheOffset(int offset,int limit);
 #endif //__HFTNAME_AND_PP_H__

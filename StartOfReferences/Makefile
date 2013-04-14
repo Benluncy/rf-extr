@@ -62,7 +62,7 @@ all			: ${PROGS} succ
 rebuild			: clean all
 
 run			: 
-	./main
+	time ./main && svm_learn -c 1 train.txt && svm_classify test.txt svm_model 
 
 main			: ${OBJS}
 	${CC} ${CFLAGS} $@.c -o $@ ${OBJS} ${LIBS}

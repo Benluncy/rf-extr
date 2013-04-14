@@ -12,6 +12,10 @@
 //for debug
 #include "debuginfo.h"
 
+#define quot(a,b) ((b==0)?0:a/b)
+#define NOTZERO(x) (x==0?1:x)
+#define LMB(x) ((x < 0) ? (0) :( x > getPclen() ? getPclen() : x ))
+
 _FilterData pFilterData;
 
 FILE *fpTrain; // train.txt
@@ -271,13 +275,13 @@ int rateWrite(FILE *fp,int start,double rate)
 	return 1;
 }
 
-int rankWrite(FILE *fp,int start,double rank)
+int rankWrite(FILE *fp,int start,double rank,int len)
 {
-	for(int i=0;i<4;i++)
+	for(int i=0;i<len-1;i++)
 	{
 		fprintf(fp,"%d:%d ",start+i,rank == i ? 1 : 0);
 	}
-	fprintf(fp,"%d:%d ",start+4,rank >=5 ? 1 : 0);
+	fprintf(fp,"%d:%d ",start+len-1,rank >= len ? 1 : 0);
 	return 1;
 }
 
@@ -327,7 +331,7 @@ int gen26ToEnd(FILE *fp,featureData fd)
 	int start = 26;
 	int lmt = -200;
 	//fp = stdout;
-	for(;lmt<=200;lmt+=100)
+	for(;lmt<=200;lmt+=150)
 	{
 		fprintf(fp,"%d:%d ",start++,(hasPPafterTheOffset(offset,lmt)?1:0));
 		fprintf(fp,"%d:%d ",start++,(hasPPafterTheOffset2(offset,lmt)?1:0));
@@ -339,29 +343,56 @@ int gen26ToEnd(FILE *fp,featureData fd)
 	
 	//32
 	//fprintf(fp,"32:%f ",(double)offset/getPclen()); // percent of the location
-	rateWrite(fp,start++,(double)offset/getPclen());
-	
+	fprintf(fp,"%d:%f ",start++,(double)offset/getPclen());
+	fprintf(fp,"%d:%f ",start++,(double)(getPclen()-offset)/offset);
+	rateWrite(fp,start,(double)offset/getPclen());
+	start+=5;
+
 	//==========================================================================================
 	//33,34
 	//int totalPP = 0;
 	//int ppnumBeforeOffset = 0;
 	//int nowOffset = 0;
-	
 	for(int i=0;i<6;i++)
 	{
-		rateWrite(fp,start,fd.fid[i][1] == 0 ? -1 : 
-					(double)fd.fid[i][0]/fd.fid[i][1]);
+		rateWrite(fp,start,(fd.offset == getPclen()) ? -1 :((double)fd.fid[i][0]/fd.offset)/
+					((fd.fid[i][1]-fd.fid[i][0])/(getPclen()-fd.offset)));
 		start+=5; //TODO ADD 
-		fprintf(fp,"%d:%f ",start++,fd.density[i][0][0]);
-		fprintf(fp,"%d:%f ",start++,fd.density[i][0][1]);
-		fprintf(fp,"%d:%f ",start++,fd.density[i][1][0]);
-		fprintf(fp,"%d:%f ",start++,fd.density[i][1][1]);
-		rankWrite(fp,start,fd.seq[i][0]);
-		start+=5;
-		rankWrite(fp,start,fd.seq[i][1]);
-		start+=5;
+
+		//fprintf(fp,"%d:%f ",start++,fd.density[i][0][0]);
+		//fprintf(fp,"%d:%f ",start++,fd.density[i][0][1]);
+		//fprintf(fp,"%d:%f ",start++,fd.density[i][1][0]);
+		//fprintf(fp,"%d:%f ",start++,fd.density[i][1][1]);
+		
+		fprintf(fp,"%d:%d ",start++,fd.density[i][0][1] < fd.density[i][0][0]);
+		fprintf(fp,"%d:%d ",start++,fd.density[i][1][1] < fd.density[i][1][0]);
+		
+		fprintf(fp,"%d:%f ",start++,quot(fd.density[i][0][1],fd.density[i][0][0]));
+		fprintf(fp,"%d:%f ",start++,quot(fd.density[i][1][1],fd.density[i][0][0]));
+		
+		rankWrite(fp,start,fd.seq[i][0],10);
+		start+=10;
+
+		rankWrite(fp,start,fd.seq[i][1],10);
+		start+=10;
+
+			/*
+		int prevNum;
+		int nextNum;
+		int lmt;
+		for(lmt = 10;lmt<1000;)
+		{
+			offsetBetweenStat(fd.offset-lmt,fd.offset,&prevNum,functionList[i]);
+			offsetBetweenStat(fd.offset+lmt,fd.offset,&nextNum,functionList[i]);
+			fprintf(fp,"%d:%f ",start++,(((double)prevNum/NOTZERO(fd.offset - LMB(fd.offset-lmt)))/((double)nextNum/NOTZERO(LMB(fd.offset+lmt)-fd.offset))));
+			//rateWrite(fp,start,(((double)prevNum/NOTZERO(fd.offset - LMB(fd.offset-lmt)))/((double)nextNum/NOTZERO(LMB(fd.offset+lmt)-fd.offset))));
+			//start+=5;
+			lmt *= 10;
+			
+			
+		}*/
+		
 	}
-	
 	return 1;
 }
 
@@ -379,6 +410,7 @@ int generateSample(const char* fileName,int isDir)
                 return 1;
         }
 	if(rand()%2) //train is 50% and test is 50%
+	//if(1)
 	{
 		fp = fpTrain;
 		trainOrTest = 1;
@@ -390,7 +422,7 @@ int generateSample(const char* fileName,int isDir)
 	
 	
 	
-        printf("[%d] %s:%s . . . ",id,(trainOrTest?"train":"test"),fileName);
+        printf("[%d] %s:%s",id,(trainOrTest?"train":"test"),fileName);
         fflush(NULL);
         
         // parse tag or etc ,move data to RAM
@@ -544,7 +576,7 @@ int generateSample(const char* fileName,int isDir)
 		
 	}
 	
-	#define quot(a,b) ((b==0)?0:a/b)
+	
 	// sequence setting ... 
 	printf(". ");fflush(NULL);//TODO TIPS
 	for(int i=0;i<mfdc.top;i++)
@@ -573,9 +605,14 @@ int generateSample(const char* fileName,int isDir)
 	
 	printf(". ");fflush(NULL);//TODO TIPS
 	// write sample
-	fprintf(fp,"#paper %d[%s]\n",id,fileName);
+	fprintf(fp,"#paper %d[%s] ",id,fileName);
+	for(int i=0;i<mfdc.top;i++)
+		fprintf(fp,"[%d:%d]",i,mfdc.data[i].offset);
+	fprintf(fp,"\n");
+	
 	for(int i=0;i<mfdc.top;i++)
 	{
+		//fprintf(fp,"%c1 qid:%d ",mfdc.data[i].positive?'+':'-',i);
 		fprintf(fp,"%c1 ",mfdc.data[i].positive?'+':'-');
 		for(int j=0;j<FEATURE_SIZE;j++)
 		{

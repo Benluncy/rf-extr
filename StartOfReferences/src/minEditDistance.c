@@ -72,6 +72,10 @@
 #define MAX2(x,y) ((x>y)?(x):(y))
 #endif //
 
+#ifndef MIDDLEOF
+#define MIDDLEOF(a,b,c)  (a >= b && a <= c) // a is at the range of  [b,c]
+#endif 
+
 
 inline int isSame(char a,char b) 
 {
@@ -240,6 +244,15 @@ inline int editDistanceT(const char *t,int tlen,const char * s,int slen,int thre
 	else return d[tlen][slen];
 }
 
+/**
+ * Data File Handle
+ */
+inline int isData(char ch)
+{
+	if(MIDDLEOF(ch,'A','Z') || MIDDLEOF(ch,'a','z') || MIDDLEOF(ch,'0','9')	)
+		return 1;
+	else return 0;
+}
 
 /*
 int main(int argc ,char *argv[])
