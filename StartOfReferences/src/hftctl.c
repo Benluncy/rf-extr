@@ -4,7 +4,7 @@
 #include <time.h>
 #include "minEditDistance.h"
 #include "virtualcontent.h"
-#include "hftnameandpp.h"
+#include "hftnpse.h"
 #include "persistence.h"
 #include "tokens.h"
 #include "hftctl.h"

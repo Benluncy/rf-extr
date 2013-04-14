@@ -57,6 +57,17 @@ all			: ${PROGS} succ
 
 rebuild			: clean all
 
+fullcheck		:
+	make rebuild &&make test && make show
+
+show			:
+	gedit diff.log
+
+train			:
+	./checkdiff train.txt
+
+test			:
+	./checkdiff test.txt
 
 checkdiff		: ${OBJS}
 	${CC} ${CFLAGS} $@.c -o $@ ${OBJS} ${LIBS}
