@@ -106,7 +106,6 @@ int isAccpted(const char *str,int threshold,int *fitLen)
 	int minLen;
 	int maxLen;
 	int ed;
-	//int succflag = 0;
 	while(p != NULL)
 	{
 		minLen = p->cmpLen - threshold;
@@ -116,19 +115,6 @@ int isAccpted(const char *str,int threshold,int *fitLen)
 		{
 			if((ed = editDistanceS(p->cmpStr,p->cmpLen,str,i)) <= threshold)
 			{
-			//debug info
-			/*
-			succflag = 1;
-			printf("{\n[%s][",p->cmpStr);
-			int z;
-			for(z=0;z<i;z++)
-			{
-				putchar(str[z]);
-			}
-			printf("]\n[%d],[%d]\n",p->cmpLen,i);
-			printf("ed: %d\n}\n",editDistanceS(p->cmpStr,p->cmpLen,str,i));
-			*/
-			// end of debug info
 				if(tmpMin > ed)
 				{
 					tmpMin = ed;
@@ -141,52 +127,33 @@ int isAccpted(const char *str,int threshold,int *fitLen)
 		{
 			accMinOffset = tmpMinOffset;
 			accMin = tmpMin;
-			//printf("acc -- ");
 		}else if(p->acc == 0 && rejMin > tmpMin) 
 		{
 			rejMinOffset = tmpMinOffset;
 			rejMin = tmpMin;
 		}
-		//rejMinOffset = rejMin < tmpMin ? rejMinOffset : tmpMinOffset;
 		p = p-> next;
 	}
 	*fitLen = accMin <= rejMin ? 
 			(accMin <= threshold ? accMinOffset : 0 ): 
 			(rejMin <= threshold ? rejMinOffset : 0 );
-	/*
-	if(succflag == 1)
-	{
-		printf("\naccMin:%d rejMin:%d threshold:%d\n",accMin,rejMin,threshold);
-		getchar();
-	}
-	*/
 	return (accMin <= rejMin) && (accMin <= threshold );
 }
 
 int stackData(StackInfo *myStack,AcceptStr acceptStr,const char *content,int len,int threshold)
 {
 	int i;
-	//int k;
-	//int minLen = cLen-threshold;
-	//int maxLen = cLen+threshold+1;
 	int fitLen;
 	myStack->top = 0;
 	int unlock = 1;
-	//int min;
-	//int minid;
-	//int ed;
 	for(i=0;i<len;i++)
 	{
-		//if(( MIDDLEOF(content[i],'A','Z') || MIDDLEOF(content[i],'a','z')
-		//	|| MIDDLEOF(content[i],'0','9') ))
 		if(isData(content[i]))
 		{
 			if(unlock)
 			{
-				//(const char *str,int threshold,int *fitLen)
 				if(acceptStr(content+i,threshold,&fitLen))
 				{
-					//printf("accept ... ");
 					i += fitLen;
 					if(myStack->top < MAX_STACK)
 					{
@@ -315,11 +282,6 @@ int gen26ToEnd(FILE *fp,featureData fd)
 {
 	//26 ~ 31
 	int offset = fd.offset;
-
-
-	//printf("prevOffset:%d nextOffset: %d",prevOffset,nextOffset);
-	//getchar();
-	
 	int start = 26;
 	int lmt = -200;
 	//fp = stdout;
@@ -334,27 +296,16 @@ int gen26ToEnd(FILE *fp,featureData fd)
 	}
 	
 	//32
-	//fprintf(fp,"32:%f ",(double)offset/getPclen()); // percent of the location
 	fprintf(fp,"%d:%f ",start++,(double)offset/getPclen());
 	fprintf(fp,"%d:%f ",start++,(double)(getPclen()-offset)/offset);
 	rateWrite(fp,start,(double)offset/getPclen());
 	start+=5;
-
-	//==========================================================================================
-	//33,34
-	//int totalPP = 0;
-	//int ppnumBeforeOffset = 0;
-	//int nowOffset = 0;
+	
 	for(int i=0;i<CallackLen;i++)
 	{
 		rateWrite(fp,start,(fd.offset == getPclen()) ? -1 :((double)fd.fid[i][0]/fd.offset)/
 					((fd.fid[i][1]-fd.fid[i][0])/(getPclen()-fd.offset)));
 		start+=5; //TODO ADD 
-
-		//fprintf(fp,"%d:%f ",start++,fd.density[i][0][0]);
-		//fprintf(fp,"%d:%f ",start++,fd.density[i][0][1]);
-		//fprintf(fp,"%d:%f ",start++,fd.density[i][1][0]);
-		//fprintf(fp,"%d:%f ",start++,fd.density[i][1][1]);
 		
 		fprintf(fp,"%d:%d ",start++,fd.density[i][0][1] < fd.density[i][0][0]);
 		fprintf(fp,"%d:%d ",start++,fd.density[i][1][1] < fd.density[i][1][0]);
@@ -368,28 +319,6 @@ int gen26ToEnd(FILE *fp,featureData fd)
 		rankWrite(fp,start,fd.seq[i][1],10);
 		start+=10;
 
-		
-		/*	
-		int prevNum;
-		int nextNum;
-		int lmt = 300;
-		offsetBetweenStat(fd.offset-lmt,fd.offset,&prevNum,functionList[i]);
-		offsetBetweenStat(fd.offset+lmt,fd.offset,&nextNum,functionList[i]);
-		fprintf(fp,"%d:%f ",start++,(((double)prevNum/NOTZERO(fd.offset - LMB(fd.offset-lmt)))/((double)nextNum/NOTZERO(LMB(fd.offset+lmt)-fd.offset))));
-		*/
-		/*	
-		for(lmt = 100;lmt<800;)
-		{
-			offsetBetweenStat(fd.offset-lmt,fd.offset,&prevNum,functionList[i]);
-			offsetBetweenStat(fd.offset+lmt,fd.offset,&nextNum,functionList[i]);
-			fprintf(fp,"%d:%f ",start++,(((double)prevNum/NOTZERO(fd.offset - LMB(fd.offset-lmt)))/((double)nextNum/NOTZERO(LMB(fd.offset+lmt)-fd.offset))));
-			//rateWrite(fp,start,(((double)prevNum/NOTZERO(fd.offset - LMB(fd.offset-lmt)))/((double)nextNum/NOTZERO(LMB(fd.offset+lmt)-fd.offset))));
-			//start+=5;
-			lmt *= 2;
-			
-			
-		}*/
-		
 	}
 	return 1;
 }
@@ -604,14 +533,6 @@ int generateSample(const char* fileName,int isDir)
 			mfdc.data[i].seq[k][2] = 1 ;
 		}
 		
-		//int prevNum;
-		//int nextNum;
-		//int lmt = 300;
-		//offsetBetweenStat(fd.offset-lmt,fd.offset,&prevNum,functionList[i]);
-		//offsetBetweenStat(fd.offset+lmt,fd.offset,&nextNum,functionList[i]);
-		//fprintf(fp,"%d:%f ",start++,(((double)prevNum/NOTZERO(fd.offset - LMB(fd.offset-lmt)))/((double)nextNum/NOTZERO(LMB(fd.offset+lmt)-fd.offset))));
-		
-						
 		for(int j=0;j<mfdc.top;j++)
 		{
 			if(i==j) continue;

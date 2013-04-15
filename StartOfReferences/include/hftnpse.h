@@ -2,6 +2,12 @@
 #define __HFTNPSE_H__
 //head feature name, pages,sequences,and etc.
 
+typedef struct
+{
+	int prev[10];
+	int next[10];
+}CloseKWD;
+
 
 //for debug
 void setContent(const char * content);
@@ -21,4 +27,6 @@ int hasNameafterTheOffset2(int offset,int limit);
 
 int hasSeqOfTheOffset(int offset,int limit);
 int hasSeqOfTheOffset2(int offset,int limit);
+
+int getCloseKWD(CloseKWD *closeKWD,int (*OffsetCallback)(int offset,int limit));
 #endif //__HFTNPSE_H__

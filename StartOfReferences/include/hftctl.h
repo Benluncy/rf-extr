@@ -6,8 +6,12 @@
 #define FEATURE_SIZE 5
 #define MAX_STACK 2000
 
+#ifndef MIDDLEOF
 #define MIDDLEOF(a,b,c)  (a >= b && a <= c) // a is at the range of  [b,c]
+#endif
+#ifndef VALUESDIFF
 #define VALUESDIFF(a,b) (a > b? (a - b) :( b - a)) //calculate difference distance of a and b
+#endif
 
 typedef struct offsetStack
 {
@@ -24,10 +28,9 @@ typedef struct filterData
 	struct filterData * next;
 	
 } FilterData;
+
 typedef FilterData * _FilterData;
-
 typedef int (*AcceptStr)(const char *str,int threshold,int *fitLen); // for stack data , callback
-
 typedef int (*OffsetCallback)(int offset,int limit); // for offset callback
 
 int offsetStat(int nowOffset,int *totalData,int *beforeData,OffsetCallback offsetFunction);
