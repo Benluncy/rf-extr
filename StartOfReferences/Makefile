@@ -43,7 +43,7 @@ MV			:= mv
 SAY			:= @echo
 
 ########################COMPILE SETTINGS################################
-VPATH			:= include/:src/:../include/	
+VPATH			:= .:include/:src/:lib/:obj/
 	export	VPATH
 LIBS			:= -L lib/ -ldl -lpthread  -lm 
 INCFLAG			:= -I include/
@@ -62,7 +62,9 @@ all			: ${PROGS} succ
 rebuild			: clean all
 
 run			: 
-	time ./main && svm_learn -c 1 train.txt && svm_classify test.txt svm_model 
+	time ./main
+	svm_learn -c 0.1 train.txt
+	svm_classify test.txt svm_model 
 
 main			: ${OBJS}
 	${CC} ${CFLAGS} $@.c -o $@ ${OBJS} ${LIBS}

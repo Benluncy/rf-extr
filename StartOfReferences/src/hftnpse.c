@@ -4,15 +4,23 @@
 #include "hftctl.h"
 #include <stdio.h>
 #include <string.h>
+inline void defineStartAndEnd(int *offset,int *offend,int limit)
+{
+	int tmp;
+	*offend = *offset + limit;
+	if(*offset > *offend)
+	{
+		tmp = *offset;
+		*offset = *offend;
+		*offend = tmp;
+	}
+	if(*offset < 0) *offset = 0;
+	if(*offend > getPclen()) *offend = getPclen();
+	
+}
 
 inline int isPageNumber(const char *content,int limit)
 {
-	//int editDistanceP(const char *t,int tlen,const char * s,int slen);
-	//int i;
-	//printf("[");
-	//for(i=0;i<10;i++)
-	//	putchar(content[i]);
-	//printf("]");
 	if(limit < 3 ) return 0;
 	if(editDistanceP("nen",3,content,3)<=0)
 		return 3;
@@ -27,84 +35,34 @@ inline int isPageNumber(const char *content,int limit)
 		return 9;
 	return 0;
 }
-/**
- * int offset : offset of pcontent
- * int limit : 
- *
- */
+
 int hasPPafterTheOffset(int offset,int limit)
 {
-	int i;
 	//int j;
-	int offend = offset + limit;
-	offend = offend >= getPclen() ? getPclen()-1 : offend; 
-	//char *content = getPcontent();
+	int i;	
+	int offend;
 	char *content = getPcontent();
+	defineStartAndEnd(&offset,&offend,limit);
 	int pageOffset;
-	int tmpForSwap;
-	if(limit < 0)
-	{
-		tmpForSwap = offend;
-		offend = offset;
-		offset = tmpForSwap;
-	}
 	for(i=offset;i<offend;i++)
 	{
 		if(fitPattern('n',content[i]))
 			if((pageOffset = isPageNumber(content+i,offend-i)) != 0)
 				return i+pageOffset;
-		//putchar(content[i]);
-		//fflush(NULL);
-		/*
-		if(content[i]=='p' || content[i] == 'P')
-		{
-			if(content[i+1] == 'p'  || content[i] == 'P')
-			{
-				for(j=3;!fitPattern('n',content[i+j]);j++)
-				{
-					if(j > 4 && 
-						(fitPattern('a',content[i+j]) ||
-							 fitPattern('e',content[i+j])))
-						continue;
-				}
-				if(isPageNumber(content+i+j)) return 1;
-			}else if(editDistanceS("page",4,content+i,4) <= 1) // threshold == 1
-			{
-				for(j=4;!fitPattern('n',content[i+j]);j++)
-				{
-					if(j > 6 && 
-						(fitPattern('a',content[i+j]) ||
-							 fitPattern('e',content[i+j])))
-						continue;
-				}	
-				if(isPageNumber(content+i+j)) return 1;
-			}
-		}*/
 	}
 	return 0;
 }
 
 int hasPPafterTheOffset2(int offset,int limit)
 {
-	int i;
 	int j;
-	int offend = offset + limit;
-	offend = offend >= getPclen() ? getPclen()-1 : offend; 
-	//char *content = getPcontent();
+	int i;	
+	int offend;
 	char *content = getPcontent();
+	defineStartAndEnd(&offset,&offend,limit);
 	int pageOffset;
-	int tmpForSwap;
-	if(limit < 0)
-	{
-		tmpForSwap = offend;
-		offend = offset;
-		offset = tmpForSwap;
-	}
 	for(i=offset;i<offend;i++)
 	{
-		//if(fitPattern('n',content[i]))
-		//	if((pageOffset = isPageNumber(content+i)) != 0)
-		//		return i+pageOffset;
 		if(content[i]=='p' || content[i] == 'P')
 		{
 			if(content[i+1] == 'p'  || content[i] == 'P')
@@ -139,22 +97,13 @@ int hasPPafterTheOffset2(int offset,int limit)
 
 int hasYearafterTheOffset(int offset,int limit)
 {
-	int i;
-	int offend = offset + limit;
-	offend = offend >= getPclen() ? getPclen()-1 : offend; 
-	//char *content = getPcontent();
+	//int j;
+	int i;	
+	int offend;
 	char *content = getPcontent();
-	int tmpForSwap;
-	if(limit < 0)
-	{
-		tmpForSwap = offend;
-		offend = offset;
-		offset = tmpForSwap;
-	}
+	defineStartAndEnd(&offset,&offend,limit);
 	for(i=offset;i<offend-3;i++) // 19xx i_max = 1
 	{
-		//putchar(content[i]);
-		//fflush(NULL);
 		if((content[i]=='1' && content[i+1]=='9')||
 			(content[i]=='2' && content[i+1]=='0'))
 		{
@@ -170,24 +119,14 @@ int hasYearafterTheOffset(int offset,int limit)
 // XXXX, X.
 int hasNameafterTheOffset0(int offset,int limit)
 {
-	int i;
 	//int j;
-	int offend = offset + limit;
-	int tag;
-	offend = offend >= getPclen() ? getPclen()-1 : offend; 
-	//char *content = getPcontent();
+	int i;	
+	int offend;
 	char *content = getPcontent();
-	int tmpForSwap;
-	if(limit < 0)
-	{
-		tmpForSwap = offend;
-		offend = offset;
-		offset = tmpForSwap;
-	}
+	defineStartAndEnd(&offset,&offend,limit);
+	int tag = 0;
 	for(i=offset;i<offend;i++)
 	{
-		//putchar(content[i]);
-		//fflush(NULL);
 		if(i-tag>1) i--;
 		tag = i;
 		while(fitPattern('a',content[i]))
@@ -204,9 +143,6 @@ int hasNameafterTheOffset0(int offset,int limit)
 			}
 			if(fitPattern('a',content[i])&&('.' == content[i+1]))
 			{
-	//			printf("0『");
-	//			for(j=tag;j<=i+1;j++) putchar(content[j]);
-	//			printf("』");
 				return i+2;
 			}
 		}
@@ -218,24 +154,14 @@ int hasNameafterTheOffset0(int offset,int limit)
 // XXXX, X.
 int hasNameafterTheOffset1(int offset,int limit)
 {
-	int i;
 	//int j;
-	int offend = offset + limit;
-	int tag;
-	offend = offend >= getPclen() ? getPclen()-1 : offend; 
-	//char *content = getPcontent();
+	int i;	
+	int offend;
 	char *content = getPcontent();
-	int tmpForSwap;
-	if(limit < 0)
-	{
-		tmpForSwap = offend;
-		offend = offset;
-		offset = tmpForSwap;
-	}
+	defineStartAndEnd(&offset,&offend,limit);
+	int tag = 0;
 	for(i=offset;i<offend;i++)
 	{
-		//putchar(content[i]);
-		//fflush(NULL);
 		if(i-tag>1) i--;
 		tag = i;
 		while(fitPattern('a',content[i]))
@@ -252,9 +178,6 @@ int hasNameafterTheOffset1(int offset,int limit)
 			}
 			if(fitPattern('a',content[i])&&fitPattern('e',content[i+1]))
 			{
-	//			printf("1『");
-	//			for(j=tag;j<=i+1;j++) putchar(content[j]);
-	//			printf("』");
 				return i+2;
 			}
 		}
@@ -266,20 +189,12 @@ int hasNameafterTheOffset1(int offset,int limit)
 // XXXX, X.
 int hasNameafterTheOffset2(int offset,int limit)
 {
-	int i;
 	//int j;
-	int offend = offset + limit;
-	int tag;
-	offend = offend >= getPclen() ? getPclen()-1 : offend; 
-	//char *content = getPcontent();
+	int i;	
+	int offend;
 	char *content = getPcontent();
-	int tmpForSwap;
-	if(limit < 0)
-	{
-		tmpForSwap = offend;
-		offend = offset;
-		offset = tmpForSwap;
-	}
+	defineStartAndEnd(&offset,&offend,limit);
+	int tag = 0;
 	for(i=offset;i<offend;i++)
 	{
 		//putchar(content[i]);
@@ -310,6 +225,83 @@ int hasNameafterTheOffset2(int offset,int limit)
 	return 0;
 }
 
+int hasSeqOfTheOffset(int offset,int limit)
+{
+	int offend;
+	char *content = getPcontent();
+	defineStartAndEnd(&offset,&offend,limit);
+	for(int i=offset;i<offend;i++)
+	{
+		if(content[i]=='['||content[i]=='|')
+		{
+			for(int j=i+1;j<offend && j < i+4;j++)
+			{
+				if(content[j] == ']' || content[j] == '|')
+				{
+					if((j-i)==1) break;
+					
+					//printf("${");
+					//for(int k=i;k<=j;k++) putchar(content[k]);
+					//printf("}");
+					return j;
+				}
+				if((content[j]<'0' || content[j] >'9') 
+					&& content[j] != 'i' && content[j] != 'l')
+					break;
+			}
+		}
+	}
+	return 0;
+}
 
 
+int hasSeqOfTheOffset2(int offset,int limit)
+{
+	int offend;
+	char *content = getPcontent();
+	defineStartAndEnd(&offset,&offend,limit);
+	int fail = 0;
+	for(int i=offset;i<offend;i++)
+	{
+		if(content[i]=='['||content[i]=='|')
+		{
+			for(int j=i+1;j<offend && j < i+6;j++)
+			{
+				switch(content[j])
+				{
+					case ']':
+					case '|':
+					case '!':
+						//printf("${");
+						//for(int k=i;k<=j;k++) putchar(content[k]);
+						//printf("}");
+						if((j-i)==1)
+						{
+							fail = 1;
+							break;
+						}
+						return j;
+					case '(':
+					case ')':
+					case ',':
+					case '~':
+					case '@':
+					case '#':
+					case '%':
+					case '$':
+					case '`':
+					case '*':
+						fail = 1;
+						break;
+				}
+				if(fail == 1)
+				{
+					fail = 0;
+					break;
+				}
+			}
+		}
+	}
+	return 0;
+}
 

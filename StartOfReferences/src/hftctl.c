@@ -24,9 +24,10 @@ FILE *fpTest; // test.txt
 int fileNum = 0;
 featureDataContainer mfdc; // myFeatureDataContainer
 featureData mfd; // myFeatureData
-OffsetCallback functionList[6]={hasPPafterTheOffset,hasPPafterTheOffset2,
+OffsetCallback functionList[CallackLen]={hasPPafterTheOffset,hasPPafterTheOffset2,
 			hasYearafterTheOffset,hasNameafterTheOffset0,
-			hasNameafterTheOffset1,hasNameafterTheOffset2,};
+			hasNameafterTheOffset1,hasNameafterTheOffset2,
+			hasSeqOfTheOffset,hasSeqOfTheOffset2};
 
 
 
@@ -162,16 +163,7 @@ int isAccpted(const char *str,int threshold,int *fitLen)
 	return (accMin <= rejMin) && (accMin <= threshold );
 }
 
-
-
-
-
-//int stackData(StackInfo *myStack,const char *content,int len,const char *toCompare,int cLen,int threshold)
-int stackData(StackInfo *myStack,
-		AcceptStr acceptStr,
-		const char *content,
-		int len,
-		int threshold)
+int stackData(StackInfo *myStack,AcceptStr acceptStr,const char *content,int len,int threshold)
 {
 	int i;
 	//int k;
@@ -226,13 +218,8 @@ unsigned int getReferenceHeadOffset()
 	{
 		myTags = *(getTags()+i);
 		while((nowTag=tokenPop(&myTags)) > 0)
-		{
 			if(nowTag == 1)
-			{
-				return i;
-			}
-		}
-		
+				return i;		
 	}
 	return 0;
 }
@@ -275,11 +262,12 @@ int rateWrite(FILE *fp,int start,double rate)
 	return 1;
 }
 
-int rankWrite(FILE *fp,int start,double rank,int len)
+// rank == 1,2,3,4,5+
+int rankWrite(FILE *fp,int start,int rank,int len)
 {
 	for(int i=0;i<len-1;i++)
 	{
-		fprintf(fp,"%d:%d ",start+i,rank == i ? 1 : 0);
+		fprintf(fp,"%d:%d ",start+i,rank == i+1 ? 1 : 0);
 	}
 	fprintf(fp,"%d:%d ",start+len-1,rank >= len ? 1 : 0);
 	return 1;
@@ -291,11 +279,13 @@ inline int offsetStat(int offset,int *totalData,int *beforeData,
 	*totalData = 0;
 	*beforeData = 0;
 	int nowOffset = 0;
-	//while((nowOffset=offsetFunction(nowOffset,getPclen())) != 0) (*totalData)++;
+	int tmp = 0;
 	while((nowOffset=offsetFunction(nowOffset,getPclen())) != 0)
 	{
 		(*totalData)++;
-		if(nowOffset < offset) (*beforeData)++;
+		if(nowOffset < offset)
+		if(nowOffset-tmp > 10) (*beforeData)++;
+		tmp = nowOffset;
 	}
 	return 1;
 	
@@ -305,6 +295,7 @@ inline int offsetBetweenStat(int offsetEnd,int offsetStart,int *dataBetween,
 					OffsetCallback offsetFunction)
 {
 	*dataBetween = 0;
+	int tmp = 0;
 	if(offsetEnd < offsetStart)
 	{
 		int tmp = offsetEnd;
@@ -314,7 +305,8 @@ inline int offsetBetweenStat(int offsetEnd,int offsetStart,int *dataBetween,
 	while((offsetStart=offsetFunction(offsetStart,getPclen())) != 0)
 	{
 		if(offsetStart >= offsetEnd) break;
-		(*dataBetween) ++ ;
+		if(offsetStart-tmp > 10) (*dataBetween) ++ ;
+		tmp = offsetStart;
 	}
 	return 1;
 }
@@ -353,7 +345,7 @@ int gen26ToEnd(FILE *fp,featureData fd)
 	//int totalPP = 0;
 	//int ppnumBeforeOffset = 0;
 	//int nowOffset = 0;
-	for(int i=0;i<6;i++)
+	for(int i=0;i<CallackLen;i++)
 	{
 		rateWrite(fp,start,(fd.offset == getPclen()) ? -1 :((double)fd.fid[i][0]/fd.offset)/
 					((fd.fid[i][1]-fd.fid[i][0])/(getPclen()-fd.offset)));
@@ -376,18 +368,24 @@ int gen26ToEnd(FILE *fp,featureData fd)
 		rankWrite(fp,start,fd.seq[i][1],10);
 		start+=10;
 
-			/*
+		
+		/*	
 		int prevNum;
 		int nextNum;
-		int lmt;
-		for(lmt = 10;lmt<1000;)
+		int lmt = 300;
+		offsetBetweenStat(fd.offset-lmt,fd.offset,&prevNum,functionList[i]);
+		offsetBetweenStat(fd.offset+lmt,fd.offset,&nextNum,functionList[i]);
+		fprintf(fp,"%d:%f ",start++,(((double)prevNum/NOTZERO(fd.offset - LMB(fd.offset-lmt)))/((double)nextNum/NOTZERO(LMB(fd.offset+lmt)-fd.offset))));
+		*/
+		/*	
+		for(lmt = 100;lmt<800;)
 		{
 			offsetBetweenStat(fd.offset-lmt,fd.offset,&prevNum,functionList[i]);
 			offsetBetweenStat(fd.offset+lmt,fd.offset,&nextNum,functionList[i]);
 			fprintf(fp,"%d:%f ",start++,(((double)prevNum/NOTZERO(fd.offset - LMB(fd.offset-lmt)))/((double)nextNum/NOTZERO(LMB(fd.offset+lmt)-fd.offset))));
 			//rateWrite(fp,start,(((double)prevNum/NOTZERO(fd.offset - LMB(fd.offset-lmt)))/((double)nextNum/NOTZERO(LMB(fd.offset+lmt)-fd.offset))));
 			//start+=5;
-			lmt *= 10;
+			lmt *= 2;
 			
 			
 		}*/
@@ -403,14 +401,12 @@ int generateSample(const char* fileName,int isDir)
 {
 	FILE *fp;
 	int trainOrTest;
-	//if(strcmp("data/oraby/A model for estimating trace-sample miss ratios.txt",fileName)!=0) return 1;
         if(isDir)
         {
                 printf("ignore dir:%s\n",fileName);
                 return 1;
         }
 	if(rand()%2) //train is 50% and test is 50%
-	//if(1)
 	{
 		fp = fpTrain;
 		trainOrTest = 1;
@@ -456,6 +452,8 @@ int generateSample(const char* fileName,int isDir)
 		mfd.qid = id;
 	
 		refOffset = getReferenceHeadOffset();
+		
+		//init count 
 		for(i=0;i<FEATURE_SIZE;i++) count[i]=1;
 		
 		//data
@@ -478,17 +476,18 @@ int generateSample(const char* fileName,int isDir)
 				{
 					info[i].top--;
 					//status[i] = count[i];
-					count[i]++;
-					
 					//DB data set
-					mfd.t[i] = count[i];
+					mfd.t[i] = count[i];//1,2,3,...
+					
+					count[i]++;//++
 				}
 			
 			}
+
 			if(!insertFeature(fileName,mfd))
 			{
 				fprintf(stderr,"[DB] insertFeature()(1): error --%d",__LINE__);
-				getchar();
+				//getchar();
 			}
 		
 			mfdc.data[mfdc.top] = mfd;
@@ -502,7 +501,7 @@ int generateSample(const char* fileName,int isDir)
 			fprintf(stderr,"[DB] insertFeatureInfo()(2): error %d",__LINE__);
 			getchar();
 		}
-	}
+	} // end of GET DATA FROM DB
 	
 	printf(". ");fflush(NULL);//TODO TIPS
 	
@@ -512,7 +511,7 @@ int generateSample(const char* fileName,int isDir)
 	for(int i=0;i<mfdc.top;i++)
 	{
 		
-		for(int j=0;j<6;j++)
+		for(int j=0;j<CallackLen;j++)
 		{
 			offsetStat(mfdc.data[i].offset,
 					&totalData,&beforeData,functionList[j]);
@@ -552,25 +551,42 @@ int generateSample(const char* fileName,int isDir)
 	printf(". ");fflush(NULL);//TODO TIPS
 	
 	int diff;
+	int lmt = 300;
 	//density setting ... 
 	for(int i=0;i<mfdc.top;i++)
 	{
-		for(int j=0;j<6;j++)
+		for(int j=0;j<CallackLen;j++)
 		{
 			
-			mfdc.data[i].density[j][0][0] = (mfdc.data[i].offset == 0 )? 0 : (double)mfdc.data[i].fid[j][0]/mfdc.data[i].offset;
-			mfdc.data[i].density[j][0][1] = ((getPclen()-mfdc.data[i].fid[j][0]) == 0)? 0 :(double)(mfdc.data[i].fid[j][1]-mfdc.data[i].fid[j][0])/(getPclen()-mfdc.data[i].fid[j][0]);
+			mfdc.data[i].density[j][0][0] = (double)mfdc.data[i].fid[j][0]/NOTZERO(mfdc.data[i].offset);
+			mfdc.data[i].density[j][0][1] = (double)(mfdc.data[i].fid[j][1]-mfdc.data[i].fid[j][0])/NOTZERO(getPclen()-mfdc.data[i].fid[j][0]);
 			
 
 			offsetBetweenStat(mfdc.data[i].offset,
 					mfdc.data[i].adjacencyOffset[0],
 					&diff,functionList[j]);
-			mfdc.data[i].density[j][1][0] = (mfdc.data[i].offset-mfdc.data[i].adjacencyOffset[0] == 0)? 0 :(double)diff/(mfdc.data[i].offset-mfdc.data[i].adjacencyOffset[0]);
+			//mfdc.data[i].density[j][1][0] = (double)(mfdc.data[i].offset-mfdc.data[i].adjacencyOffset[0])/NOTZERO(diff);
+			mfdc.data[i].density[j][1][0] = (double)diff/NOTZERO(mfdc.data[i].offset-mfdc.data[i].adjacencyOffset[0]);
+			
 			
 			offsetBetweenStat(mfdc.data[i].offset,
 					mfdc.data[i].adjacencyOffset[1],
 					&diff,functionList[j]);
-			mfdc.data[i].density[j][1][1] = ((-mfdc.data[i].offset+mfdc.data[i].adjacencyOffset[1]) == 0)?0:(double)diff/(-mfdc.data[i].offset+mfdc.data[i].adjacencyOffset[1]);
+			mfdc.data[i].density[j][1][1] = (double)diff/NOTZERO(mfdc.data[i].adjacencyOffset[1]-mfdc.data[i].offset);
+			
+			
+			// prev && next 300* words
+			offsetBetweenStat(mfdc.data[i].offset,
+					LMB(mfdc.data[i].offset-lmt),
+					&diff,functionList[j]);
+			//mfdc.data[i].density[j][1][0] = (double)(mfdc.data[i].offset-mfdc.data[i].adjacencyOffset[0])/NOTZERO(diff);
+			mfdc.data[i].density[j][2][0] = (double)diff/NOTZERO(mfdc.data[i].offset-LMB(mfdc.data[i].offset-lmt));
+			
+			
+			offsetBetweenStat(mfdc.data[i].offset,
+					LMB(mfdc.data[i].offset+lmt),
+					&diff,functionList[j]);
+			mfdc.data[i].density[j][1][1] = (double)diff/NOTZERO(LMB(mfdc.data[i].offset+lmt)-mfdc.data[i].offset);
 			
 		}
 		
@@ -581,39 +597,53 @@ int generateSample(const char* fileName,int isDir)
 	printf(". ");fflush(NULL);//TODO TIPS
 	for(int i=0;i<mfdc.top;i++)
 	{
-		for(int k=0;k<6;k++)
+		for(int k=0;k<CallackLen;k++)
 		{
 			mfdc.data[i].seq[k][0] = 1 ;
 			mfdc.data[i].seq[k][1] = 1 ;
+			mfdc.data[i].seq[k][2] = 1 ;
 		}
-				
+		
+		//int prevNum;
+		//int nextNum;
+		//int lmt = 300;
+		//offsetBetweenStat(fd.offset-lmt,fd.offset,&prevNum,functionList[i]);
+		//offsetBetweenStat(fd.offset+lmt,fd.offset,&nextNum,functionList[i]);
+		//fprintf(fp,"%d:%f ",start++,(((double)prevNum/NOTZERO(fd.offset - LMB(fd.offset-lmt)))/((double)nextNum/NOTZERO(LMB(fd.offset+lmt)-fd.offset))));
+		
+						
 		for(int j=0;j<mfdc.top;j++)
 		{
 			if(i==j) continue;
-			for(int k=0;k<6;k++)
+			for(int k=0;k<CallackLen;k++)
 			{
-				if(quot(mfdc.data[i].density[k][0][0],mfdc.data[i].density[k][0][1])
-					> quot(mfdc.data[j].density[k][0][0],mfdc.data[j].density[k][0][1]))
+				if(quot(mfdc.data[i].density[k][0][1],mfdc.data[i].density[k][0][0])
+					< quot(mfdc.data[j].density[k][0][1],mfdc.data[j].density[k][0][0]))
 					mfdc.data[i].seq[k][0] ++;
-				if(quot(mfdc.data[i].density[k][1][0],mfdc.data[i].density[k][1][1])
-					> quot(mfdc.data[j].density[k][1][0],mfdc.data[j].density[k][1][1]))
+				if(quot(mfdc.data[i].density[k][1][1],mfdc.data[i].density[k][1][0])
+					< quot(mfdc.data[j].density[k][1][1],mfdc.data[j].density[k][1][0]))
 					mfdc.data[i].seq[k][1] ++;
+				if(quot(mfdc.data[i].density[k][2][1],mfdc.data[i].density[k][2][0])
+					< quot(mfdc.data[j].density[k][2][1],mfdc.data[j].density[k][2][0]))
+					mfdc.data[i].seq[k][2] ++;	
+				
 			}
 		}
 	}
 	
 	
+	
 	printf(". ");fflush(NULL);//TODO TIPS
 	// write sample
 	fprintf(fp,"#paper %d[%s] ",id,fileName);
-	for(int i=0;i<mfdc.top;i++)
-		fprintf(fp,"[%d:%d]",i,mfdc.data[i].offset);
+	for(int i=0;i<mfdc.top;i++) fprintf(fp,"[%d:%d]",i,mfdc.data[i].offset);
 	fprintf(fp,"\n");
 	
 	for(int i=0;i<mfdc.top;i++)
 	{
 		//fprintf(fp,"%c1 qid:%d ",mfdc.data[i].positive?'+':'-',i);
 		fprintf(fp,"%c1 ",mfdc.data[i].positive?'+':'-');
+		/*
 		for(int j=0;j<FEATURE_SIZE;j++)
 		{
 			for(int k=0;k<5;k++)
@@ -622,6 +652,14 @@ int generateSample(const char* fileName,int isDir)
 					mfdc.data[i].t[j]==(k+1));
 			}
 		}
+		*/
+		//TODO SHOW DATA
+		for(int j=0;j<FEATURE_SIZE;j++)
+			rankWrite(fp,j*5+1,mfdc.data[i].t[j],5);
+		//	fprintf(fp,"%d:%d ",j+1,mfdc.data[i].t[j]);
+		//TODO END SHOW DATA	
+		
+			
 		gen26ToEnd(fp,mfdc.data[i]);
 		fprintf(fp,"\n");
 	}
