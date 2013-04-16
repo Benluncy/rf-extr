@@ -42,8 +42,6 @@ OffsetCallback functionList[CALLBACK_LEN]={hasPPafterTheOffset,hasPPafterTheOffs
 		hasYearafterTheOffset,hasNameafterTheOffset0,hasNameafterTheOffset1,hasSeqOfTheOffset};
 */
 
-int id = 1;
-
 /**
  * Start FilterData Info Handle
  */
@@ -390,6 +388,7 @@ int gen26ToEnd(FILE *fp,featureData fd)
 //int generateSample(const char* fileName,int isDir)
 int genStartSampleCtl(const char* fileName,int isDir)
 {
+	static int id = 1;
 	FILE *fp;
 	int trainOrTest;
         if(isDir)
