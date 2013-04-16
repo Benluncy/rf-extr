@@ -8,6 +8,12 @@ struct _fileList
 typedef _fileList * fileList;
 */
 
+#ifndef WIN32 // for linux
+int isDir(const char* path);
+#else // for windows
+
+#endif // enf for Linux or Windows
+
 typedef int (*file_callback)(const char* fileName,int isDir);
 
 //int dirTraversal(const char *path, int recursive,int file_callback);

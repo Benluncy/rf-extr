@@ -72,6 +72,10 @@
 #define MAX2(x,y) ((x>y)?(x):(y))
 #endif //
 
+#ifndef MIDDLEOF
+#define MIDDLEOF(a,b,c)  (a >= b && a <= c) // a is at the range of  [b,c]
+#endif 
+
 
 inline int isSame(char a,char b) 
 {
@@ -148,8 +152,68 @@ inline int editDistanceS(const char *t,int tlen,const char * s,int slen) //compa
 	return matrix[n-1][m-1];
 }
 
+inline int fitPattern(char a,char b)
+{
+	const char *de="!@#$%^&*()\"\':;,./<>?~`";
+	int len = strlen(de);
+	int i;
+	switch(a)
+	{
+		case 'a': // Ascii
+		case 'A':
+			return (b>='a' && b <= 'z') || (b >= 'A' && b <= 'Z');
+		case 'n': // Num
+		case 'N':
+			return (b>='0' && b <= '9') || b=='I' || b=='i'||b=='l'||b=='L';//b == 1?
+		case 'd': // Data (ascii or number)
+		case 'D':
+			return (fitPattern('a',b)||fitPattern('n',b));
+		case 'e': //dElimiter
+		case 'E':
+			for(i=0;i<len;i++) if(b==de[i]) return 1;	
+			return 0;
+		case 's': // Space
+		case 'S': 
+			return (b == ' ');
+		//case 
+	}
+	return 0;
+}
 
+int editDistanceP(const char *t,int tlen,const char * s,int slen)
+{
+	int m = slen + 1;
+	int n = tlen + 1;
+	//int m = strlen(s)+1; // length of source + 1 for j in 0,1,2...m-1
+	//int n = strlen(t)+1; // length of dest + 1 for i in 0,1,2...n-1
+	int matrix[n][m];// distance matrix
+	int i;
+	int j;
+	for(i = 0 ; i < n ; i ++)
+	{
+		memset(matrix[i],0,m*sizeof(int));
+		matrix[i][0] = i;
+	}
+	for(i = 0 ; i < m;i++) matrix[0][i] = i;
+	for(i = 1 ; i < n ; i ++ )
+	{
+		for(j = 1 ; j < m ; j ++)
+		{
+			if(fitPattern(t[i-1],s[j-1]))
+			{
+				matrix[i][j] = matrix[i-1][j-1];
+			}else
+			{
+				matrix[i][j] = _MIN(matrix[i][j-1] + INSERT_COST, // insert cost
+						matrix[i-1][j] + DELETE_COST, // delete cost 
+						matrix[i-1][j-1] + SUBSTITUTE_COST); // substitute cost
+			}
+		}
+	}			
+	return matrix[n-1][m-1];
+}
 
+// UNDONE
 inline int editDistanceT(const char *t,int tlen,const char * s,int slen,int threshold) 
 {
 	if (tlen - slen > threshold || slen - tlen > threshold) return -1;
@@ -180,6 +244,15 @@ inline int editDistanceT(const char *t,int tlen,const char * s,int slen,int thre
 	else return d[tlen][slen];
 }
 
+/**
+ * Data File Handle
+ */
+inline int isData(char ch)
+{
+	if(MIDDLEOF(ch,'A','Z') || MIDDLEOF(ch,'a','z') || MIDDLEOF(ch,'0','9')	)
+		return 1;
+	else return 0;
+}
 
 /*
 int main(int argc ,char *argv[])
@@ -198,61 +271,5 @@ int main(int argc ,char *argv[])
 	return 0;
 }
 */
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 

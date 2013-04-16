@@ -23,11 +23,12 @@ int main(int argc,char *argv[])
 	srand((unsigned int)time(NULL));
 
 	initFilterData();
+	insertFilterData(1,"REFERENCES AND BIBLIOGRAPHY",strlen("REFERENCES AND BIBLIOGRAPHY"));
 	insertFilterData(1,"REFERENCES",strlen("REFERENCES"));
 	insertFilterData(0,"CONFERENCES",strlen("CONFERENCES"));
-	//insertFilterData(1,"BIBLIOGRAPHY",strlen("BIBLIOGRAPHY"));
+	insertFilterData(1,"BIBLIOGRAPHY",strlen("BIBLIOGRAPHY"));
 	insertFilterData(1,"BIBLIOGRAPHIES",strlen("BIBLIOGRAPHIES"));
-	//insertFilterData(0,"AUTHOR BIOGRAPHY",strlen("AUTHOR BIOGRAPHY"));
+	insertFilterData(0,"AUTHOR BIOGRAPHY",strlen("AUTHOR BIOGRAPHY"));
 	insertFilterData(0,"AUTHOR BIOGRAPHIES",strlen("AUTHOR BIOGRAPHIES"));
 	if(getTrainFile() == NULL || getTestFile() == NULL)
 	{

@@ -52,7 +52,7 @@ GNUFLAGS		:= -Wall ${INCFLAG} -std=gnu99
 OBJS			:= hftctl.o hftnpse.o sqlite3.o persistence.o \
 				ini.o tokens.o virtualcontent.o \
 				minEditDistance.o dirTraversal.o\
-				debuginfo.o
+				debuginfo.o myMath.o
 PROGS			:= main
 
 .PHONY			: clean succ
@@ -62,7 +62,7 @@ all			: ${PROGS} succ
 rebuild			: clean all
 
 run			: 
-	time ./main
+	./main
 	svm_learn -c 0.1 train.txt
 	svm_classify test.txt svm_model 
 

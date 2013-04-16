@@ -28,8 +28,13 @@
 #include <stdlib.h>
 #include <string.h>
 #ifndef WIN32 // for linux
-#include <sys/dir.h>
+#undef __STRICT_ANSI__
+#define D_GNU_SOURCE
+#define _GNU_SOURCE
+#include <unistd.h>
+#include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/dir.h>
 #else // for windows 
 #include <io.h>
 #endif //WIN32
@@ -38,13 +43,13 @@
 
 
 #ifndef WIN32 // for linux
+
 inline int isDir(const char* path)
 {
          struct stat st;
          lstat(path, &st);
          return S_ISDIR(st.st_mode);
 }
-
 //
 int doTraversal(const char *path, int recursive,file_callback xCallback)
 {

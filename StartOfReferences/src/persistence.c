@@ -19,17 +19,34 @@ inline char *queryEscape(const char *str)
 	int j = 0;
 	int len = strlen(str);
 	for(i=0;i<len;i++)
+	{
 		switch(str[i])
 		{
 			case '\'':
-				target[j] = '\\';
+			case '\"':
+				target[j] = str[i];
 				j++;
-				target[j] = '\'';
+				target[j] = str[i];
 				j++;
+				break;
+			case '/':
+			case '[':
+			case ']':
+			case '%':
+			case '&':
+			case '_':
+			case '(':
+			case ')':
+				target[j] = '/';
+				j++;
+				target[j] = str[i];
+				j++;
+				break;
 			default :
 				target[j] = str[i];
 				j++;
 		}
+	}
 	target[j]='\0';
 	return target;
 }

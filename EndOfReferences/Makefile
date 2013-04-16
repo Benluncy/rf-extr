@@ -43,12 +43,16 @@ MV			:= mv
 SAY			:= @echo
 
 ########################COMPILE SETTINGS################################
-VPATH			:= include/:src/:../include/	
+VPATH			:= .:include/:src/:lib/:obj/
 	export	VPATH
 LIBS			:= -L lib/ -ldl -lpthread  -lm 
 INCFLAG			:= -I include/
-CFLAGS			:= -Wall ${INCFLAG} #-std=c99
-OBJS			:= ini.o tokens.o virtualcontent.o minEditDistance.o dirTraversal.o
+CFLAGS			:= -Wall ${INCFLAG} -std=c99
+GNUFLAGS		:= -Wall ${INCFLAG} -std=gnu99
+OBJS			:= hftctl.o hftnpse.o sqlite3.o persistence.o \
+				ini.o tokens.o virtualcontent.o \
+				minEditDistance.o dirTraversal.o\
+				debuginfo.o myMath.o
 PROGS			:= main
 
 .PHONY			: clean succ
@@ -59,13 +63,18 @@ rebuild			: clean all
 
 run			: 
 	./main
+	svm_learn -c 0.1 train.txt
+	svm_classify test.txt svm_model 
 
 main			: ${OBJS}
 	${CC} ${CFLAGS} $@.c -o $@ ${OBJS} ${LIBS}
 
 doclassify		: ${OBJS}
 	${CC} ${CFLAGS} $@.c -o $@ ${OBJS} ${LIBS}
-	
+
+dirTraversal.o		: 
+	${CC} ${GNUFLAGS} -c -o $@ src/dirTraversal.c 
+
 
 #virtualcontent.o	: tokens.o ini.o	
 #${CC} ${CFLAGS} src/virtualcontent.c -c -o $@ tokens.o 
@@ -91,9 +100,12 @@ doclassify		: ${OBJS}
 succ			:
 	${SAY} "Complete !" 
 
-clean    : 
+clean			: 
 	${DEL} ${PROGS} doclassify
 	${DEL} ${OBJS} 
 	${DEL} *~ include/*~ src/*~ data/*~
 	${DEL} *.swp
+
+dbclean			:
+	${DEL} db/features.db
 

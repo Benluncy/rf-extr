@@ -15,7 +15,7 @@ struct tokens
 struct tokens tkRepo;
 
 int tokenInit();
-inline char *id2Token(int id);
+char *id2Token(int id);
 int token2Id(const char *token);
 
 int tokenPush(unsigned int *tp,unsigned int id);

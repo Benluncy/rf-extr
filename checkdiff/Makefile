@@ -55,6 +55,10 @@ PROGS			:= checkdiff
 ########################################################################
 all			: ${PROGS} succ
 
+doTrain			:
+	svm_learn -c 0.1 train.txt
+	svm_classify test.txt svm_model
+
 rebuild			: clean all
 
 fullcheck		:

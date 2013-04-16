@@ -155,6 +155,8 @@ int main(int argc , char * argv[])
 	status = sqlite3_close(db);
 	if(status != SQLITE_OK )
 	printf("error:%d\n",sqlite3_errcode(db));
+	
+	printf("%s",sqlite3_mprintf("%q","it's example"));
 	return 0;
 }
 

@@ -37,7 +37,7 @@ static int doTokenInit(void* user, const char* section, const char* name,const c
 	if(MSEC("tokens"))
 	{
 		if(id > TOKEN_MAX_LEN -1) return 0;
-		sprintf(pRepo->tokens[id],"%s",strdup(name));
+		sprintf(pRepo->tokens[id],"%s",name);
 		//TODO Make sure strdup is multi-platformed
 		pRepo->ac[id] = 1;
 	}

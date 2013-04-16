@@ -69,7 +69,7 @@ int doClassify(const char* fileName,int isDir)
 	if(isUnAnnotated())
 	{
 		getFileName(name,fileName,strlen(fileName));
-		sprintf(newPath,"trash/%s",name);
+		sprintf(newPath,"unused/%s",name);
 		printf("move file [%s] to [%s]\n",fileName,newPath);
 		//getchar();
 		rename(fileName,newPath);

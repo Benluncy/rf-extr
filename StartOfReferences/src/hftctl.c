@@ -8,13 +8,20 @@
 #include "persistence.h"
 #include "tokens.h"
 #include "hftctl.h"
+#include "myMath.h"
 
 //for debug
 #include "debuginfo.h"
 
-#define quot(a,b) ((b==0)?0:a/b)
 #define NOTZERO(x) (x==0?1:x)
+//#define quot(a,b) ((b==0)?0:a/b)
+#define quot(a,b) ((double)a/NOTZERO(b))
 #define LMB(x) ((x < 0) ? (0) :( x > getPclen() ? getPclen() : x ))
+
+// different keywords' threshold
+#define DIFFKWDTH 10 
+
+#define REMOVE_ONLY_FIVE 0
 
 _FilterData pFilterData;
 
@@ -24,12 +31,16 @@ FILE *fpTest; // test.txt
 int fileNum = 0;
 featureDataContainer mfdc; // myFeatureDataContainer
 featureData mfd; // myFeatureData
-OffsetCallback functionList[CallackLen]={hasPPafterTheOffset,hasPPafterTheOffset2,
+
+OffsetCallback functionList[CALLBACK_LEN]={hasPPafterTheOffset,hasPPafterTheOffset2,
 			hasYearafterTheOffset,hasNameafterTheOffset0,
 			hasNameafterTheOffset1,hasNameafterTheOffset2,
-			hasSeqOfTheOffset,hasSeqOfTheOffset2};
-
-
+			hasSeqOfTheOffset,hasSeqOfTheOffset2,
+			hasSpecialKeyWords};
+/*
+OffsetCallback functionList[CALLBACK_LEN]={hasPPafterTheOffset,hasPPafterTheOffset2,
+		hasYearafterTheOffset,hasNameafterTheOffset0,hasNameafterTheOffset1,hasSeqOfTheOffset};
+*/
 
 int id = 1;
 
@@ -232,6 +243,7 @@ int rateWrite(FILE *fp,int start,double rate)
 // rank == 1,2,3,4,5+
 int rankWrite(FILE *fp,int start,int rank,int len)
 {
+	
 	for(int i=0;i<len-1;i++)
 	{
 		fprintf(fp,"%d:%d ",start+i,rank == i+1 ? 1 : 0);
@@ -251,7 +263,7 @@ inline int offsetStat(int offset,int *totalData,int *beforeData,
 	{
 		(*totalData)++;
 		if(nowOffset < offset)
-		if(nowOffset-tmp > 10) (*beforeData)++;
+		if(nowOffset-tmp >= DIFFKWDTH) (*beforeData)++;
 		tmp = nowOffset;
 	}
 	return 1;
@@ -272,7 +284,7 @@ inline int offsetBetweenStat(int offsetEnd,int offsetStart,int *dataBetween,
 	while((offsetStart=offsetFunction(offsetStart,getPclen())) != 0)
 	{
 		if(offsetStart >= offsetEnd) break;
-		if(offsetStart-tmp > 10) (*dataBetween) ++ ;
+		if(offsetStart-tmp >= DIFFKWDTH) (*dataBetween) ++ ;
 		tmp = offsetStart;
 	}
 	return 1;
@@ -283,45 +295,94 @@ int gen26ToEnd(FILE *fp,featureData fd)
 	//26 ~ 31
 	int offset = fd.offset;
 	int start = 26;
-	int lmt = -200;
-	//fp = stdout;
-	for(;lmt<=200;lmt+=150)
+	int lmt = 200;
+	
+	char *content = getPcontent();
+	int offend = getPclen();	
+	int finac = 1;// :1 is not ascii code  :0 is ascii code
+	// follow is not ascii code for instance : References [ right References Manual false
+	for(int i=offset;i<offend;i++ )
 	{
-		fprintf(fp,"%d:%d ",start++,(hasPPafterTheOffset(offset,lmt)?1:0));
-		fprintf(fp,"%d:%d ",start++,(hasPPafterTheOffset2(offset,lmt)?1:0));
-		fprintf(fp,"%d:%d ",start++,(hasYearafterTheOffset(offset,lmt)?1:0));
-		fprintf(fp,"%d:%d ",start++,(hasNameafterTheOffset0(offset,lmt)?1:0));
-		fprintf(fp,"%d:%d ",start++,(hasNameafterTheOffset1(offset,lmt)?1:0));
-		fprintf(fp,"%d:%d ",start++,(hasNameafterTheOffset2(offset,lmt)?1:0));		
+		if(content[i] != ' ')
+		{
+			finac = fitPattern('a',content[i]) && fitPattern('a',content[i+1]) ? 0 : 1;
+			if(!finac && fitPattern('n',content[i]))
+			{
+				finac = 1;
+			}
+			break;
+		}
 	}
+	fprintf(fp,"%d:%d ",start++,finac);
+	
+	//fp = stdout;
+	//for(;lmt<=1000;lmt+=150)
+	//{
+	lmt = 200;
+	
+	
+	fprintf(fp,"%d:%d ",start++,(hasPPafterTheOffset(offset,lmt)?1:0));
+	fprintf(fp,"%d:%d ",start++,(hasPPafterTheOffset2(offset,lmt)?1:0));
+	fprintf(fp,"%d:%d ",start++,(hasYearafterTheOffset(offset,lmt)?1:0));
+	fprintf(fp,"%d:%d ",start++,(hasNameafterTheOffset0(offset,lmt)?1:0));
+	fprintf(fp,"%d:%d ",start++,(hasNameafterTheOffset1(offset,lmt)?1:0));
+	fprintf(fp,"%d:%d ",start++,(hasNameafterTheOffset2(offset,lmt)?1:0));
+	
+	fprintf(fp,"%d:%d ",start++,(hasPPafterTheOffset(offset,lmt) >= hasPPafterTheOffset(offset,-lmt)));
+	fprintf(fp,"%d:%d ",start++,(hasPPafterTheOffset2(offset,lmt) >= hasPPafterTheOffset2(offset,-lmt)));
+	fprintf(fp,"%d:%d ",start++,(hasYearafterTheOffset(offset,lmt) >= hasYearafterTheOffset(offset,-lmt)));
+	fprintf(fp,"%d:%d ",start++,(hasNameafterTheOffset0(offset,lmt) >= hasNameafterTheOffset0(offset,-lmt)));
+	fprintf(fp,"%d:%d ",start++,(hasNameafterTheOffset1(offset,lmt) >= hasNameafterTheOffset1(offset,-lmt)));
+	fprintf(fp,"%d:%d ",start++,(hasNameafterTheOffset2(offset,lmt) >= hasNameafterTheOffset2(offset,-lmt)));
+
+
+	lmt = 1000;
+	
+	fprintf(fp,"%d:%d ",start++,(hasSeqOfTheOffset(offset,lmt)?1:0));
+	fprintf(fp,"%d:%d ",start++,(hasSeqOfTheOffset2(offset,lmt)?1:0));	
+	fprintf(fp,"%d:%d ",start++,(hasSeqOfTheOffset(offset,lmt) >= hasSeqOfTheOffset(offset,-lmt)));
+	fprintf(fp,"%d:%d ",start++,(hasSeqOfTheOffset2(offset,lmt) >= hasSeqOfTheOffset2(offset,-lmt)));
+	//}
 	
 	//32
-	fprintf(fp,"%d:%f ",start++,(double)offset/getPclen());
-	fprintf(fp,"%d:%f ",start++,(double)(getPclen()-offset)/offset);
+	//fprintf(fp,"%d:%f ",start++,(double)offset/getPclen());
+	//fprintf(fp,"%d:%f ",start++,(double)(getPclen()-offset)/offset);
 	rateWrite(fp,start,(double)offset/getPclen());
 	start+=5;
 	
-	for(int i=0;i<CallackLen;i++)
+	for(int i=0;i<CALLBACK_LEN;i++)
 	{
-		rateWrite(fp,start,(fd.offset == getPclen()) ? -1 :((double)fd.fid[i][0]/fd.offset)/
-					((fd.fid[i][1]-fd.fid[i][0])/(getPclen()-fd.offset)));
-		start+=5; //TODO ADD 
+		//rateWrite(fp,start,(fd.offset == getPclen()) ? -1 :((double)fd.fid[i][0]/fd.offset)/
+		//			((fd.fid[i][1]-fd.fid[i][0])/(getPclen()-fd.offset)));
+		//start+=5; //TODO ADD 
 		
-		fprintf(fp,"%d:%d ",start++,fd.density[i][0][1] < fd.density[i][0][0]);
-		fprintf(fp,"%d:%d ",start++,fd.density[i][1][1] < fd.density[i][1][0]);
+		fprintf(fp,"%d:%d ",start++,fd.density[i][0][1] >= fd.density[i][0][0]);
+		fprintf(fp,"%d:%d ",start++,fd.density[i][1][1] >= fd.density[i][1][0]);
+		fprintf(fp,"%d:%d ",start++,fd.density[i][2][1] >= fd.density[i][2][0]);
+		fprintf(fp,"%d:%d ",start++,fd.vari[1] >= fd.vari[0]);
 		
-		fprintf(fp,"%d:%f ",start++,quot(fd.density[i][0][1],fd.density[i][0][0]));
-		fprintf(fp,"%d:%f ",start++,quot(fd.density[i][1][1],fd.density[i][0][0]));
+		//fprintf(fp,"%d:%f ",start++,quot(fd.density[i][0][1],fd.density[i][0][0]));
+		//fprintf(fp,"%d:%f ",start++,quot(fd.density[i][1][1],fd.density[i][1][0]));
+		//fprintf(fp,"%d:%f ",start++,quot(fd.density[i][2][1],fd.density[i][2][0]));
+		//fprintf(fp,"%d:%f ",start++,quot(fd.vari[1],fd.vari[0]));
 		
-		rankWrite(fp,start,fd.seq[i][0],10);
-		start+=10;
+		int wide = 6;
+		rankWrite(fp,start,fd.seq[i][0],wide);
+		start+=wide;
 
-		rankWrite(fp,start,fd.seq[i][1],10);
-		start+=10;
+		rankWrite(fp,start,fd.seq[i][1],wide);
+		start+=wide;
+		
+		rankWrite(fp,start,fd.seq[i][2],wide);
+		start+=wide;
+		
+		rankWrite(fp,start,fd.seq[i][3],wide);
+		start+=wide;
 
 	}
 	return 1;
 }
+
 
 
 
@@ -432,7 +493,9 @@ int generateSample(const char* fileName,int isDir)
 		}
 	} // end of GET DATA FROM DB
 	
-	printf(". ");fflush(NULL);//TODO TIPS
+
+	
+	printf(".");fflush(NULL);//TODO TIPS
 	
 	// generate feature info data
 	int beforeData;
@@ -440,7 +503,7 @@ int generateSample(const char* fileName,int isDir)
 	for(int i=0;i<mfdc.top;i++)
 	{
 		
-		for(int j=0;j<CallackLen;j++)
+		for(int j=0;j<CALLBACK_LEN;j++)
 		{
 			offsetStat(mfdc.data[i].offset,
 					&totalData,&beforeData,functionList[j]);
@@ -451,7 +514,7 @@ int generateSample(const char* fileName,int isDir)
 	
 	//density and etc
 	
-	printf(". ");fflush(NULL);//TODO TIPS
+	printf(".");fflush(NULL);//TODO TIPS
 	
 	// adjacencyOffset setting ... 
 	for(int i=0;i<mfdc.top;i++)
@@ -461,100 +524,88 @@ int generateSample(const char* fileName,int isDir)
 		for(int j=0;j<mfdc.top;j++)
 		{
 			if(i == j) continue;
-			if(mfdc.data[i].offset < 
-						mfdc.data[i].offset &&
-					mfdc.data[i].adjacencyOffset[0] < 
-						mfdc.data[i].offset)
-				mfdc.data[i].adjacencyOffset[0] = 
-					mfdc.data[i].offset ;
-			else if(mfdc.data[i].offset > 
-						mfdc.data[i].offset &&
-					mfdc.data[i].adjacencyOffset[1] > 
-						mfdc.data[i].offset)
-				mfdc.data[i].adjacencyOffset[1] = 
-					mfdc.data[i].offset ;
+			if(mfdc.data[i].offset < mfdc.data[i].offset && mfdc.data[i].adjacencyOffset[0] < mfdc.data[i].offset)
+				mfdc.data[i].adjacencyOffset[0] = mfdc.data[i].offset ;
+			else if(mfdc.data[i].offset > mfdc.data[i].offset && mfdc.data[i].adjacencyOffset[1] > mfdc.data[i].offset)
+				mfdc.data[i].adjacencyOffset[1] = mfdc.data[i].offset ;
 		}
 	}
 	
 	
-	printf(". ");fflush(NULL);//TODO TIPS
+	printf(".");fflush(NULL);//TODO TIPS
 	
 	int diff;
-	int lmt = 300;
-	//density setting ... 
+	int lmt;
+	//density && variance setting ... 
+	CloseKWD ckwd;
 	for(int i=0;i<mfdc.top;i++)
 	{
-		for(int j=0;j<CallackLen;j++)
+		for(int j=0;j<CALLBACK_LEN;j++)
 		{
-			
 			mfdc.data[i].density[j][0][0] = (double)mfdc.data[i].fid[j][0]/NOTZERO(mfdc.data[i].offset);
 			mfdc.data[i].density[j][0][1] = (double)(mfdc.data[i].fid[j][1]-mfdc.data[i].fid[j][0])/NOTZERO(getPclen()-mfdc.data[i].fid[j][0]);
 			
-
-			offsetBetweenStat(mfdc.data[i].offset,
-					mfdc.data[i].adjacencyOffset[0],
-					&diff,functionList[j]);
+			offsetBetweenStat(mfdc.data[i].offset,mfdc.data[i].adjacencyOffset[0],&diff,functionList[j]);
 			//mfdc.data[i].density[j][1][0] = (double)(mfdc.data[i].offset-mfdc.data[i].adjacencyOffset[0])/NOTZERO(diff);
-			mfdc.data[i].density[j][1][0] = (double)diff/NOTZERO(mfdc.data[i].offset-mfdc.data[i].adjacencyOffset[0]);
+			mfdc.data[i].density[j][1][0] = (double)diff/NOTZERO(VALUESDIFF(mfdc.data[i].offset,mfdc.data[i].adjacencyOffset[0]));
+			
+			offsetBetweenStat(mfdc.data[i].offset,mfdc.data[i].adjacencyOffset[1],&diff,functionList[j]);
+			mfdc.data[i].density[j][1][1] = (double)diff/NOTZERO(VALUESDIFF(mfdc.data[i].adjacencyOffset[1],mfdc.data[i].offset));
 			
 			
-			offsetBetweenStat(mfdc.data[i].offset,
-					mfdc.data[i].adjacencyOffset[1],
-					&diff,functionList[j]);
-			mfdc.data[i].density[j][1][1] = (double)diff/NOTZERO(mfdc.data[i].adjacencyOffset[1]-mfdc.data[i].offset);
-			
-			
+			lmt = 300;
 			// prev && next 300* words
-			offsetBetweenStat(mfdc.data[i].offset,
-					LMB(mfdc.data[i].offset-lmt),
-					&diff,functionList[j]);
-			//mfdc.data[i].density[j][1][0] = (double)(mfdc.data[i].offset-mfdc.data[i].adjacencyOffset[0])/NOTZERO(diff);
-			mfdc.data[i].density[j][2][0] = (double)diff/NOTZERO(mfdc.data[i].offset-LMB(mfdc.data[i].offset-lmt));
+			offsetBetweenStat(mfdc.data[i].offset,LMB(mfdc.data[i].offset-lmt),&diff,functionList[j]);
+			mfdc.data[i].density[j][2][0] = (double)diff/NOTZERO(VALUESDIFF(mfdc.data[i].offset,LMB(mfdc.data[i].offset-lmt)));
 			
+			offsetBetweenStat(mfdc.data[i].offset,LMB(mfdc.data[i].offset+lmt),&diff,functionList[j]);
+			mfdc.data[i].density[j][1][1] = (double)diff/NOTZERO(VALUESDIFF(LMB(mfdc.data[i].offset+lmt),mfdc.data[i].offset));
 			
-			offsetBetweenStat(mfdc.data[i].offset,
-					LMB(mfdc.data[i].offset+lmt),
-					&diff,functionList[j]);
-			mfdc.data[i].density[j][1][1] = (double)diff/NOTZERO(LMB(mfdc.data[i].offset+lmt)-mfdc.data[i].offset);
-			
+			// variance 
+			//int getCloseKWD(int offset,CloseKWD *closeKWD,int (*callback)(int offset,int limit));
+			getCloseKWD(mfdc.data[i].offset,&ckwd,functionList[j]);
+			mfdc.data[i].vari[0] = getVariance(ckwd.prev,ckwd.pLen);
+			mfdc.data[i].vari[1] = getVariance(ckwd.next,ckwd.nLen);
 		}
-		
 	}
 	
 	
 	// sequence setting ... 
-	printf(". ");fflush(NULL);//TODO TIPS
+	printf(".");fflush(NULL);//TODO TIPS
 	for(int i=0;i<mfdc.top;i++)
 	{
-		for(int k=0;k<CallackLen;k++)
+		for(int k=0;k<CALLBACK_LEN;k++)
 		{
-			mfdc.data[i].seq[k][0] = 1 ;
-			mfdc.data[i].seq[k][1] = 1 ;
-			mfdc.data[i].seq[k][2] = 1 ;
+			for(int z=0;z<4;z++) mfdc.data[i].seq[k][z] = 1;
 		}
 		
 		for(int j=0;j<mfdc.top;j++)
 		{
 			if(i==j) continue;
-			for(int k=0;k<CallackLen;k++)
+			for(int k=0;k<CALLBACK_LEN;k++)
 			{
-				if(quot(mfdc.data[i].density[k][0][1],mfdc.data[i].density[k][0][0])
-					< quot(mfdc.data[j].density[k][0][1],mfdc.data[j].density[k][0][0]))
+				if(mfdc.data[i].density[k][0][1]/NOTZERO(mfdc.data[i].density[k][0][0])
+					< mfdc.data[j].density[k][0][1]/NOTZERO(mfdc.data[j].density[k][0][0]))
 					mfdc.data[i].seq[k][0] ++;
-				if(quot(mfdc.data[i].density[k][1][1],mfdc.data[i].density[k][1][0])
-					< quot(mfdc.data[j].density[k][1][1],mfdc.data[j].density[k][1][0]))
+				
+				if(mfdc.data[i].density[k][1][1]/NOTZERO(mfdc.data[i].density[k][1][0])
+					< mfdc.data[j].density[k][1][1]/NOTZERO(mfdc.data[j].density[k][1][0]))
 					mfdc.data[i].seq[k][1] ++;
-				if(quot(mfdc.data[i].density[k][2][1],mfdc.data[i].density[k][2][0])
-					< quot(mfdc.data[j].density[k][2][1],mfdc.data[j].density[k][2][0]))
+				
+				if(mfdc.data[i].density[k][2][1]/NOTZERO(mfdc.data[i].density[k][2][0])
+					< mfdc.data[j].density[k][2][1]/NOTZERO(mfdc.data[j].density[k][2][0]))
 					mfdc.data[i].seq[k][2] ++;	
 				
+				if(mfdc.data[i].vari[1]/NOTZERO(mfdc.data[i].vari[0])
+					< mfdc.data[j].vari[1]/NOTZERO(mfdc.data[j].vari[0]))
+					mfdc.data[i].seq[k][3] ++;
 			}
 		}
 	}
 	
 	
 	
-	printf(". ");fflush(NULL);//TODO TIPS
+	printf(".");fflush(NULL);//TODO TIPS
 	// write sample
 	fprintf(fp,"#paper %d[%s] ",id,fileName);
 	for(int i=0;i<mfdc.top;i++) fprintf(fp,"[%d:%d]",i,mfdc.data[i].offset);
@@ -562,32 +613,27 @@ int generateSample(const char* fileName,int isDir)
 	
 	for(int i=0;i<mfdc.top;i++)
 	{
+		
+		if(REMOVE_ONLY_FIVE)
+		{
+			if(mfdc.data[i].t[0]==0&&mfdc.data[i].t[1]==0&&mfdc.data[i].t[2]==0&&mfdc.data[i].t[3]==0)
+				continue;
+		}
 		//fprintf(fp,"%c1 qid:%d ",mfdc.data[i].positive?'+':'-',i);
 		fprintf(fp,"%c1 ",mfdc.data[i].positive?'+':'-');
-		/*
-		for(int j=0;j<FEATURE_SIZE;j++)
-		{
-			for(int k=0;k<5;k++)
-			{
-				fprintf(fp,"%d:%d ",j*5+k+1,
-					mfdc.data[i].t[j]==(k+1));
-			}
-		}
-		*/
-		//TODO SHOW DATA
 		for(int j=0;j<FEATURE_SIZE;j++)
 			rankWrite(fp,j*5+1,mfdc.data[i].t[j],5);
 		//	fprintf(fp,"%d:%d ",j+1,mfdc.data[i].t[j]);
-		//TODO END SHOW DATA	
-		
 			
 		gen26ToEnd(fp,mfdc.data[i]);
 		fprintf(fp,"\n");
+		
+		printf(".");fflush(NULL);//TODO TIPS
 	}
 		
 	
 	
-	printf("\t[done]\n");
+	printf("  [done]\n");
         cleanContent();
         fileNum++;
         id++;
@@ -595,8 +641,8 @@ int generateSample(const char* fileName,int isDir)
 }
 
 
+// set and get
 int getFileNum(){return fileNum;}
-
 void setTrainFile(FILE *fp){ fpTrain = fp;}
 void setTestFile(FILE *fp){fpTest = fp;}
 FILE * getTrainFile(){return fpTrain;}

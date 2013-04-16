@@ -129,18 +129,20 @@ int hasNameafterTheOffset0(int offset,int limit)
 	{
 		if(i-tag>1) i--;
 		tag = i;
+		if(content[i]<'A' || content[i]>'Z') continue;
 		while(fitPattern('a',content[i]))
 		{
 			i++;
 			if(i > offend-3) return 0;
 		}
-		if(i-tag>1 &&(','==content[i]))
+		if(i-tag>=1 &&(','==content[i]))
 		{
 			i++;
 			while(content[i]==' ') {
 				i++;
 				if(i > offend - 2) return 0;
 			}
+			if(content[i]<'A' || content[i]>'Z') continue;
 			if(fitPattern('a',content[i])&&('.' == content[i+1]))
 			{
 				return i+2;
@@ -164,21 +166,27 @@ int hasNameafterTheOffset1(int offset,int limit)
 	{
 		if(i-tag>1) i--;
 		tag = i;
+		if(content[i]<'A' || content[i]>'Z') continue;
 		while(fitPattern('a',content[i]))
 		{
 			i++;
 			if(i > offend-3) return 0;
 		}
-		if(i-tag>1 &&(','==content[i] || '.'==content[i] || ' '==content[i]))
+		if(i-tag>=1 &&(','==content[i] || '.'==content[i] || ' '==content[i]))
 		{
 			i++;
 			while(content[i]==' ') {
 				i++;
 				if(i > offend - 2) return 0;
 			}
+			if(content[i]<'A' || content[i]>'Z') continue;
 			if(fitPattern('a',content[i])&&fitPattern('e',content[i+1]))
 			{
 				return i+2;
+			}else
+			{
+				while(!fitPattern('e',content[i]) && content[i] != ' ') i++;
+				return i;
 			}
 		}
 	}
@@ -201,12 +209,13 @@ int hasNameafterTheOffset2(int offset,int limit)
 		//fflush(NULL);
 		if(i-tag>1) i--;
 		tag = i;
+		if(content[i]<'A' || content[i]>'Z') continue;
 		while(fitPattern('a',content[i]))
 		{
 			i++;
 			if(i > offend-3) return 0;
 		}
-		if(i-tag>1 &&(fitPattern('e',content[i])|| content[i] == ' '))
+		if(i-tag>=1 &&(fitPattern('e',content[i])|| content[i] == ' '))
 		{
 			i++;
 			while(content[i]==' ') {
@@ -219,6 +228,10 @@ int hasNameafterTheOffset2(int offset,int limit)
 	//			for(j=tag;j<=i+1;j++) putchar(content[j]);
 	//			printf("』");
 				return i+2;
+			}else
+			{
+				while(!fitPattern('e',content[i]) && content[i] != ' ') i++;
+				return i;
 			}
 		}
 	}
@@ -232,7 +245,7 @@ int hasSeqOfTheOffset(int offset,int limit)
 	defineStartAndEnd(&offset,&offend,limit);
 	for(int i=offset;i<offend;i++)
 	{
-		if(content[i]=='['||content[i]=='|')
+		if(content[i]=='['||content[i]=='|' || content[i] == 'r')
 		{
 			for(int j=i+1;j<offend && j < i+4;j++)
 			{
@@ -249,6 +262,11 @@ int hasSeqOfTheOffset(int offset,int limit)
 					&& content[j] != 'i' && content[j] != 'l')
 					break;
 			}
+		}else if(fitPattern('n',content[i]))
+		{
+			i++;
+			while(fitPattern('n',content[i])) i++;
+			if(content[i] == '.' || content[i] == ',') return i+1;
 		}
 	}
 	return 0;
@@ -263,7 +281,7 @@ int hasSeqOfTheOffset2(int offset,int limit)
 	int fail = 0;
 	for(int i=offset;i<offend;i++)
 	{
-		if(content[i]=='['||content[i]=='|')
+		if(content[i]=='['||content[i]=='|' || content[i] == 'r')
 		{
 			for(int j=i+1;j<offend && j < i+6;j++)
 			{
@@ -272,9 +290,6 @@ int hasSeqOfTheOffset2(int offset,int limit)
 					case ']':
 					case '|':
 					case '!':
-						//printf("${");
-						//for(int k=i;k<=j;k++) putchar(content[k]);
-						//printf("}");
 						if((j-i)==1)
 						{
 							fail = 1;
@@ -300,8 +315,136 @@ int hasSeqOfTheOffset2(int offset,int limit)
 					break;
 				}
 			}
+		}else if(fitPattern('n',content[i]))
+		{
+			i++;
+			while(fitPattern('n',content[i])) i++;
+			if(content[i] == '.' || content[i] == ',') return i+1;
 		}
 	}
 	return 0;
 }
+
+//int strncmp(const char *s1, const char *s2, size_t n);
+#ifndef TESTMATSTR
+#define TESTMATSTR(a,b) {if(strncmp(a,b,strlen(a)) == 0 ) return i + strlen(a);}
+#endif
+int hasSpecialKeyWords(int offset,int limit)
+{
+	int i;	
+	int offend;
+	char *content = getPcontent();
+	defineStartAndEnd(&offset,&offend,limit);
+	for(i=offset;i<offend;i++)
+	{
+		if(content[i-1]==' ')
+		{
+			TESTMATSTR("ISO",content+i);
+			TESTMATSTR("IEEE",content+i);
+			TESTMATSTR("ACM",content+i);
+			TESTMATSTR("Inc.",content+i);
+			TESTMATSTR("Proc.",content+i);
+			TESTMATSTR("Ph.D. Thesis",content+i);
+			TESTMATSTR("http://",content+i);
+			if(content[i]=='V'||content[i]=='v')
+			{
+				i++;
+				TESTMATSTR("ol.",content+i);
+			}
+			TESTMATSTR("volumn",content+i);
+			TESTMATSTR("Volumn",content+i);
+				
+		}
+	}
+	return 0;
+}
+
+/*
+	int pLen;
+	int nLen;
+	int prev[10];
+	int next[10];
+ */
+int getCloseKWD(int offset,CloseKWD *closeKWD,CKWDfun ckfunc)
+{
+	int offend = getPclen();
+	int nowOffset;
+	closeKWD->pLen = 0;
+	closeKWD->nLen = 0;
+	// calculate before
+	int i;
+	int x = 0;
+	//printf("<");
+	for(i=0;i<offset;i++)
+	{
+		if((nowOffset = ckfunc(i,offset-i)) > 0)
+		{
+			x ++ ;
+			//printf("(%d",nowOffset);
+			i = nowOffset ;
+			if(closeKWD->pLen)
+			{
+				//printf("D%d^%d)",(closeKWD->pLen-1)%10,closeKWD->prev[(closeKWD->pLen-1)%10]);
+				if((nowOffset - closeKWD->prev[(closeKWD->pLen-1)%10]) > 10)
+				{
+					closeKWD->prev[(closeKWD->pLen)%10] = nowOffset;
+					closeKWD->pLen ++;
+				}
+			}else
+			{
+				closeKWD->prev[(closeKWD->pLen)%10] = i;
+				//printf("N%d^%d-%d)",i,(closeKWD->pLen)%10,);
+				closeKWD->pLen ++;
+			}
+			
+		}else
+			break;
+	}
+	//printf(">");
+	//printf("<LL>%d^%d#",closeKWD->pLen,x);
+	if(closeKWD->pLen > 10)
+	{
+		closeKWD->pStart = closeKWD->pLen % 10;
+		closeKWD->pLen = 10;
+	}else
+	{
+		closeKWD->pStart = 0;	
+	}
+	// calculate next
+	for(int i=offset;i<offend;i++)
+	{
+		if((nowOffset = ckfunc(i,offend-i)) > 0)
+		{
+			i = nowOffset;
+			if(closeKWD->nLen)
+			{
+				if((nowOffset - closeKWD->next[closeKWD->nLen-1]) > 10)
+				{
+					closeKWD->next[closeKWD->nLen] = nowOffset;
+					closeKWD->nLen ++;
+				}
+			}else
+			{
+				closeKWD->next[closeKWD->nLen] = i;
+				closeKWD->nLen ++;
+			}
+			
+		}else
+			break;
+		if(closeKWD->nLen >= 10) break;
+	}
+	
+	return 1;
+}
+
+
+
+
+
+
+
+
+
+
+
 
