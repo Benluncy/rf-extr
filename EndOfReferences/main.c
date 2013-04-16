@@ -1,4 +1,5 @@
 #include "hftctl.h"
+#include "eftctl.h"
 #include "hftnpse.h"
 #include "dirTraversal.h"
 #include "persistence.h"
@@ -8,21 +9,19 @@
 #include <stdlib.h>
 #include <time.h>
 
+#define POFI(x) insertFilterData(1,x,strlen(x))
+#define DEFI(x) insertFilterData(0,x,strlen(x))
 
-
-int main(int argc,char *argv[])
+int genSamples4Endness()
 {
 	dbInit();
-	
-	//int insertFilterData(int accept,const char *cmpStr,int cmpLen);
-	//fp = fopen("sample.txt","w");
-	//char ch;
-	//int i;
-	setTrainFile(fopen("train.txt","w")); // train.txt
-	setTestFile(fopen("test.txt","w")); // test.txt     
-	srand((unsigned int)time(NULL));
-
 	initFilterData();
+	/*
+	//filters (before)
+	// APPENDIX
+	// AUTHOR BIOGRAPHY(IES)
+	// ACKNOWLEDGEMENT
+	// TABLES
 	insertFilterData(1,"REFERENCES AND BIBLIOGRAPHY",strlen("REFERENCES AND BIBLIOGRAPHY"));
 	insertFilterData(1,"REFERENCES",strlen("REFERENCES"));
 	insertFilterData(0,"CONFERENCES",strlen("CONFERENCES"));
@@ -30,18 +29,44 @@ int main(int argc,char *argv[])
 	insertFilterData(1,"BIBLIOGRAPHIES",strlen("BIBLIOGRAPHIES"));
 	insertFilterData(0,"AUTHOR BIOGRAPHY",strlen("AUTHOR BIOGRAPHY"));
 	insertFilterData(0,"AUTHOR BIOGRAPHIES",strlen("AUTHOR BIOGRAPHIES"));
+	*/
+	POFI("APPENDIX");
+	POFI("TABLE");
+	POFI("ACKNOWLEDGEMENT");
+	POFI("AUTHOR BIBLIOGRAPHIES");
+	POFI("AUTHOR BIBLIOGRAPHY");
+	
+	//DEFI()
+	
+	
+	setTrainFile(fopen("train.txt","w")); // train.txt
+	setTestFile(fopen("test.txt","w")); // test.txt     
+	srand((unsigned int)time(NULL));
 	if(getTrainFile() == NULL || getTestFile() == NULL)
 	{
 		fprintf(stderr,"error opening sample file\n");
 		return -1;
 	}
-	//for(i=0;i<100;i++)
-	dirTraversal("data/",1,genStartSampleCtl);
-	//printf("done(%d/%d)\n",bingo,fileNum);
-	printf("done \n total : %d\n",getFileNum());
+	
+	//dir traversal,and  author to ctl
+	dirTraversal("data/",1,genEndSampleCtl);
+	
 	cleanFilterData();
 	fclose(getTrainFile());
-	fclose(getTestFile());
+	fclose(getTestFile());	
+	
+	return getFileNum();
+}
+
+
+int main(int argc,char *argv[])
+{
+	int fileNum = 0;
+	
+	
+	
+	fileNum = genSamples4Endness();
+	printf("done \n total : %d\n",fileNum);
 	return 0;
 }
 

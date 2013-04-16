@@ -72,6 +72,7 @@ void setTestFile(FILE *fp);
 FILE * getTrainFile(void);
 FILE * getTestFile(void);
 
+void selfAddFileNum();
 
 #endif //__HFTCTL_H__
 

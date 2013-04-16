@@ -1,12 +1,13 @@
 #ifndef __PERSISTENCE_H__
 #define __PERSISTENCE_H__
 
-#ifndef CALLBACK_LEN
+#ifndef CALLBACK_LEN //for start?
 #define CALLBACK_LEN 9
 //#define CALLBACK_LEN 6
 #endif // CALLBACK_LEN
 
-typedef struct sFeatureData
+
+typedef struct sFeatureData //start feature data
 {
 	int qid;
 	//char fileName[1024];	
@@ -22,8 +23,6 @@ typedef struct sFeatureData
 	double density[CALLBACK_LEN][3][2];//6:method 3: all prev&next(kwd) prev&next(100*words)  2: prev next
 	double vari[2];
 } featureData;
-
-
 
 typedef struct
 {

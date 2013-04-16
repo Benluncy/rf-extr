@@ -636,7 +636,7 @@ int genStartSampleCtl(const char* fileName,int isDir)
 	
 	printf("  [done]\n");
         cleanContent();
-        fileNum++;
+        selfAddFileNum();
         id++;
         return 1;
 }
@@ -644,6 +644,7 @@ int genStartSampleCtl(const char* fileName,int isDir)
 
 // set and get
 int getFileNum(){return fileNum;}
+void selfAddFileNum() { fileNum++;}
 void setTrainFile(FILE *fp){ fpTrain = fp;}
 void setTestFile(FILE *fp){fpTest = fp;}
 FILE * getTrainFile(){return fpTrain;}

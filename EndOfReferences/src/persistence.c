@@ -11,44 +11,23 @@
 const char *dbfile = "db/features.db";
 typedef sqlite3 * dbsrc;
 dbsrc featureSrc = NULL;
+/**
+ * atof(将字符串转换成浮点型数)
+ * atoi(将字符串转换成整型数)
+ * atol(将字符串转换成长整型数)
+ * strtod(将字符串转换成浮点数)
+ * strtol(将字符串转换成长整型数)
+ * strtoul(将字符串转换成无符号长整型数)
+ * toascii(将整型数转换成合法的ASCII 码字符)
+ * toupper(将小写字母转换成大写字母)
+ * tolower(将大写字母转换成小写字母)
+ */
+
+
 
 inline char *queryEscape(const char *str)
 {
-	static char target[1024];
-	int i;
-	int j = 0;
-	int len = strlen(str);
-	for(i=0;i<len;i++)
-	{
-		switch(str[i])
-		{
-			case '\'':
-			case '\"':
-				target[j] = str[i];
-				j++;
-				target[j] = str[i];
-				j++;
-				break;
-			case '/':
-			case '[':
-			case ']':
-			case '%':
-			case '&':
-			case '_':
-			case '(':
-			case ')':
-				target[j] = '/';
-				j++;
-				target[j] = str[i];
-				j++;
-				break;
-			default :
-				target[j] = str[i];
-				j++;
-		}
-	}
-	target[j]='\0';
-	return target;
+	return sqlite3_mprintf("%q",str);
 }
 
 
@@ -65,6 +44,12 @@ int doCreateTable()
 			t4 int,\
 			positive int,\
 			offset long)";
+	const char *createTableQuery2 = "create talbe EndOffset(\
+			id integer primary key,	\
+			qid int ,\
+			fileName varchar(512),\
+			positive int,\
+			offset long)";
 	sqlite3_exec(featureSrc,
 			"create table OneToFiveInfo(\
 				id integer primary key,\
@@ -72,6 +57,7 @@ int doCreateTable()
 				sampleNumber int\
 				)",0,0,0);
 	sqlite3_exec(featureSrc,createTableQuery,0,0,0);
+	sqlite3_exec(featureSrc,createTableQuery2,0,0,0);
 	return 0;
 }
 
@@ -91,17 +77,7 @@ int dbInit()
 	return 1;
 }
 
-/*
- atof(将字符串转换成浮点型数)
-atoi(将字符串转换成整型数)
-atol(将字符串转换成长整型数)
-strtod(将字符串转换成浮点数)
-strtol(将字符串转换成长整型数)
-strtoul(将字符串转换成无符号长整型数)
-toascii(将整型数转换成合法的ASCII 码字符)
-toupper(将小写字母转换成大写字母)
-tolower(将大写字母转换成小写字母)
-*/
+
 int insertFeature(const char* fileName,featureData data)
 {
 	char query[1024];

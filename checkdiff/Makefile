@@ -59,6 +59,10 @@ doTrain			:
 	svm_learn -c 0.1 train.txt
 	svm_classify test.txt svm_model
 
+testAsTrainData		:
+	svm_learn -c 0.1 test.txt
+	svm_classify train.txt svm_model
+
 rebuild			: clean all
 
 fullcheck		:

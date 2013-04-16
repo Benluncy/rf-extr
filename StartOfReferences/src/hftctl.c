@@ -422,77 +422,16 @@ int genStartSampleCtl(const char* fileName,int isDir)
 	
 	// search from db
 	if(!getFeature(fileName,&mfdc)) // get One To Five from DB
-	{
-		int i;
-		//int j;
-		int threshold;
-		unsigned int refOffset;
-		StackInfo info[FEATURE_SIZE];
-		for(threshold=0;threshold<FEATURE_SIZE;threshold++) 
-			stackData(&info[threshold],isAccpted,getPcontent(),getPclen(),threshold);
-			
-		unsigned int count[FEATURE_SIZE];
-		//unsigned int status[FEATURE_SIZE];
-		int maxid;
-		int maxoffset;
-	
-		int isPositive;
-		
-		// DB data set
-		mfd.qid = id;
-	
-		refOffset = getReferenceHeadOffset();
-		
-		//init count 
-		for(i=0;i<FEATURE_SIZE;i++) count[i]=1;
-		
-		//data
-		mfdc.top = 0;
-		
-		while(!allZero(info,FEATURE_SIZE))
-		{	
-			maxid = maxTop(info,FEATURE_SIZE);
-			maxoffset = info[maxid].data[info[maxid].top-1];
-			isPositive = VALUESDIFF(refOffset,maxoffset) < 10 ;
-			
-			mfd.positive = isPositive;
-			mfd.offset = maxoffset;
-			
-			for(i=0;i<FEATURE_SIZE;i++)
-			{
-				//status[i] = 0;
-				mfd.t[i] = 0;
-				if(VALUESDIFF(info[i].data[info[i].top-1],maxoffset)<10)
-				{
-					info[i].top--;
-					//status[i] = count[i];
-					//DB data set
-					mfd.t[i] = count[i];//1,2,3,...
-					
-					count[i]++;//++
-				}
-			
-			}
 
-			if(!insertFeature(fileName,mfd))
-			{
-				fprintf(stderr,"[DB] insertFeature()(1): error --%d",__LINE__);
-				//getchar();
-			}
-		
-			mfdc.data[mfdc.top] = mfd;
-			mfdc.top ++ ;
-			
-		}
-		
-		//db insert
-		if(!insertFeatureInfo(fileName,mfdc.top))
-		{
-			fprintf(stderr,"[DB] insertFeatureInfo()(2): error %d",__LINE__);
-			getchar();
-		}
-	} // end of GET DATA FROM DB
-	
+
+
+
+
+
+|
+   
+
+
 
 	
 	printf(".");fflush(NULL);//TODO TIPS
