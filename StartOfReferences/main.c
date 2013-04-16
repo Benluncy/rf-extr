@@ -36,7 +36,7 @@ int main(int argc,char *argv[])
 		return -1;
 	}
 	//for(i=0;i<100;i++)
-	dirTraversal("data/",1,generateSample);
+	dirTraversal("data/",1,genStartSampleCtl);
 	//printf("done(%d/%d)\n",bingo,fileNum);
 	printf("done \n total : %d\n",getFileNum());
 	cleanFilterData();

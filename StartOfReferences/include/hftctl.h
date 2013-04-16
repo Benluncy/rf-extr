@@ -61,7 +61,7 @@ int allZero(StackInfo info[],int len);
 int maxTop(StackInfo info[],int len);
 
 // sample generater
-int generateSample(const char* fileName,int isDir);
+int genStartSampleCtl(const char* fileName,int isDir);
 
 // set && get
 int getFileNum();

@@ -387,7 +387,8 @@ int gen26ToEnd(FILE *fp,featureData fd)
 
 
 //int bingo = 0;
-int generateSample(const char* fileName,int isDir)
+//int generateSample(const char* fileName,int isDir)
+int genStartSampleCtl(const char* fileName,int isDir)
 {
 	FILE *fp;
 	int trainOrTest;

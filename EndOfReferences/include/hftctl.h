@@ -1,5 +1,5 @@
-#ifndef __HEADFEATURES_H__
-#define __HEADFEATURES_H__
+#ifndef __HFTCTL_H__
+#define __HFTCTL_H__
 #include <stdio.h>
 //definitions
 
@@ -61,7 +61,8 @@ int allZero(StackInfo info[],int len);
 int maxTop(StackInfo info[],int len);
 
 // sample generater
-int generateSample(const char* fileName,int isDir);
+//int generateSample(const char* fileName,int isDir);
+int genStartSampleCtl(const char* fileName,int isDir);
 
 // set && get
 int getFileNum();
@@ -72,7 +73,7 @@ FILE * getTrainFile(void);
 FILE * getTestFile(void);
 
 
-#endif //__HEADFEATURES_H__
+#endif //__HFTCTL_H__
 
 
 
