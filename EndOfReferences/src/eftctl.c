@@ -57,9 +57,9 @@ int genEndSampleCtl(const char* fileName,int isDir)
 		
 		// last year
 		
-		// last 
+		// last pp
 		
-
+		// 
 	}
 	
 	//step 2: calculator

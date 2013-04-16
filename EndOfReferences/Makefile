@@ -47,8 +47,8 @@ VPATH			:= .:include/:src/:lib/:obj/
 	export	VPATH
 LIBS			:= -L lib/ -ldl -lpthread  -lm 
 INCFLAG			:= -I include/
-CFLAGS			:= -Wall ${INCFLAG} -std=c99
-GNUFLAGS		:= -Wall ${INCFLAG} -std=gnu99
+CFLAGS			:= -Wall	${INCFLAG} -std=c99
+GNUFLAGS		:= -Wall	${INCFLAG} -std=gnu99
 OBJS			:= eftfun.o eftctl.o hftctl.o hftnpse.o sqlite3.o persistence.o \
 				ini.o tokens.o virtualcontent.o \
 				minEditDistance.o dirTraversal.o\
@@ -72,7 +72,7 @@ main			: ${OBJS}
 doclassify		: ${OBJS}
 	${CC} ${CFLAGS} $@.c -o $@ ${OBJS} ${LIBS}
 
-dirTraversal.o		: 
+dirTraversal.o		:
 	${CC} ${GNUFLAGS} -c -o $@ src/dirTraversal.c 
 
 
@@ -87,7 +87,7 @@ dirTraversal.o		:
 #ini.o			:
 #${CC} ${CFLAGS} src/ini.c -c -o $@  
 #	${CC} ${CFLAGS} include/ini.h -c -o $@ 
-	
+
 #dirTraversal.o		:
 #${CC} ${CFLAGS} src/dirTraversal.c -c -o $@  
 #	${CC} ${CFLAGS} include/dirTraversal.h -c -o $@ 

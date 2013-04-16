@@ -12,8 +12,8 @@ int basicFilter()
 }
 
 
-
-
+//int getLastElement(int (*callback)(int offset,int limit));
+	
 
 
 

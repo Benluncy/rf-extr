@@ -110,7 +110,7 @@ int dirTraversal(const char *path, int recursive,file_callback xCallback)
  * SIGH: unsigned
  *
  */
-int tab = 1;
+//int dirTraversal(const char *path, int recursive,file_callback xCallback)
 int dirTraversal(const char *path, int recursive,file_callback xCallback)
 {
 	int len = strlen(path)+3;
@@ -154,20 +154,20 @@ int dirTraversal(const char *path, int recursive,file_callback xCallback)
 	if(-1==handle) return -1;
 	do
 	{
-		for(i=0;i<tab;i++) printf("    ");
-		printf("+-");
+		//TODO printf -> xCallback
+		xCallback(fileinfo.name,((fileinfo.attrib & _A_SUBDIR)!=0));
 		printf("%s\n",fileinfo.name);
-		if(((fileinfo.attrib & _A_SUBDIR)!=0) && recursive && fileinfo.name[0]!='.')
+		//if(!strcmp(pdirent->d_name, ".")|| !strcmp(pdirent->d_name, "..")) continue;
+		if(((fileinfo.attrib & _A_SUBDIR)!=0) && recursive && !strcmp(fileinfo.name,".")
+				&& !strcmp(fileinfo.name,".."))
 		{
 			printf("0:%c1:%c2:%c\n",fileinfo.name[0],fileinfo.name[1],fileinfo.name[2]);
 			if(getchar() == 'q') return 1;
-			tab++;
 			printf("-->\n");
 			sprintf(nxtpath,"%s%c%s",tmppath,sp,fileinfo.name);
 			printf("[%s]\n",nxtpath);
 			dirTraversal(nxtpath,1);
 			printf("<--\n");
-			tab--;
 		}
 		
 	}while(!_findnext(handle,&fileinfo));//循环查找其他符合的文件,知道找不到其他的为止

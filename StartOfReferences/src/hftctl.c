@@ -422,17 +422,6 @@ int genStartSampleCtl(const char* fileName,int isDir)
 	
 	// search from db
 	if(!getFeature(fileName,&mfdc)) // get One To Five from DB
-
-
-
-
-
-
-|
-   
-
-
-
 	
 	printf(".");fflush(NULL);//TODO TIPS
 	
