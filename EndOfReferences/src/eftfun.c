@@ -10,8 +10,8 @@
 #include <string.h>
 
 #define thresholdForDifferneces  10
-#define thresholdForGetOffsetSuggestion  5
-#define T4GOS thresholdForGetOffsetSuggestion
+#define thresholdForGetOffsetSuggestion(x)  x*0.3
+#define T4GOS(x) thresholdForGetOffsetSuggestion(x)
 
 featureData mfd;
 featureDataContainer mfdc;
@@ -122,10 +122,13 @@ int basicFilter(featureDataContainer *container,unsigned int startOffset)
 		//2. 
 		//APPENDIX || ACKNOWLEDGEMENT
 		//AUTHOR BIBLIOGRAPHIES || AUTHOR BIBLIOGRAPHY
-		if(editDistanceS("APPENDIX",strlen("APPENDIX"),content+i,strlen("APPENDIX")) <= T4GOS ||
-			editDistanceS("ACKNOWLEDGEMENT",strlen("ACKNOWLEDGEMENT"),content+i,strlen("ACKNOWLEDGEMENT")) <= T4GOS ||
-			editDistanceS("AUTHOR BIBLIOGRAPHIES",strlen("AUTHOR BIBLIOGRAPHIES"),content+i,strlen("AUTHOR BIBLIOGRAPHIES")) <= T4GOS ||
-			editDistanceS("AUTHOR BIBLIOGRAPHY",strlen("AUTHOR BIBLIOGRAPHY"),content+i,strlen("AUTHOR BIBLIOGRAPHY")) <= T4GOS)
+		#define INLMT(x) (editDistanceS(x,strlen(x),content+i,strlen(x)) <= T4GOS(strlen(x)))
+		//if(editDistanceS("APPENDIX",strlen("APPENDIX"),content+i,strlen("APPENDIX")) <= T4GOS ||
+		//	editDistanceS("ACKNOWLEDGEMENT",strlen("ACKNOWLEDGEMENT"),content+i,strlen("ACKNOWLEDGEMENT")) <= T4GOS ||
+		//	editDistanceS("AUTHOR BIBLIOGRAPHIES",strlen("AUTHOR BIBLIOGRAPHIES"),content+i,strlen("AUTHOR BIBLIOGRAPHIES")) <= T4GOS ||
+		//	editDistanceS("AUTHOR BIBLIOGRAPHY",strlen("AUTHOR BIBLIOGRAPHY"),content+i,strlen("AUTHOR BIBLIOGRAPHY")) <= T4GOS)
+		if(INLMT("APPENDIX")||INLMT("ACKNOWLEDGEMENT")||INLMT("AUTHOR BIBLIOGRAPHIES")
+			||INLMT("AUTHOR BIBLIOGRAPHY"))
 		{
 			container->data[container->top].t[1] = 1;
 			hasContent = 1;
@@ -134,9 +137,17 @@ int basicFilter(featureDataContainer *container,unsigned int startOffset)
 		//3. "TABLE" "He is" "Figure " ,"In this appendix" , "NOTICE OF","He has","Are there " etc.
 		for(int x = 0;x < myEc.top;x++)
 		{
+			/*
 			if(editDistanceS(myEc.data[x].key,myEc.data[x].len,
 				content+i,myEc.data[x].len) <= myEc.data[x].len*0.3)
 			{
+				printf("[+]");
+				container->data[container->top].t[2] = 1;
+				hasContent = 1;
+			}*/
+			if(INLMT(myEc.data[x].key))
+			{
+				printf("[+]");
 				container->data[container->top].t[2] = 1;
 				hasContent = 1;
 			}
@@ -203,16 +214,16 @@ int combineOffsets(featureDataContainer *container)//combine nearly offsets and 
 {
 	int j = 0;
 	int lastOffset = container->data[0].offset;
-	int reo = getReferenceEndOffset();
-	container->data[0].positive = !hasDifferneces(lastOffset,reo);
-	for(int i=1;i<container->top;i++)
+	//int reo = getReferenceEndOffset();
+	//container->data[0].positive = !hasDifferneces(lastOffset,reo);
+	for(int i=0;i<container->top;i++)
 	{
 		container->data[j].offset = container->data[i].offset;
 		//hasDifferneces(int dest,int src)
 		if(!hasDifferneces(lastOffset,container->data[i].offset))
 		{
 			//container->data[j].offset = container->data[i].offset;
-			container->data[j].positive = !hasDifferneces(container->data[i].offset,reo)|| container->data[j].positive;
+			//container->data[j].positive = !hasDifferneces(container->data[i].offset,reo)|| container->data[j].positive;
 			for(int k=0;k<LENOFT;k++)
 			{
 				container->data[j].t[k] = container->data[i].t[k] || container->data[j].t[k];
@@ -221,7 +232,7 @@ int combineOffsets(featureDataContainer *container)//combine nearly offsets and 
 		{
 			j++;
 			//container->data[j].offset = container->data[i].offset;
-			container->data[j].positive = !hasDifferneces(container->data[i].offset,reo);
+			//container->data[j].positive = !hasDifferneces(container->data[i].offset,reo);
 			for(int k=0;k<LENOFT;k++)
 			{
 				container->data[j].t[k] = container->data[i].t[k];
@@ -336,6 +347,14 @@ int genNextDataForEndfeature(FILE *fp,featureData fd,int start)
 	fprintf(fp,"%d:%d ",start++,asciiCodeDensity(offset,lmt) >= asciiCodeDensity(offset,-lmt));
 	fprintf(fp,"%d:%d ",start++,dataDensity(offset,lmt) >= dataDensity(offset,-lmt));
 
+	lmt = 200;
+	fprintf(fp,"%d:%d ",start++,(hasPPafterTheOffset(offset,lmt)?1:0));
+	fprintf(fp,"%d:%d ",start++,(hasPPafterTheOffset2(offset,lmt)?1:0));
+	fprintf(fp,"%d:%d ",start++,(hasYearafterTheOffset(offset,lmt)?1:0));
+	fprintf(fp,"%d:%d ",start++,(hasNameafterTheOffset0(offset,lmt)?1:0));
+	fprintf(fp,"%d:%d ",start++,(hasNameafterTheOffset1(offset,lmt)?1:0));
+	fprintf(fp,"%d:%d ",start++,(hasNameafterTheOffset2(offset,lmt)?1:0));
+
 	lmt = -1000;
 	
 	fprintf(fp,"%d:%d ",start++,(hasSeqOfTheOffset(offset,lmt)?1:0));
@@ -351,8 +370,8 @@ int genNextDataForEndfeature(FILE *fp,featureData fd,int start)
 	//32
 	//fprintf(fp,"%d:%f ",start++,(double)offset/getPclen());
 	//fprintf(fp,"%d:%f ",start++,(double)(getPclen()-offset)/offset);
-	rateWrite(fp,start,(double)offset/getPclen());
-	start+=5;
+	//rateWrite(fp,start,(double)offset/getPclen());
+	//start+=5;
 	
 	for(int i=0;i<CALLBACK_LEN;i++)
 	{
@@ -537,7 +556,9 @@ unsigned int getReferenceEndOffset()
 
 int hasDifferneces(int dest,int src)
 {
-	if(src>=getPclen()||src<0) return 0;
+	if(src>=getPclen()) src = getPclen()-1;
+	if(src<0) src = 0;
+	int th = 0;
 	char *content = getPcontent();
 	if(dest<0) dest = 0;
 	if(dest>=getPclen()) dest = getPclen()-1;
@@ -553,7 +574,9 @@ int hasDifferneces(int dest,int src)
 		// no ascii code
 		if(fitPattern('a',content[i])&&fitPattern('a',content[i+1])) 
 		{
-			return 1;
+			th++;
+			if(th > 3) return 1;
+			i+=2;
 		}
 	}
 	return 0;

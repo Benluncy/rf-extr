@@ -25,15 +25,44 @@ inline int isPageNumber(const char *content,int limit)
 	if(limit < 3 ) return 0;
 	if(editDistanceP("nen",3,content,3)<=0)
 		return 3;
+	if(editDistanceP("nen",3,content,4)<=1)
+		return 4;
+	if(editDistanceP("nenn",4,content,4)<=1)
+		return 4;
+		
+	if(editDistanceP("nnenn",5,content,4)<=1)
+		return 4;
+	if(editDistanceP("nenn",4,content,6)<=1)
+		return 4;
+	
 	if(limit < 5) return 0;
 	if(editDistanceP("nnenn",5,content,5)<=1)
 		return 5;
+	if(editDistanceP("nnenn",5,content,6)<=1)
+		return 6;
+	
+
+	if(editDistanceP("nnnennn",7,content,6)<=1)
+		return 6;
+	if(editDistanceP("nnennn",6,content,6)<=1)
+		return 6;
+		
 	if(limit < 7) return 0;
 	if(editDistanceP("nnnennn",7,content,7)<=1)
 		return 7;
+	if(editDistanceP("nnnennn",7,content,8)<=1)
+		return 8;
+	
+	if(editDistanceP("nnnnennnn",9,content,8)<=1)
+		return 8;
+	if(editDistanceP("nnnennnn",8,content,8)<=1)
+		return 8;	
 	if(limit < 9) return 0;
 	if(editDistanceP("nnnnennnn",9,content,9)<=1)
 		return 9;
+	if(editDistanceP("nnnnennnn",9,content,10)<=1)
+		return 9;
+	
 	return 0;
 }
 
@@ -66,7 +95,7 @@ int hasPPafterTheOffset2(int offset,int limit)
 	{
 		if(content[i]=='p' || content[i] == 'P')
 		{
-			if(content[i+1] == 'p'  || content[i] == 'P')
+			if(content[i+1] == 'p'  || content[i+1] == 'P' || content[i+1] == '.')
 			{
 				for(j=3;!fitPattern('n',content[i+j]);j++)
 				{

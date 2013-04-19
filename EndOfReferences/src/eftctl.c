@@ -118,17 +118,19 @@ int genEndSampleCtl(const char* fileName,int isDir)
 		//positive
 		fprintf(fp,"%c1 ",!hasDifferneces(_mfdc->data[i].offset,targetOffset)?'+':'-');
 		//tx
-		for(int j=0;j<LENOFT;j++)
+		// 1-20
+		for(int j=1;j<LENOFT;j++)
 			rankWrite(fp,1+j*5,_mfdc->data[i].t[j],5);
 		//	fprintf(fp,"%d:%d ",);
 		
 		
-		
+		// 21 - 45
 		for(int j=0;j<LENOFT;j++)
-			rankWrite(fp,26+j*5,tmpCter.data[i].t[j],5);
+			rankWrite(fp,21+j*5,tmpCter.data[i].t[j],5);
 		
+		// 46 - end 
 		//gen26ToEnd(fp,_mfdc->data[i]);
-		genNextDataForEndfeature(fp,_mfdc->data[i],51);
+		genNextDataForEndfeature(fp,_mfdc->data[i],46);
 		fprintf(fp,"\n");
 	}
 	

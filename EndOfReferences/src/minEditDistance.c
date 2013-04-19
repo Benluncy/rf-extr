@@ -154,7 +154,7 @@ inline int editDistanceS(const char *t,int tlen,const char * s,int slen) //compa
 
 inline int fitPattern(char a,char b)
 {
-	const char *de="!@#$%^&*()\"\':;,./<>?~`";
+	const char *de="!@#$%^&*()\"\':;,./<>?~` \n\t\r";
 	int len = strlen(de);
 	int i;
 	switch(a)
