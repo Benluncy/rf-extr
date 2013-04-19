@@ -31,7 +31,9 @@ int genEndSampleCtl(const char* fileName,int isDir)
 	unsigned int targetOffset;
 	unsigned int startOffset;
 	featureDataContainer *_mfdc =getEndFeatureDataContainer();
+	featureDataContainer tmpCter ;
 	memset(_mfdc,0,sizeof(featureDataContainer));
+	memset(&tmpCter,0,sizeof(featureDataContainer));
 	// ignore dir
         if(isDir)
         {
@@ -77,7 +79,6 @@ int genEndSampleCtl(const char* fileName,int isDir)
 		//int basicFilter(featureDataContainer *container,unsigned int startOffset)
 		basicFilter(_mfdc,startOffset);
 		combineOffsets(_mfdc);
-		makeSequenceForCombinedOffsets(_mfdc);
 		for(int i = 0; i < _mfdc->top;i++)
 		{
 			if(!insertFeature(fileName,_mfdc->data[i]))
@@ -86,6 +87,8 @@ int genEndSampleCtl(const char* fileName,int isDir)
 				//getchar();
 			}
 		}
+		tmpCter = *_mfdc;
+		makeSequenceForCombinedOffsets(&tmpCter);
 		// filters
 		
 		// get endness of the file
@@ -119,8 +122,13 @@ int genEndSampleCtl(const char* fileName,int isDir)
 			rankWrite(fp,1+j*5,_mfdc->data[i].t[j],5);
 		//	fprintf(fp,"%d:%d ",);
 		
+		
+		
+		for(int j=0;j<LENOFT;j++)
+			rankWrite(fp,26+j*5,tmpCter.data[i].t[j],5);
+		
 		//gen26ToEnd(fp,_mfdc->data[i]);
-		genNextDataForEndfeature(fp,_mfdc->data[i],26);
+		genNextDataForEndfeature(fp,_mfdc->data[i],51);
 		fprintf(fp,"\n");
 	}
 	

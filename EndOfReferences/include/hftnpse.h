@@ -33,6 +33,11 @@ int hasSeqOfTheOffset2(int offset,int limit);
 
 int hasSpecialKeyWords(int offset,int limit);
 
+
+double asciiCodeDensity(int offset,int limit);
+double dataDensity(int offset,int limit);
+
+
 typedef int (*CKWDfun)(int offset,int limit);
 
 int getCloseKWD(int offset,CloseKWD *closeKWD,int (*callback)(int offset,int limit));

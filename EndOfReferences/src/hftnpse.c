@@ -4,6 +4,7 @@
 #include "hftctl.h"
 #include <stdio.h>
 #include <string.h>
+
 inline void defineStartAndEnd(int *offset,int *offend,int limit)
 {
 	int tmp;
@@ -438,8 +439,38 @@ int getCloseKWD(int offset,CloseKWD *closeKWD,CKWDfun ckfunc)
 }
 
 
+double asciiCodeDensity(int offset,int limit)
+{
+	int i;	
+	int offend;
+	int num = 0;
+	int length;
+	char *content = getPcontent();
+	defineStartAndEnd(&offset,&offend,limit);
+	length = offend - offset;
+	for(i=offset;i<offend;i++)
+	{
+		if(fitPattern('a',content[i])) num++;
+	}
+	return (double)num/length;
+}
 
 
+double dataDensity(int offset,int limit)
+{
+	int i;	
+	int offend;
+	int num = 0;
+	int length;
+	char *content = getPcontent();
+	defineStartAndEnd(&offset,&offend,limit);
+	length = offend - offset;
+	for(i=offset;i<offend;i++)
+	{
+		if(fitPattern('d',content[i])) num++;
+	}
+	return (double)num/length;
+}
 
 
 

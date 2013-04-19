@@ -65,6 +65,30 @@ int getLastYearOffset(unsigned int startOffset)
 	return offset;
 }
 
+int getLastPageOffset(unsigned int startOffset)
+{
+	//hasYearafterTheOffset(int offset,int limit)
+	int len= getPclen();
+	int offset = 0;
+	while((startOffset = hasPPafterTheOffset(startOffset,len)) != 0)
+	{
+		offset = startOffset;
+	}
+	return offset;
+}
+
+int getLastPage2Offset(unsigned int startOffset)
+{
+	//hasYearafterTheOffset(int offset,int limit)
+	int len= getPclen();
+	int offset = 0;
+	while((startOffset = hasPPafterTheOffset2(startOffset,len)) != 0)
+	{
+		offset = startOffset;
+	}
+	return offset;
+}
+
 
 
 int basicFilter(featureDataContainer *container,unsigned int startOffset)
@@ -74,6 +98,10 @@ int basicFilter(featureDataContainer *container,unsigned int startOffset)
 	int hasContent = 0;
 	int lastYearOffset = getLastYearOffset(startOffset);
 	int isMarkedYear = 0;
+	int lastPageOffset = getLastPageOffset(startOffset);
+	int isMarkedPage = 0;
+	int lastPageOffset2 = getLastPage2Offset(startOffset);
+	int isMarkedPage2 = 0;
 	//printf("last year offset is : %d",lastYearOffset);
 	//printf("%c -%d",content[0],cLen);
 	//POFI("APPENDIX");
@@ -103,7 +131,7 @@ int basicFilter(featureDataContainer *container,unsigned int startOffset)
 			hasContent = 1;
 		}
 		
-		//2. "TABLE" "He is" "Figure " ,"In this appendix" , "NOTICE OF","He has","Are there " etc.
+		//3. "TABLE" "He is" "Figure " ,"In this appendix" , "NOTICE OF","He has","Are there " etc.
 		for(int x = 0;x < myEc.top;x++)
 		{
 			if(editDistanceS(myEc.data[x].key,myEc.data[x].len,
@@ -117,8 +145,24 @@ int basicFilter(featureDataContainer *container,unsigned int startOffset)
 		
 	
 		
-		//4. end of year
+		//4. end of year 
 		if(!hasDifferneces(lastYearOffset,i) && !isMarkedYear)
+		{
+			container->data[container->top].t[3] = 1;
+			isMarkedYear = 1;
+			hasContent = 1;
+		}
+		
+		//4. end of  pp
+		if(!hasDifferneces(lastPageOffset,i) && !isMarkedPage)
+		{
+			container->data[container->top].t[3] = 1;
+			isMarkedYear = 1;
+			hasContent = 1;
+		}
+		
+		//4. end of  pp2
+		if(!hasDifferneces(lastPageOffset2,i) && !isMarkedPage2)
 		{
 			container->data[container->top].t[3] = 1;
 			isMarkedYear = 1;
@@ -201,40 +245,36 @@ int combineOffsets(featureDataContainer *container)//combine nearly offsets and 
 int makeSequenceForCombinedOffsets(featureDataContainer *container)
 {
 	unsigned int max[LENOFT];
+	//unsigned int before[LENOFT];
+	unsigned int hasData[LENOFT];
 	int top = container->top;
-	int seqMk = 0;
-	for(int i=0;i<LENOFT;i++) max[i] = 1;
-	for(int i=0;i<top;i++)
+	for(int i=0;i<LENOFT;i++)
 	{
-		seqMk = 1;
-		for(int j=1;j<LENOFT;j++)
-		{
-			if(container->data[i].t[j] == 1)
-			{
-				container->data[i].t[j] = max[j];
-				max[j]++;
-				if(seqMk)
-				{
-					seqMk --;
-					container->data[i].t[0] = max[0];
-					max[0]++;
-				}
-				
-			}else
-			{
-				container->data[i].t[j] = max[j];
-			}
-		}
+		max[i] = 1;
+		hasData[i] = 0;
 	}
 	for(int i=0;i<top;i++)
+		for(int j=1;j<LENOFT;j++) 
+			if(container->data[i].t[j] != 0 ) hasData[j] = 1;
+	
+	for(int i=0;i<top;i++)
 	{
-		for(int j=0;j<LENOFT;j++)
+		for(int j=1;j<LENOFT;j++)
 		{
-			if(container->data[i].t[j] != 0)
+			if(hasData[j])
 			{
-				container->data[i].t[j] = max[j] - container->data[i].t[j];
+				if(container->data[i].t[j] == 0)
+				{
+					container->data[i].t[j] = max[j];
+				}else
+				{
+					max[j]++;
+					container->data[i].t[j] = max[j];
+				}
+			
 			}
 		}
+		container->data[i].t[0] = i+1;
 	}
 	/*
 	printf("X:\n");
@@ -242,7 +282,7 @@ int makeSequenceForCombinedOffsets(featureDataContainer *container)
 	{
 		for(int j=0;j<LENOFT;j++)
 		{
-			printf("%d ",container->data[i].t[j]);
+			printf("%3d ",container->data[i].t[j]);
 		}
 		printf("\n");
 	}*/
@@ -293,6 +333,8 @@ int genNextDataForEndfeature(FILE *fp,featureData fd,int start)
 	fprintf(fp,"%d:%d ",start++,(hasNameafterTheOffset1(offset,lmt) >= hasNameafterTheOffset1(offset,-lmt)));
 	fprintf(fp,"%d:%d ",start++,(hasNameafterTheOffset2(offset,lmt) >= hasNameafterTheOffset2(offset,-lmt)));
 
+	fprintf(fp,"%d:%d ",start++,asciiCodeDensity(offset,lmt) >= asciiCodeDensity(offset,-lmt));
+	fprintf(fp,"%d:%d ",start++,dataDensity(offset,lmt) >= dataDensity(offset,-lmt));
 
 	lmt = -1000;
 	
@@ -300,6 +342,10 @@ int genNextDataForEndfeature(FILE *fp,featureData fd,int start)
 	fprintf(fp,"%d:%d ",start++,(hasSeqOfTheOffset2(offset,lmt)?1:0));	
 	fprintf(fp,"%d:%d ",start++,(hasSeqOfTheOffset(offset,lmt) >= hasSeqOfTheOffset(offset,-lmt)));
 	fprintf(fp,"%d:%d ",start++,(hasSeqOfTheOffset2(offset,lmt) >= hasSeqOfTheOffset2(offset,-lmt)));
+	
+	fprintf(fp,"%d:%d ",start++,asciiCodeDensity(offset,lmt) >= asciiCodeDensity(offset,-lmt));
+	fprintf(fp,"%d:%d ",start++,dataDensity(offset,lmt) >= dataDensity(offset,-lmt));
+	
 	//}
 	
 	//32
@@ -338,8 +384,12 @@ int genNextDataForEndfeature(FILE *fp,featureData fd,int start)
 		start+=wide;
 
 	}
+
 	return start;
 }
+
+
+
 
 int prepareDensityData(void)
 {
