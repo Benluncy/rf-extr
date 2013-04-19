@@ -54,8 +54,11 @@ int readFileToParse(const char * fileName)
 {
 	unsigned int flen;
 	FILE *fp = fopen(fileName,"r");
-	if(fp == NULL) return 0;
-
+	if(fp == NULL)
+	{
+		fprintf(stderr,"open file %s error\n",fileName);
+		return 0;
+	}
 	// get length 
 	fseek(fp,0L,SEEK_END); 
 	flen=ftell(fp); 
@@ -269,7 +272,6 @@ int initContent()
 
 int cleanContent()
 {
-	#ifndef doClean
 	#define doClean(s) {if(s != NULL) { free(s);s=NULL;}}
 	doClean(content);
 	clen = 0;
@@ -277,8 +279,6 @@ int cleanContent()
 	doClean(pcontent);
 	doClean(offset);
 	doClean(tags);
-	#undef doClean
-	#endif
 	return 1;
 }
 

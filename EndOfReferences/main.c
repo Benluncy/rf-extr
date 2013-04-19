@@ -1,5 +1,6 @@
 #include "hftctl.h"
 #include "eftctl.h"
+#include "eftfun.h"
 #include "hftnpse.h"
 #include "dirTraversal.h"
 #include "persistence.h"
@@ -9,19 +10,19 @@
 #include <stdlib.h>
 #include <time.h>
 
-#define POFI(x) insertFilterData(1,x,strlen(x))
-#define DEFI(x) insertFilterData(0,x,strlen(x))
 
 int genSamples4Endness()
 {
 	dbInit();
-	initFilterData();
+	//initFilterData();
 	/*
 	//filters (before)
-	// APPENDIX
-	// AUTHOR BIOGRAPHY(IES)
-	// ACKNOWLEDGEMENT
-	// TABLES
+	POFI("APPENDIX");
+	POFI("TABLE");
+	POFI("ACKNOWLEDGEMENT");
+	POFI("AUTHOR BIBLIOGRAPHIES");
+	POFI("AUTHOR BIBLIOGRAPHY");
+	
 	insertFilterData(1,"REFERENCES AND BIBLIOGRAPHY",strlen("REFERENCES AND BIBLIOGRAPHY"));
 	insertFilterData(1,"REFERENCES",strlen("REFERENCES"));
 	insertFilterData(0,"CONFERENCES",strlen("CONFERENCES"));
@@ -30,17 +31,24 @@ int genSamples4Endness()
 	insertFilterData(0,"AUTHOR BIOGRAPHY",strlen("AUTHOR BIOGRAPHY"));
 	insertFilterData(0,"AUTHOR BIOGRAPHIES",strlen("AUTHOR BIOGRAPHIES"));
 	*/
-	POFI("APPENDIX");
-	POFI("TABLE");
-	POFI("ACKNOWLEDGEMENT");
-	POFI("AUTHOR BIBLIOGRAPHIES");
-	POFI("AUTHOR BIBLIOGRAPHY");
+	cleanEndKWDContainer();
+	insertEndKWD("TABLE ");
+	insertEndKWD("He is");
+	insertEndKWD("Figure");
+	insertEndKWD("In this appendix");
+	insertEndKWD("NOTICE OF");
+	insertEndKWD("He has");
+	insertEndKWD("Are there");
 	
 	//DEFI()
 	
 	
+	openLogFile();
+	
 	setTrainFile(fopen("train.txt","w")); // train.txt
-	setTestFile(fopen("test.txt","w")); // test.txt     
+	setTestFile(fopen("test.txt","w")); // test.txt   
+
+  
 	srand((unsigned int)time(NULL));
 	if(getTrainFile() == NULL || getTestFile() == NULL)
 	{
@@ -51,9 +59,11 @@ int genSamples4Endness()
 	//dir traversal,and  author to ctl
 	dirTraversal("data/",1,genEndSampleCtl);
 	
-	cleanFilterData();
 	fclose(getTrainFile());
 	fclose(getTestFile());	
+	
+	
+	closeLogFile();
 	
 	return getFileNum();
 }

@@ -14,10 +14,6 @@ int main(int argc,char *argv[])
 {
 	dbInit();
 	
-	//int insertFilterData(int accept,const char *cmpStr,int cmpLen);
-	//fp = fopen("sample.txt","w");
-	//char ch;
-	//int i;
 	setTrainFile(fopen("train.txt","w")); // train.txt
 	setTestFile(fopen("test.txt","w")); // test.txt     
 	srand((unsigned int)time(NULL));
@@ -35,9 +31,7 @@ int main(int argc,char *argv[])
 		fprintf(stderr,"error opening sample file\n");
 		return -1;
 	}
-	//for(i=0;i<100;i++)
 	dirTraversal("data/",1,genStartSampleCtl);
-	//printf("done(%d/%d)\n",bingo,fileNum);
 	printf("done \n total : %d\n",getFileNum());
 	cleanFilterData();
 	fclose(getTrainFile());

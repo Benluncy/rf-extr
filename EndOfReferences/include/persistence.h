@@ -1,6 +1,10 @@
 #ifndef __PERSISTENCE_H__
 #define __PERSISTENCE_H__
 
+
+//sFeatureData{int t[LENOFT];};
+#define LENOFT 5
+
 #ifndef CALLBACK_LEN //for start?
 #define CALLBACK_LEN 9
 //#define CALLBACK_LEN 6
@@ -11,7 +15,7 @@ typedef struct sFeatureData //start feature data
 {
 	int qid;
 	//char fileName[1024];	
-	int t[5];
+	int t[LENOFT];
 	int positive;
 	int offset;
 	int adjacencyOffset[2]; //0: prev 1:next 

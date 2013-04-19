@@ -1,17 +1,37 @@
 #include "eftctl.h"
+#include "eftfun.h"
 #include "hftctl.h"
 #include "debuginfo.h"
 #include "persistence.h"
 #include "virtualcontent.h"
+#include "tokens.h"
+#include "minEditDistance.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+
+FILE *flog;
+
+void openLogFile()
+{
+	flog = fopen("afterend.log","w");
+}
+
+
+void closeLogFile()
+{
+	fclose(flog);
+}
 
 int genEndSampleCtl(const char* fileName,int isDir)
 {
 	FILE *fp;
 	static int id = 0;
 	int trainOrTest;
-	
+	unsigned int targetOffset;
+	unsigned int startOffset;
+	featureDataContainer *_mfdc =getEndFeatureDataContainer();
+	memset(_mfdc,0,sizeof(featureDataContainer));
 	// ignore dir
         if(isDir)
         {
@@ -45,12 +65,27 @@ int genEndSampleCtl(const char* fileName,int isDir)
 		return 0;
 	}
 	
+	targetOffset = getReferenceEndOffset();
+ 	startOffset = getReferenceHeadOffset();
 	//step 1: offsets generate
-	if(1) // generate or get offset from 
+	//if(1) // generate or get offset from 
+	//if(!getFeature(fileName,_mfdc)) // get One To Five from DB
 	//TODO read and write offsets from | into db 
 	{
+		cleanFeature(fileName);	
 		// get head of references
-		
+		//int basicFilter(featureDataContainer *container,unsigned int startOffset)
+		basicFilter(_mfdc,startOffset);
+		combineOffsets(_mfdc);
+		makeSequenceForCombinedOffsets(_mfdc);
+		for(int i = 0; i < _mfdc->top;i++)
+		{
+			if(!insertFeature(fileName,_mfdc->data[i]))
+			{
+				fprintf(stderr,"[DB] insertFeature()(1): error --%d",__LINE__);
+				//getchar();
+			}
+		}
 		// filters
 		
 		// get endness of the file
@@ -59,21 +94,42 @@ int genEndSampleCtl(const char* fileName,int isDir)
 		
 		// last pp
 		
-		// 
+		// what
+		
+		// combine ... 
 	}
 	
 	//step 2: calculator
 	
+	prepareDensityData();
+	
+	// log
+	fprintf(flog,"##[[DATA:%s|\n%20s]]\n",fileName,getPcontent()+targetOffset);
 	
 	
 	//step 3: write into file
-	fprintf(fp,"\n");
-	
-	
+	fprintf(fp,"# %s \n",fileName);
+	for(int i = 0; i < _mfdc->top;i++)
+	{
+		printf(".");
+		//positive
+		fprintf(fp,"%c1 ",!hasDifferneces(_mfdc->data[i].offset,targetOffset)?'+':'-');
+		//tx
+		for(int j=0;j<LENOFT;j++)
+			rankWrite(fp,1+j*5,_mfdc->data[i].t[j],5);
+		//	fprintf(fp,"%d:%d ",);
+		
+		//gen26ToEnd(fp,_mfdc->data[i]);
+		genNextDataForEndfeature(fp,_mfdc->data[i],26);
+		fprintf(fp,"\n");
+	}
 	
 	//step 4: finish handle
 	printf(" [done]\n");
 	id++;
+	
+	fflush(NULL);
+	cleanContent();
 	selfAddFileNum();
 	return 1;
 }

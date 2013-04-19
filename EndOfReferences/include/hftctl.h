@@ -1,6 +1,7 @@
 #ifndef __HFTCTL_H__
 #define __HFTCTL_H__
 #include <stdio.h>
+#include "persistence.h"
 //definitions
 
 #define FEATURE_SIZE 5
@@ -12,6 +13,17 @@
 #ifndef VALUESDIFF
 #define VALUESDIFF(a,b) (a > b? (a - b) :( b - a)) //calculate difference distance of a and b
 #endif
+
+#define NOTZERO(x) (x==0?1:x)
+//#define quot(a,b) ((b==0)?0:a/b)
+#define quot(a,b) ((double)a/NOTZERO(b))
+#define LMB(x) ((x < 0) ? (0) :( x > getPclen() ? getPclen() : x ))
+
+// different keywords' threshold
+#define DIFFKWDTH 10 
+
+#define REMOVE_ONLY_FIVE 0
+
 
 typedef struct offsetStack
 {
@@ -52,6 +64,9 @@ int stackData(StackInfo *myStack,AcceptStr acceptStr,const char *content,int len
 //in fact , it is only the offset at start of references area
 unsigned int getReferenceHeadOffset(void);
 
+//write into file
+int rateWrite(FILE *fp,int start,double rate);
+int rankWrite(FILE *fp,int start,int rank,int len);
 
 
 //
@@ -63,6 +78,9 @@ int maxTop(StackInfo info[],int len);
 // sample generater
 //int generateSample(const char* fileName,int isDir);
 int genStartSampleCtl(const char* fileName,int isDir);
+
+int gen26ToEnd(FILE *fp,featureData fd);
+
 
 // set && get
 int getFileNum();

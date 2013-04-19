@@ -13,16 +13,6 @@
 //for debug
 #include "debuginfo.h"
 
-#define NOTZERO(x) (x==0?1:x)
-//#define quot(a,b) ((b==0)?0:a/b)
-#define quot(a,b) ((double)a/NOTZERO(b))
-#define LMB(x) ((x < 0) ? (0) :( x > getPclen() ? getPclen() : x ))
-
-// different keywords' threshold
-#define DIFFKWDTH 10 
-
-#define REMOVE_ONLY_FIVE 0
-
 _FilterData pFilterData;
 
 FILE *fpTrain; // train.txt
@@ -31,6 +21,7 @@ FILE *fpTest; // test.txt
 int fileNum = 0;
 featureDataContainer mfdc; // myFeatureDataContainer
 featureData mfd; // myFeatureData
+
 
 OffsetCallback functionList[CALLBACK_LEN]={hasPPafterTheOffset,hasPPafterTheOffset2,
 			hasYearafterTheOffset,hasNameafterTheOffset0,

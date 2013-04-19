@@ -105,6 +105,7 @@ clean			:
 	${DEL} ${OBJS} 
 	${DEL} *~ include/*~ src/*~ data/*~
 	${DEL} *.swp
+	${DEL} svm_model svm_predictions
 
 dbclean			:
 	${DEL} db/features.db
