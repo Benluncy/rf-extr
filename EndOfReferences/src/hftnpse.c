@@ -23,6 +23,28 @@ inline void defineStartAndEnd(int *offset,int *offend,int limit)
 inline int isPageNumber(const char *content,int limit)
 {
 	if(limit < 3 ) return 0;
+	//if(editDistanceP("nen",3,content,3)<=0)
+	//	return 3;
+	if(fitPattern('n',content[0])&&(content[1]=='-')&&fitPattern('n',content[2]))
+		return 3;
+	
+	if(limit < 5) return 0;
+	if(editDistanceP("nnenn",5,content,5)<=1)
+		return 5;
+		
+	if(limit < 7) return 0;
+	if(editDistanceP("nnnennn",7,content,7)<=1)
+		return 7;
+
+	if(limit < 9) return 0;
+	if(editDistanceP("nnnnennnn",9,content,9)<=1)
+		return 9;
+	return 0;
+}
+
+inline int isPageNumberS(const char *content,int limit)
+{
+	if(limit < 3 ) return 0;
 	if(editDistanceP("nen",3,content,3)<=0)
 		return 3;
 	if(editDistanceP("nen",3,content,4)<=1)
@@ -262,6 +284,52 @@ int hasNameafterTheOffset2(int offset,int limit)
 			{
 				while(!fitPattern('e',content[i]) && content[i] != ' ') i++;
 				return i;
+			}
+		}
+	}
+	return 0;
+}
+
+
+// XXXX, X.
+//if(!parseFile("string.txt")) printf("EO");
+//int offset = hasLocationafterTheOffset(0,1000);
+//printf("is: %s",getPcontent()+offset);
+//adfadfas [Masdfadf, MA] adfasdf
+int hasLocationafterTheOffset(int offset,int limit)
+{
+	//int j;
+	int i;	
+	int offend;
+	char *content = getPcontent();
+	defineStartAndEnd(&offset,&offend,limit);
+	int tag = 0;
+	for(i=offset;i<offend;i++)
+	{
+		//putchar(content[i]);
+		//fflush(NULL);
+		if(i-tag>1) i--;
+		tag = i;
+		if(content[i]<'A' || content[i]>'Z') continue;
+		while(fitPattern('a',content[i]))
+		{
+			i++;
+			if(i > offend-3) return 0;
+		}
+		if(i-tag>=1 &&(fitPattern('e',content[i])|| content[i] == ' '))
+		{
+			i++;
+			while(content[i]==' ') {
+				i++;
+				if(i > offend - 2) return 0;
+			}
+			if(content[i]>='A' && content[i]<='Z' && 
+				content[i+1]>='A' && content[i+1]<='Z' )
+			{
+	//			printf("2『");
+	//			for(j=tag;j<=i+1;j++) putchar(content[j]);
+	//			printf("』");
+				return i+2;
 			}
 		}
 	}

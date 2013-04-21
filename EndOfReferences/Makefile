@@ -41,6 +41,9 @@ CP			:= cp
 DEL			:= rm -rf
 MV			:= mv
 SAY			:= @echo
+GADD			:= git add 
+GCMT			:= git commit -m 
+
 
 ########################COMPILE SETTINGS################################
 VPATH			:= .:include/:src/:lib/:obj/
@@ -55,11 +58,11 @@ OBJS			:= eftfun.o eftctl.o hftctl.o hftnpse.o sqlite3.o persistence.o \
 				debuginfo.o myMath.o
 PROGS			:= main
 
-.PHONY			: clean succ
+.PHONY			: all clean succ gitupdate
 ########################################################################
 all			: ${PROGS} succ
 
-rebuild			: clean all
+rebuild			: clean gitupdate all
 
 run			: 
 	./main
@@ -74,6 +77,10 @@ doclassify		: ${OBJS}
 
 dirTraversal.o		:
 	${CC} ${GNUFLAGS} -c -o $@ src/dirTraversal.c 
+	
+gitupdate		:
+	${GADD} .
+	${GCMT} `date "+auto:%Y%m%d%H%M%S"`
 
 
 #virtualcontent.o	: tokens.o ini.o	

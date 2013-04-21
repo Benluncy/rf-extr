@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include <time.h>
 
+#include "virtualcontent.h"
 
 int genSamples4Endness()
 {
@@ -72,8 +73,6 @@ int genSamples4Endness()
 int main(int argc,char *argv[])
 {
 	int fileNum = 0;
-	
-	
 	
 	fileNum = genSamples4Endness();
 	printf("done \n total : %d\n",fileNum);

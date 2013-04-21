@@ -112,11 +112,13 @@ int genEndSampleCtl(const char* fileName,int isDir)
 	
 	//step 3: write into file
 	fprintf(fp,"# %s \n",fileName);
+	int pptag = 0;
 	for(int i = 0; i < _mfdc->top;i++)
 	{
 		printf(".");
 		//positive
 		fprintf(fp,"%c1 ",!hasDifferneces(_mfdc->data[i].offset,targetOffset)?'+':'-');
+		if(!hasDifferneces(_mfdc->data[i].offset,targetOffset)) pptag = 1;
 		//tx
 		// 1-20
 		for(int j=1;j<LENOFT;j++)
@@ -126,14 +128,38 @@ int genEndSampleCtl(const char* fileName,int isDir)
 		
 		// 21 - 45
 		for(int j=0;j<LENOFT;j++)
-			rankWrite(fp,21+j*5,tmpCter.data[i].t[j],5);
+			rankWrite(fp,26+j*5,tmpCter.data[i].t[j],5);
 		
 		// 46 - end 
 		//gen26ToEnd(fp,_mfdc->data[i]);
 		genNextDataForEndfeature(fp,_mfdc->data[i],46);
 		fprintf(fp,"\n");
 	}
-	
+	//if(!pptag)
+	{
+		printf("\n>>EEEE\n");
+		char *p = getPcontent();
+		for(int i=0;i< _mfdc->top;i++)
+		{
+			printf("[E:%d]",_mfdc->data[i].offset);
+			for(int j = _mfdc->data[i].offset-30; j <  _mfdc->data[i].offset + 30 ; j ++)
+			{
+				if(j == _mfdc->data[i].offset) putchar('%');
+				putchar(*(p+j));
+			}
+				
+			putchar('\n');
+		}
+		printf("[T:%d]",targetOffset);
+		for(int j = targetOffset-30; j < targetOffset + 30 ; j ++)
+		{
+			if(j ==targetOffset) putchar('%');
+			putchar(*(p+j));
+		}
+			
+		putchar('\n');
+		printf("\n");
+	}
 	//step 4: finish handle
 	printf(" [done]\n");
 	id++;

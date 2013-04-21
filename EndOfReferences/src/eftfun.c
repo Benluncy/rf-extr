@@ -12,15 +12,19 @@
 #define thresholdForDifferneces  10
 #define thresholdForGetOffsetSuggestion(x)  x*0.3
 #define T4GOS(x) thresholdForGetOffsetSuggestion(x)
-
+#ifndef INLMT
+#define INLMT(x) (editDistanceT(x,strlen(x),content+i,strlen(x)>strlen(content+i)?strlen(content+i):strlen(x),T4GOS(strlen(x))) != -1)
+#endif
+//#define INLMT(x) (editDistanceS(x,strlen(x),content+i,strlen(x)) <= T4GOS(strlen(x)))
 featureData mfd;
 featureDataContainer mfdc;
 
+
 OffsetCallback endFunctionList[CALLBACK_LEN]={hasPPafterTheOffset,hasPPafterTheOffset2,
 			hasYearafterTheOffset,hasNameafterTheOffset0,
-			hasNameafterTheOffset1,hasNameafterTheOffset2,
+			hasNameafterTheOffset1,//hasNameafterTheOffset2,
 			hasSeqOfTheOffset,hasSeqOfTheOffset2,
-			hasSpecialKeyWords};
+			hasSpecialKeyWords,hasLocationafterTheOffset};
 
 struct endKWD
 {
@@ -70,10 +74,26 @@ int getLastPageOffset(unsigned int startOffset)
 	//hasYearafterTheOffset(int offset,int limit)
 	int len= getPclen();
 	int offset = 0;
+	char *content = getPcontent();
 	while((startOffset = hasPPafterTheOffset(startOffset,len)) != 0)
 	{
 		offset = startOffset;
+		
+		for(int i=offset-10;i<offset+10  && i < getPclen();i++)
+		{
+			if(i == offset) putchar('%');
+			putchar(content[i]);
+		}
+		putchar('\n');
 	}
+	
+	printf("PP:[");
+	for(int i=offset-10;i<offset+10 && i < getPclen();i++)
+	{
+		if(i == offset) putchar('%');
+		putchar(content[i]);
+	}
+	printf("]$$\n");
 	return offset;
 }
 
@@ -112,7 +132,6 @@ int basicFilter(featureDataContainer *container,unsigned int startOffset)
 	container->top = 0;
 	
 	//char kwdList[][30]={"TABLE","He is","Figure","In this appendix","NOTICE OF","He has","Are there"};
-	
 	for(int i=startOffset;i<cLen;i++)
 	{
 		if(i!=0) if(fitPattern('d',content[i-1])) continue;
@@ -122,18 +141,17 @@ int basicFilter(featureDataContainer *container,unsigned int startOffset)
 		//2. 
 		//APPENDIX || ACKNOWLEDGEMENT
 		//AUTHOR BIBLIOGRAPHIES || AUTHOR BIBLIOGRAPHY
-		#define INLMT(x) (editDistanceS(x,strlen(x),content+i,strlen(x)) <= T4GOS(strlen(x)))
 		//if(editDistanceS("APPENDIX",strlen("APPENDIX"),content+i,strlen("APPENDIX")) <= T4GOS ||
 		//	editDistanceS("ACKNOWLEDGEMENT",strlen("ACKNOWLEDGEMENT"),content+i,strlen("ACKNOWLEDGEMENT")) <= T4GOS ||
 		//	editDistanceS("AUTHOR BIBLIOGRAPHIES",strlen("AUTHOR BIBLIOGRAPHIES"),content+i,strlen("AUTHOR BIBLIOGRAPHIES")) <= T4GOS ||
 		//	editDistanceS("AUTHOR BIBLIOGRAPHY",strlen("AUTHOR BIBLIOGRAPHY"),content+i,strlen("AUTHOR BIBLIOGRAPHY")) <= T4GOS)
-		if(INLMT("APPENDIX")||INLMT("ACKNOWLEDGEMENT")||INLMT("AUTHOR BIBLIOGRAPHIES")
-			||INLMT("AUTHOR BIBLIOGRAPHY"))
+		if(INLMT("APPENDIX")||INLMT("ACKNOWLEDGEMENT")
+			||INLMT("AUTHOR BIBLIOGRAPHIES") ||INLMT("AUTHOR BIBLIOGRAPHY") //AUTHOR BIOGRAPHIES 
+			|| INLMT("AUTHOR BIOGRAPHIES") || INLMT("AUTHOR BIOGRAPHY")) //
 		{
 			container->data[container->top].t[1] = 1;
 			hasContent = 1;
 		}
-		
 		//3. "TABLE" "He is" "Figure " ,"In this appendix" , "NOTICE OF","He has","Are there " etc.
 		for(int x = 0;x < myEc.top;x++)
 		{
@@ -558,10 +576,12 @@ int hasDifferneces(int dest,int src)
 {
 	if(src>=getPclen()) src = getPclen()-1;
 	if(src<0) src = 0;
+	if(dest<0) dest = 0;
+	
+	if(dest>=getPclen()) dest = getPclen()-1;
 	int th = 0;
 	char *content = getPcontent();
-	if(dest<0) dest = 0;
-	if(dest>=getPclen()) dest = getPclen()-1;
+
 	if(dest < src)
 	{
 		int tmp = src;

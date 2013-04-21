@@ -33,6 +33,7 @@ int hasSeqOfTheOffset2(int offset,int limit);
 
 int hasSpecialKeyWords(int offset,int limit);
 
+int hasLocationafterTheOffset(int offset,int limit);
 
 double asciiCodeDensity(int offset,int limit);
 double dataDensity(int offset,int limit);
