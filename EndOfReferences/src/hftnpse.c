@@ -100,7 +100,7 @@ int hasPPafterTheOffset(int offset,int limit)
 	{
 		if(fitPattern('n',content[i]))
 			if((pageOffset = isPageNumber(content+i,offend-i)) != 0)
-				return i+pageOffset;
+				return i+pageOffset+1;
 	}
 	return 0;
 }
@@ -128,7 +128,7 @@ int hasPPafterTheOffset2(int offset,int limit)
 						continue;
 				}
 				if((pageOffset = isPageNumber(content+i+j,offend-i-j))!= 0) 
-					return i+j+pageOffset;
+					return i+j+pageOffset+1;
 			}else if(editDistanceS("page",4,content+i,4) <= 1) // threshold == 1
 			{
 				for(j=4;!fitPattern('n',content[i+j]);j++)
@@ -140,7 +140,7 @@ int hasPPafterTheOffset2(int offset,int limit)
 						continue;
 				}	
 				if((pageOffset = isPageNumber(content+i+j,offend-i-j))!= 0) 
-					return i+j+pageOffset;
+					return i+j+pageOffset+1;
 			}
 		}
 	}
