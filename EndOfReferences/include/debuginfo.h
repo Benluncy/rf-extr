@@ -9,6 +9,6 @@
 
 // for debug
 int printfContext(int offset);
-int printfContextS(int offset,const char *str)
+int printfContextS(int offset,const char *str);
 
 #endif // __DEBUG_INFO_H__

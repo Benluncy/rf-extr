@@ -16,20 +16,20 @@
 #define thresholdForDifferneces  10
 #define thresholdForGetOffsetSuggestion(x)  x*0.3
 #define T4GOS(x) thresholdForGetOffsetSuggestion(x)
-#ifndef INLMT
 #define INLMT(x) (editDistanceT(x,strlen(x),content+i,strlen(x)>strlen(content+i)?strlen(content+i):strlen(x),T4GOS(strlen(x))) != -1)
-#endif
 //#define INLMT(x) (editDistanceS(x,strlen(x),content+i,strlen(x)) <= T4GOS(strlen(x)))
+
+
 featureData mfd;
 featureDataContainer mfdc;
 
-/*
+
 OffsetCallback endFunctionList[CALLBACK_LEN]={hasPPafterTheOffset,hasPPafterTheOffset2,
 			hasYearafterTheOffset,hasNameafterTheOffset0,
 			hasNameafterTheOffset1,//hasNameafterTheOffset2,
 			hasSeqOfTheOffset,hasSeqOfTheOffset2,
 			hasSpecialKeyWords,hasLocationafterTheOffset};
-*/
+
 struct endKWD
 {
 	unsigned int len;
