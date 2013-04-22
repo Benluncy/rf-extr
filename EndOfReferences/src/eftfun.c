@@ -86,7 +86,6 @@ int getLastPageOffset(unsigned int startOffset)
 	//hasYearafterTheOffset(int offset,int limit)
 	int len= getPclen();
 	int offset = 0;
-	char *content = getPcontent();
 	while((startOffset = hasPPafterTheOffset(startOffset,len)) != 0)
 	{
 		offset = startOffset;
