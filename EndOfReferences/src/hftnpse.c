@@ -105,7 +105,7 @@ int hasPPafterTheOffset(int offset,int limit)
 	{
 		if(fitPattern('n',content[i]))
 			if((pageOffset = isPageNumber(content+i,offend-i)) != 0)
-				return i+pageOffset;
+				return i+pageOffset+1;
 	}
 	return 0;
 }
