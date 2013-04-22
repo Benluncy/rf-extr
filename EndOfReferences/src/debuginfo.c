@@ -19,7 +19,7 @@ int printfContext(int offset)
 int printfContextS(int offset,const char *str)
 {
 	int status;
-	printf("$TITIL(%s){\n",str);
+	printf("\n$TITIL(%s){\n",str);
 	status = printfContext(offset);
 	printf("}\n");
 	return status;

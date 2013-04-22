@@ -61,12 +61,12 @@ int insertEndKWD(const char *key)
 	myEc.top++;
 	
 	// show insert
-	printf("filter:\n");
+	printf("_filter:\n");
 	for(int i=0;i<myEc.top;i++)
 	{
 		printf("%s\n",myEc.data[i].key);
 	}
-	printf("\n");
+	printf("\n<<<<<<<<<<<<<<<<<<<<<<<<<<\n");
 	
 	
 	return 1;
