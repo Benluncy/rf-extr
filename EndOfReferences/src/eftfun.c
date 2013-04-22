@@ -100,12 +100,9 @@ int getLastPageOffset(unsigned int startOffset)
 	{
 		offset = startOffset;
 		
-		for(int i=offset-10;i<offset+10  && i < getPclen();i++)
-		{
-			if(i == offset) putchar('%');
-			putchar(content[i]);
-		}
-		putchar('\n');
+		//DEBUG INFO
+		//TODO DEBUG
+		printfContextS(offset,"getLastPageOffset [in]");
 	}
 	
 	//DEBUG INFO
@@ -171,6 +168,7 @@ int basicFilter(featureDataContainer *container,unsigned int startOffset)
 			container->data[container->top].t[1] = 1;
 			hasContent = 1;
 		}
+		
 		//3. "TABLE" "He is" "Figure " ,"In this appendix" , "NOTICE OF","He has","Are there " etc.
 		for(int x = 0;x < myEc.top;x++)
 		{
