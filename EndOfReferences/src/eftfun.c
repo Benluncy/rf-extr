@@ -6,11 +6,12 @@
 #include "myMath.h"
 #include "hftnpse.h"
 #include "hftctl.h"
+
 #include <stdio.h>
 #include <string.h>
-
+#include <stdlib.h>
 //TODO DEBUG
-//#include "debuginfo.h"
+#include "debuginfo.h"
 
 #define thresholdForDifferneces  10
 #define thresholdForGetOffsetSuggestion(x)  x*0.3
@@ -22,13 +23,13 @@
 featureData mfd;
 featureDataContainer mfdc;
 
-
+/*
 OffsetCallback endFunctionList[CALLBACK_LEN]={hasPPafterTheOffset,hasPPafterTheOffset2,
 			hasYearafterTheOffset,hasNameafterTheOffset0,
 			hasNameafterTheOffset1,//hasNameafterTheOffset2,
 			hasSeqOfTheOffset,hasSeqOfTheOffset2,
 			hasSpecialKeyWords,hasLocationafterTheOffset};
-
+*/
 struct endKWD
 {
 	unsigned int len;
