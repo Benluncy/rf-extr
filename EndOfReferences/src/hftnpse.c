@@ -29,15 +29,15 @@ inline int isPageNumber(const char *content,int limit)
 		return 3;
 	
 	if(limit < 5) return 0;
-	if(editDistanceP("nnenn",5,content,5)<=1)
+	if(editDistanceP("nnenn",5,content,5)<=0) // 1?
 		return 5;
 		
 	if(limit < 7) return 0;
-	if(editDistanceP("nnnennn",7,content,7)<=1)
+	if(editDistanceP("nnnennn",7,content,7)<=0) // 1?
 		return 7;
 
 	if(limit < 9) return 0;
-	if(editDistanceP("nnnnennnn",9,content,9)<=1)
+	if(editDistanceP("nnnnennnn",9,content,9)<=1) // 1?
 		return 9;
 	return 0;
 }

@@ -89,13 +89,10 @@ int getLastPageOffset(unsigned int startOffset)
 	while((startOffset = hasPPafterTheOffset(startOffset,len)) != 0)
 	{
 		offset = startOffset;
-		
-		//DEBUG INFO
 		//TODO DEBUG
-		printfContextS(offset,"getLastPageOffset [in]");
+		printfContextS(offset,"getLastPageOffset<in>");
 	}
 	
-	//DEBUG INFO
 	//TODO DEBUG
 	printfContextS(offset,"getLastPageOffset");
 	
