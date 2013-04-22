@@ -7,9 +7,9 @@ int printfContext(int offset)
 	int x;
 	
 	printf("\n>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n");
-	for(x=offset-100;x<offset;x++) putchar(*(getPcontent()+x));
+	for(x=(x<100)?0:(offset-100);x<offset;x++) putchar(*(getPcontent()+x));
 	printf("\n================================================================\n");
-	for(x=offset;x<offset+100;x++) putchar(*(getPcontent()+x));
+	for(x=offset;x<offset+100 && x < getPclen();x++) putchar(*(getPcontent()+x));
 	printf("\n<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n");
 	//getchar(); getchar();
 	return 1;
