@@ -37,12 +37,12 @@
 
 ########################SYSTEM SETTINGS#################################
 CC			:= gcc
-CP			:= cp
-DEL			:= rm -rf
-MV			:= mv
+CP			:= @cp
+DEL			:= @rm -rf
+MV			:= @mv
 SAY			:= @echo
-GADD			:= git add 
-GCMT			:= git commit -m 
+GADD			:= @git add 
+GCMT			:= @git commit -m 
 
 
 ########################COMPILE SETTINGS################################
