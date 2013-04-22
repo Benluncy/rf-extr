@@ -135,7 +135,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 		genNextDataForEndfeature(fp,_mfdc->data[i],46);
 		fprintf(fp,"\n");
 	}
-	//if(!pptag)
+	if(!pptag || pptag)
 	{
 		printf("\n>>EEEE\n");
 		char *p = getPcontent();
