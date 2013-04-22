@@ -47,28 +47,19 @@ typedef struct theEKContainer
 
 ekContainer myEc;
 
-int cleanEndKWDContainer()
+inline int cleanEndKWDContainer()
 {
 	myEc.top = 0;
 	return 1;
 }
 
-//"TABLE","He is","Figure","In this appendix","NOTICE OF","He has","Are there"
-int insertEndKWD(const char *key)
+inline int insertEndKWD(const char *key)
 {
+	if(myEc.top<0) myEc.top = 0;
+	if(myEc.top>=200) return 0;
 	sprintf(myEc.data[myEc.top].key,"%s",key);
 	myEc.data[myEc.top].len = strlen(key);
 	myEc.top++;
-	
-	// show insert
-	printf("_filter:\n");
-	for(int i=0;i<myEc.top;i++)
-	{
-		printf("%s\n",myEc.data[i].key);
-	}
-	printf("\n<<<<<<<<<<<<<<<<<<<<<<<<<<\n");
-	
-	
 	return 1;
 }
 
