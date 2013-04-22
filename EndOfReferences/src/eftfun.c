@@ -9,6 +9,9 @@
 #include <stdio.h>
 #include <string.h>
 
+//TODO DEBUG
+//#include "debuginfo.h"
+
 #define thresholdForDifferneces  10
 #define thresholdForGetOffsetSuggestion(x)  x*0.3
 #define T4GOS(x) thresholdForGetOffsetSuggestion(x)
@@ -52,11 +55,18 @@ int insertEndKWD(const char *key)
 	sprintf(myEc.data[myEc.top].key,"%s",key);
 	myEc.data[myEc.top].len = strlen(key);
 	myEc.top++;
+	
+	// show insert
+	printf("filter:\n");
+	for(int i=0;i<myEc.top;i++)
+	{
+		printf("%s\n",myEc.data[i]);
+	}
+	
 	return 1;
 }
 
-
-
+//TODO DEBUGING
 int getLastYearOffset(unsigned int startOffset)
 {
 	//hasYearafterTheOffset(int offset,int limit)
@@ -66,9 +76,14 @@ int getLastYearOffset(unsigned int startOffset)
 	{
 		offset = startOffset;
 	}
+	
+	//TODO DEBUGOUTPUT
+	printfContextS(offset,"getLastYearOffset");
+	
 	return offset;
 }
 
+//TODO DEBUGING
 int getLastPageOffset(unsigned int startOffset)
 {
 	//hasYearafterTheOffset(int offset,int limit)
@@ -87,13 +102,11 @@ int getLastPageOffset(unsigned int startOffset)
 		putchar('\n');
 	}
 	
-	printf("PP:[");
-	for(int i=offset-10;i<offset+10 && i < getPclen();i++)
-	{
-		if(i == offset) putchar('%');
-		putchar(content[i]);
-	}
-	printf("]$$\n");
+	//DEBUG INFO
+	//TODO DEBUG
+	printfContextS(offset,"getLastPageOffset");
+	
+	
 	return offset;
 }
 

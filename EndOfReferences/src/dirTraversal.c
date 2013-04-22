@@ -110,6 +110,10 @@ int dirTraversal(const char *path, int recursive,file_callback xCallback)
  * SIGH: unsigned
  *
  */
+/*
+ * TODO FIX IT
+ */ 
+
 //int dirTraversal(const char *path, int recursive,file_callback xCallback)
 int dirTraversal(const char *path, int recursive,file_callback xCallback)
 {

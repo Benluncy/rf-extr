@@ -33,6 +33,10 @@ int genSamples4Endness()
 	insertFilterData(0,"AUTHOR BIOGRAPHIES",strlen("AUTHOR BIOGRAPHIES"));
 	*/
 	cleanEndKWDContainer();
+	
+	/**
+	 * Before KWD is collected 
+	 */
 	insertEndKWD("TABLE ");
 	insertEndKWD("He is");
 	insertEndKWD("Figure");
@@ -40,9 +44,6 @@ int genSamples4Endness()
 	insertEndKWD("NOTICE OF");
 	insertEndKWD("He has");
 	insertEndKWD("Are there");
-	
-	//DEFI()
-	
 	
 	openLogFile();
 	
@@ -73,7 +74,7 @@ int genSamples4Endness()
 int main(int argc,char *argv[])
 {
 	int fileNum = 0;
-	
+	//get: end of references
 	fileNum = genSamples4Endness();
 	printf("done \n total : %d\n",fileNum);
 	return 0;

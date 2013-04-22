@@ -41,7 +41,7 @@ inline int isPageNumber(const char *content,int limit)
 		return 9;
 	return 0;
 }
-
+/*
 inline int isPageNumberS(const char *content,int limit)
 {
 	if(limit < 3 ) return 0;
@@ -86,7 +86,7 @@ inline int isPageNumberS(const char *content,int limit)
 		return 9;
 	
 	return 0;
-}
+}*/
 
 int hasPPafterTheOffset(int offset,int limit)
 {
