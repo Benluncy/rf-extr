@@ -11,6 +11,7 @@ int printfContext(int offset)
 	printf("\n================================================================\n");
 	for(x=offset;x<offset+100 && x < getPclen();x++) putchar(*(getPcontent()+x));
 	printf("\n<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n");
+	fflush(NULL);
 	//getchar(); getchar();
 	return 1;
 }
