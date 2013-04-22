@@ -79,8 +79,8 @@ dirTraversal.o		:
 	${CC} ${GNUFLAGS} -c -o $@ src/dirTraversal.c 
 	
 gitupdate		:
-	${GADD} .
-	${GCMT} `date "+auto:%Y%m%d%H%M%S"`
+	-${GADD} .
+	-${GCMT} `date "+auto:%Y%m%d%H%M%S"`
 
 
 #virtualcontent.o	: tokens.o ini.o	
@@ -108,11 +108,11 @@ succ			:
 	${SAY} "Complete !" 
 
 clean			: 
-	${DEL} ${PROGS} doclassify
-	${DEL} ${OBJS} 
-	${DEL} *~ include/*~ src/*~ data/*~
-	${DEL} *.swp
-	${DEL} svm_model svm_predictions
+	-${DEL} ${PROGS} doclassify
+	-${DEL} ${OBJS} 
+	-${DEL} *~ include/*~ src/*~ data/*~
+	-${DEL} *.swp
+	-${DEL} svm_model svm_predictions
 
 dbclean			:
 	${DEL} db/features.db
