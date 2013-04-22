@@ -25,8 +25,13 @@ inline int isPageNumber(const char *content,int limit)
 	if(limit < 3 ) return 0;
 	//if(editDistanceP("nen",3,content,3)<=0)
 	//	return 3;
+	
 	if(fitPattern('n',content[0])&&(content[1]=='-')&&fitPattern('n',content[2]))
 		return 3;
+	
+	if(limit < 4) return 0;
+	if(fitPattern('n',content[0])&&(content[1]=='-')&&fitPattern('n',content[2])&&fitPattern('n',content[3]))
+		return 4;
 	
 	if(limit < 5) return 0;
 	if(editDistanceP("nnenn",5,content,5)<=0) // 1?
@@ -100,7 +105,7 @@ int hasPPafterTheOffset(int offset,int limit)
 	{
 		if(fitPattern('n',content[i]))
 			if((pageOffset = isPageNumber(content+i,offend-i)) != 0)
-				return i+pageOffset+1;
+				return i+pageOffset;
 	}
 	return 0;
 }

@@ -27,11 +27,14 @@ featureData mfd;
 featureDataContainer mfdc;
 
 
-OffsetCallback endFunctionList[CALLBACK_LEN]={hasPPafterTheOffset,hasPPafterTheOffset2,
-			hasYearafterTheOffset,hasNameafterTheOffset0,
-			hasNameafterTheOffset1,//hasNameafterTheOffset2,
-			hasSeqOfTheOffset,hasSeqOfTheOffset2,
-			hasSpecialKeyWords,hasLocationafterTheOffset};
+OffsetCallback endFunctionList[CALLBACK_LEN]={hasPPafterTheOffset,
+						hasPPafterTheOffset2,
+						hasYearafterTheOffset,
+						hasNameafterTheOffset0,
+						hasNameafterTheOffset1,//hasNameafterTheOffset2,
+						hasSeqOfTheOffset,
+						hasSeqOfTheOffset2,
+						hasSpecialKeyWords,hasLocationafterTheOffset};
 
 struct endKWD
 {
