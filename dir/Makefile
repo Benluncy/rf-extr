@@ -30,7 +30,7 @@
 #
 # Makefile
 #
-# Edited By Yu Jing @ Mar. 18 , 2013
+# Edited By Yu Jing @ Mar. 21 , 2013
 #
 ########################################################################
 
@@ -48,17 +48,18 @@ SAY			:= @echo
 VPATH			:= src:include
 	export	VPATH
 
-CFLAGS			:= -std=c99  -Wall -I /usr/include
+CFLAGS			:=  -Wall -I /usr/include
 LIBS			:= #-L
 OBJS			:=
-PROGS			:= minEditDistance
+PROGS			:= dirTraversal
+
 .PHONY			: clean succ
 ########################################################################
 all			: ${PROGS} succ
 
 rebuild			: clean all
 
-minimum_edit_distance	: ${OBJS}
+dirTraversal		: ${OBJS}
 	${CC} ${CFLAGS} $@.c -o $@  ${OBJS} ${LIBS}
 
 
