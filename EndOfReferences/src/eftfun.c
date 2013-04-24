@@ -158,6 +158,7 @@ int basicFilter(featureDataContainer *container,unsigned int startOffset)
 		hasContent = 0;
 		//1. leave to datas
 		
+		IN("APPENDIX || ACKNOWLEDGEMENT");	
 		//2. 
 		//APPENDIX || ACKNOWLEDGEMENT
 		//AUTHOR BIBLIOGRAPHIES || AUTHOR BIBLIOGRAPHY
@@ -173,6 +174,7 @@ int basicFilter(featureDataContainer *container,unsigned int startOffset)
 			hasContent = 1;
 		}
 		
+		IN("TABLE He is figure etc.");
 		//3. "TABLE" "He is" "Figure " ,"In this appendix" , "NOTICE OF","He has","Are there " etc.
 		for(int x = 0;x < myEc.top;x++)
 		{
@@ -194,7 +196,7 @@ int basicFilter(featureDataContainer *container,unsigned int startOffset)
 		
 		
 	
-		
+		IN("end of year0");	
 		//4. end of year 
 		if(!hasDifferneces(lastYearOffset,i) && !isMarkedYear)
 		{
@@ -203,6 +205,7 @@ int basicFilter(featureDataContainer *container,unsigned int startOffset)
 			hasContent = 1;
 		}
 		
+		IN("end of year1");
 		//4. end of  pp
 		if(!hasDifferneces(lastPageOffset,i) && !isMarkedPage)
 		{
@@ -211,6 +214,7 @@ int basicFilter(featureDataContainer *container,unsigned int startOffset)
 			hasContent = 1;
 		}
 		
+		IN("end of year2");
 		//4. end of  pp2
 		if(!hasDifferneces(lastPageOffset2,i) && !isMarkedPage2)
 		{
@@ -219,6 +223,7 @@ int basicFilter(featureDataContainer *container,unsigned int startOffset)
 			hasContent = 1;
 		}
 		
+		IN("end of article");
 		//5 end of article
 		if(!hasDifferneces(cLen,i))
 		{
@@ -239,6 +244,8 @@ int basicFilter(featureDataContainer *container,unsigned int startOffset)
 			}*/
 			return 1;
 		}
+		
+		IN("hasContent");
 		if(hasContent)
 		{
 			container->data[container->top].offset = i;
