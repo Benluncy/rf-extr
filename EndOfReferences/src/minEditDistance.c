@@ -217,22 +217,24 @@ int editDistanceP(const char *t,int tlen,const char * s,int slen)
 inline int editDistanceT(const char *cs1,int s1len,const char * cs2,int s2len,int threshold) 
 {
     if (s1len-s2len>threshold||s2len-s1len>threshold) return -1;
-       s1len++;
-    s2len++;
     int st, en;
     int flag;
-    int d[s1len][s2len];
-    char s1[s1len];
-    char s2[s2len];
-    memset(d,0x0,sizeof(int)*((s1len+1)*(s2len+1)));
+    int d[s1len+1][s2len+1];
+    char s1[s1len+1];
+    char s2[s2len+1];
+    printf("MM0");fflush(NULL);
+    memset(d,0,sizeof(int)*((s1len+1)*(s2len+1)));
+    printf("MM1");fflush(NULL);
     for(int i=0;i<s1len;i++)
     {
     	s1[i] = (cs1[i] >='A' && cs1[i] <= 'Z') ? (cs1[i] + 32) : cs1[i];
     }
+    printf("MM2");fflush(NULL);
     for(int i=0;i<s2len;i++)
     {
     	s2[i] = (cs2[i] >='A' && cs2[i] <= 'Z') ? (cs2[i] + 32) : cs2[i];
     }
+    printf("MM3");fflush(NULL);
     for (int i = 1; i <= s1len; i++) 
     {
         st = MAX2(1, i - threshold);
@@ -245,7 +247,8 @@ inline int editDistanceT(const char *cs1,int s1len,const char * cs2,int s2len,in
             if (d[i][j] <= threshold) flag = 0;
         }
         if (flag && i > threshold) return -1;
-    }                
+    }
+    printf("MM4");fflush(NULL);              
     if (d[s1len][s2len] > threshold)        
         return -1;
     else return d[s1len][s2len];
