@@ -77,6 +77,8 @@ int main(int argc,char *argv[])
 	//get: end of references
 	fileNum = genSamples4Endness();
 	printf("done \n total : %d\n",fileNum);
+	
+	printf("max top is:%d",getMaxLen());
 	return 0;
 }
 

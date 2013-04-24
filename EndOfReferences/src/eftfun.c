@@ -134,7 +134,7 @@ int getLastPage2Offset(unsigned int startOffset)
 	return offset;
 }
 
-
+int maxLen = 0;
 
 int basicFilter(featureDataContainer *container,unsigned int startOffset)
 {
@@ -258,11 +258,15 @@ int basicFilter(featureDataContainer *container,unsigned int startOffset)
 		{
 			container->data[container->top].offset = i;
 			container->top++;
+			if(container->top >= 200) printf("found!");
+			maxLen = container->top > maxLen ? container->top : maxLen;
 		}
 	}
 	OT("for(int i=startOffset;i<cLen;i++)");
 	return 0;
 }
+
+int getMaxLen(){return maxLen;}
 
 
 int combineOffsets(featureDataContainer *container)//combine nearly offsets and make sure 

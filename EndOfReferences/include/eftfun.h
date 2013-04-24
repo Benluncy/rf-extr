@@ -30,6 +30,8 @@ int genNextDataForEndfeature(FILE *fp,featureData fd,int step);
 
 int prepareDensityData(void);
 
+
+int getMaxLen(void);
 #endif // __EFTFUN_H__
 
 
