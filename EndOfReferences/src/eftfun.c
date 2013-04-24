@@ -151,6 +151,7 @@ int basicFilter(featureDataContainer *container,unsigned int startOffset)
 	container->top = 0;
 	
 	//char kwdList[][30]={"TABLE","He is","Figure","In this appendix","NOTICE OF","He has","Are there"};
+	IN("for(int i=startOffset;i<cLen;i++)")
 	for(int i=startOffset;i<cLen;i++)
 	{
 		if(i!=0) if(fitPattern('d',content[i-1])) continue;
@@ -244,6 +245,7 @@ int basicFilter(featureDataContainer *container,unsigned int startOffset)
 			container->top++;
 		}
 	}
+	OT("for(int i=startOffset;i<cLen;i++)");
 	return 0;
 }
 
