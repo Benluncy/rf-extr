@@ -2,8 +2,11 @@
 #include "debuginfo.h"
 #include "virtualcontent.h"
 
+#define NODEBUG 1
+
 int printfContext(int offset)
 {
+	if(NODEBUG) return 1;
 	int x;
 	
 	printf("\n>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n");
@@ -18,6 +21,7 @@ int printfContext(int offset)
 
 int printfContextS(int offset,const char *str)
 {
+	if(NODEBUG) return 1;
 	int status;
 	printf("\n$TITIL(%s)@[%d]{\n",str,offset);
 	status = printfContext(offset);
