@@ -17,7 +17,9 @@
 
 #define thresholdForGetOffsetSuggestion(x)  x*0.3
 #define T4GOS(x) thresholdForGetOffsetSuggestion(x)
-#define INLMT(x) (editDistanceT(x,strlen(x),content+i,strlen(x)>strlen(content+i)?strlen(content+i):strlen(x),T4GOS(strlen(x))) != -1)
+#define INLMT(x) (editDistanceT(x,strlen(x),content+i,strlen(x)>strlen(content+i)?\
+			strlen(content+i):\
+			strlen(x),T4GOS(strlen(x))) != -1)
 
 
 //#define INLMT(x) (editDistanceS(x,strlen(x),content+i,strlen(x)) <= T4GOS(strlen(x)))
@@ -170,6 +172,7 @@ int basicFilter(featureDataContainer *container,unsigned int startOffset)
 			||INLMT("AUTHOR BIBLIOGRAPHIES") ||INLMT("AUTHOR BIBLIOGRAPHY") //AUTHOR BIOGRAPHIES 
 			|| INLMT("AUTHOR BIOGRAPHIES") || INLMT("AUTHOR BIOGRAPHY")) //
 		{
+			
 			container->data[container->top].t[1] = 1;
 			hasContent = 1;
 		}
