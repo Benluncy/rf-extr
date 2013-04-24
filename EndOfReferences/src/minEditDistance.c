@@ -217,12 +217,14 @@ int editDistanceP(const char *t,int tlen,const char * s,int slen)
 inline int editDistanceT(const char *cs1,int s1len,const char * cs2,int s2len,int threshold) 
 {
     if (s1len-s2len>threshold||s2len-s1len>threshold) return -1;
+       s1len++;
+    s2len++;
     int st, en;
     int flag;
-    int d[s1len+1][s2len+1];
-    char s1[s1len+1];
-    char s2[s2len+1];
-    memset(d,0,(s1len+1)*(s2len+1));
+    int d[s1len][s2len];
+    char s1[s1len];
+    char s2[s2len];
+    memset(d,0x0,sizeof(int)*((s1len+1)*(s2len+1)));
     for(int i=0;i<s1len;i++)
     {
     	s1[i] = (cs1[i] >='A' && cs1[i] <= 'Z') ? (cs1[i] + 32) : cs1[i];

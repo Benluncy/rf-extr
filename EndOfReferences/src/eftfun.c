@@ -17,9 +17,14 @@
 
 #define thresholdForGetOffsetSuggestion(x)  x*0.3
 #define T4GOS(x) thresholdForGetOffsetSuggestion(x)
-#define INLMT(x) (editDistanceT(x,strlen(x),content+i,strlen(x)>strlen(content+i)?\
-			strlen(content+i):\
-			strlen(x),T4GOS(strlen(x))) != -1)
+#define INLMT(x) (editDistanceT(\
+			x,\
+			strlen(x),\
+			content+i,\
+			strlen(x)>strlen(content+i)?\
+				strlen(content+i):\
+				strlen(x),T4GOS(strlen(x))\
+			)!= -1)
 
 
 //#define INLMT(x) (editDistanceS(x,strlen(x),content+i,strlen(x)) <= T4GOS(strlen(x)))
