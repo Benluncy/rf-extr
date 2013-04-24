@@ -248,7 +248,8 @@ inline int editDistanceT(const char *cs1,int s1len,const char * cs2,int s2len,in
         }
         if (flag && i > threshold) return -1;
     }
-    printf("MM4");fflush(NULL);              
+    printf("MM4");fflush(NULL);
+    printf("__>\n");fflush(NULL);
     if (d[s1len][s2len] > threshold)        
         return -1;
     else return d[s1len][s2len];

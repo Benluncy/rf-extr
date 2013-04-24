@@ -31,7 +31,7 @@ typedef struct sFeatureData //start feature data
 typedef struct
 {
 	int top;
-	featureData data[200];
+	featureData data[1200];
 } featureDataContainer;
 
 
