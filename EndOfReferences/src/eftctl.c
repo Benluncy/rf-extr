@@ -140,7 +140,6 @@ int genEndSampleCtl(const char* fileName,int isDir)
 	if(!pptag || pptag)
 	{
 		printf("\n DEBUG : contents\n");
-		char *p = getPcontent();
 		for(int i=0;i< _mfdc->top;i++)
 		{
 			printf("[E:%d]",_mfdc->data[i].offset);
