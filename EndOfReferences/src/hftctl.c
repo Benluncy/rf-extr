@@ -135,8 +135,8 @@ int isAccpted(const char *str,int threshold,int *fitLen)
 		p = p-> next;
 	}
 	*fitLen = accMin <= rejMin ? 
-			(accMin <= threshold ? accMinOffset : 0 ): 
-			(rejMin <= threshold ? rejMinOffset : 0 );
+			(accMin <= threshold ? accMinOffset : 0 ) :
+			(rejMin <= threshold ? rejMinOffset : 0 ) ;
 	return (accMin <= rejMin) && (accMin <= threshold );
 }
 

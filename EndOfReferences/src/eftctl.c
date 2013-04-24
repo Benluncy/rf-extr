@@ -135,30 +135,20 @@ int genEndSampleCtl(const char* fileName,int isDir)
 		genNextDataForEndfeature(fp,_mfdc->data[i],46);
 		fprintf(fp,"\n");
 	}
+	
+	//DEBUG
 	if(!pptag || pptag)
 	{
-		printf("\n>>EEEE\n");
+		printf("\n DEBUG : contents\n");
 		char *p = getPcontent();
 		for(int i=0;i< _mfdc->top;i++)
 		{
 			printf("[E:%d]",_mfdc->data[i].offset);
-			for(int j = _mfdc->data[i].offset-30; j <  _mfdc->data[i].offset + 30 ; j ++)
-			{
-				if(j == _mfdc->data[i].offset) putchar('%');
-				putchar(*(p+j));
-			}
-				
-			putchar('\n');
+			printfContext(_mfdc->data[i].offset);
 		}
 		printf("[T:%d]",targetOffset);
-		for(int j = targetOffset-30; j < targetOffset + 30 ; j ++)
-		{
-			if(j ==targetOffset) putchar('%');
-			putchar(*(p+j));
-		}
-			
-		putchar('\n');
-		printf("\n");
+		printfContext(targetOffset);
+		
 	}
 	//step 4: finish handle
 	printf(" [done]\n");
