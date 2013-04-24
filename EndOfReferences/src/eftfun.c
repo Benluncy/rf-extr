@@ -22,6 +22,9 @@
 
 //#define INLMT(x) (editDistanceS(x,strlen(x),content+i,strlen(x)) <= T4GOS(strlen(x)))
 
+#define IN(x) {printf("in:%s\n",x);fflush(NULL);}
+#define OT(x) {printf("out:%s\n",x);fflush(NULL);}
+#define NX(x) {printf("next:%s\n",x);fflush(NULL);}
 
 featureData mfd;
 featureDataContainer mfdc;
@@ -70,36 +73,45 @@ inline int insertEndKWD(const char *key)
 int getLastYearOffset(unsigned int startOffset)
 {
 	//hasYearafterTheOffset(int offset,int limit)
+	IN("getLastYearOffset");
 	int len= getPclen();
 	int offset = 0;
+	IN("getLastYearOffset>>while");
 	while((startOffset = hasYearafterTheOffset(startOffset,len)) != 0)
 	{
+		NX("getLastYearOffset>>while");
 		offset = startOffset;
 	}
+	OT("getLastYearOffset<<while");
 	
 	//TODO DEBUGOUTPUT
 	printfContextS(offset,"getLastYearOffset");
 	
+	OT("getLastYearOffset");
 	return offset;
 }
 
 //TODO DEBUGING
 int getLastPageOffset(unsigned int startOffset)
 {
+	IN("getLastPageOffset");
 	//hasYearafterTheOffset(int offset,int limit)
 	int len= getPclen();
 	int offset = 0;
+	IN("getLastPageOffset>>while");
 	while((startOffset = hasPPafterTheOffset(startOffset,len)) != 0)
 	{
+		NX("getLastYearOffset>>while[S]");
 		offset = startOffset;
 		//TODO DEBUG
 		printfContextS(offset,"getLastPageOffset<in>");
+		NX("getLastYearOffset>>while[E]");
 	}
-	
+	OT("getLastPageOffset<<while");
 	//TODO DEBUG
 	printfContextS(offset,"getLastPageOffset");
 	
-	
+	OT("getLastPageOffset");
 	return offset;
 }
 
