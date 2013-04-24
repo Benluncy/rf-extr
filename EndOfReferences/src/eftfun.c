@@ -29,9 +29,9 @@
 
 //#define INLMT(x) (editDistanceS(x,strlen(x),content+i,strlen(x)) <= T4GOS(strlen(x)))
 
-#define IN(x) {printf("in:%s\n",x);fflush(NULL);}
-#define OT(x) {printf("out:%s\n",x);fflush(NULL);}
-#define NX(x) {printf("next:%s\n",x);fflush(NULL);}
+//#define IN(x) {printf("in:%s\n",x);fflush(NULL);}
+//#define OT(x) {printf("out:%s\n",x);fflush(NULL);}
+//#define NX(x) {printf("next:%s\n",x);fflush(NULL);}
 
 featureData mfd;
 featureDataContainer mfdc;
@@ -80,45 +80,45 @@ inline int insertEndKWD(const char *key)
 int getLastYearOffset(unsigned int startOffset)
 {
 	//hasYearafterTheOffset(int offset,int limit)
-	IN("getLastYearOffset");
+	//IN("getLastYearOffset");
 	int len= getPclen();
 	int offset = 0;
-	IN("getLastYearOffset>>while");
+	//IN("getLastYearOffset>>while");
 	while((startOffset = hasYearafterTheOffset(startOffset,len)) != 0)
 	{
-		NX("getLastYearOffset>>while");
+	//	NX("getLastYearOffset>>while");
 		offset = startOffset;
 	}
-	OT("getLastYearOffset<<while");
+	//OT("getLastYearOffset<<while");
 	
 	//TODO DEBUGOUTPUT
 	printfContextS(offset,"getLastYearOffset");
 	
-	OT("getLastYearOffset");
+	//OT("getLastYearOffset");
 	return offset;
 }
 
 //TODO DEBUGING
 int getLastPageOffset(unsigned int startOffset)
 {
-	IN("getLastPageOffset");
+	//IN("getLastPageOffset");
 	//hasYearafterTheOffset(int offset,int limit)
 	int len= getPclen();
 	int offset = 0;
-	IN("getLastPageOffset>>while");
+	//IN("getLastPageOffset>>while");
 	while((startOffset = hasPPafterTheOffset(startOffset,len)) != 0)
 	{
-		NX("getLastYearOffset>>while[S]");
+	//	NX("getLastYearOffset>>while[S]");
 		offset = startOffset;
 		//TODO DEBUG
 		printfContextS(offset,"getLastPageOffset<in>");
-		NX("getLastYearOffset>>while[E]");
+	//	NX("getLastYearOffset>>while[E]");
 	}
-	OT("getLastPageOffset<<while");
+	//OT("getLastPageOffset<<while");
 	//TODO DEBUG
 	printfContextS(offset,"getLastPageOffset");
 	
-	OT("getLastPageOffset");
+	//OT("getLastPageOffset");
 	return offset;
 }
 
@@ -146,7 +146,7 @@ int basicFilter(featureDataContainer *container,unsigned int startOffset)
 	int lastPageOffset = getLastPageOffset(startOffset);
 	int isMarkedPage = 0;
 	int lastPageOffset2 = getLastPage2Offset(startOffset);
-	OT("FINISH GET LAST YY,PP && PP2");
+	//OT("FINISH GET LAST YY,PP && PP2");
 	int isMarkedPage2 = 0;
 	//printf("last year offset is : %d",lastYearOffset);
 	//printf("%c -%d",content[0],cLen);
@@ -158,14 +158,14 @@ int basicFilter(featureDataContainer *container,unsigned int startOffset)
 	container->top = 0;
 	
 	//char kwdList[][30]={"TABLE","He is","Figure","In this appendix","NOTICE OF","He has","Are there"};
-	IN("for(int i=startOffset;i<cLen;i++)")
+	//IN("for(int i=startOffset;i<cLen;i++)")
 	for(int i=startOffset;i<cLen;i++)
 	{
 		if(i!=0) if(fitPattern('d',content[i-1])) continue;
 		hasContent = 0;
 		//1. leave to datas
 		
-		IN("APPENDIX || ACKNOWLEDGEMENT");	
+	//	IN("APPENDIX || ACKNOWLEDGEMENT");	
 		//2. 
 		//APPENDIX || ACKNOWLEDGEMENT
 		//AUTHOR BIBLIOGRAPHIES || AUTHOR BIBLIOGRAPHY
@@ -182,7 +182,7 @@ int basicFilter(featureDataContainer *container,unsigned int startOffset)
 			hasContent = 1;
 		}
 		
-		IN("TABLE He is figure etc.");
+	//	IN("TABLE He is figure etc.");
 		//3. "TABLE" "He is" "Figure " ,"In this appendix" , "NOTICE OF","He has","Are there " etc.
 		for(int x = 0;x < myEc.top;x++)
 		{
@@ -204,7 +204,7 @@ int basicFilter(featureDataContainer *container,unsigned int startOffset)
 		
 		
 	
-		IN("end of year0");	
+	//	IN("end of year0");	
 		//4. end of year 
 		if(!hasDifferneces(lastYearOffset,i) && !isMarkedYear)
 		{
@@ -213,7 +213,7 @@ int basicFilter(featureDataContainer *container,unsigned int startOffset)
 			hasContent = 1;
 		}
 		
-		IN("end of year1");
+	//	IN("end of year1");
 		//4. end of  pp
 		if(!hasDifferneces(lastPageOffset,i) && !isMarkedPage)
 		{
@@ -222,7 +222,7 @@ int basicFilter(featureDataContainer *container,unsigned int startOffset)
 			hasContent = 1;
 		}
 		
-		IN("end of year2");
+	//	IN("end of year2");
 		//4. end of  pp2
 		if(!hasDifferneces(lastPageOffset2,i) && !isMarkedPage2)
 		{
@@ -231,7 +231,7 @@ int basicFilter(featureDataContainer *container,unsigned int startOffset)
 			hasContent = 1;
 		}
 		
-		IN("end of article");
+	//	IN("end of article");
 		//5 end of article
 		if(!hasDifferneces(cLen,i))
 		{
@@ -253,7 +253,7 @@ int basicFilter(featureDataContainer *container,unsigned int startOffset)
 			return 1;
 		}
 		
-		IN("hasContent");
+	//	IN("hasContent");
 		if(hasContent)
 		{
 			container->data[container->top].offset = i;
@@ -262,7 +262,8 @@ int basicFilter(featureDataContainer *container,unsigned int startOffset)
 			maxLen = container->top > maxLen ? container->top : maxLen;
 		}
 	}
-	OT("for(int i=startOffset;i<cLen;i++)");
+	printf("M[%d]",getMaxLen());
+	//OT("for(int i=startOffset;i<cLen;i++)");
 	return 0;
 }
 
