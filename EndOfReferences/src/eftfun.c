@@ -139,6 +139,7 @@ int basicFilter(featureDataContainer *container,unsigned int startOffset)
 	int lastPageOffset = getLastPageOffset(startOffset);
 	int isMarkedPage = 0;
 	int lastPageOffset2 = getLastPage2Offset(startOffset);
+	OT("FINISH GET LAST YY,PP && PP2");
 	int isMarkedPage2 = 0;
 	//printf("last year offset is : %d",lastYearOffset);
 	//printf("%c -%d",content[0],cLen);
