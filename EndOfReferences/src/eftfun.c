@@ -13,7 +13,7 @@
 //TODO DEBUG
 #include "debuginfo.h"
 
-#define INDEBUG 1
+#define INDEBUG 0
 
 #define thresholdForDifferneces  10
 
@@ -307,7 +307,7 @@ int basicFilter(featureDataContainer *container,unsigned int startOffset)
 			printf("last is : %d\n",container->data[container->top].offset);
 			printf("last is : %d %d (JUDGE:%d)\n",i,cLen,hasDifferneces(cLen,i));
 			*/
-			printfContextS(i,"21239");
+			//printfContextS(i,"21239");
 			return 1;
 		}
 		
