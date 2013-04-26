@@ -132,7 +132,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 		
 		// 46 - end 
 		//gen26ToEnd(fp,_mfdc->data[i]);
-		genNextDataForEndfeature(fp,_mfdc->data[i],46);
+		genNextDataForEndfeature(fp,_mfdc->data[i],66);
 		fprintf(fp,"\n");
 	}
 	

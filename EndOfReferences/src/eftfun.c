@@ -87,6 +87,7 @@ int getLastYearOffset(unsigned int startOffset)
 	while((startOffset = hasYearafterTheOffset(startOffset,len)) != 0)
 	{
 	//	NX("getLastYearOffset>>while");
+		printfContextS(offset,"getLastYearOffset(while)");
 		offset = startOffset;
 	}
 	//OT("getLastYearOffset<<while");
@@ -369,7 +370,9 @@ int genNextDataForEndfeature(FILE *fp,featureData fd,int start)
 	char *content = getPcontent();
 	int offend = getPclen();	
 	int finac = 1;// :1 is not ascii code  :0 is ascii code
+	/*
 	// follow is not ascii code for instance : References [ right References Manual false
+	// ONLY FOR startness of references
 	for(int i=offset;i<offend;i++ )
 	{
 		if(content[i] != ' ')
@@ -383,7 +386,7 @@ int genNextDataForEndfeature(FILE *fp,featureData fd,int start)
 		}
 	}
 	fprintf(fp,"%d:%d ",start++,finac);
-	
+	*/
 	//fp = stdout;
 	//for(;lmt<=1000;lmt+=150)
 	//{
