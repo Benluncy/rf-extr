@@ -28,6 +28,12 @@
 				strlen(x),T4GOS(strlen(x))\
 			)!= -1)
 
+#define SHOWLMT(x) printf("%s(%d) %d <=> %d",\
+			x,strlen(x),\
+			editDistanceS(x,strlen(x),content+realoffset,\
+				strlen(x)>strlen(content+realoffset)?strlen(content+i):strlen(x)),\
+			T4GOS(strlen(x))\
+			);
 
 //#define INLMT(x) (editDistanceS(x,strlen(x),content+i,strlen(x)) <= T4GOS(strlen(x)))
 
@@ -163,6 +169,22 @@ int basicFilter(featureDataContainer *container,unsigned int startOffset)
 	//POFI("AUTHOR BIBLIOGRAPHIES");
 	//POFI("AUTHOR BIBLIOGRAPHY");
 	container->top = 0;
+	
+	int realoffset = getReferenceEndOffset();
+	printf("real offset's value\n");
+	printf("1. leave to datas\n");
+	printf("2. acknowledgements etc.\n");
+	SHOWLMT("APPENDIX");
+	SHOWLMT("ACKNOWLEDGEMENT");
+	SHOWLMT("AUTHOR BIBLIOGRAPHIES");
+	SHOWLMT("AUTHOR BIBLIOGRAPHY");
+	SHOWLMT("AUTHOR BIOGRAPHIES");
+	SHOWLMT("AUTHOR BIOGRAPHY");
+	
+	printf("3. \"TABLE\" \"He is\" \"Figure \" ... \n");
+	printf("4. end of year \n");
+	printf("5. end of  pp\n");
+	if(INDEBUG) printfContextS(realoffset,"SHOWLMT~");
 	
 	//char kwdList[][30]={"TABLE","He is","Figure","In this appendix","NOTICE OF","He has","Are there"};
 	//IN("for(int i=startOffset;i<cLen;i++)")
