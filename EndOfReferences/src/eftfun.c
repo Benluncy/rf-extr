@@ -25,14 +25,16 @@
 			content+i,\
 			strlen(x)>strlen(content+i)?\
 				strlen(content+i):\
-				strlen(x),T4GOS(strlen(x))\
+				strlen(x),\
+			T4GOS(strlen(x))\
 			)!= -1)
 
-#define SHOWLMT(x) printf("%s(%d) %d <=> %d \n",\
+#define SHOWLMT(x) printf("%s(%d) %d <=> %d <%d>\n",\
 			x,strlen(x),\
 			editDistanceS(x,strlen(x),content+realoffset,\
 				strlen(x)>strlen(content+realoffset)?strlen(content+realoffset):strlen(x)),\
 			T4GOS(strlen(x))\
+			INLMT(x)\
 			);
 
 //#define INLMT(x) (editDistanceS(x,strlen(x),content+i,strlen(x)) <= T4GOS(strlen(x)))
