@@ -197,10 +197,11 @@ int basicFilter(featureDataContainer *container,unsigned int startOffset)
 	
 	for(int i=startOffset;i<cLen;i++)
 	{
+		/*
 		if(!hasDifferneces(realoffset,i))
 		{
 			printf("[B]%d {%d-%d}\n",INLMT("AUTHOR BIOGRAPHIES"),realoffset,i);
-		}
+		}*/
 		if(i!=0) if(fitPattern('d',content[i-1])) continue;
 		if(!hasDifferneces(realoffset,i))
 		{
