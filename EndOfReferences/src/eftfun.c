@@ -373,9 +373,9 @@ int genNextDataForEndfeature(FILE *fp,featureData fd,int start)
 	int offset = fd.offset;
 	int lmt = 200;
 	
-	char *content = getPcontent();
-	int offend = getPclen();	
-	int finac = 1;// :1 is not ascii code  :0 is ascii code
+//	char *content = getPcontent();
+//	int offend = getPclen();	
+//	int finac = 1;// :1 is not ascii code  :0 is ascii code
 	/*
 	// follow is not ascii code for instance : References [ right References Manual false
 	// ONLY FOR startness of references
