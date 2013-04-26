@@ -139,7 +139,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 	}
 	
 	//DEBUG
-	if(!pptag || pptag)
+	if(!pptag)
 	{
 		printf("\n DEBUG : contents\n");
 		for(int i=0;i< _mfdc->top;i++)
