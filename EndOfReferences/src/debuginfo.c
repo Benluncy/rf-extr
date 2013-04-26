@@ -2,7 +2,7 @@
 #include "debuginfo.h"
 #include "virtualcontent.h"
 
-#define NODEBUG 0
+#define NODEBUG 1
 
 int printfContext(int offset)
 {
