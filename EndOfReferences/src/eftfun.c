@@ -194,8 +194,8 @@ int basicFilter(featureDataContainer *container,unsigned int startOffset)
 	//char kwdList[][30]={"TABLE","He is","Figure","In this appendix","NOTICE OF","He has","Are there"};
 	//IN("for(int i=startOffset;i<cLen;i++)")
 	*/
-	printf("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n\
-		CLEN is %d\n",cLen);
+	//printf("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n\
+	//	CLEN is %d\n",cLen);
 	for(int i=startOffset;i<cLen;i++)
 	{
 		/*
