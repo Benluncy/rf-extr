@@ -684,8 +684,7 @@ unsigned int getReferenceEndOffset()
 
 //TODO MAY USELESS ... 
 //int getLastElement(int (*callback)(int offset,int limit));
-	
-/*
+
 int hasDifferneces(int dest,int src)
 {
 	if(src>=getPclen()) src = getPclen()-1;
@@ -693,7 +692,7 @@ int hasDifferneces(int dest,int src)
 	if(dest<0) dest = 0;
 	
 	if(dest>=getPclen()) dest = getPclen()-1;
-	int th = 0;
+	//int th = 0;
 	char *content = getPcontent();
 
 	if(dest < src)
@@ -703,19 +702,20 @@ int hasDifferneces(int dest,int src)
 		dest = tmp;
 	}
 	if((dest - src) <= thresholdForDifferneces) return 0;
-	for(int i=src;i<dest;i++)
+	for(int i=src;i<dest-1;i++)
 	{
 		// no ascii code
 		if(fitPattern('a',content[i])&&fitPattern('a',content[i+1])) 
 		{
-			th++;
-			if(th > 3) return 1;
-			i+=2;
+			return 1;
+			//th++;
+			//if(th > 3) return 1;
+			//i+=2;
 		}
 	}
 	return 0;
 }
-*/
+
 
 
 //TODO MY LORD ...
