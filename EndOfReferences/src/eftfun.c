@@ -131,7 +131,7 @@ int getLastPageOffset(unsigned int startOffset)
 	}
 	//OT("getLastPageOffset<<while");
 	//TODO DEBUG
-	printfContextS(offset,"getLastPageOffset");
+	if(INDEBUG) printfContextS(offset,"getLastPageOffset");
 	
 	//OT("getLastPageOffset");
 	return offset;
