@@ -304,7 +304,7 @@ int basicFilter(featureDataContainer *container,unsigned int startOffset)
 			}*/
 			printf("last is : %d\n",container->data[container->top-1].offset);
 			printf("last is : %d\n",container->data[container->top].offset);
-			printf("last is : %d %d\n",i,cLen);
+			printf("last is : %d %d (JUDGE:%d)\n",i,cLen,!hasDifferneces(cLen,i));
 			return 1;
 		}
 		
@@ -685,7 +685,7 @@ unsigned int getReferenceEndOffset()
 //TODO MAY USELESS ... 
 //int getLastElement(int (*callback)(int offset,int limit));
 	
-
+/*
 int hasDifferneces(int dest,int src)
 {
 	if(src>=getPclen()) src = getPclen()-1;
@@ -715,6 +715,8 @@ int hasDifferneces(int dest,int src)
 	}
 	return 0;
 }
+*/
+
 
 //TODO MY LORD ...
 featureDataContainer *getEndFeatureDataContainer(void)

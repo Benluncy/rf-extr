@@ -7,7 +7,12 @@ int cleanEndKWDContainer();
 int insertEndKWD(const char *key);
 
 //util
-int hasDifferneces(int dest,int src);
+//int hasDifferneces(int dest,int src);
+#ifndef hasDifferneces
+#define hasDifferneces(a,b) ((a > b? (a - b) :( b - a)) < 10) 
+//calculate difference distance of a and b
+#endif
+
 unsigned int getReferenceEndOffset(void);
 
 // set and get
