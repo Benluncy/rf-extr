@@ -285,8 +285,7 @@ int basicFilter(featureDataContainer *container,unsigned int startOffset)
 		
 	//	IN("end of article");
 		//5 end of article
-		//if(!hasDifferneces(cLen,i))
-		if(!hasDiffernecesH(cLen,i))
+		if(!hasDifferneces(cLen,i))
 		{
 			container->data[container->top].t[4] = 1;
 			container->data[container->top].offset = i;
@@ -347,7 +346,7 @@ int combineOffsets(featureDataContainer *container)//combine nearly offsets and 
 	{
 		printf("[OO],%d\n",container->data[i].offset);
 	}*/
-	for(int i=1;i<container->top;i++)
+	for(int i=1;i<container->top-1;i++)
 	{
 		//container->data[j].offset = container->data[i].offset;
 		//hasDifferneces(int dest,int src)
@@ -374,6 +373,23 @@ int combineOffsets(featureDataContainer *container)//combine nearly offsets and 
 			lastOffset = container->data[i].offset;
 		}
 	}
+	if(!hasDifferneces(lastOffset,getPclen()))
+	{
+		for(int k=0;k<LENOFT;k++)
+		{
+			container->data[j].t[k] = container->data[container->top-1].t[k] || container->data[j].t[k];
+		}
+	}else
+	{
+		j++;
+		container->data[j].offset = container->data[container->top-1].offset;
+		for(int k=0;k<LENOFT;k++)
+		{
+			container->data[j].t[k] = container->data[container->top-1].t[k];
+		}
+	}
+	
+	
 	container->top = j+1;
 	/*
 	for(int i=0;i<container->top;i++)
