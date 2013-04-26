@@ -31,7 +31,7 @@
 #define SHOWLMT(x) printf("%s(%d) %d <=> %d",\
 			x,strlen(x),\
 			editDistanceS(x,strlen(x),content+realoffset,\
-				strlen(x)>strlen(content+realoffset)?strlen(content+i):strlen(x)),\
+				strlen(x)>strlen(content+realoffset)?strlen(content+realoffset):strlen(x)),\
 			T4GOS(strlen(x))\
 			);
 
