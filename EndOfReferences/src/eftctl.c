@@ -23,10 +23,12 @@ void closeLogFile()
 	fclose(flog);
 }
 
+#define ONLY(x) if(strncmp(x,fileName,strlen(x))!=0) return 1;
+
 int genEndSampleCtl(const char* fileName,int isDir)
 {
-	//if(strncmp("data/orbz_sec/Analysis of electronics assembly operations.txt",fileName,strlen("data/orbz_sec/Analysis of electronics assembly operations.txt"))!=0) return 1;
-       
+	//
+       	ONLY("data/orbz_sec/Another approach to service courses.txt");
 	FILE *fp;
 	static int id = 0;
 	int trainOrTest;
