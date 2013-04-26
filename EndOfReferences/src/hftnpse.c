@@ -434,7 +434,7 @@ int hasSeqOfTheOffset2(int offset,int limit)
 #endif
 int hasSpecialKeyWords(int offset,int limit)
 {
-	int i;	
+	int i;
 	int offend;
 	char *content = getPcontent();
 	defineStartAndEnd(&offset,&offend,limit);

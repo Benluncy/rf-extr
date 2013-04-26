@@ -25,6 +25,8 @@ void closeLogFile()
 
 int genEndSampleCtl(const char* fileName,int isDir)
 {
+	if(strncmp("data/orbz_sec/Analysis of electronics assembly operations.txt",fileName,strlen("data/orbz_sec/Analysis of electronics assembly operations.txt"))!=0) return 1;
+       
 	FILE *fp;
 	static int id = 0;
 	int trainOrTest;
@@ -35,7 +37,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 	memset(_mfdc,0,sizeof(featureDataContainer));
 	memset(&tmpCter,0,sizeof(featureDataContainer));
 	// ignore dir
-        if(isDir)
+	if(isDir)
         {
                 printf("ignore dir:%s\n",fileName);
                 return 1;

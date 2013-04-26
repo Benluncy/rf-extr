@@ -13,6 +13,8 @@
 //TODO DEBUG
 #include "debuginfo.h"
 
+#define INDEBUG 1
+
 #define thresholdForDifferneces  10
 
 #define thresholdForGetOffsetSuggestion(x)  x*0.3
@@ -87,13 +89,15 @@ int getLastYearOffset(unsigned int startOffset)
 	while((startOffset = hasYearafterTheOffset(startOffset,len)) != 0)
 	{
 	//	NX("getLastYearOffset>>while");
-		printfContextS(offset,"getLastYearOffset(while)");
+		if(INDEBUG) printfContextS(offset,"getLastYearOffset(while)");
+		
 		offset = startOffset;
 	}
 	//OT("getLastYearOffset<<while");
 	
+	
 	//TODO DEBUGOUTPUT
-	printfContextS(offset,"getLastYearOffset");
+	if(INDEBUG) printfContextS(offset,"getLastYearOffset");
 	
 	//OT("getLastYearOffset");
 	return offset;
@@ -110,10 +114,12 @@ int getLastPageOffset(unsigned int startOffset)
 	while((startOffset = hasPPafterTheOffset(startOffset,len)) != 0)
 	{
 	//	NX("getLastYearOffset>>while[S]");
-		offset = startOffset;
+		
 		//TODO DEBUG
-		printfContextS(offset,"getLastPageOffset<in>");
+		if(INDEBUG) printfContextS(offset,"getLastPageOffset<in>");
 	//	NX("getLastYearOffset>>while[E]");
+	
+		offset = startOffset;
 	}
 	//OT("getLastPageOffset<<while");
 	//TODO DEBUG
@@ -135,7 +141,7 @@ int getLastPage2Offset(unsigned int startOffset)
 	return offset;
 }
 
-int maxLen = 0;
+//int maxLen = 0;
 
 int basicFilter(featureDataContainer *container,unsigned int startOffset)
 {
@@ -259,16 +265,16 @@ int basicFilter(featureDataContainer *container,unsigned int startOffset)
 		{
 			container->data[container->top].offset = i;
 			container->top++;
-			if(container->top >= 200) printf("found!");
-			maxLen = container->top > maxLen ? container->top : maxLen;
+			//if(container->top >= 200) printf("found!");
+			//maxLen = container->top > maxLen ? container->top : maxLen;
 		}
 	}
-	printf("M[%d]",getMaxLen());
+	//printf("M[%d]",getMaxLen());
 	//OT("for(int i=startOffset;i<cLen;i++)");
 	return 0;
 }
 
-int getMaxLen(){return maxLen;}
+//int getMaxLen(){return maxLen;}
 
 
 int combineOffsets(featureDataContainer *container)//combine nearly offsets and make sure 

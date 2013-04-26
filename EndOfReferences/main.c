@@ -78,7 +78,7 @@ int main(int argc,char *argv[])
 	fileNum = genSamples4Endness();
 	printf("done \n total : %d\n",fileNum);
 	
-	printf("max top is:%d",getMaxLen());
+	//printf("max top is:%d",getMaxLen());
 	return 0;
 }
 
