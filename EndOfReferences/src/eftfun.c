@@ -172,7 +172,7 @@ int basicFilter(featureDataContainer *container,unsigned int startOffset)
 	//POFI("AUTHOR BIBLIOGRAPHY");
 	container->top = 0;
 	
-	int realoffset = getReferenceEndOffset() + 1;
+	int realoffset = getReferenceEndOffset();
 	int i = realoffset;
 	printf("**********************************************************************************\n");
 	printf("real offset's value\n");
@@ -303,6 +303,10 @@ int basicFilter(featureDataContainer *container,unsigned int startOffset)
 	//	IN("hasContent");
 		if(hasContent)
 		{
+			if(!hasDifferneces(realoffset,i))
+			{
+				printf("[S]%d {%d-%d}\n",INLMT("AUTHOR BIOGRAPHIES"),realoffset,i);
+			}
 			container->data[container->top].offset = i;
 			container->top++;
 			//if(container->top >= 200) printf("found!");
