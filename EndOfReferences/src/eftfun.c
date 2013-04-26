@@ -171,6 +171,7 @@ int basicFilter(featureDataContainer *container,unsigned int startOffset)
 	container->top = 0;
 	
 	int realoffset = getReferenceEndOffset();
+	printf("**********************************************************************************\n");
 	printf("real offset's value\n");
 	printf("1. leave to datas\n");
 	printf("2. acknowledgements etc.\n");
@@ -186,6 +187,7 @@ int basicFilter(featureDataContainer *container,unsigned int startOffset)
 	printf("5. end of  pp\n");
 	if(INDEBUG) printfContextS(realoffset,"SHOWLMT~");
 	
+	printf("**********************************************************************************\n");
 	//char kwdList[][30]={"TABLE","He is","Figure","In this appendix","NOTICE OF","He has","Are there"};
 	//IN("for(int i=startOffset;i<cLen;i++)")
 	for(int i=startOffset;i<cLen;i++)
