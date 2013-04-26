@@ -333,10 +333,10 @@ int combineOffsets(featureDataContainer *container)//combine nearly offsets and 
 	int lastOffset = container->data[0].offset;
 	//int reo = getReferenceEndOffset();
 	//container->data[0].positive = !hasDifferneces(lastOffset,reo);
-	printf("combine!!!!\n");
+	printf("[XXXXXXXXXXXXXXXXXXXXXXXXX]combine!!!!\n");
 	for(int i=0;i<container->top;i++)
 	{
-		printf("[OO],%d",container->data[j].offset);
+		printf("[OO],%d\n",container->data[i].offset);
 	}
 	for(int i=0;i<container->top;i++)
 	{
