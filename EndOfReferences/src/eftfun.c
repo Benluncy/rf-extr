@@ -170,7 +170,7 @@ int basicFilter(featureDataContainer *container,unsigned int startOffset)
 	//POFI("AUTHOR BIBLIOGRAPHY");
 	container->top = 0;
 	
-	int realoffset = getReferenceEndOffset();
+	int realoffset = getReferenceEndOffset() + 1;
 	printf("**********************************************************************************\n");
 	printf("real offset's value\n");
 	printf("1. leave to datas\n");
