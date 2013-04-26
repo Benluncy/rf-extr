@@ -171,7 +171,7 @@ int basicFilter(featureDataContainer *container,unsigned int startOffset)
 	//POFI("AUTHOR BIBLIOGRAPHIES");
 	//POFI("AUTHOR BIBLIOGRAPHY");
 	container->top = 0;
-	
+	/*
 	int realoffset = getReferenceEndOffset();
 	int i = realoffset;
 	printf("**********************************************************************************\n");
@@ -193,7 +193,7 @@ int basicFilter(featureDataContainer *container,unsigned int startOffset)
 	printf("**********************************************************************************\n");
 	//char kwdList[][30]={"TABLE","He is","Figure","In this appendix","NOTICE OF","He has","Are there"};
 	//IN("for(int i=startOffset;i<cLen;i++)")
-	
+	*/
 	
 	for(int i=startOffset;i<cLen;i++)
 	{
@@ -203,6 +203,7 @@ int basicFilter(featureDataContainer *container,unsigned int startOffset)
 			printf("[B]%d {%d-%d}\n",INLMT("AUTHOR BIOGRAPHIES"),realoffset,i);
 		}*/
 		if(i!=0) if(fitPattern('d',content[i-1])) continue;
+		/*
 		if(!hasDifferneces(realoffset,i))
 		{
 			printf("[A]%d {%d-%d}\n",INLMT("AUTHOR BIOGRAPHIES"),realoffset,i);
@@ -210,7 +211,7 @@ int basicFilter(featureDataContainer *container,unsigned int startOffset)
 			||INLMT("AUTHOR BIBLIOGRAPHIES") ||INLMT("AUTHOR BIBLIOGRAPHY")
 			|| INLMT("AUTHOR BIOGRAPHIES") || INLMT("AUTHOR BIOGRAPHY"))));
 		}
-		
+		*/
 		
 		hasContent = 0;
 		//1. leave to datas
@@ -306,12 +307,12 @@ int basicFilter(featureDataContainer *container,unsigned int startOffset)
 	//	IN("hasContent");
 		if(hasContent)
 		{
+			/*
 			if(!hasDifferneces(realoffset,i))
 			{
-				printf("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\n");
 				printf("[S]%d {%d-%d}\n",INLMT("AUTHOR BIOGRAPHIES"),realoffset,i);
-				printf("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\n");
-			}
+			}*/
+			
 			container->data[container->top].offset = i;
 			container->top++;
 			//if(container->top >= 200) printf("found!");
