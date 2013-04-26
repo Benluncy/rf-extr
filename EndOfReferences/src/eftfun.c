@@ -732,7 +732,9 @@ int hasDifferneces(int dest,int src)
 	for(int i=src;i<dest;i++)
 	{
 		// no ascii code
-		if(!(content[i]>='a'&&content[i]<='z')||(content[i]>='A'&&content[i]<='Z')) th++;
+		//if(!(content[i]>='a'&&content[i]<='z')||(content[i]>='A'&&content[i]<='Z')) th++;
+		if(content[i] != ' ' && content[i] != '\r' && content[i] != '\n') th++;
+		
 		if(th>2) return 1;
 		/*
 		if(fitPattern('a',content[i])&&fitPattern('a',content[i+1])) 
