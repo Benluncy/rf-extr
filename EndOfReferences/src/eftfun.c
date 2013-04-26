@@ -372,6 +372,7 @@ int combineOffsets(featureDataContainer *container)//combine nearly offsets and 
 			lastOffset = container->data[i].offset;
 		}
 	}
+	/*
 	if(!hasDifferneces(lastOffset,getPclen()))
 	{
 		for(int k=0;k<LENOFT;k++)
@@ -386,6 +387,13 @@ int combineOffsets(featureDataContainer *container)//combine nearly offsets and 
 		{
 			container->data[j].t[k] = container->data[container->top-1].t[k];
 		}
+	}*/
+	
+	j++;
+	container->data[j].offset = container->data[container->top-1].offset;
+	for(int k=0;k<LENOFT;k++)
+	{
+		container->data[j].t[k] = container->data[container->top-1].t[k];
 	}
 	
 	
