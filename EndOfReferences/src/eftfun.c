@@ -302,8 +302,9 @@ int basicFilter(featureDataContainer *container,unsigned int startOffset)
 				}
 				printf("%d \n",container->data[i].offset);
 			}*/
-			printf("last is : %d",container->data[container->top-1].offset);
-			printf("last is : %d",container->data[container->top].offset);
+			printf("last is : %d\n",container->data[container->top-1].offset);
+			printf("last is : %d\n",container->data[container->top].offset);
+			printf("last is : %d %d\n",i,cLen);
 			return 1;
 		}
 		
