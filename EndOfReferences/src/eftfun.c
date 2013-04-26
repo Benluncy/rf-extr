@@ -28,7 +28,7 @@
 				strlen(x),T4GOS(strlen(x))\
 			)!= -1)
 
-#define SHOWLMT(x) printf("%s(%d) %d <=> %d",\
+#define SHOWLMT(x) printf("%s(%d) %d <=> %d \n",\
 			x,strlen(x),\
 			editDistanceS(x,strlen(x),content+realoffset,\
 				strlen(x)>strlen(content+realoffset)?strlen(content+realoffset):strlen(x)),\
@@ -191,8 +191,6 @@ int basicFilter(featureDataContainer *container,unsigned int startOffset)
 	//char kwdList[][30]={"TABLE","He is","Figure","In this appendix","NOTICE OF","He has","Are there"};
 	//IN("for(int i=startOffset;i<cLen;i++)")
 	
-	getchar();
-	getchar();
 	
 	for(int i=startOffset;i<cLen;i++)
 	{
