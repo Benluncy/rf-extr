@@ -190,6 +190,10 @@ int basicFilter(featureDataContainer *container,unsigned int startOffset)
 	printf("**********************************************************************************\n");
 	//char kwdList[][30]={"TABLE","He is","Figure","In this appendix","NOTICE OF","He has","Are there"};
 	//IN("for(int i=startOffset;i<cLen;i++)")
+	
+	getchar();
+	getchar();
+	
 	for(int i=startOffset;i<cLen;i++)
 	{
 		if(i!=0) if(fitPattern('d',content[i-1])) continue;
