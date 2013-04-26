@@ -206,6 +206,9 @@ int basicFilter(featureDataContainer *container,unsigned int startOffset)
 		if(!hasDifferneces(realoffset,i))
 		{
 			printf("[A]%d {%d-%d}\n",INLMT("AUTHOR BIOGRAPHIES"),realoffset,i);
+			printf("[AA]X%d\n",((INLMT("APPENDIX")||INLMT("ACKNOWLEDGEMENT")
+			||INLMT("AUTHOR BIBLIOGRAPHIES") ||INLMT("AUTHOR BIBLIOGRAPHY")
+			|| INLMT("AUTHOR BIOGRAPHIES") || INLMT("AUTHOR BIOGRAPHY"))));
 		}
 		
 		
