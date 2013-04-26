@@ -173,6 +173,7 @@ int basicFilter(featureDataContainer *container,unsigned int startOffset)
 	container->top = 0;
 	
 	int realoffset = getReferenceEndOffset() + 1;
+	i = realoffset;
 	printf("**********************************************************************************\n");
 	printf("real offset's value\n");
 	printf("1. leave to datas\n");
