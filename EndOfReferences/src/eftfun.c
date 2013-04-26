@@ -333,9 +333,14 @@ int combineOffsets(featureDataContainer *container)//combine nearly offsets and 
 	int lastOffset = container->data[0].offset;
 	//int reo = getReferenceEndOffset();
 	//container->data[0].positive = !hasDifferneces(lastOffset,reo);
+	printf("combine!!!!\n");
 	for(int i=0;i<container->top;i++)
 	{
-		container->data[j].offset = container->data[i].offset;
+		printf("[OO],%d",container->data[j].offset);
+	}
+	for(int i=0;i<container->top;i++)
+	{
+		//container->data[j].offset = container->data[i].offset;
 		//hasDifferneces(int dest,int src)
 		if(!hasDifferneces(lastOffset,container->data[i].offset))
 		{
@@ -347,6 +352,7 @@ int combineOffsets(featureDataContainer *container)//combine nearly offsets and 
 			}
 		}else
 		{
+			container->data[j].offset = container->data[i].offset;
 			j++;
 			//container->data[j].offset = container->data[i].offset;
 			//container->data[j].positive = !hasDifferneces(container->data[i].offset,reo);
@@ -354,8 +360,8 @@ int combineOffsets(featureDataContainer *container)//combine nearly offsets and 
 			{
 				container->data[j].t[k] = container->data[i].t[k];
 			}
+			lastOffset = container->data[i].offset;
 		}
-		lastOffset = container->data[i].offset;
 	}
 	container->top = j+1;
 	/*
