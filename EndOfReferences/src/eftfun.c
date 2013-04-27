@@ -49,7 +49,7 @@ endFeatureData mfd;
 endFeatureDataContainer mfdc;
 
 
-OffsetCallback endFunctionList[CALLBACK_LEN]={hasPPafterTheOffset,
+OffsetCallback endFunctionList[ENDCALLBACKLEN]={hasPPafterTheOffset,
 						hasPPafterTheOffset2,
 						hasYearafterTheOffset,
 						hasNameafterTheOffset0,
@@ -382,27 +382,45 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 		}
 		
 		// 3 end of year // before end of article
-		if(!hasDifferneces(lastYearOffset,i) && !isMarkedEOY)
+		if(!hasDifferneces(lastYearOffset,i))
 		{
+			if(!isMarkedEOY)
+			{
+				isMarkedEOY = 1;
+				hasContent = 1;
+			}
 			container->data[container->top].t[3] = 1;
-			isMarkedEOY = 1;
-			hasContent = 1;
+		}else if(i > lastYearOffset)
+		{
+			container->data[container->top].t[3] = 2;
 		}
 		
 		// 4 end of page // before end of article
-		if(!hasDifferneces(lastPageOffset,i) && !isMarkedEOP)
+		if(!hasDifferneces(lastPageOffset,i))
 		{
+			if(!isMarkedEOP)
+			{
+				isMarkedEOP = 1;
+				hasContent = 1;
+			}
 			container->data[container->top].t[4] = 1;
-			isMarkedEOP = 1;
-			hasContent = 1;
+		}else if(i > lastPageOffset)
+		{
+			container->data[container->top].t[4] = 2;
 		}
 		
 		// 5 end of page2 // before end of article
-		if(!hasDifferneces(lastPageOffset2,i) && !isMarkedEOP2)
+		if(!hasDifferneces(lastPageOffset2,i))
 		{
+			if(!isMarkedEOP2)
+			{
+				isMarkedEOP2 = 1;
+				hasContent = 1;
+			}
 			container->data[container->top].t[5] = 1;
-			isMarkedEOP = 1;
-			hasContent = 1;
+		}else if(i > lastPageOffset2)
+		{
+			container->data[container->top].t[5] = 2;
 		}
 		
 		// 6 end of article (move down)
@@ -410,34 +428,85 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 		// 7 end year before ack
 		if(i>endYearBeforeAck && endYearBeforeAck)
 		{
-			
+			container->data[container->top].t[7] = 2;
 		}
 		
 		// 8 end year before table
+		if(i>endYearBeforeTable && endYearBeforeTable)
+		{
+			container->data[container->top].t[8] = 2;
+		}
 		// 9 end year before ack or table
+		if(i>endYearBeforeAckOrTable && endYearBeforeAckOrTable)
+		{
+			container->data[container->top].t[9] = 2;
+		}
+
 		// 10 end page before ack
+		if(i>endPageBeforeAck && endPageBeforeAck)
+		{
+			container->data[container->top].t[10] = 2;
+		}
+		
 		// 11 end page before table
+		if(i>endPageBeforeTable && endPageBeforeTable)
+		{
+			container->data[container->top].t[11] = 2;
+		}
+		
 		// 12 end page before ack or table
+		if(i>endPageBeforeAckOrTable && endPageBeforeAckOrTable)
+		{
+			container->data[container->top].t[12] = 2;
+		}
 		// 13 end page2 before ack
+		if(i>endPage2BeforeAck && endPage2BeforeAck)
+		{
+			container->data[container->top].t[13] = 2;
+		}
 		// 14 end page2 before table
+		
+		if(i>endPage2BeforeTable && endPage2BeforeTable)
+		{
+			container->data[container->top].t[14] = 2;
+		}
 		// 15 end page2 before ack or table
+		if(i>endPage2BeforeAckOrTable && endPage2BeforeAckOrTable)
+		{
+			container->data[container->top].t[15] = 2;
+		}
 
 		// 16 index of year
 		if(i>=nextYearOffset && nextYearOffset != -1)
 		{
 			indexOfYear ++;
 			container->data[container->top].t[16] = indexOfYear;
-			
+			nextYearOffset = hasYearafterTheOffset(nextYearOffset,cLen);
+			if(nextYearOffset == 0) nextYearOffset = -1;
 		}
-		hasYearafterTheOffset(startOffset,cLen))
 		// 17 index of page
+		if(i>=nextPageOffset && nextPageOffset != -1)
+		{
+			indexOfPage ++ ;
+			container->data[container->top].t[17] = indexOfPage;
+			nextPageOffset = hasPPafterTheOffset(nextPageOffset,cLen);
+			if(nextPageOffset == 0) nextPageOffset = -1;
+		}
 		// 18 index of page2
+		if(i>=nextPage2Offset && nextPage2Offset != -1)
+		{
+			indexOfPage2 ++ ;
+			container->data[container->top].t[17] = indexOfPage2;
+			nextPage2Offset = hasPPafterTheOffset(nextPage2Offset,cLen);
+			if(nextPage2Offset == 0) nextPage2Offset = -1;
+		}
+		
 		//////////////////////////////////////////////////////////////////////////
 
 		// 6 end of article
 		if(!hasDifferneces(cLen,i))
 		{
-			if(ENDCTNMAX <= container->top)
+			if(ENDCTNMAX <= container->top) // 
 			{
 				fprintf(stderr,"[ERROR] pool is full! %s %d",__FILE__,__LINE__);
 			}
@@ -453,11 +522,6 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 		
 		if(hasContent)
 		{
-			/*
-			if(!hasDifferneces(realoffset,i))
-			{
-				printf("[S]%d {%d-%d}\n",INLMT("AUTHOR BIOGRAPHIES"),realoffset,i);
-			}*/
 			if(ENDCTNMAX <= container->top)
 			{
 				fprintf(stderr,"[ERROR] pool is full! %s %d",__FILE__,__LINE__);
@@ -482,15 +546,28 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 {
 	int j = 0;
 	int lastOffset = container->data[0].offset;
-	//int reo = getReferenceEndOffset();
-	//container->data[0].positive = !hasDifferneces(lastOffset,reo);
-	/*
-	printf("[XXXXXXXXXXXXXXXXXXXXXXXXX]combine!!!!\n");
-	for(int i=0;i<container->top;i++)
-	{
-		printf("[OO],%d\n",container->data[i].offset);
-	}*/
-	for(int i=1;i<container->top-1;i++)
+	//introduce of settings
+	// 0 empty for valued -- index of all offsets
+	// 1 acknowledgements etc.
+	// 2 table , he is figure ... (a list)
+	// 3 end of year // before end of content
+	// 4 end of page // before end of content
+	// 5 end of page2 // before end of content
+	// 6 end of article
+	// 7 end year before ack
+	// 8 end year before table
+	// 9 end year before ack or table
+	// 10 end page before ack
+	// 11 end page before table
+	// 12 end page before ack or table
+	// 13 end page2 before ack
+	// 14 end page2 before table
+	// 15 end page2 before ack or table
+	// 16 index of year
+	// 17 index of page
+	// 18 index of page2
+	//for(int i=1;i<container->top-1;i++)
+	for(int i=1;i<container->top;i++)
 	{
 		//container->data[j].offset = container->data[i].offset;
 		//hasDifferneces(int dest,int src)
@@ -499,9 +576,20 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 			//printf("[no diff and combine]:%d-%d",lastOffset,container->data[i].offset);
 			//container->data[j].offset = container->data[i].offset;
 			//container->data[j].positive = !hasDifferneces(container->data[i].offset,reo)|| container->data[j].positive;
-			for(int k=0;k<ENDLEN;k++)
+			for(int k=1;k<ENDLEN;k++)
 			{
-				container->data[j].t[k] = container->data[i].t[k] || container->data[j].t[k];
+				
+				if(container->data[j].t[k] != container->data[i].t[k])
+				{
+					j++;
+					container->data[j].offset = container->data[i].offset;
+					container->data[j].t[0] = j;
+					for(int z=1;z<ENDLEN;z++)
+					{
+						container->data[j].t[z] = container->data[i].t[z];
+					}
+				}
+				//container->data[j].t[k] = container->data[i].t[k] || container->data[j].t[k];
 			}
 		}else
 		{
@@ -510,13 +598,15 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 			container->data[j].offset = container->data[i].offset;
 			//container->data[j].offset = container->data[i].offset;
 			//container->data[j].positive = !hasDifferneces(container->data[i].offset,reo);
-			for(int k=0;k<ENDLEN;k++)
+			container->data[j].t[0] = j;
+			for(int k=1;k<ENDLEN;k++)
 			{
 				container->data[j].t[k] = container->data[i].t[k];
 			}
 			lastOffset = container->data[i].offset;
 		}
 	}
+	/*
 	if(!hasDifferneces(lastOffset,getPclen()))
 	{
 		for(int k=0;k<ENDLEN;k++)
@@ -532,6 +622,7 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 			container->data[j].t[k] = container->data[container->top-1].t[k];
 		}
 	}
+	*/
 	/*
 	j++;
 	container->data[j].offset = container->data[container->top-1].offset;
@@ -676,7 +767,7 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	//rateWrite(fp,start,(double)offset/getPclen());
 	//start+=5;
 	
-	for(int i=0;i<CALLBACK_LEN;i++)
+	for(int i=0;i<ENDCALLBACKLEN;i++)
 	{
 		//rateWrite(fp,start,(fd.offset == getPclen()) ? -1 :((double)fd.fid[i][0]/fd.offset)/
 		//			((fd.fid[i][1]-fd.fid[i][0])/(getPclen()-fd.offset)));
@@ -720,7 +811,7 @@ int prepareDensityData(void)
 	for(int i=0;i<mfdc.top;i++)
 	{
 		
-		for(int j=0;j<CALLBACK_LEN;j++)
+		for(int j=0;j<ENDCALLBACKLEN;j++)
 		{
 			offsetStat(mfdc.data[i].offset,
 					&totalData,&beforeData,endFunctionList[j]);
@@ -757,7 +848,7 @@ int prepareDensityData(void)
 	CloseKWD ckwd;
 	for(int i=0;i<mfdc.top;i++)
 	{
-		for(int j=0;j<CALLBACK_LEN;j++)
+		for(int j=0;j<ENDCALLBACKLEN;j++)
 		{
 			mfdc.data[i].density[j][0][0] = (double)mfdc.data[i].fid[j][0]/NOTZERO(mfdc.data[i].offset);
 			mfdc.data[i].density[j][0][1] = (double)(mfdc.data[i].fid[j][1]-mfdc.data[i].fid[j][0])/NOTZERO(getPclen()-mfdc.data[i].fid[j][0]);
@@ -791,7 +882,7 @@ int prepareDensityData(void)
 	printf(".");fflush(NULL);//TODO TIPS
 	for(int i=0;i<mfdc.top;i++)
 	{
-		for(int k=0;k<CALLBACK_LEN;k++)
+		for(int k=0;k<ENDCALLBACKLEN;k++)
 		{
 			for(int z=0;z<4;z++) mfdc.data[i].seq[k][z] = 1;
 		}
@@ -799,7 +890,7 @@ int prepareDensityData(void)
 		for(int j=0;j<mfdc.top;j++)
 		{
 			if(i==j) continue;
-			for(int k=0;k<CALLBACK_LEN;k++)
+			for(int k=0;k<ENDCALLBACKLEN;k++)
 			{
 				if(mfdc.data[i].density[k][0][1]/NOTZERO(mfdc.data[i].density[k][0][0])
 					< mfdc.data[j].density[k][0][1]/NOTZERO(mfdc.data[j].density[k][0][0]))
