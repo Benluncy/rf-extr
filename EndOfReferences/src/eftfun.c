@@ -493,6 +493,7 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 			nextPageOffset = hasPPafterTheOffset(nextPageOffset,cLen);
 			if(nextPageOffset == 0) nextPageOffset = -1;
 			printf("[P]");
+			printfContextS(i,"P1");
 		}
 		// 18 index of page2
 		if(i>=nextPage2Offset && nextPage2Offset != -1)
@@ -502,6 +503,7 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 			nextPage2Offset = hasPPafterTheOffset(nextPage2Offset,cLen);
 			if(nextPage2Offset == 0) nextPage2Offset = -1;
 			printf("[PP]");
+			printfContextS(i,"P2");
 		}
 		
 		//////////////////////////////////////////////////////////////////////////
