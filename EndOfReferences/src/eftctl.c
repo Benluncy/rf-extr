@@ -128,13 +128,13 @@ int genEndSampleCtl(const char* fileName,int isDir)
 		if(!hasDifferneces(_mfdc->data[i].offset,targetOffset)) pptag = 1;
 		//tx
 		// 1-20
-		for(int j=1;j<LENOFT;j++)
+		for(int j=1;j<ENDLEN;j++)
 			rankWrite(fp,1+j*5,_mfdc->data[i].t[j],5);
 		//	fprintf(fp,"%d:%d ",);
 		
 		
 		// 21 - 45
-		for(int j=0;j<LENOFT;j++)
+		for(int j=0;j<ENDLEN;j++)
 			rankWrite(fp,26+j*5,tmpCter.data[i].t[j],5);
 		
 		// 46 - end 

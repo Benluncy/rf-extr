@@ -295,7 +295,7 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 			for(int i=0;i<container->top;i++)
 			{
 				printf(">>");
-				for(int j=0;j<LENOFT;j++)
+				for(int j=0;j<ENDLEN;j++)
 				{
 					printf("%d ",container->data[i].t[j]);
 				}
@@ -354,7 +354,7 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 			//printf("[no diff and combine]:%d-%d",lastOffset,container->data[i].offset);
 			//container->data[j].offset = container->data[i].offset;
 			//container->data[j].positive = !hasDifferneces(container->data[i].offset,reo)|| container->data[j].positive;
-			for(int k=0;k<LENOFT;k++)
+			for(int k=0;k<ENDLEN;k++)
 			{
 				container->data[j].t[k] = container->data[i].t[k] || container->data[j].t[k];
 			}
@@ -365,7 +365,7 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 			container->data[j].offset = container->data[i].offset;
 			//container->data[j].offset = container->data[i].offset;
 			//container->data[j].positive = !hasDifferneces(container->data[i].offset,reo);
-			for(int k=0;k<LENOFT;k++)
+			for(int k=0;k<ENDLEN;k++)
 			{
 				container->data[j].t[k] = container->data[i].t[k];
 			}
@@ -374,7 +374,7 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 	}
 	if(!hasDifferneces(lastOffset,getPclen()))
 	{
-		for(int k=0;k<LENOFT;k++)
+		for(int k=0;k<ENDLEN;k++)
 		{
 			container->data[j].t[k] = container->data[container->top-1].t[k] || container->data[j].t[k];
 		}
@@ -382,7 +382,7 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 	{
 		j++;
 		container->data[j].offset = container->data[container->top-1].offset;
-		for(int k=0;k<LENOFT;k++)
+		for(int k=0;k<ENDLEN;k++)
 		{
 			container->data[j].t[k] = container->data[container->top-1].t[k];
 		}
@@ -390,7 +390,7 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 	/*
 	j++;
 	container->data[j].offset = container->data[container->top-1].offset;
-	for(int k=0;k<LENOFT;k++)
+	for(int k=0;k<ENDLEN;k++)
 	{
 		container->data[j].t[k] = container->data[container->top-1].t[k];
 	}*/
@@ -400,7 +400,7 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 	/*
 	for(int i=0;i<container->top;i++)
 	{
-		for(int j=0;j<LENOFT;j++)
+		for(int j=0;j<ENDLEN;j++)
 		{
 			printf("%d ",container->data[i].t[j]);
 		}
@@ -411,22 +411,22 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 
 int makeSequenceForCombinedOffsets(endFeatureDataContainer *container)
 {
-	unsigned int max[LENOFT];
-	//unsigned int before[LENOFT];
-	unsigned int hasData[LENOFT];
+	unsigned int max[ENDLEN];
+	//unsigned int before[ENDLEN];
+	unsigned int hasData[ENDLEN];
 	int top = container->top;
-	for(int i=0;i<LENOFT;i++)
+	for(int i=0;i<ENDLEN;i++)
 	{
 		max[i] = 1;
 		hasData[i] = 0;
 	}
 	for(int i=0;i<top;i++)
-		for(int j=1;j<LENOFT;j++) 
+		for(int j=1;j<ENDLEN;j++) 
 			if(container->data[i].t[j] != 0 ) hasData[j] = 1;
 	
 	for(int i=0;i<top;i++)
 	{
-		for(int j=1;j<LENOFT;j++)
+		for(int j=1;j<ENDLEN;j++)
 		{
 			if(hasData[j])
 			{
@@ -447,7 +447,7 @@ int makeSequenceForCombinedOffsets(endFeatureDataContainer *container)
 	printf("X:\n");
 	for(int i=0;i<top;i++)
 	{
-		for(int j=0;j<LENOFT;j++)
+		for(int j=0;j<ENDLEN;j++)
 		{
 			printf("%3d ",container->data[i].t[j]);
 		}

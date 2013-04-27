@@ -3,10 +3,14 @@
 
 
 //sFeatureData{int t[LENOFT];};
+#ifndef LENOFT
 #define LENOFT 5
+#endif //LENOFT
 
+#ifndef ENDLEN
 #define ENDLEN 8
-
+#endif //ENDLEN
+//
 #ifndef ENDCALLBACKLEN //ENDCALLBACKLEN
 #define ENDCALLBACKLEN 9
 #endif // ENDCALLBACKLEN
