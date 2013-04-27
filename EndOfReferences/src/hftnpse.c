@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "debuginfo.h"
 
 inline void defineStartAndEnd(int *offset,int *offend,int limit)
 {
@@ -172,7 +173,7 @@ inline int isPageNumberS(const char *content,int limit)
 
 int hasPPafterTheOffset(int offset,int limit)
 {
-	//int j;
+	int j;
 	int i;	
 	int offend;
 	char *content = getPcontent();
@@ -182,7 +183,12 @@ int hasPPafterTheOffset(int offset,int limit)
 	{
 		if(fitPattern('n',content[i]))
 			if((pageOffset = isPageNumber(content+i,offend-i)) != 0)
+			{
+				printfContextS(i,"success,before");
+				printfContextS(i+pageOffset+1,"success,next");			
 				return i+pageOffset+1;
+			}
+				
 	}
 	return 0;
 }
