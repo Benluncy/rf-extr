@@ -93,7 +93,7 @@ int getLastYearOffset(unsigned int startOffset,int limit)
 {
 	//hasYearafterTheOffset(int offset,int limit)
 	//IN("getLastYearOffset");
-	int len= getPclen();
+	//int len= getPclen();
 	int offset = 0;
 	//IN("getLastYearOffset>>while");
 	while((startOffset = hasYearafterTheOffset(startOffset,limit)) != 0)
