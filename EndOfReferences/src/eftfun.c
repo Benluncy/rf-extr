@@ -278,6 +278,37 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 	for(int i=startOffset;i<cLen;i++)
 	{//endYearBeforeAck
 		
+		// 16 index of year
+		if(i==nextYearOffset && nextYearOffset != -1)
+		{
+			indexOfYear ++;
+			container->data[container->top].t[16] = indexOfYear;
+			nextYearOffset = hasYearafterTheOffset(nextYearOffset,cLen);
+			if(nextYearOffset == 0) nextYearOffset = -1;
+			printf("[Y]");
+		}
+		// 17 index of page
+		if(i==nextPageOffset && nextPageOffset != -1)
+		{
+			indexOfPage ++ ;
+			container->data[container->top].t[17] = indexOfPage;
+			nextPageOffset = hasPPafterTheOffset(nextPageOffset,cLen);
+			if(nextPageOffset == 0) nextPageOffset = -1;
+			printf("[P]");
+			printfContextS(i,"P1");
+		}
+		// 18 index of page2
+		if(i==nextPage2Offset && nextPage2Offset != -1)
+		{
+			indexOfPage2 ++ ;
+			container->data[container->top].t[17] = indexOfPage2;
+			nextPage2Offset = hasPPafterTheOffset(nextPage2Offset,cLen);
+			if(nextPage2Offset == 0) nextPage2Offset = -1;
+			printf("[PP]");
+			printfContextS(i,"P2");
+		}
+		
+		
 		if(i!=0)
 		{
 			// 7 ~ 15
@@ -476,35 +507,7 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 			container->data[container->top].t[15] = 2;
 		}
 
-		// 16 index of year
-		if(i>=nextYearOffset && nextYearOffset != -1)
-		{
-			indexOfYear ++;
-			container->data[container->top].t[16] = indexOfYear;
-			nextYearOffset = hasYearafterTheOffset(nextYearOffset,cLen);
-			if(nextYearOffset == 0) nextYearOffset = -1;
-			printf("[Y]");
-		}
-		// 17 index of page
-		if(i>=nextPageOffset && nextPageOffset != -1)
-		{
-			indexOfPage ++ ;
-			container->data[container->top].t[17] = indexOfPage;
-			nextPageOffset = hasPPafterTheOffset(nextPageOffset,cLen);
-			if(nextPageOffset == 0) nextPageOffset = -1;
-			printf("[P]");
-			printfContextS(i,"P1");
-		}
-		// 18 index of page2
-		if(i>=nextPage2Offset && nextPage2Offset != -1)
-		{
-			indexOfPage2 ++ ;
-			container->data[container->top].t[17] = indexOfPage2;
-			nextPage2Offset = hasPPafterTheOffset(nextPage2Offset,cLen);
-			if(nextPage2Offset == 0) nextPage2Offset = -1;
-			printf("[PP]");
-			printfContextS(i,"P2");
-		}
+		// move up
 		
 		//////////////////////////////////////////////////////////////////////////
 
