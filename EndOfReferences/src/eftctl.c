@@ -128,16 +128,16 @@ int genEndSampleCtl(const char* fileName,int isDir)
 		if(!hasDifferneces(_mfdc->data[i].offset,targetOffset)) pptag = 1;
 		//tx
 		//1-10
-		rankWrite(fp,1,_mfdc->data[i].t[0],10);
+		rankWrite(fp,1,_mfdc->data[i].t[0]+1,10);
 		//11-55
 		for(int j=1;j<16;j++)
-			rankWrite(fp,8+j*3,_mfdc->data[i].t[j],3);
+			rankWrite(fp,8+j*3,_mfdc->data[i].t[j]+1,3);
 		//	fprintf(fp,"%d:%d ",);
 		
 		
 		// 91-180 18*5 
 		for(int j=0;j<ENDLEN;j++)
-			rankWrite(fp,91+j*5,tmpCter.data[i].t[j],5);
+			rankWrite(fp,56+j*5,tmpCter.data[i].t[j],5);
 		
 		// 181 - end 
 		//gen26ToEnd(fp,_mfdc->data[i]);
