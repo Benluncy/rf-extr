@@ -35,9 +35,9 @@ int genEndSampleCtl(const char* fileName,int isDir)
 	unsigned int targetOffset;
 	unsigned int startOffset;
 	endFeatureDataContainer *_mfdc =getEndFeatureDataContainer();
-	endFeatureDataContainer tmpCter ;
+	//endFeatureDataContainer tmpCter ;
 	memset(_mfdc,0,sizeof(endFeatureDataContainer));
-	memset(&tmpCter,0,sizeof(endFeatureDataContainer));
+	//memset(&tmpCter,0,sizeof(endFeatureDataContainer));
 	// ignore dir
 	if(isDir)
         {
@@ -74,7 +74,6 @@ int genEndSampleCtl(const char* fileName,int isDir)
 	targetOffset = getReferenceEndOffset();
  	startOffset = getReferenceHeadOffset();
 	//step 1: offsets generate
-	//if(1) // generate or get offset from 
 	//if(!getFeature(fileName,_mfdc)) // get One To Five from DB
 	//TODO read and write offsets from | into db 
 	{
@@ -94,19 +93,9 @@ int genEndSampleCtl(const char* fileName,int isDir)
 				//getchar();
 			}
 		}*/
-		tmpCter = *_mfdc;
-		makeSequenceForCombinedOffsets(&tmpCter);
-		// filters
 		
-		// get endness of the file
-		
-		// last year
-		
-		// last pp
-		
-		// what
-		
-		// combine ... 
+		//tmpCter = *_mfdc;
+		//makeSequenceForCombinedOffsets(&tmpCter);
 	}
 	
 	//step 2: calculator
@@ -134,14 +123,14 @@ int genEndSampleCtl(const char* fileName,int isDir)
 			rankWrite(fp,8+j*3,_mfdc->data[i].t[j]+1,3);
 		//	fprintf(fp,"%d:%d ",);
 		
-		
+		/*
 		// 91-180 18*5 
 		for(int j=0;j<ENDLEN;j++)
 			rankWrite(fp,56+j*5,tmpCter.data[i].t[j],5);
-		
+		*/
 		// 181 - end 
 		//gen26ToEnd(fp,_mfdc->data[i]);
-		genNextDataForEndfeature(fp,_mfdc->data[i],181);
+		genNextDataForEndfeature(fp,_mfdc->data[i],61);
 		fprintf(fp,"\n");
 	}
 	
