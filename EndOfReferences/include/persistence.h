@@ -8,12 +8,16 @@
 #endif //LENOFT
 
 #ifndef ENDLEN
-#define ENDLEN 8
+#define ENDLEN 19
 #endif //ENDLEN
 //
 #ifndef ENDCALLBACKLEN //ENDCALLBACKLEN
 #define ENDCALLBACKLEN 9
 #endif // ENDCALLBACKLEN
+
+#ifndef ENDCTNMAX
+#define ENDCTNMAX 1024
+#endif // ENDCTNMAX
 
 #ifndef CALLBACK_LEN //for start?
 #define CALLBACK_LEN 9
@@ -53,19 +57,19 @@ typedef struct sEndFeatureData //start feature data
 	int positive;
 	int offset;
 	int adjacencyOffset[2]; //0: prev 1:next 
-	int fid[CALLBACK_LEN][2];//feature info data fid[x][0] == beforeData fid[x][1] == totalData
+	int fid[ENDCALLBACKLEN][2];//feature info data fid[x][0] == beforeData fid[x][1] == totalData
 	//fid means all collected key words before && total of the offset
-	int seq[CALLBACK_LEN][4];
+	int seq[ENDCALLBACKLEN][4];
 	//CALLBACK_LEN :functions 
 	//4:0)all 1)prev&&next 2)words 3)seq of vari
-	double density[CALLBACK_LEN][3][2];//6:method 3: all prev&next(kwd) prev&next(100*words)  2: prev next
+	double density[ENDCALLBACKLEN][3][2];//6:method 3: all prev&next(kwd) prev&next(100*words)  2: prev next
 	double vari[2];
 } endFeatureData;
 
 typedef struct
 {
 	int top;
-	endFeatureData data[1024]; // now max is 266
+	endFeatureData data[ENDCTNMAX]; // now max is ENDCTNMAX ~ 1024
 } endFeatureDataContainer;
 
 //init

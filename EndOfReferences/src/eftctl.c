@@ -127,19 +127,19 @@ int genEndSampleCtl(const char* fileName,int isDir)
 		fprintf(fp,"%c1 ",!hasDifferneces(_mfdc->data[i].offset,targetOffset)?'+':'-');
 		if(!hasDifferneces(_mfdc->data[i].offset,targetOffset)) pptag = 1;
 		//tx
-		// 1-20
+		// 1-90 18*5 (in fact 17*5)
 		for(int j=1;j<ENDLEN;j++)
 			rankWrite(fp,1+j*5,_mfdc->data[i].t[j],5);
 		//	fprintf(fp,"%d:%d ",);
 		
 		
-		// 21 - 45
+		// 91-180 18*5 
 		for(int j=0;j<ENDLEN;j++)
-			rankWrite(fp,26+j*5,tmpCter.data[i].t[j],5);
+			rankWrite(fp,91+j*5,tmpCter.data[i].t[j],5);
 		
-		// 46 - end 
+		// 181 - end 
 		//gen26ToEnd(fp,_mfdc->data[i]);
-		genNextDataForEndfeature(fp,_mfdc->data[i],66);
+		genNextDataForEndfeature(fp,_mfdc->data[i],181);
 		fprintf(fp,"\n");
 	}
 	

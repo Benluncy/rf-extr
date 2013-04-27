@@ -17,7 +17,9 @@ endFeatureData *getEndFeatureData(void);
 
 
 // calculated data
-int getLastYearOffset(unsigned int startOffset);
+int getLastYearOffset(unsigned int startOffset,int limit);
+int getLastPageOffset(unsigned int startOffset,int limit);
+int getLastPage2Offset(unsigned int startOffset,int limit);
 
 // main function 
 int basicFilter(endFeatureDataContainer *container,unsigned int startOffset);
@@ -30,6 +32,8 @@ int makeSequenceForCombinedOffsets(endFeatureDataContainer *container);
 int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int step);
 
 int prepareDensityData(void);
+
+
 
 
 //int getMaxLen(void);

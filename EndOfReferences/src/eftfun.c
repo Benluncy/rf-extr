@@ -29,6 +29,8 @@
 			T4GOS(strlen(x))\
 			)!= -1)
 
+#define MINANDNZ(x,y) (x!=0?(y!=0?(x>y?y:x):(x)):y)
+
 #define SHOWLMT(x) printf("%s(%d) %d <=> %d <%d>\n",\
 			x,strlen(x),\
 			editDistanceS(x,strlen(x),content+realoffset,\
@@ -87,7 +89,7 @@ inline int insertEndKWD(const char *key)
 }
 
 //TODO DEBUGING
-int getLastYearOffset(unsigned int startOffset)
+int getLastYearOffset(unsigned int startOffset,int limit)
 {
 	//hasYearafterTheOffset(int offset,int limit)
 	//IN("getLastYearOffset");
@@ -112,14 +114,13 @@ int getLastYearOffset(unsigned int startOffset)
 }
 
 //TODO DEBUGING
-int getLastPageOffset(unsigned int startOffset)
+int getLastPageOffset(unsigned int startOffset,int limit)
 {
 	//IN("getLastPageOffset");
 	//hasYearafterTheOffset(int offset,int limit)
-	int len= getPclen();
 	int offset = 0;
 	//IN("getLastPageOffset>>while");
-	while((startOffset = hasPPafterTheOffset(startOffset,len)) != 0)
+	while((startOffset = hasPPafterTheOffset(startOffset,limit)) != 0)
 	{
 	//	NX("getLastYearOffset>>while[S]");
 		
@@ -137,12 +138,12 @@ int getLastPageOffset(unsigned int startOffset)
 	return offset;
 }
 
-int getLastPage2Offset(unsigned int startOffset)
+int getLastPage2Offset(unsigned int startOffset,int limit)
 {
 	//hasYearafterTheOffset(int offset,int limit)
 	int len= getPclen();
 	int offset = 0;
-	while((startOffset = hasPPafterTheOffset2(startOffset,len)) != 0)
+	while((startOffset = hasPPafterTheOffset2(startOffset,limit)) != 0)
 	{
 		offset = startOffset;
 	}
@@ -156,95 +157,222 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 	char *content = getPcontent();
 	int cLen = getPclen();	
 	int hasContent = 0;
-	int lastYearOffset = getLastYearOffset(startOffset);
-	int isMarkedYear = 0;
-	int lastPageOffset = getLastPageOffset(startOffset);
-	int isMarkedPage = 0;
-	int lastPageOffset2 = getLastPage2Offset(startOffset);
-	//OT("FINISH GET LAST YY,PP && PP2");
-	int isMarkedPage2 = 0;
-	//printf("last year offset is : %d",lastYearOffset);
-	//printf("%c -%d",content[0],cLen);
-	//POFI("APPENDIX");
-	//POFI("TABLE");
-	//POFI("ACKNOWLEDGEMENT");
-	//POFI("AUTHOR BIBLIOGRAPHIES");
-	//POFI("AUTHOR BIBLIOGRAPHY");
 	container->top = 0;
-	/*
-	int realoffset = getReferenceEndOffset();
-	int i = realoffset;
-	printf("**********************************************************************************\n");
-	printf("real offset's value\n");
-	printf("1. leave to datas\n");
-	printf("2. acknowledgements etc.\n");
-	SHOWLMT("APPENDIX");
-	SHOWLMT("ACKNOWLEDGEMENT");
-	SHOWLMT("AUTHOR BIBLIOGRAPHIES");
-	SHOWLMT("AUTHOR BIBLIOGRAPHY");
-	SHOWLMT("AUTHOR BIOGRAPHIES");
-	SHOWLMT("AUTHOR BIOGRAPHY");
+	//introduce of settings
+	// 0 empty for valued -- index of all offsets
+	// 1 acknowledgements etc.
+	// 2 table , he is figure ... (a list)
+	// 3 end of year // before end of content
+	int lastYearOffset = getLastYearOffset(startOffset,cLen);
+	int isMarkedEOY = 0;
 	
-	printf("3. \"TABLE\" \"He is\" \"Figure \" ... \n");
-	printf("4. end of year \n");
-	printf("5. end of  pp\n");
-	if(INDEBUG) printfContextS(realoffset,"SHOWLMT~");
+	// 4 end of page // before end of content
+	int lastPageOffset = getLastPageOffset(startOffset,cLen);
+	int isMarkedEOP = 0;
 	
-	printf("**********************************************************************************\n");
-	//char kwdList[][30]={"TABLE","He is","Figure","In this appendix","NOTICE OF","He has","Are there"};
-	//IN("for(int i=startOffset;i<cLen;i++)")
-	*/
-	//printf("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\nCLEN is %d\n",cLen);
+	// 5 end of page2 // before end of content
+	int lastPageOffset2 = getLastPage2Offset(startOffset,cLen);
+	int isMarkedEOP2 = 0;
+	// 6 end of article
+	// nothing to init
+	
+	// 7 end year before ack
+	int markedAck=0;
+	int markedTable=0;
+	
+	int endYearBeforeAck = 0;
+	int endYearBeforeTable = 0;
+	
+	int endPageBeforeAck = 0;
+	int endPageBeforeTable = 0;
+	
+	int endPage2BeforeAck = 0;
+	int endPage2BeforeTable = 0;
+	
 	for(int i=startOffset;i<cLen;i++)
 	{
-		/*
-		if(!hasDifferneces(realoffset,i))
-		{
-			printf("[B]%d {%d-%d}\n",INLMT("AUTHOR BIOGRAPHIES"),realoffset,i);
-		}*/
 		if(i!=0) if(fitPattern('d',content[i-1])) continue;
-		/*
-		if(!hasDifferneces(realoffset,i))
+		if(INLMT("APPENDIX")
+			|| INLMT("ACKNOWLEDGEMENT")
+			|| INLMT("AUTHOR BIBLIOGRAPHIES")
+			|| INLMT("AUTHOR BIBLIOGRAPHY")
+			|| INLMT("AUTHOR BIOGRAPHIES")
+			|| INLMT("AUTHOR BIOGRAPHY"))
 		{
-			printf("[A]%d {%d-%d}\n",INLMT("AUTHOR BIOGRAPHIES"),realoffset,i);
-			printf("[AA]X%d\n",((INLMT("APPENDIX")||INLMT("ACKNOWLEDGEMENT")
-			||INLMT("AUTHOR BIBLIOGRAPHIES") ||INLMT("AUTHOR BIBLIOGRAPHY")
-			|| INLMT("AUTHOR BIOGRAPHIES") || INLMT("AUTHOR BIOGRAPHY"))));
-		}
-		*/
-		
-		hasContent = 0;
-		//1. leave to datas
-		
-	//	IN("APPENDIX || ACKNOWLEDGEMENT");	
-		//2. 
-		//APPENDIX || ACKNOWLEDGEMENT
-		//AUTHOR BIBLIOGRAPHIES || AUTHOR BIBLIOGRAPHY
-		//if(editDistanceS("APPENDIX",strlen("APPENDIX"),content+i,strlen("APPENDIX")) <= T4GOS ||
-		//	editDistanceS("ACKNOWLEDGEMENT",strlen("ACKNOWLEDGEMENT"),content+i,strlen("ACKNOWLEDGEMENT")) <= T4GOS ||
-		//	editDistanceS("AUTHOR BIBLIOGRAPHIES",strlen("AUTHOR BIBLIOGRAPHIES"),content+i,strlen("AUTHOR BIBLIOGRAPHIES")) <= T4GOS ||
-		//	editDistanceS("AUTHOR BIBLIOGRAPHY",strlen("AUTHOR BIBLIOGRAPHY"),content+i,strlen("AUTHOR BIBLIOGRAPHY")) <= T4GOS)
-		if(INLMT("APPENDIX")||INLMT("ACKNOWLEDGEMENT")
-			||INLMT("AUTHOR BIBLIOGRAPHIES") ||INLMT("AUTHOR BIBLIOGRAPHY") //AUTHOR BIOGRAPHIES 
-			|| INLMT("AUTHOR BIOGRAPHIES") || INLMT("AUTHOR BIOGRAPHY")) //
-		{
+			if(!markedAck)
+			{
+				endYearBeforeAck = i;
+				endPageBeforeAck = i;
+				endPage2BeforeAck = i;
+				markedAck = 1;
+			}
 			
+		}
+		for(int x = 0;x < myEc.top;x++)
+		{
+			if(INLMT(myEc.data[x].key))
+			{
+				if(!markedTable)
+				{
+					endYearBeforeTable = i;
+					endPageBeforeTable = i;
+					endPage2BeforeTable = i;
+					markedTable = 1;
+				}
+				
+			}
+		}
+		if(markedAck && markedTable) break;
+	}
+	
+	
+	
+	endYearBeforeAck = endYearBeforeAck == 0 ? 0 : getLastPageOffset(startOffset,endYearBeforeAck);
+	//int isMarkedEYBA = 0;
+	
+	// 8 end year before table
+	endYearBeforeTable = endYearBeforeTable == 0 ? 0 : getLastPageOffset(startOffset,endYearBeforeTable);
+	//int isMarkedEYBT = 0;
+	
+	// 9 end year before ack or table
+	int endYearBeforeAckOrTable = MINANDNZ(endYearBeforeAck,endYearBeforeTable);
+	//int isMarkedEYBAOT = 0;
+	
+	
+	// 10 end page before ack
+	endPageBeforeAck = endPageBeforeAck == 0 ? 0 : getLastPageOffset(startOffset,endPageBeforeAck);
+	//int isMarkedEPBA = 0;
+	
+	
+	// 11 end page before table
+	endPageBeforeTable = endPageBeforeTable == 0 ? 0 : getLastPageOffset(startOffset,endPageBeforeTable);
+	//int isMarkedEPBT = 0;
+	
+	// 12 end page before ack or table
+	int endPageBeforeAckOrTable = MINANDNZ(endPageBeforeAck,endPageBeforeTable);
+	//int isMarkedEPBAOT = 0;
+	
+	// 13 end page2 before ack
+	endPage2BeforeAck = endPage2BeforeAck == 0 ? 0 : getLastPage2Offset(startOffset,endPage2BeforeAck);
+	//int isMarkedEP2BA = 0;
+	
+	// 14 end page2 before table
+	endPage2BeforeTable = endPage2BeforeTable == 0 ? 0 : getLastPage2Offset(startOffset,endPage2BeforeTable);
+	//int isMarkedEP2BT = 0;
+	
+	// 15 end page2 before ack or table
+	int endPage2BeforeAckOrTable = MINANDNZ(endPage2BeforeAck,endPage2BeforeTable);
+	//int isMarkedEP2BAOT = 0;
+	
+	// 16 index of year
+	int nextYearOffset = 0;
+	int indexOfYear = 0;
+	// 17 index of page
+	int nextPageOffset = 0;
+	int indexOfPage = 0;
+	
+	// 18 index of page2
+	int nextPage2Offset = 0;
+	int indexOfPage2 = 0;
+	
+	for(int i=startOffset;i<cLen;i++)
+	{//endYearBeforeAck
+		
+		if(i!=0)
+		{
+			// 7 ~ 15
+			// 7 end year before ack
+			if(endYearBeforeAck == i)
+			{
+				container->data[container->top].t[7] = 1;
+				hasContent = 1;
+				//isMarkedEYBA = 1;
+			}
+			// 8 end year before table
+			if(endYearBeforeTable == i)
+			{
+				container->data[container->top].t[8] = 1;
+				hasContent = 1;
+				//isMarkedEYBT = 1;
+			}
+			// 9 end year before ack or table
+			if(endYearBeforeAckOrTable == i)
+			{
+				container->data[container->top].t[9] = 1;
+				hasContent = 1;
+				//isMarkedEYBAOT = 1;
+			}
+			// 10 end page before ack
+			if(endPageBeforeAck == i)
+			{
+				container->data[container->top].t[10] = 1;
+				hasContent = 1;
+				//isMarkedEPBA = 1;
+			}
+			// 11 end page before table
+			if(endPageBeforeTable == i)
+			{
+				container->data[container->top].t[11] = 1;
+				hasContent = 1;
+				//isMarkedEPBT = 1;
+			}
+			// 12 end page before ack or table
+			if(endPageBeforeAckOrTable == i)
+			{
+				container->data[container->top].t[12] = 1;
+				hasContent = 1;
+				//isMarkedEPBAOT = 1;
+			}
+			// 13 end page2 before ack
+			if(endPage2BeforeAck == i)
+			{
+				container->data[container->top].t[13] = 1;
+				hasContent = 1;
+				//isMarkedEP2BA = 1;
+			}
+			// 14 end page2 before table
+			if(endPage2BeforeTable == i)
+			{
+				container->data[container->top].t[14] = 1;
+				hasContent = 1;
+				//isMarkedEP2BT = 1;
+			}
+			// 15 end page2 before ack or table
+			if(endPage2BeforeAckOrTable == i)
+			{
+				container->data[container->top].t[15] = 1;
+				hasContent = 1;
+				//isMarkedEP2BAOT = 1;
+			}
+		
+			// ingore useless i == 0 or past is not data(data:[0-9][a-z][A-Z])
+			if(fitPattern('d',content[i-1]) && !hasContent) continue;
+		}
+		
+		// init
+		hasContent = 0;
+		
+		
+		//////////////////////////////////////////////////////////////////////////
+		// 0 empty for valued -- index of all offsets
+		// leave empty
+		
+		// 1 acknowledgements etc.
+		//
+		if(INLMT("APPENDIX")
+			|| INLMT("ACKNOWLEDGEMENT")
+			|| INLMT("AUTHOR BIBLIOGRAPHIES") 
+			|| INLMT("AUTHOR BIBLIOGRAPHY")
+			|| INLMT("AUTHOR BIOGRAPHIES")
+			|| INLMT("AUTHOR BIOGRAPHY"))
+		{
 			container->data[container->top].t[1] = 1;
 			hasContent = 1;
 		}
 		
-	//	IN("TABLE He is figure etc.");
-		//3. "TABLE" "He is" "Figure " ,"In this appendix" , "NOTICE OF","He has","Are there " etc.
+		// 2 table , he is figure ... (a list)
 		for(int x = 0;x < myEc.top;x++)
 		{
-			/*
-			if(editDistanceS(myEc.data[x].key,myEc.data[x].len,
-				content+i,myEc.data[x].len) <= myEc.data[x].len*0.3)
-			{
-				printf("[+]");
-				container->data[container->top].t[2] = 1;
-				hasContent = 1;
-			}*/
 			if(INLMT(myEc.data[x].key))
 			{
 				printf("[+]");
@@ -253,64 +381,69 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 			}
 		}
 		
-		
-	
-	//	IN("end of year0");	
-		//4. end of year 
-		if(!hasDifferneces(lastYearOffset,i) && !isMarkedYear)
+		// 3 end of year // before end of article
+		if(!hasDifferneces(lastYearOffset,i) && !isMarkedEOY)
 		{
 			container->data[container->top].t[3] = 1;
-			isMarkedYear = 1;
+			isMarkedEOY = 1;
 			hasContent = 1;
 		}
 		
-	//	IN("end of year1");
-		//4. end of  pp
-		if(!hasDifferneces(lastPageOffset,i) && !isMarkedPage)
-		{
-			container->data[container->top].t[3] = 1;
-			isMarkedYear = 1;
-			hasContent = 1;
-		}
-		
-	//	IN("end of year2");
-		//4. end of  pp2
-		if(!hasDifferneces(lastPageOffset2,i) && !isMarkedPage2)
-		{
-			container->data[container->top].t[3] = 1;
-			isMarkedYear = 1;
-			hasContent = 1;
-		}
-		
-	//	IN("end of article");
-		//5 end of article
-		if(!hasDifferneces(cLen,i))
+		// 4 end of page // before end of article
+		if(!hasDifferneces(lastPageOffset,i) && !isMarkedEOP)
 		{
 			container->data[container->top].t[4] = 1;
+			isMarkedEOP = 1;
+			hasContent = 1;
+		}
+		
+		// 5 end of page2 // before end of article
+		if(!hasDifferneces(lastPageOffset2,i) && !isMarkedEOP2)
+		{
+			container->data[container->top].t[5] = 1;
+			isMarkedEOP = 1;
+			hasContent = 1;
+		}
+		
+		// 6 end of article (move down)
+
+		// 7 end year before ack
+		if(i>endYearBeforeAck && endYearBeforeAck)
+		{
+			
+		}
+		
+		// 8 end year before table
+		// 9 end year before ack or table
+		// 10 end page before ack
+		// 11 end page before table
+		// 12 end page before ack or table
+		// 13 end page2 before ack
+		// 14 end page2 before table
+		// 15 end page2 before ack or table
+
+		// 16 index of year
+		// 17 index of page
+		// 18 index of page2
+		//////////////////////////////////////////////////////////////////////////
+
+		// 6 end of article
+		if(!hasDifferneces(cLen,i))
+		{
+			if(ENDCTNMAX <= container->top)
+			{
+				fprintf(stderr,"[ERROR] pool is full! %s %d",__FILE__,__LINE__);
+			}
+			container->data[container->top].t[6] = 1;
 			container->data[container->top].offset = i;
 			container->top++;
-
-			/*					
-			printf("\n\n#:{}\n");
-			for(int i=0;i<container->top;i++)
+			if(ENDCTNMAX < container->top)
 			{
-				printf(">>");
-				for(int j=0;j<ENDLEN;j++)
-				{
-					printf("%d ",container->data[i].t[j]);
-				}
-				printf("%d \n",container->data[i].offset);
-			}*/
-			/*
-			printf("last is : %d\n",container->data[container->top-1].offset);
-			printf("last is : %d\n",container->data[container->top].offset);
-			printf("last is : %d %d (JUDGE:%d)\n",i,cLen,hasDifferneces(cLen,i));
-			*/
-			//printfContextS(i,"21239");
+				fprintf(stderr,"[WARNING] pool is full! %s %d",__FILE__,__LINE__);
+			}
 			return 1;
 		}
 		
-	//	IN("hasContent");
 		if(hasContent)
 		{
 			/*
@@ -318,15 +451,20 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 			{
 				printf("[S]%d {%d-%d}\n",INLMT("AUTHOR BIOGRAPHIES"),realoffset,i);
 			}*/
-			
+			if(ENDCTNMAX <= container->top)
+			{
+				fprintf(stderr,"[ERROR] pool is full! %s %d",__FILE__,__LINE__);
+			}
 			container->data[container->top].offset = i;
 			container->top++;
+			if(ENDCTNMAX <= container->top)
+			{
+				fprintf(stderr,"[WARNING] pool is full! %s %d",__FILE__,__LINE__);
+			}
 			//if(container->top >= 200) printf("found!");
 			//maxLen = container->top > maxLen ? container->top : maxLen;
 		}
 	}
-	//printf("M[%d]",getMaxLen());
-	//OT("for(int i=startOffset;i<cLen;i++)");
 	return 0;
 }
 
