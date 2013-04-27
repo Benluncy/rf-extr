@@ -43,8 +43,8 @@
 //#define OT(x) {printf("out:%s\n",x);fflush(NULL);}
 //#define NX(x) {printf("next:%s\n",x);fflush(NULL);}
 
-endFeatureData mfd;
-endFeatureDataContainer mfdc;
+endendFeatureData mfd;
+endendFeatureDataContainer mfdc;
 
 
 OffsetCallback endFunctionList[CALLBACK_LEN]={hasPPafterTheOffset,
@@ -151,7 +151,7 @@ int getLastPage2Offset(unsigned int startOffset)
 
 //int maxLen = 0;
 
-int basicFilter(featureDataContainer *container,unsigned int startOffset)
+int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 {
 	char *content = getPcontent();
 	int cLen = getPclen();	
@@ -333,7 +333,7 @@ int basicFilter(featureDataContainer *container,unsigned int startOffset)
 //int getMaxLen(){return maxLen;}
 
 
-int combineOffsets(featureDataContainer *container)//combine nearly offsets and make sure 
+int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets and make sure 
 {
 	int j = 0;
 	int lastOffset = container->data[0].offset;
@@ -409,7 +409,7 @@ int combineOffsets(featureDataContainer *container)//combine nearly offsets and 
 	return 1;
 }
 
-int makeSequenceForCombinedOffsets(featureDataContainer *container)
+int makeSequenceForCombinedOffsets(endFeatureDataContainer *container)
 {
 	unsigned int max[LENOFT];
 	//unsigned int before[LENOFT];
@@ -457,7 +457,7 @@ int makeSequenceForCombinedOffsets(featureDataContainer *container)
 }
 
 
-int genNextDataForEndfeature(FILE *fp,featureData fd,int start)
+int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 {
 	int offset = fd.offset;
 	int lmt = 200;
@@ -774,12 +774,12 @@ int hasDiffernecesH(int dest,int src)
 */
 
 //TODO MY LORD ...
-featureDataContainer *getEndFeatureDataContainer(void)
+endFeatureDataContainer *getEndendFeatureDataContainer(void)
 {
 	return &mfdc;
 }
 
-featureData *getEndFeatureData(void)
+endFeatureData *getEndendFeatureData(void)
 {
 	return &mfd;
 }
