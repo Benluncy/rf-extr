@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <string.h>
 
+
 inline void defineStartAndEnd(int *offset,int *offend,int limit)
 {
 	int tmp;
@@ -20,30 +21,68 @@ inline void defineStartAndEnd(int *offset,int *offend,int limit)
 	
 }
 
+inline int ch2int(char ch)
+{
+	int val;
+	if(ch =='I' || ch == 'l')
+		val = 1;
+	else 
+		val = ch - '0';
+	//if(val > 9 || val < 0) return -1;
+	if(val > 9 || val < 0) return 0;
+	return val; 
+}
+
 inline int isPageNumber(const char *content,int limit)
 {
+	int a = 0;
+	int b = 0;
 	if(limit < 3 ) return 0;
 	//if(editDistanceP("nen",3,content,3)<=0)
 	//	return 3;
+	if(limit > 9 ) limit = 9;
 	
-	if(fitPattern('n',content[0])&&(content[1]=='-')&&fitPattern('n',content[2]))
-		return 3;
-	
-	if(limit < 4) return 0;
-	if(fitPattern('n',content[0])&&(content[1]=='-')&&fitPattern('n',content[2])&&fitPattern('n',content[3]))
-		return 4;
-	
-	if(limit < 5) return 0;
-	if(editDistanceP("nnenn",5,content,5)<=0) // 1?
-		return 5;
-		
-	if(limit < 7) return 0;
-	if(editDistanceP("nnnennn",7,content,7)<=0) // 1?
-		return 7;
-
-	if(limit < 9) return 0;
-	if(editDistanceP("nnnnennnn",9,content,9)<=1) // 1?
-		return 9;
+	switch(limit)
+	{
+	case 9:
+		if(editDistanceP("nnnnennnn",9,content,9)<=1) // 1?
+			return 9;
+	case 8:
+		if(editDistanceP("nnnennnn",8,content,8)<=0) // 1?
+			return 9;
+	case 7:
+		if(editDistanceP("nnnennn",7,content,7)<=0) // 1?
+		{
+			a = ch2int(content[0])*100 + ch2int(content[1])*10 + ch2int(content[2]);
+			b = ch2int(content[0])*100 + ch2int(content[1])*10 + ch2int(content[2]);
+			if(b > a) return 7;
+		}
+	case 6:
+	case 5:
+		if(editDistanceP("nnenn",5,content,5)<=0) // 1?
+		{
+			a = ch2int(content[0])*10 + ch2int(content[1]);
+			b = ch2int(content[3])*10 + ch2int(content[4]);
+			if(b > a) return 5;
+		}
+	case 4:
+		if(fitPattern('n',content[0])&&(content[1]=='-')&&
+			fitPattern('n',content[2])&&fitPattern('n',content[3]))
+		{
+			a = ch2int(content[0]);
+			b = ch2int(content[2])*10 + ch2int(content[3]);
+			if(b > a) return 4;
+		}
+	case 3:
+		if(fitPattern('n',content[0])&&(content[1]=='-')&&fitPattern('n',content[2]))
+		{
+			a = ch2int(content[0]);
+			b = ch2int(content[2]);
+			if(b > a) return 3;
+		}	
+	default :
+		return 0;
+	}
 	return 0;
 }
 /*

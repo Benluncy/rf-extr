@@ -17,6 +17,7 @@ void setContent(const char * content);
 void defineStartAndEnd(int *offset,int *offend,int limit);
 
 //
+int ch2int(char ch);
 int isPageNumber(const char *content,int limit);
 
 int hasPPafterTheOffset(int offset,int limit);
