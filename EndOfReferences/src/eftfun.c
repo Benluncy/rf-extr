@@ -551,17 +551,10 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 	//for(int i=1;i<container->top-1;i++)
 	for(int i=1;i<container->top;i++)
 	{
-		printf("O:%d\n",container->data[i].offset);
-	}
-	for(int i=1;i<container->top;i++)
-	{
 		//container->data[j].offset = container->data[i].offset;
 		//hasDifferneces(int dest,int src)
 		if(!hasDifferneces(lastOffset,container->data[i].offset))
 		{
-			//printf("[no diff and combine]:%d-%d",lastOffset,container->data[i].offset);
-			//container->data[j].offset = container->data[i].offset;
-			//container->data[j].positive = !hasDifferneces(container->data[i].offset,reo)|| container->data[j].positive;
 			for(int k=1;k<ENDLEN;k++)
 			{
 				
@@ -575,15 +568,11 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 						container->data[j].t[z] = container->data[i].t[z];
 					}
 				}
-				//container->data[j].t[k] = container->data[i].t[k] || container->data[j].t[k];
 			}
 		}else
 		{
-			//printf("[diff and j++]:%d-%d",lastOffset,container->data[i].offset);
 			j++;
 			container->data[j].offset = container->data[i].offset;
-			//container->data[j].offset = container->data[i].offset;
-			//container->data[j].positive = !hasDifferneces(container->data[i].offset,reo);
 			container->data[j].t[0] = j;
 			for(int k=1;k<ENDLEN;k++)
 			{
@@ -619,20 +608,6 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 	
 	
 	container->top = j+1;
-	
-	for(int i=1;i<container->top;i++)
-	{
-		printf("Z:%d\n",container->data[i].offset);
-	}
-	/*
-	for(int i=0;i<container->top;i++)
-	{
-		for(int j=0;j<ENDLEN;j++)
-		{
-			printf("%d ",container->data[i].t[j]);
-		}
-		printf("\n");
-	}*/
 	return 1;
 }
 
