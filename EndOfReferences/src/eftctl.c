@@ -28,7 +28,7 @@ void closeLogFile()
 int genEndSampleCtl(const char* fileName,int isDir)
 {
 	//
-       	//ONLY("data/orbz_sec/Another approach to service courses.txt");
+       	ONLY("data/orbz_sec/Analysis of electronics assembly operations.txt");
 	FILE *fp;
 	static int id = 0;
 	int trainOrTest;
