@@ -265,14 +265,14 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 	//int isMarkedEP2BAOT = 0;
 	
 	// 16 index of year
-	int nextYearOffset = 0;
+	int nextYearOffset = hasYearafterTheOffset(startOffset,cLen);;
 	int indexOfYear = 0;
 	// 17 index of page
-	int nextPageOffset = 0;
+	int nextPageOffset = hasPPafterTheOffset(startOffset,cLen);
 	int indexOfPage = 0;
 	
 	// 18 index of page2
-	int nextPage2Offset = 0;
+	int nextPage2Offset = hasPPafterTheOffset2(startOffset,cLen);
 	int indexOfPage2 = 0;
 	
 	for(int i=startOffset;i<cLen;i++)
