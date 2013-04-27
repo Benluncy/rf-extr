@@ -43,8 +43,8 @@
 //#define OT(x) {printf("out:%s\n",x);fflush(NULL);}
 //#define NX(x) {printf("next:%s\n",x);fflush(NULL);}
 
-endendFeatureData mfd;
-endendFeatureDataContainer mfdc;
+endFeatureData mfd;
+endFeatureDataContainer mfdc;
 
 
 OffsetCallback endFunctionList[CALLBACK_LEN]={hasPPafterTheOffset,
