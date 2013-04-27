@@ -41,7 +41,7 @@ inline int isPageNumber(const char *content,int limit)
 	//if(editDistanceP("nen",3,content,3)<=0)
 	//	return 3;
 	if(limit > 9 ) limit = 9;
-	
+	printf("{%9s}",content);
 	switch(limit)
 	{
 	case 9:
