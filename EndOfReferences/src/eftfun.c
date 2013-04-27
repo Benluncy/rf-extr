@@ -13,7 +13,7 @@
 //TODO DEBUG
 #include "debuginfo.h"
 
-#define INDEBUG 0
+//#define INDEBUG 0
 
 #define thresholdForDifferneces  10
 
@@ -30,7 +30,7 @@
 			)!= -1)
 
 #define MINANDNZ(x,y) (x!=0?(y!=0?(x>y?y:x):(x)):y)
-
+/*
 #define SHOWLMT(x) printf("%s(%d) %d <=> %d <%d>\n",\
 			x,strlen(x),\
 			editDistanceS(x,strlen(x),content+realoffset,\
@@ -38,7 +38,7 @@
 			T4GOS(strlen(x)),\
 			INLMT(x)\
 			);
-
+*/
 //#define INLMT(x) (editDistanceS(x,strlen(x),content+i,strlen(x)) <= T4GOS(strlen(x)))
 
 //#define IN(x) {printf("in:%s\n",x);fflush(NULL);}
@@ -88,28 +88,13 @@ inline int insertEndKWD(const char *key)
 	return 1;
 }
 
-//TODO DEBUGING
 int getLastYearOffset(unsigned int startOffset,int limit)
 {
-	//hasYearafterTheOffset(int offset,int limit)
-	//IN("getLastYearOffset");
-	//int len= getPclen();
 	int offset = 0;
-	//IN("getLastYearOffset>>while");
 	while((startOffset = hasYearafterTheOffset(startOffset,limit)) != 0)
 	{
-	//	NX("getLastYearOffset>>while");
-		if(INDEBUG) printfContextS(offset,"getLastYearOffset(while)");
-		
 		offset = startOffset;
 	}
-	//OT("getLastYearOffset<<while");
-	
-	
-	//TODO DEBUGOUTPUT
-	if(INDEBUG) printfContextS(offset,"getLastYearOffset");
-	
-	//OT("getLastYearOffset");
 	return offset;
 }
 
@@ -121,14 +106,11 @@ int getLastPageOffset(unsigned int startOffset,int limit)
 	{
 		offset = startOffset;
 	}
-	printf("\n##OFFSET:%d\n",offset);
 	return offset;
 }
 
 int getLastPage2Offset(unsigned int startOffset,int limit)
 {
-	//hasYearafterTheOffset(int offset,int limit)
-	//int len= getPclen();
 	int offset = 0;
 	while((startOffset = hasPPafterTheOffset2(startOffset,limit)) != 0)
 	{
@@ -281,6 +263,7 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 			indexOfPage ++ ;
 			container->data[container->top].t[17] = indexOfPage;
 			nextPageOffset = hasPPafterTheOffset(nextPageOffset,cLen);
+			printf("#################################RECEIVE:%d\n",nextPageOffset);
 			if(nextPageOffset == 0) nextPageOffset = -1;
 			printf("[P]");
 			printfContextS(i,"P1");
