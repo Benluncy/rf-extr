@@ -96,7 +96,7 @@ int getLastYearOffset(unsigned int startOffset,int limit)
 	int len= getPclen();
 	int offset = 0;
 	//IN("getLastYearOffset>>while");
-	while((startOffset = hasYearafterTheOffset(startOffset,len)) != 0)
+	while((startOffset = hasYearafterTheOffset(startOffset,limit)) != 0)
 	{
 	//	NX("getLastYearOffset>>while");
 		if(INDEBUG) printfContextS(offset,"getLastYearOffset(while)");
@@ -141,7 +141,7 @@ int getLastPageOffset(unsigned int startOffset,int limit)
 int getLastPage2Offset(unsigned int startOffset,int limit)
 {
 	//hasYearafterTheOffset(int offset,int limit)
-	int len= getPclen();
+	//int len= getPclen();
 	int offset = 0;
 	while((startOffset = hasPPafterTheOffset2(startOffset,limit)) != 0)
 	{
@@ -423,6 +423,13 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 		// 15 end page2 before ack or table
 
 		// 16 index of year
+		if(i>=nextYearOffset && nextYearOffset != -1)
+		{
+			indexOfYear ++;
+			container->data[container->top].t[16] = indexOfYear;
+			
+		}
+		hasYearafterTheOffset(startOffset,cLen))
 		// 17 index of page
 		// 18 index of page2
 		//////////////////////////////////////////////////////////////////////////
