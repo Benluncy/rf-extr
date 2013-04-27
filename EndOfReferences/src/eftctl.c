@@ -83,14 +83,17 @@ int genEndSampleCtl(const char* fileName,int isDir)
 		//int basicFilter(featureDataContainer *container,unsigned int startOffset)
 		basicFilter(_mfdc,startOffset);
 		combineOffsets(_mfdc);
+		//!INSERT INTO DB
+		/*
 		for(int i = 0; i < _mfdc->top;i++)
 		{
+			
 			if(!insertFeature(fileName,_mfdc->data[i]))
 			{
 				fprintf(stderr,"[DB] insertFeature()(1): error --%d",__LINE__);
 				//getchar();
 			}
-		}
+		}*/
 		tmpCter = *_mfdc;
 		makeSequenceForCombinedOffsets(&tmpCter);
 		// filters
