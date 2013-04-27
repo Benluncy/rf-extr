@@ -483,6 +483,7 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 			container->data[container->top].t[16] = indexOfYear;
 			nextYearOffset = hasYearafterTheOffset(nextYearOffset,cLen);
 			if(nextYearOffset == 0) nextYearOffset = -1;
+			printf("[Y]");
 		}
 		// 17 index of page
 		if(i>=nextPageOffset && nextPageOffset != -1)
@@ -491,6 +492,7 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 			container->data[container->top].t[17] = indexOfPage;
 			nextPageOffset = hasPPafterTheOffset(nextPageOffset,cLen);
 			if(nextPageOffset == 0) nextPageOffset = -1;
+			printf("[P]");
 		}
 		// 18 index of page2
 		if(i>=nextPage2Offset && nextPage2Offset != -1)
@@ -499,6 +501,7 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 			container->data[container->top].t[17] = indexOfPage2;
 			nextPage2Offset = hasPPafterTheOffset(nextPage2Offset,cLen);
 			if(nextPage2Offset == 0) nextPage2Offset = -1;
+			printf("[PP]");
 		}
 		
 		//////////////////////////////////////////////////////////////////////////
