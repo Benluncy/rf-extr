@@ -53,7 +53,7 @@ inline int isPageNumber(const char *content,int limit)
 				ch2int(content[7])*10+ch2int(content[8]);
 			if(b>a && content[4] != ' ') 
 			{
-				printf("[ACC]{%d-%d}",a,b);
+				//printf("[ACC]{%d-%d}",a,b);
 				return 9;
 			}
 		}
@@ -67,7 +67,7 @@ inline int isPageNumber(const char *content,int limit)
 				ch2int(content[6])*10+ch2int(content[7]);
 			if(b>a && content[3] != ' ') 
 			{
-				printf("[ACC]{%d-%d}",a,b);
+				//printf("[ACC]{%d-%d}",a,b);
 				return 8;
 			}
 		}
@@ -79,7 +79,7 @@ inline int isPageNumber(const char *content,int limit)
 			b = ch2int(content[0])*100 + ch2int(content[1])*10 + ch2int(content[2]);
 			if(b>a && content[3] != ' ') 
 			{
-				printf("[ACC]{%d-%d}",a,b);
+				//printf("[ACC]{%d-%d}",a,b);
 				return 7;
 			}
 		}
@@ -91,7 +91,7 @@ inline int isPageNumber(const char *content,int limit)
 			b = ch2int(content[3])*10 + ch2int(content[4]);
 			if(b>a && content[2] != ' ') 
 			{
-				printf("[ACC]{%d-%d}",a,b);
+				//printf("[ACC]{%d-%d}",a,b);
 				return 5;
 			}
 		}
@@ -103,7 +103,7 @@ inline int isPageNumber(const char *content,int limit)
 			b = ch2int(content[2])*10 + ch2int(content[3]);
 			if(b>a && content[1] != ' ') 
 			{
-				printf("[ACC]{%d-%d}",a,b);
+				//printf("[ACC]{%d-%d}",a,b);
 				return 4;
 			}
 		}
@@ -114,7 +114,7 @@ inline int isPageNumber(const char *content,int limit)
 			b = ch2int(content[2]);
 			if(b>a && content[1] != ' ') 
 			{
-				printf("[ACC]{%d-%d}",a,b);
+				//printf("[ACC]{%d-%d}",a,b);
 				return 3;
 			}
 		}	
@@ -182,8 +182,8 @@ int hasPPafterTheOffset(int offset,int limit)
 		if(fitPattern('n',content[i]))
 			if((pageOffset = isPageNumber(content+i,offend-i)) != 0)
 			{
-				printfContextS(i,"success,before");
-				printfContextS(i+pageOffset+1,"success,next");			
+				//printfContextS(i,"success,before");
+				//printfContextS(i+pageOffset+1,"success,next");			
 				return i+pageOffset+1;
 			}
 				
