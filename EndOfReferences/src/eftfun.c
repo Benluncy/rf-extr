@@ -43,8 +43,8 @@
 //#define OT(x) {printf("out:%s\n",x);fflush(NULL);}
 //#define NX(x) {printf("next:%s\n",x);fflush(NULL);}
 
-featureData mfd;
-featureDataContainer mfdc;
+endFeatureData mfd;
+endFeatureDataContainer mfdc;
 
 
 OffsetCallback endFunctionList[CALLBACK_LEN]={hasPPafterTheOffset,
@@ -372,7 +372,6 @@ int combineOffsets(featureDataContainer *container)//combine nearly offsets and 
 			lastOffset = container->data[i].offset;
 		}
 	}
-	/*
 	if(!hasDifferneces(lastOffset,getPclen()))
 	{
 		for(int k=0;k<LENOFT;k++)
@@ -387,14 +386,14 @@ int combineOffsets(featureDataContainer *container)//combine nearly offsets and 
 		{
 			container->data[j].t[k] = container->data[container->top-1].t[k];
 		}
-	}*/
-	
+	}
+	/*
 	j++;
 	container->data[j].offset = container->data[container->top-1].offset;
 	for(int k=0;k<LENOFT;k++)
 	{
 		container->data[j].t[k] = container->data[container->top-1].t[k];
-	}
+	}*/
 	
 	
 	container->top = j+1;
