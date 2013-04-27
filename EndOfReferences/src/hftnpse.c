@@ -45,7 +45,7 @@ inline int isPageNumber(const char *content,int limit)
 	switch(limit)
 	{
 	case 9:
-		if((editDistanceP("nnnnennnn",9,content,9)<=1)) // 1?
+		if((editDistanceP("nnnnennnn",9,content,9)<=0)) // 1?
 		{
 			a = ch2int(content[0])*1000 + ch2int(content[1])*100 + 
 				ch2int(content[2])*10+ch2int(content[3]);
