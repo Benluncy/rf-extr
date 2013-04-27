@@ -246,6 +246,8 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 	
 	for(int i=startOffset;i<cLen;i++)
 	{//endYearBeforeAck
+		// init
+		hasContent = 0;
 		
 		// 16 index of year
 		if(i==nextYearOffset && nextYearOffset != -1)
@@ -353,8 +355,7 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 			if(fitPattern('d',content[i-1]) && !hasContent) continue;
 		}
 		
-		// init
-		hasContent = 0;
+		
 		
 		
 		//////////////////////////////////////////////////////////////////////////
@@ -548,6 +549,10 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 	// 17 index of page
 	// 18 index of page2
 	//for(int i=1;i<container->top-1;i++)
+	for(int i=1;i<container->top;i++)
+	{
+		printf("O:%d\n",container->data[i].offset);
+	}
 	for(int i=1;i<container->top;i++)
 	{
 		//container->data[j].offset = container->data[i].offset;
