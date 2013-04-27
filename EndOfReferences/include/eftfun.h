@@ -12,7 +12,7 @@ int hasDifferneces(int dest,int src);
 unsigned int getReferenceEndOffset(void);
 
 // set and get
-endFeatureDataContainer *getendFeatureDataContainer(void);
+endFeatureDataContainer *getEndFeatureDataContainer(void);
 endFeatureData *getEndFeatureData(void);
 
 

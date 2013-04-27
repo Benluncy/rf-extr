@@ -774,12 +774,12 @@ int hasDiffernecesH(int dest,int src)
 */
 
 //TODO MY LORD ...
-endFeatureDataContainer *getEndendFeatureDataContainer(void)
+endFeatureDataContainer *getEndFeatureDataContainer(void)
 {
 	return &mfdc;
 }
 
-endFeatureData *getEndendFeatureData(void)
+endFeatureData *getEndFeatureData(void)
 {
 	return &mfd;
 }
