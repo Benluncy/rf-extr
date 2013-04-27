@@ -45,13 +45,13 @@ inline int isPageNumber(const char *content,int limit)
 	switch(limit)
 	{
 	case 9:
-		if(editDistanceP("nnnnennnn",9,content,9)<=1) // 1?
+		if((editDistanceP("nnnnennnn",9,content,9)<=1)) // 1?
 		{
 			a = ch2int(content[0])*1000 + ch2int(content[1])*100 + 
 				ch2int(content[2])*10+ch2int(content[3]);
 			b = ch2int(content[5])*1000 + ch2int(content[6])*100 + 
 				ch2int(content[7])*10+ch2int(content[8]);
-			if(b>a) 
+			if(b>a && content[4] != ' ') 
 			{
 				printf("[ACC]{%d-%d}",a,b);
 				return 9;
@@ -61,11 +61,11 @@ inline int isPageNumber(const char *content,int limit)
 	case 8:
 		if(editDistanceP("nnnennnn",8,content,8)<=0) // 1?
 		{
-			a = ch2int(content[0])*1000 + ch2int(content[1])*100 + 
-				ch2int(content[2])*10+ch2int(content[3]);
-			b = ch2int(content[5])*1000 + ch2int(content[6])*100 + 
-				ch2int(content[7])*10+ch2int(content[8]);
-			if(b>a) 
+			a = ch2int(content[0])*100 + ch2int(content[1])*10 + 
+				ch2int(content[2]);
+			b = ch2int(content[4])*1000 + ch2int(content[5])*100 + 
+				ch2int(content[6])*10+ch2int(content[7]);
+			if(b>a && content[3] != ' ') 
 			{
 				printf("[ACC]{%d-%d}",a,b);
 				return 8;
@@ -77,7 +77,7 @@ inline int isPageNumber(const char *content,int limit)
 		{
 			a = ch2int(content[0])*100 + ch2int(content[1])*10 + ch2int(content[2]);
 			b = ch2int(content[0])*100 + ch2int(content[1])*10 + ch2int(content[2]);
-			if(b>a) 
+			if(b>a && content[3] != ' ') 
 			{
 				printf("[ACC]{%d-%d}",a,b);
 				return 7;
@@ -89,7 +89,7 @@ inline int isPageNumber(const char *content,int limit)
 		{
 			a = ch2int(content[0])*10 + ch2int(content[1]);
 			b = ch2int(content[3])*10 + ch2int(content[4]);
-			if(b>a) 
+			if(b>a && content[2] != ' ') 
 			{
 				printf("[ACC]{%d-%d}",a,b);
 				return 5;
@@ -101,7 +101,7 @@ inline int isPageNumber(const char *content,int limit)
 		{
 			a = ch2int(content[0]);
 			b = ch2int(content[2])*10 + ch2int(content[3]);
-			if(b>a) 
+			if(b>a && content[1] != ' ') 
 			{
 				printf("[ACC]{%d-%d}",a,b);
 				return 4;
@@ -112,7 +112,7 @@ inline int isPageNumber(const char *content,int limit)
 		{
 			a = ch2int(content[0]);
 			b = ch2int(content[2]);
-			if(b>a) 
+			if(b>a && content[1] != ' ') 
 			{
 				printf("[ACC]{%d-%d}",a,b);
 				return 3;
