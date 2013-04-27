@@ -46,10 +46,24 @@ inline int isPageNumber(const char *content,int limit)
 	{
 	case 9:
 		if(editDistanceP("nnnnennnn",9,content,9)<=1) // 1?
-			return 9;
+		{
+			a = ch2int(content[0])*1000 + ch2int(content[1])*100 + 
+				ch2int(content[2])*10+ch2int(content[3]);
+			b = ch2int(content[5])*1000 + ch2int(content[6])*100 + 
+				ch2int(content[7])*10+ch2int(content[8]);
+			if(b>a) return 9;
+		}
+			
 	case 8:
 		if(editDistanceP("nnnennnn",8,content,8)<=0) // 1?
-			return 9;
+		{
+			a = ch2int(content[0])*1000 + ch2int(content[1])*100 + 
+				ch2int(content[2])*10+ch2int(content[3]);
+			b = ch2int(content[5])*1000 + ch2int(content[6])*100 + 
+				ch2int(content[7])*10+ch2int(content[8]);
+			if(b>a) return 8;
+		}
+			
 	case 7:
 		if(editDistanceP("nnnennn",7,content,7)<=0) // 1?
 		{
@@ -144,7 +158,7 @@ int hasPPafterTheOffset(int offset,int limit)
 	{
 		if(fitPattern('n',content[i]))
 			if((pageOffset = isPageNumber(content+i,offend-i)) != 0)
-				return i+pageOffset+1;
+				return i+pageOffset;
 	}
 	return 0;
 }
