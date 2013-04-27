@@ -265,7 +265,7 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 			indexOfPage ++ ;
 			container->data[container->top].t[17] = indexOfPage;
 			nextPageOffset = hasPPafterTheOffset(nextPageOffset,cLen);
-			printf("#################################RECEIVE:%d\n",nextPageOffset);
+			//printf("#################################RECEIVE:%d\n",nextPageOffset);
 			if(nextPageOffset == 0) nextPageOffset = -1;
 			//printf("[P]");
 			//printfContextS(i,"P1");
@@ -380,7 +380,7 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 		{
 			if(INLMT(myEc.data[x].key))
 			{
-				printf("[+]");
+				//printf("[+]");
 				container->data[container->top].t[2] = 1;
 				hasContent = 1;
 			}
@@ -619,6 +619,11 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 	
 	
 	container->top = j+1;
+	
+	for(int i=1;i<container->top;i++)
+	{
+		printf("Z:%d\n",container->data[i].offset);
+	}
 	/*
 	for(int i=0;i<container->top;i++)
 	{
