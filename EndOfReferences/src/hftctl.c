@@ -19,8 +19,8 @@ FILE *fpTrain; // train.txt
 FILE *fpTest; // test.txt
 
 int fileNum = 0;
-endFeatureDataContainer mfdc; // myFeatureDataContainer
-endFeatureData mfd; // myFeatureData
+featureDataContainer mfdc; // myFeatureDataContainer
+featureData mfd; // myFeatureData
 
 
 OffsetCallback functionList[CALLBACK_LEN]={hasPPafterTheOffset,hasPPafterTheOffset2,
