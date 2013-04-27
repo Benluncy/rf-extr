@@ -51,7 +51,11 @@ inline int isPageNumber(const char *content,int limit)
 				ch2int(content[2])*10+ch2int(content[3]);
 			b = ch2int(content[5])*1000 + ch2int(content[6])*100 + 
 				ch2int(content[7])*10+ch2int(content[8]);
-			if(b>a) return 9;
+			if(b>a) 
+			{
+				printf("[ACC]{%d-%d}",a,b);
+				return 9;
+			}
 		}
 			
 	case 8:
@@ -61,7 +65,11 @@ inline int isPageNumber(const char *content,int limit)
 				ch2int(content[2])*10+ch2int(content[3]);
 			b = ch2int(content[5])*1000 + ch2int(content[6])*100 + 
 				ch2int(content[7])*10+ch2int(content[8]);
-			if(b>a) return 8;
+			if(b>a) 
+			{
+				printf("[ACC]{%d-%d}",a,b);
+				return 8;
+			}
 		}
 			
 	case 7:
@@ -69,7 +77,11 @@ inline int isPageNumber(const char *content,int limit)
 		{
 			a = ch2int(content[0])*100 + ch2int(content[1])*10 + ch2int(content[2]);
 			b = ch2int(content[0])*100 + ch2int(content[1])*10 + ch2int(content[2]);
-			if(b > a) return 7;
+			if(b>a) 
+			{
+				printf("[ACC]{%d-%d}",a,b);
+				return 7;
+			}
 		}
 	case 6:
 	case 5:
@@ -77,7 +89,11 @@ inline int isPageNumber(const char *content,int limit)
 		{
 			a = ch2int(content[0])*10 + ch2int(content[1]);
 			b = ch2int(content[3])*10 + ch2int(content[4]);
-			if(b > a) return 5;
+			if(b>a) 
+			{
+				printf("[ACC]{%d-%d}",a,b);
+				return 5;
+			}
 		}
 	case 4:
 		if(fitPattern('n',content[0])&&(content[1]=='-')&&
@@ -85,14 +101,22 @@ inline int isPageNumber(const char *content,int limit)
 		{
 			a = ch2int(content[0]);
 			b = ch2int(content[2])*10 + ch2int(content[3]);
-			if(b > a) return 4;
+			if(b>a) 
+			{
+				printf("[ACC]{%d-%d}",a,b);
+				return 4;
+			}
 		}
 	case 3:
 		if(fitPattern('n',content[0])&&(content[1]=='-')&&fitPattern('n',content[2]))
 		{
 			a = ch2int(content[0]);
 			b = ch2int(content[2]);
-			if(b > a) return 3;
+			if(b>a) 
+			{
+				printf("[ACC]{%d-%d}",a,b);
+				return 3;
+			}
 		}	
 	default :
 		return 0;
