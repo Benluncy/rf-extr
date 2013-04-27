@@ -36,8 +36,8 @@ int genEndSampleCtl(const char* fileName,int isDir)
 	unsigned int startOffset;
 	endFeatureDataContainer *_mfdc =getEndFeatureDataContainer();
 	endFeatureDataContainer tmpCter ;
-	memset(_mfdc,0,sizeof(featureDataContainer));
-	memset(&tmpCter,0,sizeof(featureDataContainer));
+	memset(_mfdc,0,sizeof(endFeatureDataContainer));
+	memset(&tmpCter,0,sizeof(endFeatureDataContainer));
 	// ignore dir
 	if(isDir)
         {

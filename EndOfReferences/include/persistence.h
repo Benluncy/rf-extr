@@ -61,7 +61,7 @@ typedef struct sEndFeatureData //start feature data
 typedef struct
 {
 	int top;
-	featureData data[1024]; // now max is 266
+	endFeatureData data[1024]; // now max is 266
 } endFeatureDataContainer;
 
 //init
