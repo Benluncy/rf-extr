@@ -173,7 +173,6 @@ inline int isPageNumberS(const char *content,int limit)
 
 int hasPPafterTheOffset(int offset,int limit)
 {
-	int j;
 	int i;	
 	int offend;
 	char *content = getPcontent();
