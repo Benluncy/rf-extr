@@ -116,25 +116,12 @@ int getLastYearOffset(unsigned int startOffset,int limit)
 //TODO DEBUGING
 int getLastPageOffset(unsigned int startOffset,int limit)
 {
-	//IN("getLastPageOffset");
-	//hasYearafterTheOffset(int offset,int limit)
 	int offset = 0;
-	//IN("getLastPageOffset>>while");
 	while((startOffset = hasPPafterTheOffset(startOffset,limit)) != 0)
 	{
-	//	NX("getLastYearOffset>>while[S]");
-		
-		//TODO DEBUG
-		if(INDEBUG) printfContextS(offset,"getLastPageOffset<in>");
-	//	NX("getLastYearOffset>>while[E]");
-	
 		offset = startOffset;
 	}
-	//OT("getLastPageOffset<<while");
-	//TODO DEBUG
-	if(INDEBUG) printfContextS(offset,"getLastPageOffset");
-	
-	//OT("getLastPageOffset");
+	printf("\n##OFFSET:%d\n",offset);
 	return offset;
 }
 
