@@ -546,7 +546,7 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 				{
 					
 					container->data[container->top-1].offset = avgOffset / offnum;
-					offnum = 0;
+					offnum = 1;
 					container->data[container->top].offset = i;
 					container->top++;
 					if(container->top >= ENDCTNMAX)
