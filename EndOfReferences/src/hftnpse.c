@@ -698,7 +698,13 @@ double dataDensity(int offset,int limit)
 	return (double)num/length;
 }
 
-
+inline double wordsDensity(int offset,int limit)
+{
+	int offend;
+	int num = wordsNumber(offset,limit);
+	defineStartAndEnd(&offset,&offend,limit);
+	return (double)num/(offend-offset);
+}
 
 
 

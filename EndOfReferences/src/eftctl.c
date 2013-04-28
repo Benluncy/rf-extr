@@ -120,7 +120,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 		printf(".");
 		//positive
 		fprintf(fp,"%c1 ",!haveDiffernecesE(_mfdc->data[i].offset,targetOffset)?'+':'-');
-		if(!hasDifferneces(_mfdc->data[i].offset,targetOffset)) pptag = 1;
+		if(!haveDiffernecesE(_mfdc->data[i].offset,targetOffset)) pptag = 1;
 		//tx
 		//1-10
 		rankWrite(fp,1,_mfdc->data[i].t[0]+1,10);
