@@ -113,6 +113,7 @@ clean			:
 	-${DEL} *~ include/*~ src/*~ data/*~
 	-${DEL} *.swp
 	-${DEL} svm_model svm_predictions
+	-${DEL} data/fa/*~ data/oraby/*~ data/orbz/*~ data/orbz_sec/*~
 
 dbclean			:
 	${DEL} db/features.db
