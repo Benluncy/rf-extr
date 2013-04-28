@@ -32,7 +32,7 @@
 #define MINANDNZ(x,y) (x!=0?(y!=0?(x>y?y:x):(x)):y)
 
 #define ABSDIFF(x,y) (x>y?x-y:y-x)
-#define INABSDIFF(x,y) (ABSDIFF<=thresholdForDifferneces)
+#define INABSDIFF(x,y) (ABSDIFF(x,y)<=thresholdForDifferneces)
 
 /*
 #define SHOWLMT(x) printf("%s(%d) %d <=> %d <%d>\n",\
