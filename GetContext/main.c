@@ -27,7 +27,7 @@ int main(int argc,char *argv[])
 	initContent();
 	if(!parseFile(file_name))
 	{
-		fprintf(stderr,"[[error parsing file : #%s#]]",fileName);
+		fprintf(stderr,"[[error parsing file : #%s#]]",file_name);
 		return -1;
 	}
 	printfContext(offset);
