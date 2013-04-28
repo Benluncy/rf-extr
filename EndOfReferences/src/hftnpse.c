@@ -560,7 +560,7 @@ int hasWords(int offset,int limit)
 	return 0;	
 }
 
-int WordsNumber(int offset,int limit)
+int wordsNumber(int offset,int limit)
 {
 	int i;
 	int offend;
