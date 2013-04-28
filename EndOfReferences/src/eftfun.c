@@ -30,6 +30,10 @@
 			)!= -1)
 
 #define MINANDNZ(x,y) (x!=0?(y!=0?(x>y?y:x):(x)):y)
+
+#define ABSDIFF(x,y) (x>y?x-y:y-x)
+#define INABSDIFF(x,y) (ABSDIFF<=thresholdForDifferneces)
+
 /*
 #define SHOWLMT(x) printf("%s(%d) %d <=> %d <%d>\n",\
 			x,strlen(x),\
@@ -606,7 +610,8 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 	{
 		//container->data[j].offset = container->data[i].offset;
 		//haveDifferneces(int dest,int src)
-		if(!haveDiffernecesH(lastOffset,container->data[i].offset))
+		//if(!haveDiffernecesH(lastOffset,container->data[i].offset))
+		if(INABSDIFF(lastOffset,container->data[i].offset))
 		{
 			for(int k=1;k<ENDLEN;k++)
 			{
@@ -624,6 +629,7 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 			}
 		}else
 		{
+			container->data[j].offset = (container->data[j].offset+container->data[i-1].offset)/2;
 			j++;
 			container->data[j].offset = container->data[i].offset;
 			container->data[j].t[0] = j;
