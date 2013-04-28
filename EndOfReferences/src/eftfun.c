@@ -15,24 +15,6 @@
 
 //#define INDEBUG 0
 
-#define thresholdForDifferneces  10
-
-#define thresholdForGetOffsetSuggestion(x)  x*0.3
-#define T4GOS(x) thresholdForGetOffsetSuggestion(x)
-#define INLMT(x) (editDistanceT(\
-			x,\
-			strlen(x),\
-			content+i,\
-			strlen(x)>strlen(content+i)?\
-				strlen(content+i):\
-				strlen(x),\
-			T4GOS(strlen(x))\
-			)!= -1)
-
-#define MINANDNZ(x,y) (x!=0?(y!=0?(x>y?y:x):(x)):y)
-
-#define ABSDIFF(x,y) (x>y?x-y:y-x)
-#define INABSDIFF(x,y) (ABSDIFF(x,y)<=thresholdForDifferneces)
 
 /*
 #define SHOWLMT(x) printf("%s(%d) %d <=> %d <%d>\n",\
@@ -725,7 +707,7 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	int lmt = 200;
 	
 	// prepareDensityData 
-	prepareDensityData();
+	//prepareDensityData();
 	
 //	char *content = getPcontent();
 //	int offend = getPclen();	
@@ -750,8 +732,8 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	//fp = stdout;
 	//for(;lmt<=1000;lmt+=150)
 	//{
-	lmt = -200;
-	
+	lmt = -30;
+
 	
 	fprintf(fp,"%d:%d ",start++,(hasPPafterTheOffset(offset,lmt)?1:-1));
 	fprintf(fp,"%d:%d ",start++,(hasPPafterTheOffset2(offset,lmt)?1:-1));
@@ -766,6 +748,14 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	fprintf(fp,"%d:%d ",start++,((hasNameafterTheOffset0(offset,lmt) >= hasNameafterTheOffset0(offset,-lmt)))?1:-1);
 	fprintf(fp,"%d:%d ",start++,((hasNameafterTheOffset1(offset,lmt) >= hasNameafterTheOffset1(offset,-lmt)))?1:-1);
 	fprintf(fp,"%d:%d ",start++,((hasNameafterTheOffset2(offset,lmt) >= hasNameafterTheOffset2(offset,-lmt)))?1:-1);
+
+	fprintf(fp,"%d:%d ",start++,((hasPPafterTheOffset(offset,lmt) > hasPPafterTheOffset(offset,-lmt)))?1:-1);
+	fprintf(fp,"%d:%d ",start++,((hasPPafterTheOffset2(offset,lmt) > hasPPafterTheOffset2(offset,-lmt)))?1:-1);
+	fprintf(fp,"%d:%d ",start++,((hasYearafterTheOffset(offset,lmt) > hasYearafterTheOffset(offset,-lmt)))?1:-1);
+	fprintf(fp,"%d:%d ",start++,((hasNameafterTheOffset0(offset,lmt) > hasNameafterTheOffset0(offset,-lmt)))?1:-1);
+	fprintf(fp,"%d:%d ",start++,((hasNameafterTheOffset1(offset,lmt) > hasNameafterTheOffset1(offset,-lmt)))?1:-1);
+	fprintf(fp,"%d:%d ",start++,((hasNameafterTheOffset2(offset,lmt) > hasNameafterTheOffset2(offset,-lmt)))?1:-1);
+
 
 	fprintf(fp,"%d:%d ",start++,(asciiCodeDensity(offset,lmt) >= asciiCodeDensity(offset,-lmt))?1:-1);
 	fprintf(fp,"%d:%d ",start++,(dataDensity(offset,lmt) >= dataDensity(offset,-lmt))?1:-1);
@@ -798,7 +788,7 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	//fprintf(fp,"%d:%f ",start++,(double)(getPclen()-offset)/offset);
 	//rateWrite(fp,start,(double)offset/getPclen());
 	//start+=5;
-	
+	/*
 	for(int i=0;i<ENDCALLBACKLEN;i++)
 	{
 		//rateWrite(fp,start,(fd.offset == getPclen()) ? -1 :((double)fd.fid[i][0]/fd.offset)/
@@ -827,8 +817,8 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 		
 		rankWrite(fp,start,fd.seq[i][3],wide);
 		start+=wide;*/
-	}
-
+	//}
+	
 	return start;
 }
 

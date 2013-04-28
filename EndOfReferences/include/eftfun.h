@@ -2,6 +2,27 @@
 #define __EFTFUN_H__
 #include <stdio.h>
 #include "persistence.h"
+
+#define thresholdForDifferneces  10
+
+#define thresholdForGetOffsetSuggestion(x)  x*0.3
+#define T4GOS(x) thresholdForGetOffsetSuggestion(x)
+#define INLMT(x) (editDistanceT(\
+			x,\
+			strlen(x),\
+			content+i,\
+			strlen(x)>strlen(content+i)?\
+				strlen(content+i):\
+				strlen(x),\
+			T4GOS(strlen(x))\
+			)!= -1)
+
+#define MINANDNZ(x,y) (x!=0?(y!=0?(x>y?y:x):(x)):y)
+
+#define ABSDIFF(x,y) (x>y?x-y:y-x)
+#define INABSDIFF(x,y) (ABSDIFF(x,y)<=thresholdForDifferneces)
+
+
 // data set
 int cleanEndKWDContainer();
 int insertEndKWD(const char *key);
