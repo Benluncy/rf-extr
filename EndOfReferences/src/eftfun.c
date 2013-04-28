@@ -532,7 +532,7 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 			else
 			{
 			
-				if(!haveDiffernecesH(container->data[container->top-1].offset,i))
+			/*	if(!haveDiffernecesH(container->data[container->top-1].offset,i))
 				{
 					avgOffset += i;
 					offnum ++;
@@ -547,14 +547,14 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 					
 					container->data[container->top-1].offset = avgOffset / offnum;
 					offnum = 1;
-					container->data[container->top].offset = i;
+			*/		container->data[container->top].offset = i;
 					container->top++;
 					if(container->top >= ENDCTNMAX)
 					{
 						fprintf(stderr,"[ERROR] pool is full! %s %d",__FILE__,__LINE__);
 						getchar();
 					}
-				}			
+			//	}
 			}
 
 			// 6 end of article
