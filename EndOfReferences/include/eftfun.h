@@ -8,6 +8,7 @@ int insertEndKWD(const char *key);
 
 //util
 int haveDifferneces(int dest,int src);
+int haveDiffernecesE(int dest,int src);
 
 unsigned int getReferenceEndOffset(void);
 
