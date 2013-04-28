@@ -172,7 +172,8 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 			|| INLMT("AUTHOR BIBLIOGRAPHY")
 			|| INLMT("AUTHOR BIOGRAPHIES")
 			|| INLMT("AUTHOR BIOGRAPHY")
-			|| INLMT("ADDRESS INFORMATION"))
+			|| INLMT("ADDRESS INFORMATION")
+			|| INLMT("Bibliographical"))
 		{
 			if(!markedAck)
 			{
