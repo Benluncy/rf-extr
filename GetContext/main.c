@@ -4,6 +4,8 @@
 #include "hftnpse.h"
 #include "dirTraversal.h"
 #include "persistence.h"
+#include "virtualcontent.h"
+#include "debuginfo.h"
 #include "main.h"
 #include <stdio.h>
 #include <string.h>
@@ -21,7 +23,15 @@ int main(int argc,char *argv[])
 	}
 	char *file_name = argv[1];
 	int offset = aoti(argv[2]);
-	printf("parse : [%d]@[%s]",offset,file_name);
+	printf("parse : [%d]@[%s]...\n",offset,file_name);
+	initContent();
+	if(!parseFile(fileName))
+	{
+		fprintf(stderr,"[[error parsing file : #%s#]]",fileName);
+		return -1;
+	}
+	printfContext(targetOffset);
+	cleanContent();
 	return 0;
 }
 
