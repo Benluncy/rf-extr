@@ -28,6 +28,12 @@ void closeLogFile()
 int genEndSampleCtl(const char* fileName,int isDir)
 {
 	//
+	/**
+	 * todo list:
+	 * data/oraby/A framework for assisted exploration with collaboration.txt
+	 *
+	 */
+	
        	//ONLY("data/orbz_sec/Antialiased ray tracing by adaptive progressive refinement.txt");
 	FILE *fp;
 	static int id = 0;
@@ -79,9 +85,9 @@ int genEndSampleCtl(const char* fileName,int isDir)
 	{
 		cleanFeature(fileName);	
 		// get head of references
-		//int basicFilter(featureDataContainer *container,unsigned int startOffset)
 		basicFilter(_mfdc,startOffset);
-		combineOffsets(_mfdc);
+		//combineOffsets(_mfdc);
+		
 		//!INSERT INTO DB
 		/*
 		for(int i = 0; i < _mfdc->top;i++)
@@ -113,7 +119,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 	{
 		printf(".");
 		//positive
-		fprintf(fp,"%c1 ",!hasDifferneces(_mfdc->data[i].offset,targetOffset)?'+':'-');
+		fprintf(fp,"%c1 ",!haveDiffernecesE(_mfdc->data[i].offset,targetOffset)?'+':'-');
 		if(!hasDifferneces(_mfdc->data[i].offset,targetOffset)) pptag = 1;
 		//tx
 		//1-10

@@ -7,7 +7,7 @@ int cleanEndKWDContainer();
 int insertEndKWD(const char *key);
 
 //util
-int hasDifferneces(int dest,int src);
+int haveDifferneces(int dest,int src);
 
 unsigned int getReferenceEndOffset(void);
 

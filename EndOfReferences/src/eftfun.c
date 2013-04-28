@@ -56,7 +56,9 @@ OffsetCallback endFunctionList[ENDCALLBACKLEN]={hasPPafterTheOffset,
 						hasNameafterTheOffset1,//hasNameafterTheOffset2,
 						hasSeqOfTheOffset,
 						hasSeqOfTheOffset2,
-						hasSpecialKeyWords,hasLocationafterTheOffset};
+						hasSpecialKeyWords,
+						hasLocationafterTheOffset,
+						hasWords};
 
 struct endKWD
 {
@@ -350,7 +352,7 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 				hasContent = 1;
 				//isMarkedEP2BAOT = 1;
 			}
-		
+			//
 			// ingore useless i == 0 or past is not data(data:[0-9][a-z][A-Z])
 			if(fitPattern('d',content[i-1]) && !hasContent) continue;
 		}
@@ -370,6 +372,7 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 			|| INLMT("AUTHOR BIBLIOGRAPHY")
 			|| INLMT("AUTHOR BIOGRAPHIES")
 			|| INLMT("AUTHOR BIOGRAPHY"))
+			//|| INLMT("Bibliography");
 		{
 			container->data[container->top].t[1] = 1;
 			hasContent = 1;
@@ -387,7 +390,7 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 		}
 		
 		// 3 end of year // before end of article
-		if(!hasDifferneces(lastYearOffset,i))
+		if(!haveDifferneces(lastYearOffset,i))
 		{
 			if(!isMarkedEOY)
 			{
@@ -401,7 +404,7 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 		}
 		
 		// 4 end of page // before end of article
-		if(!hasDifferneces(lastPageOffset,i))
+		if(!haveDifferneces(lastPageOffset,i))
 		{
 			if(!isMarkedEOP)
 			{
@@ -415,7 +418,7 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 		}
 		
 		// 5 end of page2 // before end of article
-		if(!hasDifferneces(lastPageOffset2,i))
+		if(!haveDifferneces(lastPageOffset2,i))
 		{
 			if(!isMarkedEOP2)
 			{
@@ -486,7 +489,7 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 		//////////////////////////////////////////////////////////////////////////
 
 		// 6 end of article
-		if(!hasDifferneces(cLen,i))
+		if(!haveDifferneces(cLen,i))
 		{
 			if(ENDCTNMAX <= container->top) // 
 			{
@@ -521,7 +524,7 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 			}
 			else
 			{
-				if(!hasDifferneces(container->data[container->top-1].offset,i))
+				if(!haveDifferneces(container->data[container->top-1].offset,i))
 				{
 					container->top --;
 					for(int k=1;k<ENDLEN;k++)
@@ -586,8 +589,8 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 	for(int i=1;i<container->top;i++)
 	{
 		//container->data[j].offset = container->data[i].offset;
-		//hasDifferneces(int dest,int src)
-		if(!hasDifferneces(lastOffset,container->data[i].offset))
+		//haveDifferneces(int dest,int src)
+		if(!haveDifferneces(lastOffset,container->data[i].offset))
 		{
 			for(int k=1;k<ENDLEN;k++)
 			{
@@ -616,7 +619,7 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 		}
 	}
 	/*
-	if(!hasDifferneces(lastOffset,getPclen()))
+	if(!haveDifferneces(lastOffset,getPclen()))
 	{
 		for(int k=0;k<ENDLEN;k++)
 		{
@@ -738,9 +741,10 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	fprintf(fp,"%d:%d ",start++,(hasNameafterTheOffset1(offset,lmt) >= hasNameafterTheOffset1(offset,-lmt)));
 	fprintf(fp,"%d:%d ",start++,(hasNameafterTheOffset2(offset,lmt) >= hasNameafterTheOffset2(offset,-lmt)));
 
-	fprintf(fp,"%d:%d ",start++,asciiCodeDensity(offset,lmt) >= asciiCodeDensity(offset,-lmt));
-	fprintf(fp,"%d:%d ",start++,dataDensity(offset,lmt) >= dataDensity(offset,-lmt));
-
+	fprintf(fp,"%d:%d ",start++,(asciiCodeDensity(offset,lmt) >= asciiCodeDensity(offset,-lmt))?1:-1);
+	fprintf(fp,"%d:%d ",start++,(dataDensity(offset,lmt) >= dataDensity(offset,-lmt))?1:-1);
+	fprintf(fp,"%d:%d ",start++,(wordsNumber(offset,lmt) >= wordsNumber(offset,-lmt))?1:-1);
+	
 	lmt = 200;
 	fprintf(fp,"%d:%d ",start++,(hasPPafterTheOffset(offset,lmt)?1:0));
 	fprintf(fp,"%d:%d ",start++,(hasPPafterTheOffset2(offset,lmt)?1:0));
@@ -749,6 +753,8 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	fprintf(fp,"%d:%d ",start++,(hasNameafterTheOffset1(offset,lmt)?1:0));
 	fprintf(fp,"%d:%d ",start++,(hasNameafterTheOffset2(offset,lmt)?1:0));
 
+
+	/*
 	lmt = -1000;
 	
 	fprintf(fp,"%d:%d ",start++,(hasSeqOfTheOffset(offset,lmt)?1:0));
@@ -758,7 +764,7 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	
 	fprintf(fp,"%d:%d ",start++,asciiCodeDensity(offset,lmt) >= asciiCodeDensity(offset,-lmt));
 	fprintf(fp,"%d:%d ",start++,dataDensity(offset,lmt) >= dataDensity(offset,-lmt));
-	
+	*/
 	//}
 	
 	//32
@@ -782,7 +788,7 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 		//fprintf(fp,"%d:%f ",start++,quot(fd.density[i][1][1],fd.density[i][1][0]));
 		//fprintf(fp,"%d:%f ",start++,quot(fd.density[i][2][1],fd.density[i][2][0]));
 		//fprintf(fp,"%d:%f ",start++,quot(fd.vari[1],fd.vari[0]));
-		
+		/*
 		int wide = 6;
 		rankWrite(fp,start,fd.seq[i][0],wide);
 		start+=wide;
@@ -794,7 +800,7 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 		start+=wide;
 		
 		rankWrite(fp,start,fd.seq[i][3],wide);
-		start+=wide;
+		start+=wide;*/
 
 	}
 
@@ -947,7 +953,7 @@ unsigned int getReferenceEndOffset()
 //TODO MAY USELESS ... 
 //int getLastElement(int (*callback)(int offset,int limit));
 
-int hasDifferneces(int dest,int src)
+int haveDifferneces(int dest,int src)
 {
 	if(src>=getPclen()) src = getPclen()-1;
 	if(src<0) src = 0;
@@ -982,8 +988,46 @@ int hasDifferneces(int dest,int src)
 	}
 	return 0;
 }
+
+int haveDiffernecesE(int dest,int src) // extend
+{
+	if(src>=getPclen()) src = getPclen()-1;
+	if(src<0) src = 0;
+	if(dest<0) dest = 0;
+	
+	if(dest>=getPclen()) dest = getPclen()-1;
+	int th = 0;
+	char *content = getPcontent();
+
+	if(dest < src)
+	{
+		int tmp = src;
+		src = dest;
+		dest = tmp;
+	}
+	if((dest - src) <= thresholdForDifferneces) return 0;
+	for(int i=src;i<dest;i++)
+	{
+		/*
+		// no ascii code
+		//if(!(content[i]>='a'&&content[i]<='z')||(content[i]>='A'&&content[i]<='Z')) th++;
+		if(content[i] != ' ' && content[i] != '\r' && content[i] != '\n' &&fitPattern()) th++;
+		
+		if(th>2) return 1;
+		*/
+		
+		if(fitPattern('a',content[i])&&fitPattern('a',content[i+1])) 
+		{
+			//return 1;
+			th++;
+			if(th > 3) return 1;
+			i+=2;
+		}
+	}
+	return 0;
+}
 /*
-int hasDiffernecesH(int dest,int src)
+int haveDiffernecesH(int dest,int src)
 {
 	if(src>=getPclen()) src = getPclen()-1;
 	if(src<0) src = 0;

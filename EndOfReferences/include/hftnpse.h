@@ -36,6 +36,18 @@ int hasSpecialKeyWords(int offset,int limit);
 
 int hasLocationafterTheOffset(int offset,int limit);
 
+int hasWords(int offset,int limit);
+
+int wordsNumber(int offset,int limit);
+
+inline double wordsDensity(int offset,int limit)
+{
+	int offset;
+	int offend;
+	int num = wordsNumber(offset,limit);
+	defineStartAndEnd(&offset,&offend,limit);
+	return (double)num/(offend-offset);
+}
 double asciiCodeDensity(int offset,int limit);
 double dataDensity(int offset,int limit);
 
