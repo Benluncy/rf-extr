@@ -550,6 +550,7 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 		// 6 end of article
 		if(!haveDiffernecesH(cLen,i))
 		{
+			container->data[container->top].offset = i;
 			container->data[container->top].t[6] = 1;
 			container->top ++ ;
 			return 1;
@@ -564,7 +565,6 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets and make sure 
 {
 	return 1;
-
 	int j = 0;
 	int lastOffset = container->data[0].offset;
 	//introduce of settings
@@ -593,6 +593,15 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 		//container->data[j].offset = container->data[i].offset;
 		//haveDifferneces(int dest,int src)
 		//if(!haveDiffernecesH(lastOffset,container->data[i].offset))
+		for(j=i;(container->data[j].offset-container->data[i].offset)<=thresholdForDifferneces;j++)
+		{
+			if(INABSDIFF(container->data[j].offset,container->data[i].offset))
+			{
+				
+			}
+		}
+		
+		/*
 		if(INABSDIFF(lastOffset,container->data[i].offset))
 		{
 			for(int k=1;k<ENDLEN;k++)
@@ -620,7 +629,7 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 				container->data[j].t[k] = container->data[i].t[k];
 			}
 			lastOffset = container->data[i].offset;
-		}
+		}*/
 	}
 	/*
 	if(!haveDifferneces(lastOffset,getPclen()))
@@ -771,17 +780,17 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	fprintf(fp,"%d:%d ",start++,(hasNameafterTheOffset2(offset,lmt)?1:-1));
 
 
-	/*
-	lmt = -1000;
 	
-	fprintf(fp,"%d:%d ",start++,(hasSeqOfTheOffset(offset,lmt)?1:0));
-	fprintf(fp,"%d:%d ",start++,(hasSeqOfTheOffset2(offset,lmt)?1:0));	
-	fprintf(fp,"%d:%d ",start++,(hasSeqOfTheOffset(offset,lmt) >= hasSeqOfTheOffset(offset,-lmt)));
-	fprintf(fp,"%d:%d ",start++,(hasSeqOfTheOffset2(offset,lmt) >= hasSeqOfTheOffset2(offset,-lmt)));
+	lmt = -100;
+	
+	fprintf(fp,"%d:%d ",start++,(hasSeqOfTheOffset(offset,lmt)?1:-1));
+	fprintf(fp,"%d:%d ",start++,(hasSeqOfTheOffset2(offset,lmt)?1:-1));	
+	fprintf(fp,"%d:%d ",start++,((hasSeqOfTheOffset(offset,lmt) >= hasSeqOfTheOffset(offset,-lmt)))?1:-1);
+	fprintf(fp,"%d:%d ",start++,((hasSeqOfTheOffset2(offset,lmt) >= hasSeqOfTheOffset2(offset,-lmt)))?1:-1);
 	
 	fprintf(fp,"%d:%d ",start++,asciiCodeDensity(offset,lmt) >= asciiCodeDensity(offset,-lmt));
 	fprintf(fp,"%d:%d ",start++,dataDensity(offset,lmt) >= dataDensity(offset,-lmt));
-	*/
+	
 	//}
 	
 	//32
