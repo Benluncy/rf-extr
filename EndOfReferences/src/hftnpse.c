@@ -27,6 +27,8 @@ inline int ch2int(char ch)
 	int val;
 	if(ch =='I' || ch == 'l')
 		val = 1;
+	if(ch == 'o'|| ch == 'O')
+		val = 0;
 	else 
 		val = ch - '0';
 	//if(val > 9 || val < 0) return -1;
@@ -185,8 +187,7 @@ inline int hasPPafterTheOffset(int offset,int limit)
 				//printfContextS(i,"success,before");
 				//printfContextS(i+pageOffset+1,"success,next");			
 				return i+pageOffset+1;
-			}
-				
+			}		
 	}
 	return 0;
 }
@@ -537,6 +538,7 @@ int hasSpecialKeyWords(int offset,int limit)
 			}
 			TESTMATSTR("volumn",content+i);
 			TESTMATSTR("Volumn",content+i);
+			TESTMATSTR("Fig,",content+i);
 				
 		}
 	}

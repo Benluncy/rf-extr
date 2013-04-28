@@ -489,7 +489,7 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 		//////////////////////////////////////////////////////////////////////////
 
 		// 6 end of article
-		if(!haveDifferneces(cLen,i))
+		if(!haveDiffernecesH(cLen,i))
 		{
 			if(ENDCTNMAX <= container->top) // 
 			{
@@ -524,7 +524,7 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 			}
 			else
 			{
-				if(!haveDifferneces(container->data[container->top-1].offset,i))
+				if(!haveDiffernecesH(container->data[container->top-1].offset,i))
 				{
 					container->top --;
 					for(int k=1;k<ENDLEN;k++)
@@ -989,7 +989,7 @@ int haveDifferneces(int dest,int src)
 	return 0;
 }
 
-int haveDiffernecesE(int dest,int src) // extend
+int haveDiffernecesH(int dest,int src)
 {
 	if(src>=getPclen()) src = getPclen()-1;
 	if(src<0) src = 0;
@@ -1006,6 +1006,32 @@ int haveDiffernecesE(int dest,int src) // extend
 		dest = tmp;
 	}
 	if((dest - src) <= thresholdForDifferneces) return 0;
+	for(int i=src;i<dest;i++)
+	{
+		// no ascii code
+		//if(!(content[i]>='a'&&content[i]<='z')||(content[i]>='A'&&content[i]<='Z')) th++;
+		if(content[i] != ' ' && content[i] != '\r' && content[i] != '\n') return 1;
+	}
+	return 0;
+}
+
+int haveDiffernecesE(int dest,int src) // extend
+{
+	if(src>=getPclen()) src = getPclen()-1;
+	if(src<0) src = 0;
+	if(dest<0) dest = 0;
+	
+	if(dest>=getPclen()) dest = getPclen()-1;
+	int th = 0;
+	char *content = getPcontent();
+
+	if(dest < src)
+	{
+		int tmp = src;
+		src = dest;
+		dest = tmp;
+	}
+	if((dest - src) <= thresholdForDifferneces*2) return 0;
 	for(int i=src;i<dest;i++)
 	{
 		/*

@@ -40,6 +40,7 @@ int genSamples4Endness()
 	insertEndKWD("TABLE ");
 	insertEndKWD("He is");
 	insertEndKWD("Figure");
+	insertEndKWD("Fig.");
 	insertEndKWD("In this appendix");
 	insertEndKWD("NOTICE OF");
 	insertEndKWD("He has");
