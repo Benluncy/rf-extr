@@ -727,31 +727,31 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	lmt = -200;
 	
 	
-	fprintf(fp,"%d:%d ",start++,(hasPPafterTheOffset(offset,lmt)?1:0));
-	fprintf(fp,"%d:%d ",start++,(hasPPafterTheOffset2(offset,lmt)?1:0));
-	fprintf(fp,"%d:%d ",start++,(hasYearafterTheOffset(offset,lmt)?1:0));
-	fprintf(fp,"%d:%d ",start++,(hasNameafterTheOffset0(offset,lmt)?1:0));
-	fprintf(fp,"%d:%d ",start++,(hasNameafterTheOffset1(offset,lmt)?1:0));
-	fprintf(fp,"%d:%d ",start++,(hasNameafterTheOffset2(offset,lmt)?1:0));
+	fprintf(fp,"%d:%d ",start++,(hasPPafterTheOffset(offset,lmt)?1:-1));
+	fprintf(fp,"%d:%d ",start++,(hasPPafterTheOffset2(offset,lmt)?1:-1));
+	fprintf(fp,"%d:%d ",start++,(hasYearafterTheOffset(offset,lmt)?1:-1));
+	fprintf(fp,"%d:%d ",start++,(hasNameafterTheOffset0(offset,lmt)?1:-1));
+	fprintf(fp,"%d:%d ",start++,(hasNameafterTheOffset1(offset,lmt)?1:-1));
+	fprintf(fp,"%d:%d ",start++,(hasNameafterTheOffset2(offset,lmt)?1:-1));
 	
-	fprintf(fp,"%d:%d ",start++,(hasPPafterTheOffset(offset,lmt) >= hasPPafterTheOffset(offset,-lmt)));
-	fprintf(fp,"%d:%d ",start++,(hasPPafterTheOffset2(offset,lmt) >= hasPPafterTheOffset2(offset,-lmt)));
-	fprintf(fp,"%d:%d ",start++,(hasYearafterTheOffset(offset,lmt) >= hasYearafterTheOffset(offset,-lmt)));
-	fprintf(fp,"%d:%d ",start++,(hasNameafterTheOffset0(offset,lmt) >= hasNameafterTheOffset0(offset,-lmt)));
-	fprintf(fp,"%d:%d ",start++,(hasNameafterTheOffset1(offset,lmt) >= hasNameafterTheOffset1(offset,-lmt)));
-	fprintf(fp,"%d:%d ",start++,(hasNameafterTheOffset2(offset,lmt) >= hasNameafterTheOffset2(offset,-lmt)));
+	fprintf(fp,"%d:%d ",start++,(hasPPafterTheOffset(offset,lmt) >= hasPPafterTheOffset(offset,-lmt)))?1:-1);
+	fprintf(fp,"%d:%d ",start++,(hasPPafterTheOffset2(offset,lmt) >= hasPPafterTheOffset2(offset,-lmt)))?1:-1);
+	fprintf(fp,"%d:%d ",start++,(hasYearafterTheOffset(offset,lmt) >= hasYearafterTheOffset(offset,-lmt)))?1:-1);
+	fprintf(fp,"%d:%d ",start++,(hasNameafterTheOffset0(offset,lmt) >= hasNameafterTheOffset0(offset,-lmt)))?1:-1);
+	fprintf(fp,"%d:%d ",start++,(hasNameafterTheOffset1(offset,lmt) >= hasNameafterTheOffset1(offset,-lmt)))?1:-1);
+	fprintf(fp,"%d:%d ",start++,((hasNameafterTheOffset2(offset,lmt) >= hasNameafterTheOffset2(offset,-lmt)))?1:-1);
 
 	fprintf(fp,"%d:%d ",start++,(asciiCodeDensity(offset,lmt) >= asciiCodeDensity(offset,-lmt))?1:-1);
 	fprintf(fp,"%d:%d ",start++,(dataDensity(offset,lmt) >= dataDensity(offset,-lmt))?1:-1);
 	fprintf(fp,"%d:%d ",start++,(wordsNumber(offset,lmt) >= wordsNumber(offset,-lmt))?1:-1);
 	
 	lmt = 200;
-	fprintf(fp,"%d:%d ",start++,(hasPPafterTheOffset(offset,lmt)?1:0));
-	fprintf(fp,"%d:%d ",start++,(hasPPafterTheOffset2(offset,lmt)?1:0));
-	fprintf(fp,"%d:%d ",start++,(hasYearafterTheOffset(offset,lmt)?1:0));
-	fprintf(fp,"%d:%d ",start++,(hasNameafterTheOffset0(offset,lmt)?1:0));
-	fprintf(fp,"%d:%d ",start++,(hasNameafterTheOffset1(offset,lmt)?1:0));
-	fprintf(fp,"%d:%d ",start++,(hasNameafterTheOffset2(offset,lmt)?1:0));
+	fprintf(fp,"%d:%d ",start++,(hasPPafterTheOffset(offset,lmt)?1:-1));
+	fprintf(fp,"%d:%d ",start++,(hasPPafterTheOffset2(offset,lmt)?1:-1));
+	fprintf(fp,"%d:%d ",start++,(hasYearafterTheOffset(offset,lmt)?1:-1));
+	fprintf(fp,"%d:%d ",start++,(hasNameafterTheOffset0(offset,lmt)?1:-1));
+	fprintf(fp,"%d:%d ",start++,(hasNameafterTheOffset1(offset,lmt)?1:-1));
+	fprintf(fp,"%d:%d ",start++,(hasNameafterTheOffset2(offset,lmt)?1:-1));
 
 
 	/*
@@ -779,10 +779,10 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 		//			((fd.fid[i][1]-fd.fid[i][0])/(getPclen()-fd.offset)));
 		//start+=5; //TODO ADD 
 		
-		fprintf(fp,"%d:%d ",start++,fd.density[i][0][1] <= fd.density[i][0][0]);
-		fprintf(fp,"%d:%d ",start++,fd.density[i][1][1] <= fd.density[i][1][0]);
-		fprintf(fp,"%d:%d ",start++,fd.density[i][2][1] <= fd.density[i][2][0]);
-		fprintf(fp,"%d:%d ",start++,fd.vari[1] <= fd.vari[0]);
+		fprintf(fp,"%d:%d ",start++,(fd.density[i][0][1] <= fd.density[i][0][0])?1:-1);
+		fprintf(fp,"%d:%d ",start++,(fd.density[i][1][1] <= fd.density[i][1][0])?1:-1);
+		fprintf(fp,"%d:%d ",start++,(fd.density[i][2][1] <= fd.density[i][2][0])?1:-1);
+		fprintf(fp,"%d:%d ",start++,(fd.vari[1] <= fd.vari[0])?1:-1);
 		
 		//fprintf(fp,"%d:%f ",start++,quot(fd.density[i][0][1],fd.density[i][0][0]));
 		//fprintf(fp,"%d:%f ",start++,quot(fd.density[i][1][1],fd.density[i][1][0]));
