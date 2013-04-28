@@ -515,7 +515,7 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 			return 1;
 		}*/
 		
-		if(hasContent || !haveDiffernecesH(cLen,i))
+		if(hasContent)// || !haveDiffernecesH(cLen,i))
 		{
 			if(container->top==0)
 			{
@@ -557,15 +557,16 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 			//	}
 			}
 
-			// 6 end of article
-			if(!haveDiffernecesH(cLen,i))
-			{
-				container->data[container->top].t[6] = 1;
-				container->top ++ ;
-				return 1;
-			}
+			
 			//if(container->top >= 200) printf("found!");
 			//maxLen = container->top > maxLen ? container->top : maxLen;
+		}
+		// 6 end of article
+		if(!haveDiffernecesH(cLen,i))
+		{
+			container->data[container->top].t[6] = 1;
+			container->top ++ ;
+			return 1;
 		}
 	}
 	return 0;
@@ -576,7 +577,7 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 
 int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets and make sure 
 {
-	return 1;
+	//return 1;
 
 	int j = 0;
 	int lastOffset = container->data[0].offset;
@@ -605,7 +606,7 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 	{
 		//container->data[j].offset = container->data[i].offset;
 		//haveDifferneces(int dest,int src)
-		if(!haveDifferneces(lastOffset,container->data[i].offset))
+		if(!haveDiffernecesH(lastOffset,container->data[i].offset))
 		{
 			for(int k=1;k<ENDLEN;k++)
 			{
