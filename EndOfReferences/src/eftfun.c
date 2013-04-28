@@ -581,7 +581,7 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 
 int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets and make sure 
 {
-	//return 1;
+	return 1;
 
 	int j = 0;
 	int lastOffset = container->data[0].offset;
@@ -720,7 +720,7 @@ int makeSequenceForCombinedOffsets(endFeatureDataContainer *container)
 
 int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 {
-	return 1;
+	//return 1;
 	int offset = fd.offset;
 	int lmt = 200;
 	
