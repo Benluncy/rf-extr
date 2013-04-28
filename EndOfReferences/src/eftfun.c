@@ -491,6 +491,7 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 			if(ENDCTNMAX <= container->top) // 
 			{
 				fprintf(stderr,"[ERROR] pool is full! %s %d",__FILE__,__LINE__);
+				getchar();
 			}
 			container->data[container->top].t[6] = 1;
 			container->data[container->top].offset = i;
@@ -504,16 +505,47 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 		
 		if(hasContent)
 		{
-			if(ENDCTNMAX <= container->top)
+			if(container->top==0)
 			{
-				fprintf(stderr,"[ERROR] pool is full! %s %d",__FILE__,__LINE__);
+				if(ENDCTNMAX <= container->top)
+				{
+					fprintf(stderr,"[ERROR] pool is full! %s %d",__FILE__,__LINE__);
+					getchar();
+				}
+				container->data[container->top].offset = i;
+				container->top++;
+				if(ENDCTNMAX <= container->top)
+				{
+					fprintf(stderr,"[WARNING] pool is full! %s %d",__FILE__,__LINE__);
+				}
 			}
-			container->data[container->top].offset = i;
-			container->top++;
-			if(ENDCTNMAX <= container->top)
+			else
 			{
-				fprintf(stderr,"[WARNING] pool is full! %s %d",__FILE__,__LINE__);
+				if(!hasDifferneces(container->data[container->top-1].offset,i))
+				{
+					container->top --;
+					for(int k=1;k<ENDLEN;k++)
+					{
+						container->data[container->top].t[k] = MINANDNZ(
+								container->data[container->top].t[k],
+								container->data[container->top+1].t[k]);
+					}
+				}else
+				{
+					if(ENDCTNMAX <= container->top)
+					{
+						fprintf(stderr,"[ERROR] pool is full! %s %d",__FILE__,__LINE__);
+						getchar();
+					}
+					container->data[container->top].offset = i;
+					container->top++;
+					if(ENDCTNMAX <= container->top)
+					{
+						fprintf(stderr,"[WARNING] pool is full! %s %d",__FILE__,__LINE__);
+					}
+				}			
 			}
+
 			//if(container->top >= 200) printf("found!");
 			//maxLen = container->top > maxLen ? container->top : maxLen;
 		}
@@ -526,6 +558,8 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 
 int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets and make sure 
 {
+	return 1;
+
 	int j = 0;
 	int lastOffset = container->data[0].offset;
 	//introduce of settings
