@@ -377,7 +377,8 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 			|| INLMT("AUTHOR BIBLIOGRAPHY")
 			|| INLMT("AUTHOR BIOGRAPHIES")
 			|| INLMT("AUTHOR BIOGRAPHY")
-			|| INLMT("ADDRESS INFORMATION"))
+			|| INLMT("ADDRESS INFORMATION")
+			|| INLMT("Bibliographical"))
 			//|| INLMT("Bibliography");
 		{
 			container->data[container->top].t[1] = 1;
