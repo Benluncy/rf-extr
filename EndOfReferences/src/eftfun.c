@@ -702,6 +702,9 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	int offset = fd.offset;
 	int lmt = 200;
 	
+	// prepareDensityData 
+	prepareDensityData();
+	
 //	char *content = getPcontent();
 //	int offend = getPclen();	
 //	int finac = 1;// :1 is not ascii code  :0 is ascii code

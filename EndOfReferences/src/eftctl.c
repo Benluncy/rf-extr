@@ -103,11 +103,8 @@ int genEndSampleCtl(const char* fileName,int isDir)
 		//tmpCter = *_mfdc;
 		//makeSequenceForCombinedOffsets(&tmpCter);
 	}
-	
-	//step 2: calculator
-	
-	prepareDensityData();
-	
+
+
 	// log
 	fprintf(flog,"##[[DATA:%s|\n%20s]]\n",fileName,getPcontent()+targetOffset);
 	
