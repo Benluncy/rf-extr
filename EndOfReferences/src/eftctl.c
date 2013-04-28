@@ -112,6 +112,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 	//step 3: write into file
 	fprintf(fp,"# %s \n",fileName);
 	int pptag = 0;
+	int start = 1;
 	for(int i = 0; i < _mfdc->top;i++)
 	{
 		printf(".");
@@ -120,10 +121,16 @@ int genEndSampleCtl(const char* fileName,int isDir)
 		if(!haveDiffernecesE(_mfdc->data[i].offset,targetOffset)) pptag = 1;
 		//tx
 		//1-10
-		rankWrite(fp,1,_mfdc->data[i].t[0]+1,10);
+		rankWrite(fp,start,_mfdc->data[i].t[0]+1,10);
+		start += 10;
 		//11-55
 		for(int j=1;j<16;j++)
-			rankWrite(fp,8+j*3,_mfdc->data[i].t[j]+1,3);
+		{
+			fprintf(fp,"%d:%d ",start++,_mfdc->data[i].t[j]+1);
+			rankWrite(fp,start,_mfdc->data[i].t[j]+1,3);
+			start+=3;
+		}
+			
 		//	fprintf(fp,"%d:%d ",);
 		
 		/*
@@ -133,7 +140,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 		*/
 		// 181 - end 
 		//gen26ToEnd(fp,_mfdc->data[i]);
-		genNextDataForEndfeature(fp,_mfdc->data[i],61);
+		genNextDataForEndfeature(fp,_mfdc->data[i],start);
 		fprintf(fp," #%d",_mfdc->data[i].offset);
 		fprintf(fp,"\n");
 	}
