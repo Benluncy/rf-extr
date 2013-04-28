@@ -734,11 +734,11 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	fprintf(fp,"%d:%d ",start++,(hasNameafterTheOffset1(offset,lmt)?1:-1));
 	fprintf(fp,"%d:%d ",start++,(hasNameafterTheOffset2(offset,lmt)?1:-1));
 	
-	fprintf(fp,"%d:%d ",start++,(hasPPafterTheOffset(offset,lmt) >= hasPPafterTheOffset(offset,-lmt)))?1:-1);
-	fprintf(fp,"%d:%d ",start++,(hasPPafterTheOffset2(offset,lmt) >= hasPPafterTheOffset2(offset,-lmt)))?1:-1);
-	fprintf(fp,"%d:%d ",start++,(hasYearafterTheOffset(offset,lmt) >= hasYearafterTheOffset(offset,-lmt)))?1:-1);
-	fprintf(fp,"%d:%d ",start++,(hasNameafterTheOffset0(offset,lmt) >= hasNameafterTheOffset0(offset,-lmt)))?1:-1);
-	fprintf(fp,"%d:%d ",start++,(hasNameafterTheOffset1(offset,lmt) >= hasNameafterTheOffset1(offset,-lmt)))?1:-1);
+	fprintf(fp,"%d:%d ",start++,((hasPPafterTheOffset(offset,lmt) >= hasPPafterTheOffset(offset,-lmt)))?1:-1);
+	fprintf(fp,"%d:%d ",start++,((hasPPafterTheOffset2(offset,lmt) >= hasPPafterTheOffset2(offset,-lmt)))?1:-1);
+	fprintf(fp,"%d:%d ",start++,((hasYearafterTheOffset(offset,lmt) >= hasYearafterTheOffset(offset,-lmt)))?1:-1);
+	fprintf(fp,"%d:%d ",start++,((hasNameafterTheOffset0(offset,lmt) >= hasNameafterTheOffset0(offset,-lmt)))?1:-1);
+	fprintf(fp,"%d:%d ",start++,((hasNameafterTheOffset1(offset,lmt) >= hasNameafterTheOffset1(offset,-lmt)))?1:-1);
 	fprintf(fp,"%d:%d ",start++,((hasNameafterTheOffset2(offset,lmt) >= hasNameafterTheOffset2(offset,-lmt)))?1:-1);
 
 	fprintf(fp,"%d:%d ",start++,(asciiCodeDensity(offset,lmt) >= asciiCodeDensity(offset,-lmt))?1:-1);
