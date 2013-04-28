@@ -244,7 +244,8 @@ int hasYearafterTheOffset(int offset,int limit)
 	for(i=offset;i<offend-3;i++) // 19xx i_max = 1
 	{
 		if((content[i]=='1' && content[i+1]=='9')||
-			(content[i]=='2' && content[i+1]=='0'))
+			(content[i]=='2' && content[i+1]=='0') ||
+			(content[i]=='~' && content[i+1]=='9'))
 		{
 			if(fitPattern('n',content[i+2])&&fitPattern('n',content[i+3])) 
 				return i+4;
