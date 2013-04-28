@@ -25,12 +25,12 @@ int main(int argc,char *argv[])
 	int offset = atoi(argv[2]);
 	printf("parse : [%d]@[%s]...\n",offset,file_name);
 	initContent();
-	if(!parseFile(fileName))
+	if(!parseFile(file_name))
 	{
 		fprintf(stderr,"[[error parsing file : #%s#]]",fileName);
 		return -1;
 	}
-	printfContext(targetOffset);
+	printfContext(offset);
 	cleanContent();
 	return 0;
 }
