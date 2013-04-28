@@ -171,7 +171,8 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 			|| INLMT("AUTHOR BIBLIOGRAPHIES")
 			|| INLMT("AUTHOR BIBLIOGRAPHY")
 			|| INLMT("AUTHOR BIOGRAPHIES")
-			|| INLMT("AUTHOR BIOGRAPHY"))
+			|| INLMT("AUTHOR BIOGRAPHY")
+			|| INLMT("ADDRESS INFORMATION"))
 		{
 			if(!markedAck)
 			{
@@ -374,7 +375,8 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 			|| INLMT("AUTHOR BIBLIOGRAPHIES") 
 			|| INLMT("AUTHOR BIBLIOGRAPHY")
 			|| INLMT("AUTHOR BIOGRAPHIES")
-			|| INLMT("AUTHOR BIOGRAPHY"))
+			|| INLMT("AUTHOR BIOGRAPHY")
+			|| INLMT("ADDRESS INFORMATION"))
 			//|| INLMT("Bibliography");
 		{
 			container->data[container->top].t[1] = 1;
