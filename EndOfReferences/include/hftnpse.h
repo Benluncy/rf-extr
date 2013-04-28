@@ -42,7 +42,6 @@ int wordsNumber(int offset,int limit);
 
 inline double wordsDensity(int offset,int limit)
 {
-	int offset;
 	int offend;
 	int num = wordsNumber(offset,limit);
 	defineStartAndEnd(&offset,&offend,limit);
