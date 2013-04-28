@@ -22,7 +22,7 @@ int main(int argc,char *argv[])
 		printf("\t usage: %s <file_name> <offset>\n",argv[0]);
 	}
 	char *file_name = argv[1];
-	int offset = aoti(argv[2]);
+	int offset = atoi(argv[2]);
 	printf("parse : [%d]@[%s]...\n",offset,file_name);
 	initContent();
 	if(!parseFile(fileName))
