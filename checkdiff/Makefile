@@ -47,7 +47,7 @@ VPATH			:= include/:src/:../include/
 	export	VPATH
 LIBS			:= -L lib/ -ldl -lpthread  -lm 
 INCFLAG			:= -I include/
-CFLAGS			:= -Wall ${INCFLAG} #-std=c99
+CFLAGS			:= -Wall ${INCFLAG} -std=c99
 OBJS			:= 
 PROGS			:= checkdiff
 
