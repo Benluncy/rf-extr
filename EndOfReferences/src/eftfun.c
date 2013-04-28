@@ -654,6 +654,7 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 
 int makeSequenceForCombinedOffsets(endFeatureDataContainer *container)
 {
+	return 1;
 	unsigned int max[ENDLEN];
 	//unsigned int before[ENDLEN];
 	unsigned int hasData[ENDLEN];
@@ -827,6 +828,7 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 
 int prepareDensityData(void)
 {
+	return 1;
 	int beforeData;
 	int totalData;
 	for(int i=0;i<mfdc.top;i++)
