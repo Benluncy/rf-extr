@@ -801,7 +801,6 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 		
 		rankWrite(fp,start,fd.seq[i][3],wide);
 		start+=wide;*/
-
 	}
 
 	return start;
