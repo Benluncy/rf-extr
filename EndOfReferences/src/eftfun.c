@@ -996,7 +996,6 @@ int haveDiffernecesH(int dest,int src)
 	if(dest<0) dest = 0;
 	
 	if(dest>=getPclen()) dest = getPclen()-1;
-	int th = 0;
 	char *content = getPcontent();
 
 	if(dest < src)
