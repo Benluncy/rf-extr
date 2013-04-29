@@ -933,14 +933,14 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	int vote = 0;
 	for(int i=0;i<ENDCALLBACKLEN;i++)
 		if(endFunctionList[i](offset,lmt)) vote++;
-	rankWrite(fp,start+1,ENDCALLBACKLEN);
+	rankWrite(fp,start+1,vote,ENDCALLBACKLEN);
 	start+=ENDCALLBACKLEN+1;	
 	
 	lmt = 30;
 	vote = 0;
 	for(int i=0;i<ENDCALLBACKLEN;i++)
 		if(endFunctionList[i](offset,lmt)) vote++;
-	rankWrite(fp,start+1,ENDCALLBACKLEN);
+	rankWrite(fp,start+1,vote,ENDCALLBACKLEN);
 	start+=ENDCALLBACKLEN+1;
 
 
