@@ -678,6 +678,13 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 		markedReal[j] = edOffsetList[j]==0?1:0;
 		realOffset[j] = 0;
 	}
+	for(j=0;j<9;j++)
+	{
+		printf("ED%D:,MR:%dRO:%d|"edOffsetList[j],markedReal[j],realOffset[j]);
+	}
+		
+	printf("\n");
+	getchar();
 	//edOffsetList[0] = container->top;
 	/*
 	realOffset[0] = container->data[edOffsetList[0]].t[16];
