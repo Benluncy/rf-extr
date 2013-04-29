@@ -47,6 +47,7 @@ ekContainer myEc;
 endFeatureData mfd;
 endFeatureDataContainer mfdc;
 
+#define ECBL 5
 
 OffsetCallback endFunctionList[ENDCALLBACKLEN]={hasPPafterTheOffset,
 						hasPPafterTheOffset2,
@@ -57,6 +58,12 @@ OffsetCallback endFunctionList[ENDCALLBACKLEN]={hasPPafterTheOffset,
 						hasSeqOfTheOffset2,
 						hasSpecialKeyWords,
 						hasLocationafterTheOffset,
+						hasWords};
+						
+OffsetCallback endFunctionList[ECBL]={hasPPafterTheOffset,
+						hasPPafterTheOffset2,
+						hasYearafterTheOffset,
+						hasSpecialKeyWords,
 						hasWords};
 
 
@@ -880,9 +887,9 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	// /*
 	// f g1
 	lmt = -50;
-	for(int z=0;z<ENDCALLBACKLEN;z++)
+	for(int z=0;z<ECBL;z++)//ENDCALLBACKLEN
 	{
-		fprintf(fp,"%d:%d ",start++,((endFunctionList[z](offset,lmt) >= 
+		fprintf(fp,"%d:%d ",start++,((endFunctionList[z](offset,lmt) > 
 			endFunctionList[z](offset,-lmt)))?1:-1);
 	}
 	
@@ -1013,6 +1020,7 @@ int prepareDensityData(void)
 	return 1;
 	int beforeData;
 	int totalData;
+	/*
 	for(int i=0;i<mfdc.top;i++)
 	{
 		
@@ -1024,7 +1032,7 @@ int prepareDensityData(void)
 			mfdc.data[i].fid[j][1] = totalData;
 		}
 	}
-	
+	*/
 	//density and etc
 	
 	// adjacencyOffset setting ... 
