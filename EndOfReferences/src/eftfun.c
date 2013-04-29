@@ -914,6 +914,9 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	if(haveDiffernecesD(offset,getReferenceEndOffset()))
 	{
 		absdiff = 1;
+	}else
+	{
+		absdiff = absdiff < 10 ? absdiff+10 : absdiff;
 	}
 	
 	powerWrite(fp,start,absdiff,10);
