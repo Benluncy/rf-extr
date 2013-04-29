@@ -350,7 +350,7 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 			}
 			// 9 end year before ack or table
 			//if(endYearBeforeAckOrTable == i)
-			if(endYearBeforeAck == i) || (endYearBeforeTable == i))
+			if((endYearBeforeAck == i) || (endYearBeforeTable == i))
 			{
 				container->data[container->top].t[9] = 1;
 				hasContent = 1;
