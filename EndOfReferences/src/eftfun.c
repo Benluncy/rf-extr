@@ -950,8 +950,8 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	powerWrite(fp,start,ABSDIFF(offset,absOffset[1]),10);
 	start+=10;
 	
-	powerWrite(fp,start,ABSDIFF(offset,getReferenceHeadOffset()),2);
-	start+=2;
+	powerWrite(fp,start,ABSDIFF(offset,getReferenceHeadOffset()),5);
+	start+=5;
 
 	lmt = -200;
 	fprintf(fp,"%d:%d ",start++,(hasSeqOfTheOffset(offset,lmt)?1:-1));
