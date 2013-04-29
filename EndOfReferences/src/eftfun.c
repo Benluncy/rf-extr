@@ -890,7 +890,7 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	for(int z=0;z<ECBL;z++)//ENDCALLBACKLEN
 	{
 		fprintf(fp,"%d:%d ",start++,((endFunctionList[z](offset,lmt) > 
-			endFunctionList[z](offset,-lmt)))?1:-1);
+			endFunctionList[z](offset,-lmt)))?1:0);
 	}
 	
 	/*
