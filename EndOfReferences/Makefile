@@ -68,6 +68,10 @@ run			:
 	./main
 	svm_learn -c 0.1 train.txt
 	svm_classify test.txt svm_model 
+	
+test			: 
+	svm_learn -c 0.1 test.txt
+	svm_classify train.txt svm_model 
 
 main			: ${OBJS}
 	${CC} ${CFLAGS} $@.c -o $@ ${OBJS} ${LIBS}
