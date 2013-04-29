@@ -181,17 +181,18 @@ int genEndSampleCtl(const char* fileName,int isDir)
 				rankWrite(fp,start,_mfdc->data[i].t[j],3);
 				start += 3;
 				break;
-			
+			/*
 			case 6: // end of article
 				// 0 , 1
 				fprintf(fp,"%d:%d ",start++,_mfdc->data[i].t[j]);
 				break;
-			
+			*/
 			case 9:
 			case 12:
 			case 15:
 				// 9 end year before ack or table
 				// 12 end page before ack or table
+				// 0 , 1 , 2,
 				rankWrite(fp,start,_mfdc->data[i].t[j],3);
 				start += 3;
 				break;
