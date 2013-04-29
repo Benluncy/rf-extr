@@ -209,13 +209,14 @@ int genEndSampleCtl(const char* fileName,int isDir)
 	
 	
 	//DEBUG
-	if(!pptag)
-	{
-		printf("[~]");
-	}
+	
+	//if(!pptag)
+	//{
+	//	printf("[~]");
+	//}
 	//step 4: finish handle
 	//printf("(%d)",pptag);
-	printf(" [ok]\n");
+	printf(" ok\n");
 	id++;
 	
 	
