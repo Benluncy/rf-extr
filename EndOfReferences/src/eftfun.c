@@ -120,8 +120,8 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 	int hasContent = 0;
 	container->top = 0;
 	
-	int avgOffset = 0;
-	int offnum = 0;
+	//int avgOffset = 0;
+	//int offnum = 0;
 	//introduce of settings
 	// 0 empty for valued -- index of all offsets
 	// 1 acknowledgements etc.
