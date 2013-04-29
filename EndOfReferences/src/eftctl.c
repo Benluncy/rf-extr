@@ -167,14 +167,17 @@ int genEndSampleCtl(const char* fileName,int isDir)
 			//	rateWrite(fp,start,_mfdc->data[j].t[0]/_mfdc->top);
 			//	start+=5;
 			//	break;
-			/*
 			case 1:
 			case 2:
 				// 1 acknowledgements etc.
 				// 2 table , he is figure ... (a list)
 				fprintf(fp,"%d:%d ",start++,_mfdc->data[_mfdc->top].t[j]);
+				if(_mfdc->data[_mfdc->top].t[j])
+				{
+					printf("{%d-diff:%d}",ABSDIFF(_mfdc->data[_mfdc->top].offset,targetOffset));
+				}
 				break;
-			*/
+			
 			case 3:
 			case 4:
 			case 5:
