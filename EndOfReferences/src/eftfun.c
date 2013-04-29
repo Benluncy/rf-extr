@@ -763,8 +763,6 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 				//printf("[%d-%d-%d]",i,19+j,container->data[i].t[19+j]);
 			} 
 		}
-		
-		
 	}
 	
 	
@@ -786,7 +784,7 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 			}
 			for(int z=16;z<ENDLEN;z++)
 			{
-				container->data[j].t[z] = MIN2(container->data[i].t[z],container->data[j].t[z]);
+				container->data[j].t[z] = MINANDNZ(container->data[i].t[z],container->data[j].t[z]);
 			}
 		}else
 		{
