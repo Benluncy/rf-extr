@@ -972,7 +972,7 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 		
 		fprintf(fp,"%d:%d ",start++,(fd.density[i][0][1] < fd.density[i][0][0])?1:-1);
 		fprintf(fp,"%d:%d ",start++,(fd.density[i][1][1] < fd.density[i][1][0])?1:-1);
-		fprintf(fp,"%d:%d ",start++,(fd.density[i][2][1] < fd.density[i][2][0])?1:-1);
+		//fprintf(fp,"%d:%d ",start++,(fd.density[i][2][1] < fd.density[i][2][0])?1:-1);
 		//fprintf(fp,"%d:%d ",start++,(fd.vari[1] < fd.vari[0])?1:-1);
 		
 		
@@ -1063,7 +1063,7 @@ int prepareDensityData(void)
 			offsetBetweenStat(mfdc.data[i].offset,mfdc.data[i].adjacencyOffset[1],&diff,endFunctionList[j]);
 			mfdc.data[i].density[j][1][1] = (double)diff/NOTZERO(VALUESDIFF(mfdc.data[i].adjacencyOffset[1],mfdc.data[i].offset));
 			
-			
+			/*
 			lmt = 300;
 			// prev && next 300* words
 			offsetBetweenStat(mfdc.data[i].offset,LMB(mfdc.data[i].offset-lmt),&diff,endFunctionList[j]);
@@ -1071,7 +1071,7 @@ int prepareDensityData(void)
 			
 			offsetBetweenStat(mfdc.data[i].offset,LMB(mfdc.data[i].offset+lmt),&diff,endFunctionList[j]);
 			mfdc.data[i].density[j][1][1] = (double)diff/NOTZERO(VALUESDIFF(LMB(mfdc.data[i].offset+lmt),mfdc.data[i].offset));
-			
+			*/
 			// variance 
 			//int getCloseKWD(int offset,CloseKWD *closeKWD,int (*callback)(int offset,int limit));
 			//getCloseKWD(mfdc.data[i].offset,&ckwd,endFunctionList[j]);
