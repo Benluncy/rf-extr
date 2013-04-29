@@ -884,7 +884,7 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	
 	//prepareDensityData();
 	
-	/*
+	// /*
 	// f g1
 	lmt = -50;
 	fprintf(fp,"%d:%d ",start++,((hasPPafterTheOffset(offset,lmt) >= hasPPafterTheOffset(offset,-lmt)))?1:-1);
@@ -961,8 +961,8 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	//start+=5;
 	
 	
-	for(int i=0;i<MECL;i++)
-	{
+	//for(int i=0;i<MECL;i++)
+	//{
 		//rateWrite(fp,start,(fd.offset == getPclen()) ? -1 :((double)fd.fid[i][0]/fd.offset)/
 		//			((fd.fid[i][1]-fd.fid[i][0])/(getPclen()-fd.offset)));
 		//start+=5;
@@ -1000,7 +1000,7 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 		start+=wide;
 		// */
 		
-	}
+	//}
 	
 	return start;
 }

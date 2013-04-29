@@ -188,13 +188,13 @@ int genEndSampleCtl(const char* fileName,int isDir)
 				break;
 			// */
 	
-			/*
+			// /*
 			// f 3
 			case 6: // end of article
 				// 0 , 1
 				fprintf(fp,"%d:%d ",start++,_mfdc->data[i].t[j]);
 				break;
-			*/
+			// */
 			/*
 			// f 4
 			case 7:
