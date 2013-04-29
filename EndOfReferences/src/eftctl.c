@@ -169,7 +169,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 				break;
 			case 1:
 			case 2:
-				fprintf(fp,"%d:%d ",start++,container->data[container->top].t[j]);
+				fprintf(fp,"%d:%d ",start++,_mfdc->data[_mfdc->top].t[j]);
 				break;
 			case 3:
 			case 4:
@@ -179,7 +179,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 				start += 3;
 				break;
 			case 6:
-				fprintf(fp,"%d:%d ",start++,container->data[container->top].t[j]);
+				fprintf(fp,"%d:%d ",start++,_mfdc->data[_mfdc->top].t[j]);
 				break;
 			case 9:
 			case 12:
