@@ -199,7 +199,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 				break;
 			// */
 			
-			//*
+			/*
 			// f 4
 			case 7:
 			case 8:
@@ -207,7 +207,15 @@ int genEndSampleCtl(const char* fileName,int isDir)
 			case 11:
 			case 13:
 			case 14:
-			
+				// 9 end year before ack or table
+				// 12 end page before ack or table
+				// end year before article
+				// 0 , 1 , 2,
+				rankWrite(fp,start,_mfdc->data[i].t[j],3);
+				start += 3;
+				break;	
+			// */
+			//*		
 			case 9:
 			case 12:
 			case 15:
@@ -215,7 +223,8 @@ int genEndSampleCtl(const char* fileName,int isDir)
 				// 12 end page before ack or table
 				// end year before article
 				// 0 , 1 , 2,
-				rankWrite(fp,start,_mfdc->data[i].t[j],3);
+				//rankWrite(fp,start,_mfdc->data[i].t[j],3);
+				rankWrite(fp,start,_mfdc->data[i].t[j-1]+_mfdc->data[i].t[j-2],4);
 				start += 3;
 				break;
 			// */
@@ -235,12 +244,13 @@ int genEndSampleCtl(const char* fileName,int isDir)
 		
 			
 		}
-		
+		/*
 		rankWrite(fp,start,_mfdc->data[i].t[7]+_mfdc->data[i].t[8]
 					+_mfdc->data[i].t[10]+_mfdc->data[i].t[11]
 					+_mfdc->data[i].t[13]+_mfdc->data[i].t[14]
 					+_mfdc->data[i].t[3]+_mfdc->data[i].t[4]
 					+_mfdc->data[i].t[5],8);
+		*/
 		start += 8;
 			
 		start = genNextDataForEndfeature(fp,_mfdc->data[i],start);
