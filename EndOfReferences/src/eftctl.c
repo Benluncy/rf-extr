@@ -135,11 +135,14 @@ int genEndSampleCtl(const char* fileName,int isDir)
 	//printfContextS(targetOffset,"targetOffset");
 	
 	int lastOffset = _mfdc->data[0].offset;
-	
+	int hasp = 0;
 	for(int i = 0; i < _mfdc->top;i++)
 	{
+		if(hasp) break;
 		if(!haveDifferneces(lastOffset,_mfdc->data[i].offset)) continue;
 		lastOffset = _mfdc->data[i].offset;
+		
+		if(!haveDiffernecesH(_mfdc->data[i].offset,targetOffset)) hasp = 1;
 		
 		printf(".");
 		//positive
@@ -172,7 +175,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 			case 17:
 			case 18:
 				break;
-			*/
+			
 			case 9:
 			case 12:
 			case 15:
@@ -180,7 +183,9 @@ int genEndSampleCtl(const char* fileName,int isDir)
 			case 17:
 			case 18:
 				break;
+			*/
 			default:
+			/*
 				if(j>18)
 				{
 					powerWrite(fp,start,_mfdc->data[i].t[j],8);
@@ -190,8 +195,9 @@ int genEndSampleCtl(const char* fileName,int isDir)
 					rankWrite(fp,start,_mfdc->data[i].t[j]+1,8);
 					start+=8;
 				}
-				
-				
+			*/	
+				powerWrite(fp,start,_mfdc->data[i].t[j],4);
+				start+=4;
 			}
 			
 			//fprintf(fp,"%d:%d ",start++,_mfdc->data[i].t[j]+1);
@@ -214,6 +220,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 	
 	int mstart = 1;
 	//DEBUG
+	/*
 	if(!pptag)
 	{
 		for(int i = 0; i < _mfdc->top;i++)
@@ -226,7 +233,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 				{
 					switch(j)
 					{
-					/*
+					//
 					case 7:
 					case 8:
 					case 10:
@@ -237,7 +244,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 					case 17:
 					case 18:
 						break;
-					*/
+					///
 					case 9:
 					case 12:
 					case 15:
@@ -270,7 +277,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 				break;
 			}
 		}
-	/*
+
 		printf("\n DEBUG : contents\n");
 		for(int i=0;i< _mfdc->top;i++)
 		{
@@ -279,8 +286,9 @@ int genEndSampleCtl(const char* fileName,int isDir)
 		}
 		printf("[T:%d]",targetOffset);
 		printfContext(targetOffset);
-	*/	
+	///	
 	}
+	*/
 	//step 4: finish handle
 	printf("(%d)",pptag);
 	printf(" [done]\n");
