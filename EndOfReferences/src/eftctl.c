@@ -196,7 +196,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 			if(j==0)
 			{
 				//powerWrite(fp,start,-,4);
-				rateWrite(fp,start,_mfdc->data[i].t[0]/_mfdc->top)
+				rateWrite(fp,start,_mfdc->data[i].t[0]/_mfdc->top);
 				start+=5;
 			}else if(j<16)
 			{
