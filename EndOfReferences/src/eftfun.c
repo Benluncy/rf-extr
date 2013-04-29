@@ -613,7 +613,11 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 	int th=0;
 	int realOffset[6];// 7 8 10 11  13 14
 	int markedReal[6];
-	for(j=0;j<6;j++) markedReal[j] = edOffsetList[j]==0?1:0;
+	for(j=0;j<6;j++)
+	{
+		markedReal[j] = edOffsetList[j]==0?1:0;
+		realOffset[j] = 0;
+	}
 	//edOffsetList[0] = container->top;
 	/*
 	realOffset[0] = container->data[edOffsetList[0]].t[16];
@@ -625,15 +629,15 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 	realOffset[4] = container->data[edOffsetList[4]].t[18];
 	realOffset[5] = container->data[edOffsetList[5]].t[18];
 	*/
-	for(th=0;!allMarked(markedReal,6);th++)
+	for(th=0;(!allMarked(markedReal,6)) && (edOffsetList[j]+th)< container->top && (edOffsetList[j]-th) >= 0;th++)
 	{
 		for(j=0;j<6;j++)
 		{
-			if(container->data[edOffsetList[j]+th].t[16+(j/2)]!=0)
+			if(container->data[edOffsetList[j]+th].t[16+(j/2)]!=0 && !markedReal[j])
 			{
 				realOffset[j] = container->data[edOffsetList[j]+th].t[16+(j/2)];
 				markedReal[j] = 1;
-			}else if(container->data[edOffsetList[j]-th].t[16+(j/2)]!=0)
+			}else if(container->data[edOffsetList[j]-th].t[16+(j/2)]!=0 && !markedReal[j])
 			{
 				realOffset[j] = container->data[edOffsetList[j]-th].t[16+(j/2)];
 				markedReal[j] = 1;
@@ -641,6 +645,18 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 		}
 	}
 	
+	for(j=0;j<6;j++) markedReal[j] = realOffset[j] || !edOffsetList[j];
+	for(th=container->top;(!allMarked(markedReal,6)) && th>=0;th--)
+	{
+		for(j=0;j<6;j++)
+		{
+			if(container->data[th].t[16+(j/2)]!=0 && !markedReal[j])
+			{
+				realOffset[j] = container->data[th].t[16+(j/2)];
+				markedReal[j] = 1;
+			}
+		}
+	}
 	
 	//introduce of settings
 	// 0 empty for valued -- index of all offsets
