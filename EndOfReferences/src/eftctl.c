@@ -227,6 +227,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 	//DEBUG
 	if(!pptag)
 	{
+		/*
 		for(int i = 0; i < _mfdc->top;i++)
 		{
 			if(!haveDiffernecesD(_mfdc->data[i].offset,targetOffset))
@@ -287,6 +288,8 @@ int genEndSampleCtl(const char* fileName,int isDir)
 				break;
 			}
 		}
+		*/
+		printf("[~]");
 		/*
 		printf("\n DEBUG : contents\n");
 		for(int i=0;i< _mfdc->top;i++)
