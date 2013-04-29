@@ -147,11 +147,13 @@ int genEndSampleCtl(const char* fileName,int isDir)
 		
 			switch(j)
 			{
+			/*
 			case 0:
 				rateWrite(fp,start,_mfdc->data[j].t[0]/_mfdc->top);
 				start+=5;
 				break;
-			/*
+			*/
+			
 			case 1:
 			case 2:
 				// 1 acknowledgements etc.
@@ -168,7 +170,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 				//	}
 				//}
 				break;
-			
+			/*
 			case 3:
 			case 4:
 			case 5:
