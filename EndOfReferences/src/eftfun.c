@@ -457,7 +457,9 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 				container->data[container->top].t[2] = 2;
 				hasContent = 1;
 			}
-		}else if(!haveDifferneces(absOffset[1],i))
+		}
+		
+		if(container->data[container->top].t[2]==0 && !haveDifferneces(absOffset[1],i))
 		{
 			container->data[container->top].t[2] = 1;
 		}
