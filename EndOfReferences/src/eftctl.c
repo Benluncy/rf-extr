@@ -158,7 +158,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 		//start += 10;
 		//11-55
 		start = 1;
-		for(int j=1;j<ENDLEN;j++)
+		for(int j=0;j<ENDLEN;j++)
 		{
 		/*
 			switch(j)
@@ -193,8 +193,20 @@ int genEndSampleCtl(const char* fileName,int isDir)
 			}
 		*/	
 			//fprintf(fp,"%d:%d ",start++,_mfdc->data[i].t[j]+1);
-			powerWrite(fp,start,_mfdc->data[i].t[j]+1,4);
-			start+=4;
+			if(j==0)
+			{
+				powerWrite(fp,start,_mfdc->data[i].top- start,_mfdc->data[i].t[j],4);
+				start+=4;
+			}else if(j<16)
+			{
+				rankWrite(fp,start,_mfdc->data[i].t[j]+1,8);
+				start+=8;
+			}else
+			{
+				powerWrite(fp,start,_mfdc->data[i].t[j]+1,4);
+				start+=4;
+			}
+			
 			
 		}
 			
@@ -224,11 +236,24 @@ int genEndSampleCtl(const char* fileName,int isDir)
 				start = 1;
 				pptag = -1;
 				fprintf(fp,"+1 ");
-				for(int j=1;j<ENDLEN;j++)
+				for(int j=0;j<ENDLEN;j++)
 				{
-					powerWrite(fp,start,_mfdc->data[i].t[j]+1,4);
-					start+=4;
+					//powerWrite(fp,start,_mfdc->data[i].t[j]+1,4);
+					//start+=4;
 					//fprintf(fp,"%d:%d ",start++,_mfdc->data[i].t[j]+1);
+					if(j==0)
+					{
+						powerWrite(fp,start,_mfdc->data[i].top- start,_mfdc->data[i].t[j],4);
+						start+=4;
+					}else if(j<16)
+					{
+						rankWrite(fp,start,_mfdc->data[i].t[j]+1,8);
+						start+=8;
+					}else
+					{
+						powerWrite(fp,start,_mfdc->data[i].t[j]+1,4);
+						start+=4;
+					}
 			
 				}
 				
