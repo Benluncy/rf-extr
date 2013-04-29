@@ -875,7 +875,7 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	int offset = fd.offset;
 	int lmt;
 	
-	prepareDensityData();
+	//prepareDensityData();
 	
 	/*
 	// f g1

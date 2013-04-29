@@ -58,6 +58,7 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int step);
 
 int prepareDensityData(void);
 
+
 int allMarked(int a[],int len);
 
 int powerWrite(FILE *fp,int start,int value,int len);
