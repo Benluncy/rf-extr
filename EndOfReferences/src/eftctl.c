@@ -195,8 +195,9 @@ int genEndSampleCtl(const char* fileName,int isDir)
 			//fprintf(fp,"%d:%d ",start++,_mfdc->data[i].t[j]+1);
 			if(j==0)
 			{
-				powerWrite(fp,start,_mfdc->top-_mfdc->data[i].t[j],4);
-				start+=4;
+				//powerWrite(fp,start,-,4);
+				rateWrite(fp,start,_mfdc->data[i].t[0]/_mfdc->top)
+				start+=5;
 			}else if(j<16)
 			{
 				rankWrite(fp,start,_mfdc->data[i].t[j]+1,8);
