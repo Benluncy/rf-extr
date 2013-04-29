@@ -220,7 +220,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 		{
 			if(!haveDiffernecesE(_mfdc->data[i].offset,targetOffset))
 			{
-				pptag++;
+				pptag = -1;
 				fprintf(fp,"+1 ");
 				for(int j=1;j<ENDLEN;j++)
 				{
