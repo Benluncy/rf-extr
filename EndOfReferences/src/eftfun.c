@@ -972,7 +972,7 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 		//fprintf(fp,"%d:%f ",start++,quot(fd.density[i][2][1],fd.density[i][2][0]));
 		//fprintf(fp,"%d:%f ",start++,quot(fd.vari[1],fd.vari[0]));
 	
-		
+		/*
 		int wide = 6;
 		rankWrite(fp,start,fd.seq[i][0],wide);
 		start+=wide;
@@ -985,6 +985,7 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 		
 		rankWrite(fp,start,fd.seq[i][3],wide);
 		start+=wide;
+		*/
 	}
 	
 	return start;
@@ -1067,7 +1068,7 @@ int prepareDensityData(void)
 		}
 	}
 	
-	
+	/*
 	// sequence setting ... 
 	printf(".");fflush(NULL);//TODO TIPS
 	for(int i=0;i<mfdc.top;i++)
@@ -1100,6 +1101,7 @@ int prepareDensityData(void)
 			}
 		}
 	}
+	*/
 	
 	return 1;
 }
