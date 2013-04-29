@@ -875,7 +875,7 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	int offset = fd.offset;
 	int lmt;
 	
-	// prepareDensityData();
+	prepareDensityData();
 	
 	/*
 	// f g1
@@ -934,7 +934,7 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	start+=2;*/
 	// no use end 
 	
-	// /*
+	/*
 	// f g5
 	lmt = -200;
 	fprintf(fp,"%d:%d ",start++,(hasSeqOfTheOffset(offset,lmt)?1:-1));
@@ -952,23 +952,29 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	//fprintf(fp,"%d:%f ",start++,(double)(getPclen()-offset)/offset);
 	//rateWrite(fp,start,(double)offset/getPclen());
 	//start+=5;
-	/*
+	
+	
 	for(int i=0;i<ENDCALLBACKLEN;i++)
 	{
 		//rateWrite(fp,start,(fd.offset == getPclen()) ? -1 :((double)fd.fid[i][0]/fd.offset)/
 		//			((fd.fid[i][1]-fd.fid[i][0])/(getPclen()-fd.offset)));
 		//start+=5; //TODO ADD 
 		
+		// /*
+		// f g6
+		
 		fprintf(fp,"%d:%d ",start++,(fd.density[i][0][1] <= fd.density[i][0][0])?1:-1);
 		fprintf(fp,"%d:%d ",start++,(fd.density[i][1][1] <= fd.density[i][1][0])?1:-1);
 		fprintf(fp,"%d:%d ",start++,(fd.density[i][2][1] <= fd.density[i][2][0])?1:-1);
 	//	fprintf(fp,"%d:%d ",start++,(fd.vari[1] <= fd.vari[0])?1:-1);
 		
+		
+		// */
+		
 		//fprintf(fp,"%d:%f ",start++,quot(fd.density[i][0][1],fd.density[i][0][0]));
 		//fprintf(fp,"%d:%f ",start++,quot(fd.density[i][1][1],fd.density[i][1][0]));
 		//fprintf(fp,"%d:%f ",start++,quot(fd.density[i][2][1],fd.density[i][2][0]));
 		//fprintf(fp,"%d:%f ",start++,quot(fd.vari[1],fd.vari[0]));
-	*/
 		/*
 		int wide = 6;
 		rankWrite(fp,start,fd.seq[i][0],wide);
@@ -993,7 +999,7 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 
 int prepareDensityData(void)
 {
-	return 1;
+	//return 1;
 	int beforeData;
 	int totalData;
 	for(int i=0;i<mfdc.top;i++)
@@ -1065,7 +1071,7 @@ int prepareDensityData(void)
 		}
 	}
 	
-	
+	/*
 	// sequence setting ... 
 	printf(".");fflush(NULL);//TODO TIPS
 	for(int i=0;i<mfdc.top;i++)
@@ -1098,7 +1104,7 @@ int prepareDensityData(void)
 			}
 		}
 	}
-	
+	*/
 	return 1;
 }
 
