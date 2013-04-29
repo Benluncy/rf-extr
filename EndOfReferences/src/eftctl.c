@@ -141,7 +141,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 		//lastOffset = _mfdc->data[i].offset;
 		
 		
-		printf(".");
+		printf(".(%d)",_mfdc->data[i].offset);
 		//positive
 		
 		fprintf(fp,"%c1 ",!haveDiffernecesD(_mfdc->data[i].offset,targetOffset)?'+':'-');
@@ -163,16 +163,18 @@ int genEndSampleCtl(const char* fileName,int isDir)
 		
 			switch(j)
 			{
-			case 0:
-				rateWrite(fp,start,_mfdc->data[j].t[0]/_mfdc->top);
-				start+=5;
-				break;
+			//case 0:
+			//	rateWrite(fp,start,_mfdc->data[j].t[0]/_mfdc->top);
+			//	start+=5;
+			//	break;
+			/*
 			case 1:
 			case 2:
 				// 1 acknowledgements etc.
 				// 2 table , he is figure ... (a list)
 				fprintf(fp,"%d:%d ",start++,_mfdc->data[_mfdc->top].t[j]);
 				break;
+			*/
 			case 3:
 			case 4:
 			case 5:
@@ -234,7 +236,6 @@ int genEndSampleCtl(const char* fileName,int isDir)
 				fprintf(fp,"+1 ");
 				for(int j=0;j<ENDLEN;j++)
 				{
-		
 					switch(j)
 					{
 					case 0:
