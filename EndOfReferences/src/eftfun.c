@@ -752,10 +752,14 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 	
 	// do combine
 	j=0;
+	int offNum=1;
+	int sumOffset = container->data[0].offset;;
 	for(int i=1;i<container->top;i++)
 	{
 		if(!haveDifferneces(lastOffset,container->data[i].offset))
 		{
+			sumOffset += container->data[i].offset;
+			offNum ++;
 			for(int z=1;z<16;z++)
 			{
 				container->data[j].t[z] = MAX2(container->data[i].t[z],container->data[j].t[z]);
@@ -766,15 +770,18 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 			}
 		}else
 		{
-			container->data[j].offset = (container->data[j].offset+container->data[(i-1)<j?j:(i-1)].offset)/2;
+			container->data[j].offset = sumOffset / offNum;
 			j++;
 			container->data[j].offset = container->data[i].offset;
+			lastOffset = container->data[i].offset;
 			container->data[j].t[0] = j;
+			offNum = 1;
+			sumOffset =  container->data[i].offset;
 			for(int k=1;k<ENDLEN;k++)
 			{
 				container->data[j].t[k] = container->data[i].t[k];
 			}
-			lastOffset = container->data[i].offset;
+			
 		}
 	}
 	container->top = j+1;
