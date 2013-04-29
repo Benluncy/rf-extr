@@ -908,7 +908,7 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	powerWrite(fp,start,ABSDIFF(offset,absOffset[1]),10);
 	start+=10;
 */	
-	powerWrite(fp,start,1+(ABSDIFF(offset,getReferenceEndOffset())/thresholdForDifferneces),10);
+	powerWrite(fp,start,1+(ABSDIFF(offset,getReferenceEndOffset())/(thresholdForDifferneces*2)),10);
 	start+=10;
 /*
 	lmt = -200;
