@@ -349,9 +349,10 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 				//isMarkedEYBT = 1;
 			}
 			// 9 end year before ack or table
-			if(endYearBeforeAckOrTable == i)
+			//if(endYearBeforeAckOrTable == i)
+			if(endYearBeforeAck == i) || (endYearBeforeTable == i)
 			{
-				container->data[container->top].t[9] = (endYearBeforeAck == i) || (endYearBeforeTable == i);
+				container->data[container->top].t[9] = 1;
 				hasContent = 1;
 				edOffsetList[2] = container->top;
 				//isMarkedEYBAOT = 1;
@@ -373,9 +374,10 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 				//isMarkedEPBT = 1;
 			}
 			// 12 end page before ack or table
-			if(endPageBeforeAckOrTable == i)
+			//if(endPageBeforeAckOrTable == i)
+			if((endPageBeforeAck == i) || (endPageBeforeTable == i))
 			{
-				container->data[container->top].t[12] = (endPageBeforeAck == i) || (endPageBeforeTable == i);
+				container->data[container->top].t[12] = 1;
 				hasContent = 1;
 				edOffsetList[5] = container->top;
 				//isMarkedEPBAOT = 1;
@@ -397,9 +399,10 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 				//isMarkedEP2BT = 1;
 			}
 			// 15 end page2 before ack or table
-			if(endPage2BeforeAckOrTable == i)
+			//if(endPage2BeforeAckOrTable == i)
+			if((endPage2BeforeAck == i) || (endPage2BeforeTable == i))
 			{
-				container->data[container->top].t[15] = (endPage2BeforeAck == i) || (endPage2BeforeTable == i);
+				container->data[container->top].t[15] = 1;
 				hasContent = 1;
 				edOffsetList[8] = container->top;
 				//isMarkedEP2BAOT = 1;
@@ -734,7 +737,11 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 		{
 			if(container->data[i].t[16+j] != 0)
 			{
-				container->data[i].t[19+j] = ABSDIFF(container->data[i].t[16+j],realOffset[j]);
+				if(j%3 == 2)
+				{
+					container->data[i].t[19+j] = MINANDNZ(container->data[i].t[18+j],container->data[i].t[17+j]);
+				}else
+					container->data[i].t[19+j] = ABSDIFF(container->data[i].t[16+j],realOffset[j]);
 				//printf("[%d-%d-%d]",i,19+j,container->data[i].t[19+j]);
 			} 
 		}

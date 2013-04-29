@@ -200,8 +200,13 @@ int genEndSampleCtl(const char* fileName,int isDir)
 				start+=5;
 			}else if(j<16)
 			{
+				switch(j)
+				{
+				case:
 				rankWrite(fp,start,_mfdc->data[i].t[j]+1,8);
 				start+=8;
+				}
+				
 			}else
 			{
 				powerWrite(fp,start,_mfdc->data[i].t[j]+1,8);
