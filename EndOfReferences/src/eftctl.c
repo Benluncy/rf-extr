@@ -240,6 +240,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 				if(_mfdc->data[i].t[j]!=0)
 				{
 					printf("XX[%d]XX",_mfdc->data[i].t[j]);
+					getchar();
 				}
 				powerWrite(fp,start,_mfdc->data[i].t[j],8);
 				start+=8;
