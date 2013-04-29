@@ -48,6 +48,8 @@ endFeatureData mfd;
 endFeatureDataContainer mfdc;
 
 
+#define MECL 5
+/*
 OffsetCallback endFunctionList[ENDCALLBACKLEN]={hasPPafterTheOffset,
 						hasPPafterTheOffset2,
 						hasYearafterTheOffset,
@@ -58,7 +60,12 @@ OffsetCallback endFunctionList[ENDCALLBACKLEN]={hasPPafterTheOffset,
 						hasSpecialKeyWords,
 						hasLocationafterTheOffset,
 						hasWords};
-
+*/
+OffsetCallback endFunctionList[MECL]={hasPPafterTheOffset2,
+						hasYearafterTheOffset,
+						hasNameafterTheOffset0,
+						hasSeqOfTheOffset2,
+						hasSpecialKeyWords};
 
 int edOffsetList[9];
 int absOffset[2]; // ack fig
@@ -954,7 +961,7 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	//start+=5;
 	
 	
-	for(int i=0;i<ENDCALLBACKLEN;i++)
+	for(int i=0;i<MECL;i++)
 	{
 		//rateWrite(fp,start,(fd.offset == getPclen()) ? -1 :((double)fd.fid[i][0]/fd.offset)/
 		//			((fd.fid[i][1]-fd.fid[i][0])/(getPclen()-fd.offset)));
@@ -1009,7 +1016,7 @@ int prepareDensityData(void)
 	for(int i=0;i<mfdc.top;i++)
 	{
 		
-		for(int j=0;j<ENDCALLBACKLEN;j++)
+		for(int j=0;j<MECL;j++)
 		{
 			offsetStat(mfdc.data[i].offset,
 					&totalData,&beforeData,endFunctionList[j]);
@@ -1043,7 +1050,7 @@ int prepareDensityData(void)
 	//CloseKWD ckwd;
 	for(int i=0;i<mfdc.top;i++)
 	{
-		for(int j=0;j<ENDCALLBACKLEN;j++)
+		for(int j=0;j<MECL;j++)
 		{
 			//printf("X");
 			mfdc.data[i].density[j][0][0] = (double)mfdc.data[i].fid[j][0]/NOTZERO(mfdc.data[i].offset);
