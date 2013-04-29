@@ -1016,7 +1016,7 @@ int prepareDensityData(void)
 	for(int i=0;i<mfdc.top;i++)
 	{
 		
-		for(int j=0;j<MECL;j++)
+		for(int j=0;j<ENDCALLBACKLEN;j++)
 		{
 			offsetStat(mfdc.data[i].offset,
 					&totalData,&beforeData,endFunctionList[j]);
