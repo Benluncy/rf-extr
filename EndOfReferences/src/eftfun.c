@@ -944,17 +944,17 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	fprintf(fp,"%d:%d ",start++,((hasNameafterTheOffset2(offset,lmt) >= hasNameafterTheOffset2(offset,-lmt)))?1:-1);
 	
 		
-	//absOffset[0] = i;
-	fprintf(fp,"%d:%d ",start++,ABSDIFF(offset,absOffset[0]));
-	fprintf(fp,"%d:%d ",start++,ABSDIFF(offset,absOffset[1]));
+	//absOffset[0] = 
+	powerWrite(fp,start,ABSDIFF(offset,absOffset[0]),10);
+	start+=10;
+	powerWrite(fp,start,ABSDIFF(offset,absOffset[1]),10);
+	start+=10;
 
-	/*
 	lmt = -200;
 	fprintf(fp,"%d:%d ",start++,(hasSeqOfTheOffset(offset,lmt)?1:-1));
 	fprintf(fp,"%d:%d ",start++,(hasSeqOfTheOffset2(offset,lmt)?1:-1));	
 	fprintf(fp,"%d:%d ",start++,((hasSeqOfTheOffset(offset,lmt) >= hasSeqOfTheOffset(offset,-lmt)))?1:-1);
 	fprintf(fp,"%d:%d ",start++,((hasSeqOfTheOffset2(offset,lmt) >= hasSeqOfTheOffset2(offset,-lmt)))?1:-1);
-	*/
 	
 	//fprintf(fp,"%d:%d ",start++,asciiCodeDensity(offset,lmt) >= asciiCodeDensity(offset,-lmt));
 	//fprintf(fp,"%d:%d ",start++,dataDensity(offset,lmt) >= dataDensity(offset,-lmt));
