@@ -279,7 +279,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 				break;
 			}
 		}
-
+		/*
 		printf("\n DEBUG : contents\n");
 		for(int i=0;i< _mfdc->top;i++)
 		{
@@ -288,6 +288,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 		}
 		printf("[T:%d]",targetOffset);
 		printfContext(targetOffset);
+		*/
 	///	
 	}
 	//step 4: finish handle
