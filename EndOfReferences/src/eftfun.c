@@ -963,10 +963,10 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 		// /*
 		// f g6
 		
-		fprintf(fp,"%d:%d ",start++,(fd.density[i][0][1] <= fd.density[i][0][0])?1:-1);
-		fprintf(fp,"%d:%d ",start++,(fd.density[i][1][1] <= fd.density[i][1][0])?1:-1);
-		fprintf(fp,"%d:%d ",start++,(fd.density[i][2][1] <= fd.density[i][2][0])?1:-1);
-	//	fprintf(fp,"%d:%d ",start++,(fd.vari[1] <= fd.vari[0])?1:-1);
+		fprintf(fp,"%d:%d ",start++,(fd.density[i][0][1] < fd.density[i][0][0])?1:-1);
+		fprintf(fp,"%d:%d ",start++,(fd.density[i][1][1] < fd.density[i][1][0])?1:-1);
+		fprintf(fp,"%d:%d ",start++,(fd.density[i][2][1] < fd.density[i][2][0])?1:-1);
+		fprintf(fp,"%d:%d ",start++,(fd.vari[1] < fd.vari[0])?1:-1);
 		
 		
 		// */
@@ -989,7 +989,7 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 		rankWrite(fp,start,fd.seq[i][3],wide);
 		start+=wide;
 		*/
-	//}
+	}
 	
 	return start;
 }
