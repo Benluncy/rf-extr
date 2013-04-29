@@ -191,7 +191,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 				break;
 			// */
 	
-			/*
+			//*
 			// f 3
 			case 6: // end of article
 				// 0 , 1
@@ -199,7 +199,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 				break;
 			// */
 			
-			/*
+			//*
 			// f 4
 			case 7:
 			case 8:
@@ -215,7 +215,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 				start += 3;
 				break;	
 			// */
-			/*		
+			//*		
 			case 9:
 			case 12:
 			case 15:
@@ -229,7 +229,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 				break;
 			// */
 			
-			//*
+			/*
 			// f5
 			case 21:
 			case 24:
