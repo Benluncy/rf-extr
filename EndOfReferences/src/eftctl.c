@@ -133,8 +133,12 @@ int genEndSampleCtl(const char* fileName,int isDir)
 	int pptag = 0;
 	int start = 1;
 	//printfContextS(targetOffset,"targetOffset");
+	
+	int lastOffset = _mfdc->data[0].offset;
+	
 	for(int i = 0; i < _mfdc->top;i++)
 	{
+		if(!haveDiffernecesH(_mfdc->data[i].offset,targetOffset)) continue;
 		printf(".");
 		//positive
 		
@@ -167,6 +171,13 @@ int genEndSampleCtl(const char* fileName,int isDir)
 			case 18:
 				break;
 			*/
+			case 9:
+			case 12:
+			case 15:
+			case 16:
+			case 17:
+			case 18:
+				break;
 			default:
 				if(j>18)
 				{
@@ -199,9 +210,65 @@ int genEndSampleCtl(const char* fileName,int isDir)
 		fprintf(fp,"\n");
 	}
 	
+	int mstart = 1;
 	//DEBUG
 	if(!pptag)
 	{
+		for(int i = 0; i < _mfdc->top;i++)
+		{
+			if(!haveDiffernecesE(_mfdc->data[i].offset,targetOffset))
+			{
+				pptag++;
+				fprintf(fp,"+1 ");
+				for(int j=1;j<ENDLEN;j++)
+				{
+					switch(j)
+					{
+					/*
+					case 7:
+					case 8:
+					case 10:
+					case 11:
+					case 13:
+					case 14:
+					case 16:
+					case 17:
+					case 18:
+						break;
+					*/
+					case 9:
+					case 12:
+					case 15:
+					case 16:
+					case 17:
+					case 18:
+						break;
+					default:
+						if(j>18)
+						{
+							powerWrite(fp,mstart,_mfdc->data[i].t[j],8);
+							mstart+=8;
+						}else
+						{
+							rankWrite(fp,mstart,_mfdc->data[i].t[j]+1,8);
+							mstart+=8;
+						}
+				
+				
+					}
+			
+					//fprintf(fp,"%d:%d ",start++,_mfdc->data[i].t[j]+1);
+			
+				}
+				
+				
+				start = genNextDataForEndfeature(fp,_mfdc->data[i],start);
+				fprintf(fp," #%d",_mfdc->data[i].offset);
+				fprintf(fp,"\n");
+				break;
+			}
+		}
+	/*
 		printf("\n DEBUG : contents\n");
 		for(int i=0;i< _mfdc->top;i++)
 		{
@@ -210,7 +277,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 		}
 		printf("[T:%d]",targetOffset);
 		printfContext(targetOffset);
-		
+	*/	
 	}
 	//step 4: finish handle
 	printf("(%d)",pptag);
