@@ -236,6 +236,11 @@ int genEndSampleCtl(const char* fileName,int isDir)
 			case 27:
 				// the min the better
 				// ABSDIFF of INDEX
+				// problem
+				if(_mfdc->data[i].t[j]!=0)
+				{
+					printf("XX[%d]XX",_mfdc->data[i].t[j]);
+				}
 				powerWrite(fp,start,_mfdc->data[i].t[j],8);
 				start+=8;
 				break;
