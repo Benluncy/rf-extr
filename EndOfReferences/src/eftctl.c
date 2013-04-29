@@ -157,6 +157,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 		//rankWrite(fp,start,_mfdc->data[i].t[0]+1,10);
 		//start += 10;
 		//11-55
+		start = 1;
 		for(int j=1;j<ENDLEN;j++)
 		{
 		/*
@@ -211,7 +212,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 		fprintf(fp,"\n");
 	}
 	
-	int mstart = 1;
+	start = 1;
 	//DEBUG
 	
 	if(!pptag)
