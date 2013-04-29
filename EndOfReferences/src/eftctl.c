@@ -151,8 +151,6 @@ int genEndSampleCtl(const char* fileName,int isDir)
 			// f 0
 			case 0:
 				rateWrite(fp,start,(double)_mfdc->data[i].t[0]/_mfdc->top);
-				printf("{%d|%d|%f}",_mfdc->data[j].t[0],_mfdc->top
-							,(double)_mfdc->data[i].t[0]/_mfdc->top);
 				start+=5;
 				break;
 			// */
