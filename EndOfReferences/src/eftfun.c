@@ -629,7 +629,7 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 	realOffset[4] = container->data[edOffsetList[4]].t[18];
 	realOffset[5] = container->data[edOffsetList[5]].t[18];
 	*/
-	for(th=0;(!allMarked(markedReal,6)) && ((edOffsetList[j]+th)< container->top || (edOffsetList[j]-th)) >= 0;th++)
+	for(th=0;(!allMarked(markedReal,6)) && ((edOffsetList[j]+th)< container->top || (edOffsetList[j]-th) >= 0);th++)
 	{
 		for(j=0;j<6;j++)
 		{
@@ -641,7 +641,7 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 					markedReal[j] = 1;
 				}
 			}
-			if((edOffsetList[j]-th)) >= 0)
+			if((edOffsetList[j]-th) >= 0)
 			{
 				if(container->data[edOffsetList[j]-th].t[16+(j/2)]!=0 && !markedReal[j])
 				{
