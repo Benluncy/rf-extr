@@ -142,13 +142,13 @@ int genEndSampleCtl(const char* fileName,int isDir)
 		if(!haveDifferneces(lastOffset,_mfdc->data[i].offset)) continue;
 		lastOffset = _mfdc->data[i].offset;
 		
-		if(!haveDiffernecesH(_mfdc->data[i].offset,targetOffset)) hasp = 1;
+		if(!haveDifferneces(_mfdc->data[i].offset,targetOffset)) hasp = 1;
 		
 		printf(".");
 		//positive
 		
-		fprintf(fp,"%c1 ",!haveDiffernecesH(_mfdc->data[i].offset,targetOffset)?'+':'-');
-		if(!haveDiffernecesE(_mfdc->data[i].offset,targetOffset)) pptag ++;
+		fprintf(fp,"%c1 ",!haveDifferneces(_mfdc->data[i].offset,targetOffset)?'+':'-');
+		if(!haveDifferneces(_mfdc->data[i].offset,targetOffset)) pptag ++;
 		/*
 		if(ABSDIFF(_mfdc->data[i].offset,targetOffset)<100)
 		{
