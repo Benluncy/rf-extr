@@ -908,15 +908,18 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	powerWrite(fp,start,ABSDIFF(offset,absOffset[1]),10);
 	start+=10;
 */	
-	int absdiff;
-	if(absdiff = (ABSDIFF(offset,getReferenceEndOffset())/(thresholdForDifferneces*4)) > 2 
-		&& !haveDiffernecesD(getReferenceEndOffset(),offset))
+	// no use start
+	int absdiff = ABSDIFF(offset,getReferenceEndOffset());
+	//!haveDiffernecesD(_mfdc->data[i].offset,targetOffset)
+	if(haveDiffernecesD(offset,getReferenceEndOffset()))
 	{
 		absdiff = 1;
 	}
-	if(absdiff == 0) absdiff = 1;
-	powerWrite(fp,start,1+(absdiff),10);
+	
+	powerWrite(fp,start,absdiff,10);
 	start+=10;
+	// no use end 
+	
 /*
 	lmt = -200;
 	fprintf(fp,"%d:%d ",start++,(hasSeqOfTheOffset(offset,lmt)?1:-1));
