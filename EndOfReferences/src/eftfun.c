@@ -48,8 +48,6 @@ endFeatureData mfd;
 endFeatureDataContainer mfdc;
 
 
-#define MECL 5
-/*
 OffsetCallback endFunctionList[ENDCALLBACKLEN]={hasPPafterTheOffset,
 						hasPPafterTheOffset2,
 						hasYearafterTheOffset,
@@ -60,12 +58,7 @@ OffsetCallback endFunctionList[ENDCALLBACKLEN]={hasPPafterTheOffset,
 						hasSpecialKeyWords,
 						hasLocationafterTheOffset,
 						hasWords};
-*/
-OffsetCallback endFunctionList[MECL]={hasPPafterTheOffset2,
-						hasYearafterTheOffset,
-						hasNameafterTheOffset0,
-						hasSeqOfTheOffset2,
-						hasSpecialKeyWords};
+
 
 int edOffsetList[9];
 int absOffset[2]; // ack fig
@@ -887,6 +880,13 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	// /*
 	// f g1
 	lmt = -50;
+	for(int z=0;z<ENDCALLBACKLEN;z++)
+	{
+		fprintf(fp,"%d:%d ",start++,((endFunctionList[z](offset,lmt) >= 
+			endFunctionList[z](offset,-lmt)))?1:-1);
+	}
+	
+	/*
 	fprintf(fp,"%d:%d ",start++,((hasPPafterTheOffset(offset,lmt) >= hasPPafterTheOffset(offset,-lmt)))?1:-1);
 	fprintf(fp,"%d:%d ",start++,((hasPPafterTheOffset2(offset,lmt) >= hasPPafterTheOffset2(offset,-lmt)))?1:-1);
 	fprintf(fp,"%d:%d ",start++,((hasYearafterTheOffset(offset,lmt) >= hasYearafterTheOffset(offset,-lmt)))?1:-1);

@@ -188,7 +188,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 				break;
 			// */
 	
-			// /*
+			/*
 			// f 3
 			case 6: // end of article
 				// 0 , 1
