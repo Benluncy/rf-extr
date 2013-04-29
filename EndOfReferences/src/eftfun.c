@@ -899,7 +899,7 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	//fp = stdout;
 	//for(;lmt<=1000;lmt+=150)
 	//{
-	lmt = -200;
+	lmt = -50;
 
 	
 	fprintf(fp,"%d:%d ",start++,(hasPPafterTheOffset(offset,lmt)?1:-1));
@@ -928,7 +928,7 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	fprintf(fp,"%d:%d ",start++,(dataDensity(offset,lmt) >= dataDensity(offset,-lmt))?1:-1);
 	fprintf(fp,"%d:%d ",start++,(wordsNumber(offset,lmt) >= wordsNumber(offset,-lmt))?1:-1);
 	
-	lmt = 200;
+	lmt = 30;
 	fprintf(fp,"%d:%d ",start++,(hasPPafterTheOffset(offset,lmt)?1:-1));
 	fprintf(fp,"%d:%d ",start++,(hasPPafterTheOffset2(offset,lmt)?1:-1));
 	fprintf(fp,"%d:%d ",start++,(hasYearafterTheOffset(offset,lmt)?1:-1));
