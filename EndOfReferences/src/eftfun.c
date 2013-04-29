@@ -48,7 +48,7 @@ endFeatureData mfd;
 endFeatureDataContainer mfdc;
 
 #define ECBL 5
-
+/*
 OffsetCallback endFunctionList[ENDCALLBACKLEN]={hasPPafterTheOffset,
 						hasPPafterTheOffset2,
 						hasYearafterTheOffset,
@@ -59,7 +59,7 @@ OffsetCallback endFunctionList[ENDCALLBACKLEN]={hasPPafterTheOffset,
 						hasSpecialKeyWords,
 						hasLocationafterTheOffset,
 						hasWords};
-						
+*/						
 OffsetCallback endFunctionList[ECBL]={hasPPafterTheOffset,
 						hasPPafterTheOffset2,
 						hasYearafterTheOffset,
