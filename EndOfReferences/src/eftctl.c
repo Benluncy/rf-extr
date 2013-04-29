@@ -138,7 +138,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 	
 	for(int i = 0; i < _mfdc->top;i++)
 	{
-		if(!haveDifferneces(lastOffset,targetOffset)) continue;
+		if(!haveDifferneces(lastOffset,_mfdc->data[i].offset)) continue;
 		lastOffset = _mfdc->data[i].offset;
 		
 		printf(".");
