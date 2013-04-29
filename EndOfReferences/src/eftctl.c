@@ -234,7 +234,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 			//
 			//
 			//
-			/*
+			
 			case 16:
 			case 17:
 			case 18:
@@ -246,7 +246,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 			
 			case 25:
 			case 26:
-			*/
+			
 			case 21:
 			case 24:
 			case 27:
