@@ -751,6 +751,7 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 	
 	
 	// do combine
+	/*
 	j=0;
 	int offNum=1;
 	int sumOffset = container->data[0].offset;;
@@ -785,6 +786,7 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 		}
 	}
 	container->top = j+1;
+	*/
 	/*
 	if(!haveDifferneces(lastOffset,getPclen()))
 	{
