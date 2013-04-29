@@ -61,6 +61,7 @@ OffsetCallback endFunctionList[ENDCALLBACKLEN]={hasPPafterTheOffset,
 
 
 int edOffsetList[9];
+int absOffset[2]; // ack fig
 
 
 
@@ -172,6 +173,7 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 				endYearBeforeAck = i;
 				endPageBeforeAck = i;
 				endPage2BeforeAck = i;
+				absOffset[0] = i;
 				markedAck = 1;
 			}
 			
@@ -186,6 +188,7 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 					endPageBeforeTable = i;
 					endPage2BeforeTable = i;
 					markedTable = 1;
+					absOffset[1] = i;
 				}
 				
 			}
@@ -933,26 +936,28 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	
 	
 	lmt = 30;
-	for(int i=0;i<ENDCALLBACKLEN;i++)
-		if(endFunctionList[i](offset,lmt))
-		{
-			fprintf(fp,"%d:%s ",start++,"1");
-		}else
-		{
-			fprintf(fp,"%d:%s ",start++,"-1");
-		}
+	fprintf(fp,"%d:%d ",start++,((hasPPafterTheOffset(offset,lmt) >= hasPPafterTheOffset(offset,-lmt)))?1:-1);
+	fprintf(fp,"%d:%d ",start++,((hasPPafterTheOffset2(offset,lmt) >= hasPPafterTheOffset2(offset,-lmt)))?1:-1);
+	fprintf(fp,"%d:%d ",start++,((hasYearafterTheOffset(offset,lmt) >= hasYearafterTheOffset(offset,-lmt)))?1:-1);
+	fprintf(fp,"%d:%d ",start++,((hasNameafterTheOffset0(offset,lmt) >= hasNameafterTheOffset0(offset,-lmt)))?1:-1);
+	fprintf(fp,"%d:%d ",start++,((hasNameafterTheOffset1(offset,lmt) >= hasNameafterTheOffset1(offset,-lmt)))?1:-1);
+	fprintf(fp,"%d:%d ",start++,((hasNameafterTheOffset2(offset,lmt) >= hasNameafterTheOffset2(offset,-lmt)))?1:-1);
 	
+		
+	//absOffset[0] = i;
+	fprintf(fp,"%d:%d ",start++,ABSDIFF(offset,absOffset[0]));
+	fprintf(fp,"%d:%d ",start++,ABSDIFF(offset,absOffset[1]));
 
-	
-	lmt = -500;
-	
+	/*
+	lmt = -200;
 	fprintf(fp,"%d:%d ",start++,(hasSeqOfTheOffset(offset,lmt)?1:-1));
 	fprintf(fp,"%d:%d ",start++,(hasSeqOfTheOffset2(offset,lmt)?1:-1));	
 	fprintf(fp,"%d:%d ",start++,((hasSeqOfTheOffset(offset,lmt) >= hasSeqOfTheOffset(offset,-lmt)))?1:-1);
 	fprintf(fp,"%d:%d ",start++,((hasSeqOfTheOffset2(offset,lmt) >= hasSeqOfTheOffset2(offset,-lmt)))?1:-1);
+	*/
 	
-	fprintf(fp,"%d:%d ",start++,asciiCodeDensity(offset,lmt) >= asciiCodeDensity(offset,-lmt));
-	fprintf(fp,"%d:%d ",start++,dataDensity(offset,lmt) >= dataDensity(offset,-lmt));
+	//fprintf(fp,"%d:%d ",start++,asciiCodeDensity(offset,lmt) >= asciiCodeDensity(offset,-lmt));
+	//fprintf(fp,"%d:%d ",start++,dataDensity(offset,lmt) >= dataDensity(offset,-lmt));
 	
 	//}
 	
