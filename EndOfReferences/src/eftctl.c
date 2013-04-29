@@ -155,6 +155,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 		{
 			switch(j)
 			{
+			/*
 			case 7:
 			case 8:
 			case 10:
@@ -165,7 +166,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 			case 17:
 			case 18:
 				break;
-			
+			*/
 			default:
 				if(j>18)
 				{
