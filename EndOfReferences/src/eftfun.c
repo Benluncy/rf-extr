@@ -298,7 +298,7 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 			}else if(!haveDiffernecesE(i,nextPageOffset))
 			{
 				container->data[container->top].t[17] = indexOfPage+1;
-			}else if(!haveDiffernecesE(i,nextPageOffset))
+			}else if(!haveDiffernecesE(i,lastPageOffsetForIndex))
 			{
 				container->data[container->top].t[17] = indexOfPage;
 			}
@@ -312,6 +312,7 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 			{
 				indexOfPage2 ++ ;
 				container->data[container->top].t[17] = indexOfPage2;
+				lastPage2OffsetForIndex = nextPage2Offset;
 				nextPage2Offset = hasPPafterTheOffset(nextPage2Offset,cLen);
 				if(nextPage2Offset == 0) nextPage2Offset = -1;
 				//printf("[PP]");
