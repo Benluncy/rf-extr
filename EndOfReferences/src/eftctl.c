@@ -136,9 +136,12 @@ int genEndSampleCtl(const char* fileName,int isDir)
 	{
 		printf(".");
 		//positive
+		printf("targetOffset:\n")
+		
 		fprintf(fp,"%c1 ",!haveDiffernecesE(_mfdc->data[i].offset,targetOffset)?'+':'-');
 		if(!haveDiffernecesE(_mfdc->data[i].offset,targetOffset)) pptag = 1;
-		//tx
+		printfContext(targetOffset,"targetOffset");
+		printfContext(_mfdc->data[i].offset,"nowoffset");
 		//1-10
 		//rankWrite(fp,start,_mfdc->data[i].t[0]+1,10);
 		//start += 10;
