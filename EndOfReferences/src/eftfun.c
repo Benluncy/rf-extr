@@ -609,7 +609,7 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 {
 	//return 1;
 	int j = 0;
-	int lastOffset = container->data[0].offset;
+	//int lastOffset = container->data[0].offset;
 	int th=0;
 	int realOffset[6];// 7 8 10 11  13 14
 	int markedReal[6];
