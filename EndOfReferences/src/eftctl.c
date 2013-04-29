@@ -223,7 +223,6 @@ int genEndSampleCtl(const char* fileName,int isDir)
 	
 	
 	//DEBUG
-	pptag = -2;
 	if(!pptag)
 	{
 		for(int i = 0; i < _mfdc->top;i++)
