@@ -134,6 +134,9 @@ int genEndSampleCtl(const char* fileName,int isDir)
 	int start = 1;
 	//printfContextS(targetOffset,"targetOffset");
 	
+	int diffs = 100000000;
+	int diffsj = 0;
+	
 	//int lastOffset = _mfdc->data[0].offset;
 	for(int i = 0; i < _mfdc->top;i++)
 	{
@@ -171,10 +174,15 @@ int genEndSampleCtl(const char* fileName,int isDir)
 			case 2:
 				// 1 acknowledgements etc.
 				// 2 table , he is figure ... (a list)
-				fprintf(fp,"%d:%d ",start++,_mfdc->data[_mfdc->top].t[j]);
+				fprintf(fp,"%d:%d ",start++,_mfdc->data[i].t[j]);
 				if(_mfdc->data[_mfdc->top].t[j])
 				{
-					printf("{%d-diff:%d}",j,ABSDIFF(_mfdc->data[_mfdc->top].offset,targetOffset));
+					//printf("{%d-diff:%d}",j,ABSDIFF(_mfdc->data[_mfdc->top].offset,targetOffset));
+					if(diffs >ABSDIFF(_mfdc->data[i].offset,targetOffset))
+					{
+						diffs = ABSDIFF(_mfdc->data[i].offset,targetOffset);
+						diffsj = j;
+					}
 				}
 				break;
 			
@@ -190,7 +198,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 				break;
 			case 6: // end of article
 				// 0 , 1
-				fprintf(fp,"%d:%d ",start++,_mfdc->data[_mfdc->top].t[j]);
+				fprintf(fp,"%d:%d ",start++,_mfdc->data[i].t[j]);
 				break;
 			case 9:
 			case 12:
@@ -306,7 +314,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 	///	
 	}
 	//step 4: finish handle
-	printf("(%d)",pptag);
+	printf("%d(%d) (%d)",diffs,diffsj,pptag);
 	printf(" [done]\n");
 	id++;
 	
