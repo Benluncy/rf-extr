@@ -896,7 +896,7 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	fprintf(fp,"%d:%d ",start++,(wordsNumber(offset,lmt) >= wordsNumber(offset,-lmt))?1:-1);
 	// */
 	
-	// /*
+	/*
 	// f g3
 	lmt = 30;
 	fprintf(fp,"%d:%d ",start++,((hasPPafterTheOffset(offset,lmt) >= hasPPafterTheOffset(offset,-lmt)))?1:-1);
@@ -906,13 +906,18 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	fprintf(fp,"%d:%d ",start++,((hasNameafterTheOffset1(offset,lmt) >= hasNameafterTheOffset1(offset,-lmt)))?1:-1);
 	fprintf(fp,"%d:%d ",start++,((hasNameafterTheOffset2(offset,lmt) >= hasNameafterTheOffset2(offset,-lmt)))?1:-1);
 	// */	
-/*		
+
+	// /*	
+	// f g4
 	//absOffset[0] = 
+	lmt = 30;
 	powerWrite(fp,start,ABSDIFF(offset,absOffset[0]),10);
 	start+=10;
 	powerWrite(fp,start,ABSDIFF(offset,absOffset[1]),10);
 	start+=10;
-*/	
+	//*/
+	
+		
 	// no use start
 	/*
 	int absdiff = ABSDIFF(offset,getReferenceEndOffset());
