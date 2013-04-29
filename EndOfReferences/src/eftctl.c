@@ -136,7 +136,6 @@ int genEndSampleCtl(const char* fileName,int isDir)
 	{
 		printf(".");
 		//positive
-		printf("targetOffset:\n")
 		
 		fprintf(fp,"%c1 ",!haveDiffernecesE(_mfdc->data[i].offset,targetOffset)?'+':'-');
 		if(!haveDiffernecesE(_mfdc->data[i].offset,targetOffset)) pptag = 1;
