@@ -765,6 +765,7 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 	j=0;
 	int offNum=1;
 	int sumOffset = container->data[0].offset;;
+	container->data[j].t[0] = 1;
 	for(int i=1;i<container->top;i++)
 	{
 		if(!haveDifferneces(lastOffset,container->data[i].offset))
@@ -785,7 +786,7 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 			j++;
 			container->data[j].offset = container->data[i].offset;
 			lastOffset = container->data[i].offset;
-			container->data[j].t[0] = j;
+			container->data[j].t[0] = j+1;
 			offNum = 1;
 			sumOffset =  container->data[i].offset;
 			for(int k=1;k<ENDLEN;k++)
