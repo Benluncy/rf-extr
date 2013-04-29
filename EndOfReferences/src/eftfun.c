@@ -867,7 +867,7 @@ int makeSequenceForCombinedOffsets(endFeatureDataContainer *container)
 
 int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 {
-	return 1;
+	//return 1;
 	
 	//return 1;
 	int offset = fd.offset;
@@ -899,7 +899,7 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	//fp = stdout;
 	//for(;lmt<=1000;lmt+=150)
 	//{
-	lmt = -30;
+	lmt = -200;
 
 	
 	fprintf(fp,"%d:%d ",start++,(hasPPafterTheOffset(offset,lmt)?1:-1));
@@ -938,7 +938,7 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 
 
 	
-	lmt = -100;
+	lmt = -500;
 	
 	fprintf(fp,"%d:%d ",start++,(hasSeqOfTheOffset(offset,lmt)?1:-1));
 	fprintf(fp,"%d:%d ",start++,(hasSeqOfTheOffset2(offset,lmt)?1:-1));	
