@@ -132,7 +132,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 	fprintf(fp,"# %s \n",fileName);
 	int pptag = 0;
 	int start = 1;
-	printfContextS(targetOffset,"targetOffset");
+	//printfContextS(targetOffset,"targetOffset");
 	for(int i = 0; i < _mfdc->top;i++)
 	{
 		printf(".");
@@ -140,12 +140,13 @@ int genEndSampleCtl(const char* fileName,int isDir)
 		
 		fprintf(fp,"%c1 ",!haveDiffernecesH(_mfdc->data[i].offset,targetOffset)?'+':'-');
 		if(!haveDiffernecesE(_mfdc->data[i].offset,targetOffset)) pptag = 1;
+		/*
 		if(ABSDIFF(_mfdc->data[i].offset,targetOffset)<100)
 		{
 			printf("[PP:%c]\n",!haveDiffernecesH(_mfdc->data[i].offset,targetOffset)?'+':'-');
 			printfContextS(_mfdc->data[i].offset,"nowoffset");
 		}
-		
+		*/
 		//1-10
 		//rankWrite(fp,start,_mfdc->data[i].t[0]+1,10);
 		//start += 10;
