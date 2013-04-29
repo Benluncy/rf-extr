@@ -1018,9 +1018,10 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 int prepareDensityData(void)
 {
 	return 1;
+	/*
 	int beforeData;
 	int totalData;
-	/*
+	
 	for(int i=0;i<mfdc.top;i++)
 	{
 		
