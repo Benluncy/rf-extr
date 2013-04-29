@@ -135,14 +135,11 @@ int genEndSampleCtl(const char* fileName,int isDir)
 	//printfContextS(targetOffset,"targetOffset");
 	
 	int lastOffset = _mfdc->data[0].offset;
-	int hasp = 0;
 	for(int i = 0; i < _mfdc->top;i++)
 	{
-		if(hasp) break;
-		if(!haveDifferneces(lastOffset,_mfdc->data[i].offset)) continue;
+		if(!haveDiffernecesE(lastOffset,_mfdc->data[i].offset)) continue;
 		lastOffset = _mfdc->data[i].offset;
 		
-		if(!haveDifferneces(_mfdc->data[i].offset,targetOffset)) hasp = 1;
 		
 		printf(".");
 		//positive
@@ -164,7 +161,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 		{
 			switch(j)
 			{
-			/*
+			
 			case 7:
 			case 8:
 			case 10:
@@ -183,7 +180,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 			case 17:
 			case 18:
 				break;
-			*/
+			
 			default:
 			/*
 				if(j>18)
@@ -233,7 +230,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 				{
 					switch(j)
 					{
-					/*
+					
 					//
 					case 7:
 					case 8:
@@ -253,7 +250,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 					case 17:
 					case 18:
 						break;
-					*/
+				
 					default:
 						if(j>18)
 						{
