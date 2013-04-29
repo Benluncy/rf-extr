@@ -144,7 +144,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 		start = 1;
 		for(int j=0;j<ENDLEN;j++)
 		{
-		
+		/*
 			switch(j)
 			{
 			//case 0:
@@ -199,6 +199,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 				start+=8;
 				break;
 			}
+		*/
 			
 		}
 			
