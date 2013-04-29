@@ -919,8 +919,8 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 		absdiff = absdiff < 10 ? absdiff+10 : absdiff;
 	}
 	
-	powerWrite(fp,start,absdiff,10);
-	start+=10;
+	powerWrite(fp,start,absdiff,2);
+	start+=2;
 	// no use end 
 	
 /*

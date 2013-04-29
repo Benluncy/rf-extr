@@ -167,7 +167,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 				//	}
 				//}
 				break;
-			/*
+			
 			case 3:
 			case 4:
 			case 5:
@@ -198,7 +198,6 @@ int genEndSampleCtl(const char* fileName,int isDir)
 				powerWrite(fp,start,_mfdc->data[i].t[j],8);
 				start+=8;
 				break;
-			*/
 			}
 		
 			
