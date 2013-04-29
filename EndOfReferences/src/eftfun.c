@@ -610,7 +610,7 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 	//return 1;
 	int j = 0;
 	int lastOffset = container->data[0].offset;
-	int th=0
+	int th=0;
 	int realOffset[6];// 7 8 10 11  13 14
 	int markedReal[6];
 	for(j=0;j<6;j++) markedReal[j] = edOffsetList[j]==0?1:0;
@@ -889,6 +889,7 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 		//fprintf(fp,"%d:%f ",start++,quot(fd.density[i][1][1],fd.density[i][1][0]));
 		//fprintf(fp,"%d:%f ",start++,quot(fd.density[i][2][1],fd.density[i][2][0]));
 		//fprintf(fp,"%d:%f ",start++,quot(fd.vari[1],fd.vari[0]));
+	*/
 		/*
 		int wide = 6;
 		rankWrite(fp,start,fd.seq[i][0],wide);
