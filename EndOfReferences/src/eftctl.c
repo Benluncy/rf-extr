@@ -174,7 +174,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 				fprintf(fp,"%d:%d ",start++,_mfdc->data[_mfdc->top].t[j]);
 				if(_mfdc->data[_mfdc->top].t[j])
 				{
-					printf("{%d-diff:%d}",ABSDIFF(_mfdc->data[_mfdc->top].offset,targetOffset));
+					printf("{%d-diff:%d}",j,ABSDIFF(_mfdc->data[_mfdc->top].offset,targetOffset));
 				}
 				break;
 			
