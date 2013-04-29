@@ -48,7 +48,7 @@ endFeatureData mfd;
 endFeatureDataContainer mfdc;
 
 #define ECBL 5
-/*
+
 OffsetCallback endFunctionList[ENDCALLBACKLEN]={hasPPafterTheOffset,
 						hasPPafterTheOffset2,
 						hasYearafterTheOffset,
@@ -59,13 +59,13 @@ OffsetCallback endFunctionList[ENDCALLBACKLEN]={hasPPafterTheOffset,
 						hasSpecialKeyWords,
 						hasLocationafterTheOffset,
 						hasWords};
-*/						
+/*						
 OffsetCallback endFunctionList[ECBL]={hasPPafterTheOffset,
 						hasPPafterTheOffset2,
 						hasYearafterTheOffset,
 						hasSpecialKeyWords,
 						hasWords};
-
+*/
 
 int edOffsetList[9];
 int absOffset[2]; // ack fig
@@ -884,7 +884,7 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	
 	//prepareDensityData();
 	
-	// /*
+	/*
 	// f g1
 	lmt = -50;
 	for(int z=0;z<ECBL;z++)//ENDCALLBACKLEN
@@ -892,7 +892,7 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 		fprintf(fp,"%d:%d ",start++,((endFunctionList[z](offset,lmt) > 
 			endFunctionList[z](offset,-lmt)))?1:0);
 	}
-	
+	// */
 	/*
 	fprintf(fp,"%d:%d ",start++,((hasPPafterTheOffset(offset,lmt) >= hasPPafterTheOffset(offset,-lmt)))?1:-1);
 	fprintf(fp,"%d:%d ",start++,((hasPPafterTheOffset2(offset,lmt) >= hasPPafterTheOffset2(offset,-lmt)))?1:-1);
