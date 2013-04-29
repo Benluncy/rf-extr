@@ -757,9 +757,16 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 			{
 				if(j%3 == 2)
 				{
-					container->data[i].t[19+j] = MINANDNZ(container->data[i].t[18+j],container->data[i].t[17+j]);
+					//container->data[i].t[19+j] = MINANDNZ(container->data[i].t[18+j],container->data[i].t[17+j]);
+					
+					container->data[i].t[19+j]= (realOffset[j-1]>realOffset[j-2])?
+									container->data[i].t[17+j]: //ack
+									container->data[i].t[18+j]; //tab
 				}else
+				{
 					container->data[i].t[19+j] = ABSDIFF(container->data[i].t[16+j],realOffset[j]);
+					container->data[i].t[19+j] /= thresholdForDifferneces;
+				}
 				//printf("[%d-%d-%d]",i,19+j,container->data[i].t[19+j]);
 			} 
 		}
