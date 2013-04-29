@@ -132,36 +132,15 @@ int genEndSampleCtl(const char* fileName,int isDir)
 	
 	//step 3: write into file
 	fprintf(fp,"# %s \n",fileName);
-	int pptag = 0;
+	//int pptag = 0;
 	int start = 1;
-	//printfContextS(targetOffset,"targetOffset");
-	
-	int diffs = 100000000;
-	int diffsj = 0;
-	
-	//int lastOffset = _mfdc->data[0].offset;
+
 	for(int i = 0; i < _mfdc->top;i++)
 	{
-		//if(!haveDiffernecesE(lastOffset,_mfdc->data[i].offset)) continue;
-		//lastOffset = _mfdc->data[i].offset;
-		
-		
 		printf(".");
 		//positive
-		
 		fprintf(fp,"%c1 ",!haveDiffernecesD(_mfdc->data[i].offset,targetOffset)?'+':'-');
-		if(!haveDifferneces(_mfdc->data[i].offset,targetOffset)) pptag ++;
-		/*
-		if(ABSDIFF(_mfdc->data[i].offset,targetOffset)<100)
-		{
-			printf("[PP:%c]\n",!haveDiffernecesH(_mfdc->data[i].offset,targetOffset)?'+':'-');
-			printfContextS(_mfdc->data[i].offset,"nowoffset");
-		}
-		*/
-		//1-10
-		//rankWrite(fp,start,_mfdc->data[i].t[0]+1,10);
-		//start += 10;
-		//11-55
+		//if(!haveDifferneces(_mfdc->data[i].offset,targetOffset)) pptag ++;
 		start = 1;
 		for(int j=0;j<ENDLEN;j++)
 		{
@@ -177,15 +156,16 @@ int genEndSampleCtl(const char* fileName,int isDir)
 				// 1 acknowledgements etc.
 				// 2 table , he is figure ... (a list)
 				fprintf(fp,"%d:%d ",start++,_mfdc->data[i].t[j]);
-				if(_mfdc->data[_mfdc->top].t[j])
-				{
+				
+				//if(_mfdc->data[_mfdc->top].t[j])
+				//{
 					//printf("{%d-diff:%d}",j,ABSDIFF(_mfdc->data[_mfdc->top].offset,targetOffset));
-					if(diffs >ABSDIFF(_mfdc->data[i].offset,targetOffset))
-					{
-						diffs = ABSDIFF(_mfdc->data[i].offset,targetOffset);
-						diffsj = j;
-					}
-				}
+				//	if(diffs >ABSDIFF(_mfdc->data[i].offset,targetOffset))
+				//	{
+				//		diffs = ABSDIFF(_mfdc->data[i].offset,targetOffset);
+				//		diffsj = j;
+				//	}
+				//}
 				break;
 			
 			case 3:
@@ -222,15 +202,6 @@ int genEndSampleCtl(const char* fileName,int isDir)
 			
 		}
 			
-		//	fprintf(fp,"%d:%d ",);
-		
-		/*
-		// 91-180 18*5 
-		for(int j=0;j<ENDLEN;j++)
-			rankWrite(fp,56+j*5,tmpCter.data[i].t[j],5);
-		*/
-		// 181 - end 
-		//gen26ToEnd(fp,_mfdc->data[i]);
 		start = genNextDataForEndfeature(fp,_mfdc->data[i],start);
 		fprintf(fp," #%d",_mfdc->data[i].offset);
 		fprintf(fp,"\n");
@@ -240,80 +211,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 	//DEBUG
 	if(!pptag)
 	{
-		/*
-		for(int i = 0; i < _mfdc->top;i++)
-		{
-			if(!haveDiffernecesD(_mfdc->data[i].offset,targetOffset))
-			{
-				start = 1;
-				pptag = -1;
-				fprintf(fp,"+1 ");
-				for(int j=0;j<ENDLEN;j++)
-				{
-					switch(j)
-					{
-					case 0:
-						rateWrite(fp,start,_mfdc->data[j].t[0]/_mfdc->top);
-						start+=5;
-						break;
-					case 1:
-					case 2:
-						// 1 acknowledgements etc.
-						// 2 table , he is figure ... (a list)
-						fprintf(fp,"%d:%d ",start++,_mfdc->data[_mfdc->top].t[j]);
-						break;
-					case 3:
-					case 4:
-					case 5:
-						// 3 end of year // before end of content
-						// 4 end of page // before end of content
-						// 5 end of page2 // before end of content
-						// 0 , 1 , 2
-						rankWrite(fp,start,_mfdc->data[i].t[j],3);
-						start += 3;
-						break;
-					case 6: // end of article
-						// 0 , 1
-						fprintf(fp,"%d:%d ",start++,_mfdc->data[_mfdc->top].t[j]);
-						break;
-					case 9:
-					case 12:
-					case 15:
-						// 9 end year before ack or table
-						// 12 end page before ack or table
-						rankWrite(fp,start,_mfdc->data[i].t[j],3);
-						start += 3;
-						break;
-					case 21:
-					case 24:
-					case 27:
-						// the min the better
-						// ABSDIFF of INDEX
-						powerWrite(fp,start,_mfdc->data[i].t[j],8);
-						start+=8;
-						break;
-					}
-			
-				}
-				start = genNextDataForEndfeature(fp,_mfdc->data[i],start);
-				fprintf(fp," #%d",_mfdc->data[i].offset);
-				fprintf(fp,"\n");
-				break;
-			}
-		}
-		*/
 		printf("[~]");
-		/*
-		printf("\n DEBUG : contents\n");
-		for(int i=0;i< _mfdc->top;i++)
-		{
-			printf("[E:%d]",_mfdc->data[i].offset);
-			printfContext(_mfdc->data[i].offset);
-		}
-		printf("[T:%d]",targetOffset);
-		printfContext(targetOffset);
-		*/
-	///	
 	}
 	//step 4: finish handle
 	if(diffsj!=0)

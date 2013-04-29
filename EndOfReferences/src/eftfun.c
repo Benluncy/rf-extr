@@ -871,48 +871,14 @@ int makeSequenceForCombinedOffsets(endFeatureDataContainer *container)
 int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 {
 	//return 1;
-	
 	//return 1;
 	int offset = fd.offset;
-	int lmt = 200;
+	int lmt;
 	
-	// prepareDensityData 
-	prepareDensityData();
+	// prepareDensityData();
 	
-//	char *content = getPcontent();
-//	int offend = getPclen();	
-//	int finac = 1;// :1 is not ascii code  :0 is ascii code
-	/*
-	// follow is not ascii code for instance : References [ right References Manual false
-	// ONLY FOR startness of references
-	for(int i=offset;i<offend;i++ )
-	{
-		if(content[i] != ' ')
-		{
-			finac = fitPattern('a',content[i]) && fitPattern('a',content[i+1]) ? 0 : 1;
-			if(!finac && fitPattern('n',content[i]))
-			{
-				finac = 1;
-			}
-			break;
-		}
-	}
-	fprintf(fp,"%d:%d ",start++,finac);
-	*/
-	//fp = stdout;
-	//for(;lmt<=1000;lmt+=150)
-	//{
 	lmt = -50;
-
-	/*
-	fprintf(fp,"%d:%d ",start++,(hasPPafterTheOffset(offset,lmt)?1:-1));
-	fprintf(fp,"%d:%d ",start++,(hasPPafterTheOffset2(offset,lmt)?1:-1));
-	fprintf(fp,"%d:%d ",start++,(hasYearafterTheOffset(offset,lmt)?1:-1));
-	fprintf(fp,"%d:%d ",start++,(hasNameafterTheOffset0(offset,lmt)?1:-1));
-	fprintf(fp,"%d:%d ",start++,(hasNameafterTheOffset1(offset,lmt)?1:-1));
-	fprintf(fp,"%d:%d ",start++,(hasNameafterTheOffset2(offset,lmt)?1:-1));
-	*/
-	
+/*
 	
 	fprintf(fp,"%d:%d ",start++,((hasPPafterTheOffset(offset,lmt) >= hasPPafterTheOffset(offset,-lmt)))?1:-1);
 	fprintf(fp,"%d:%d ",start++,((hasPPafterTheOffset2(offset,lmt) >= hasPPafterTheOffset2(offset,-lmt)))?1:-1);
@@ -920,14 +886,6 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	fprintf(fp,"%d:%d ",start++,((hasNameafterTheOffset0(offset,lmt) >= hasNameafterTheOffset0(offset,-lmt)))?1:-1);
 	fprintf(fp,"%d:%d ",start++,((hasNameafterTheOffset1(offset,lmt) >= hasNameafterTheOffset1(offset,-lmt)))?1:-1);
 	fprintf(fp,"%d:%d ",start++,((hasNameafterTheOffset2(offset,lmt) >= hasNameafterTheOffset2(offset,-lmt)))?1:-1);
-/*
-	fprintf(fp,"%d:%d ",start++,((hasPPafterTheOffset(offset,lmt) > hasPPafterTheOffset(offset,-lmt)))?1:-1);
-	fprintf(fp,"%d:%d ",start++,((hasPPafterTheOffset2(offset,lmt) > hasPPafterTheOffset2(offset,-lmt)))?1:-1);
-	fprintf(fp,"%d:%d ",start++,((hasYearafterTheOffset(offset,lmt) > hasYearafterTheOffset(offset,-lmt)))?1:-1);
-	fprintf(fp,"%d:%d ",start++,((hasNameafterTheOffset0(offset,lmt) > hasNameafterTheOffset0(offset,-lmt)))?1:-1);
-	fprintf(fp,"%d:%d ",start++,((hasNameafterTheOffset1(offset,lmt) > hasNameafterTheOffset1(offset,-lmt)))?1:-1);
-	fprintf(fp,"%d:%d ",start++,((hasNameafterTheOffset2(offset,lmt) > hasNameafterTheOffset2(offset,-lmt)))?1:-1);
-*/
 
 	lmt = -300;
 	fprintf(fp,"%d:%d ",start++,(asciiCodeDensity(offset,lmt) >= asciiCodeDensity(offset,-lmt))?1:-1);
@@ -942,7 +900,7 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	fprintf(fp,"%d:%d ",start++,((hasNameafterTheOffset0(offset,lmt) >= hasNameafterTheOffset0(offset,-lmt)))?1:-1);
 	fprintf(fp,"%d:%d ",start++,((hasNameafterTheOffset1(offset,lmt) >= hasNameafterTheOffset1(offset,-lmt)))?1:-1);
 	fprintf(fp,"%d:%d ",start++,((hasNameafterTheOffset2(offset,lmt) >= hasNameafterTheOffset2(offset,-lmt)))?1:-1);
-	
+*/	
 		
 	//absOffset[0] = 
 	powerWrite(fp,start,ABSDIFF(offset,absOffset[0]),10);
