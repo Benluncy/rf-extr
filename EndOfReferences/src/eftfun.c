@@ -751,7 +751,7 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 	{
 		for(int k=0;k<3;k++)
 		{
-			 container->data[i].t[16+k] = container->data[16+k] == 0 ? 0:
+			 container->data[i].t[16+k] = (container->data[i].t[16+k] == 0) ? 0:
 			 		(minid[k]>0?minid[k]:-minid[k]);
 			 minid[k] -- ;
 		}
