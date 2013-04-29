@@ -174,7 +174,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 				//}
 				break;
 			// */
-			
+			/* 
 			// f 2
 			case 3:
 			case 4:
@@ -186,14 +186,15 @@ int genEndSampleCtl(const char* fileName,int isDir)
 				rankWrite(fp,start,_mfdc->data[i].t[j],3);
 				start += 3;
 				break;
-			/*
+			// */
+			// /*
 			
 			// f 3
 			case 6: // end of article
 				// 0 , 1
 				fprintf(fp,"%d:%d ",start++,_mfdc->data[i].t[j]);
 				break;
-			*/
+			// */
 			 /*
 			// f 4
 			case 7:
