@@ -195,10 +195,9 @@ int genEndSampleCtl(const char* fileName,int isDir)
 				fprintf(fp,"%d:%d ",start++,_mfdc->data[i].t[j]);
 				break;
 			// */
-			// /*
+			
+			/*
 			// f 4
-			
-			
 			case 7:
 			case 8:
 			case 10:
@@ -217,7 +216,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 				break;
 			// */
 			
-			/*
+			// /*
 			// f5
 			case 21:
 			case 24:
