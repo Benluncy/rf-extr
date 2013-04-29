@@ -933,7 +933,6 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	
 	
 	lmt = 30;
-	vote = 0;
 	for(int i=0;i<ENDCALLBACKLEN;i++)
 		if(endFunctionList[i](offset,lmt))
 		{
