@@ -162,7 +162,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 				// 1 acknowledgements etc.
 				// 2 table , he is figure ... (a list)
 				//fprintf(fp,"%d:%d ",start++,_mfdc->data[i].t[j]);
-				rankWrite(fp,start,_mfdc->data[i].t[j]+1,3);
+				rankWrite(fp,start,_mfdc->data[i].t[j],2);
 				start += 3;
 				
 				//if(_mfdc->data[i].t[j])
