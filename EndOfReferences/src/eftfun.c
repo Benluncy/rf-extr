@@ -965,7 +965,7 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	{
 		rateWrite(fp,start,(fd.offset == getPclen()) ? -1 :((double)fd.fid[i][0]/fd.offset)/
 					((fd.fid[i][1]-fd.fid[i][0])/(getPclen()-fd.offset)));
-		//start+=5;
+		start+=5;
 		
 		/*
 		// f g6
