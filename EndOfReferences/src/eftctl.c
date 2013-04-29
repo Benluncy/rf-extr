@@ -252,8 +252,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 				// problem
 				if(_mfdc->data[i].t[j]!=0)
 				{
-					printf("XX[%d]XX",_mfdc->data[i].t[j]);
-					getchar();
+					printf("[E:%d(i:%dj:%d)]",_mfdc->data[i].t[j],i,j);
 				}
 				powerWrite(fp,start,_mfdc->data[i].t[j],5);
 				start+=5;
