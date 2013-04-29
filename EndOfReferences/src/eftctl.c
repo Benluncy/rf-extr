@@ -197,15 +197,18 @@ int genEndSampleCtl(const char* fileName,int isDir)
 			// */
 			// /*
 			// f 4
+			
+			/*
 			case 7:
 			case 8:
 			case 10:
 			case 11:
 			case 13:
 			case 14:
-			//case 9:
-			//case 12:
-			//case 15:
+			*/
+			case 9:
+			case 12:
+			case 15:
 				// 9 end year before ack or table
 				// 12 end page before ack or table
 				// 0 , 1 , 2,
