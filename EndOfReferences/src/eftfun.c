@@ -699,7 +699,7 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 			if(container->data[i].t[16+j] != 0)
 			{
 				container->data[i].t[19+j] = ABSDIFF(container->data[i].t[16+j],realOffset[j]);
-				printf("[%d-%d-%d]",i,19+j,container->data[i].t[19+j]);
+				//printf("[%d-%d-%d]",i,19+j,container->data[i].t[19+j]);
 			} 
 		}
 		
@@ -1220,6 +1220,18 @@ int allMarked(int a[],int len)
 	return 1;
 }
 
+
+int powerWrite(FILE *fp,int start,int value,int len)
+{
+	int i;
+	value = value < 0 ? -value : value;
+	for(i=0;value>0;i++)
+	{
+		value /= 2;
+	}
+	rankWrite(fp,start,i,len);
+	return 1;
+}
 
 //TODO MY LORD ...
 endFeatureDataContainer *getEndFeatureDataContainer(void)

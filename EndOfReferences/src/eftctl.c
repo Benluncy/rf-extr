@@ -107,7 +107,26 @@ int genEndSampleCtl(const char* fileName,int isDir)
 
 	// log
 	fprintf(flog,"##[[DATA:%s|\n%20s]]\n",fileName,getPcontent()+targetOffset);
-	
+		
+	// 0 empty for valued -- index of all offsets
+	// 1 acknowledgements etc.
+	// 2 table , he is figure ... (a list)
+	// 3 end of year // before end of content
+	// 4 end of page // before end of content
+	// 5 end of page2 // before end of content
+	// 6 end of article
+	// 7 end year before ack
+	// 8 end year before table
+	// 9 end year before ack or table
+	// 10 end page before ack
+	// 11 end page before table
+	// 12 end page before ack or table
+	// 13 end page2 before ack
+	// 14 end page2 before table
+	// 15 end page2 before ack or table
+	// 16 index of year
+	// 17 index of page
+	// 18 index of page2
 	
 	//step 3: write into file
 	fprintf(fp,"# %s \n",fileName);
@@ -138,9 +157,19 @@ int genEndSampleCtl(const char* fileName,int isDir)
 			case 17:
 			case 18:
 				break;
+			
 			default:
-				rankWrite(fp,start,_mfdc->data[i].t[j]+1,8);
-				start+=8;
+				if(j>18)
+				{
+					powerWrite(fp,start,_mfdc->data[i].t[j]+1,8);
+					start+=8;
+				}else
+				{
+					rankWrite(fp,start,_mfdc->data[i].t[j]+1,8);
+					start+=8;
+				}
+				
+				
 			}
 			
 			//fprintf(fp,"%d:%d ",start++,_mfdc->data[i].t[j]+1);
