@@ -147,13 +147,13 @@ int genEndSampleCtl(const char* fileName,int isDir)
 		
 			switch(j)
 			{
-			
+			/*
 			// f 0
 			case 0:
 				rateWrite(fp,start,_mfdc->data[j].t[0]/_mfdc->top);
 				start+=5;
 				break;
-			
+			*/
 			// f 1
 			case 1:
 			case 2:
@@ -190,7 +190,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 				fprintf(fp,"%d:%d ",start++,_mfdc->data[i].t[j]);
 				break;
 			*/
-			/*
+			 /*
 			// f 4
 			case 7:
 			case 8:
@@ -207,8 +207,9 @@ int genEndSampleCtl(const char* fileName,int isDir)
 				rankWrite(fp,start,_mfdc->data[i].t[j],3);
 				start += 3;
 				break;
-			*/
+			// */
 			
+			// /*
 			// f5
 			case 21:
 			case 24:
@@ -218,7 +219,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 				powerWrite(fp,start,_mfdc->data[i].t[j],8);
 				start+=8;
 				break;
-			// 
+			// */
 			}
 		
 			
