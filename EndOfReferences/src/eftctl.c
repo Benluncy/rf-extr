@@ -231,6 +231,19 @@ int genEndSampleCtl(const char* fileName,int isDir)
 			
 			//*
 			// f5
+			//
+			//
+			//
+			case 16:
+			case 17:
+			case 18:
+			
+			case 19:
+			case 20:
+			case 22:
+			case 23:
+			case 25:
+			case 26:
 			case 21:
 			case 24:
 			case 27:
@@ -242,8 +255,8 @@ int genEndSampleCtl(const char* fileName,int isDir)
 					printf("XX[%d]XX",_mfdc->data[i].t[j]);
 					getchar();
 				}
-				powerWrite(fp,start,_mfdc->data[i].t[j],8);
-				start+=8;
+				powerWrite(fp,start,_mfdc->data[i].t[j],5);
+				start+=5;
 				break;
 			// */
 			}
