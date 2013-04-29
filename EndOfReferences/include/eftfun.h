@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include "persistence.h"
 
-#define thresholdForDifferneces  10
+#define thresholdForDifferneces  5
 
 #define thresholdForGetOffsetSuggestion(x)  x*0.2
 #define T4GOS(x) thresholdForGetOffsetSuggestion(x)
