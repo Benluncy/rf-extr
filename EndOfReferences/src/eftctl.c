@@ -147,7 +147,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 		
 			switch(j)
 			{
-			// /*
+			/*
 			// f 0
 			case 0:
 				rateWrite(fp,start,(double)_mfdc->data[i].t[0]/_mfdc->top);
@@ -155,15 +155,17 @@ int genEndSampleCtl(const char* fileName,int isDir)
 				break;
 			// */
 			
-			/*
+			// /*
 			// f 1
 			case 1:
 			case 2:
 				// 1 acknowledgements etc.
 				// 2 table , he is figure ... (a list)
-				fprintf(fp,"%d:%d ",start++,_mfdc->data[i].t[j]);
+				//fprintf(fp,"%d:%d ",start++,_mfdc->data[i].t[j]);
+				rankWrite(fp,start,_mfdc->data[i].t[j],3);
+				start += 3;
 				
-				//if(_mfdc->data[_mfdc->top].t[j])
+				//if(_mfdc->data[i].t[j])
 				//{
 					//printf("{%d-diff:%d}",j,ABSDIFF(_mfdc->data[_mfdc->top].offset,targetOffset));
 				//	if(diffs >ABSDIFF(_mfdc->data[i].offset,targetOffset))

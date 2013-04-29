@@ -441,8 +441,11 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 			|| INLMT("Bibliographical"))
 			//|| INLMT("Bibliography");
 		{
-			container->data[container->top].t[1] = 1;
+			container->data[container->top].t[1] = 2;
 			hasContent = 1;
+		}else if(!haveDifferneces(absOffset[0],i))
+		{
+			container->data[container->top].t[1] = 1;
 		}
 		
 		// 2 table , he is figure ... (a list)
@@ -451,9 +454,12 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 			if(INLMT(myEc.data[x].key))
 			{
 				//printf("[+]");
-				container->data[container->top].t[2] = 1;
+				container->data[container->top].t[2] = 2;
 				hasContent = 1;
 			}
+		}else if(!haveDifferneces(absOffset[1],i))
+		{
+			container->data[container->top].t[2] = 1;
 		}
 		
 		// 3 end of year // before end of article
