@@ -241,14 +241,17 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 	//int isMarkedEP2BAOT = 0;
 	
 	// 16 index of year
-	int nextYearOffset = hasYearafterTheOffset(startOffset,cLen);;
+	int nextYearOffset = hasYearafterTheOffset(startOffset,cLen);
+	int lastYearOffsetForIndex = startOffset;
 	int indexOfYear = 0;
 	// 17 index of page
 	int nextPageOffset = hasPPafterTheOffset(startOffset,cLen);
+	int lastPageOffsetForIndex = startOffset;
 	int indexOfPage = 0;
 	
 	// 18 index of page2
 	int nextPage2Offset = hasPPafterTheOffset2(startOffset,cLen);
+	int lastPage2OffsetForIndex = startOffset;
 	int indexOfPage2 = 0;
 	
 	for(int i=startOffset;i<cLen;i++)
@@ -262,14 +265,18 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 			if(i==nextYearOffset )
 			{
 				indexOfYear ++;
-				container->data[container->top].t[16] = indexOfYear*2;
+				container->data[container->top].t[16] = indexOfYear;
+				lastYearOffsetForIndex = nextYearOffset;
 				nextYearOffset = hasYearafterTheOffset(nextYearOffset,cLen);
 				if(nextYearOffset == 0) nextYearOffset = -1;
 				//printf("[Y]");
 				hasContent = 1;
-			}else if(!haveDiffernecesH(i,nextYearOffset))
+			}else if(!haveDiffernecesE(i,nextYearOffset))
 			{
-				container->data[container->top].t[16] = indexOfYear*2-1;
+				container->data[container->top].t[16] = indexOfYear+1;
+			}else if(!haveDiffernecesE(i,lastYearOffsetForIndex))
+			{
+				container->data[container->top].t[16] = indexOfYear;
 			}
 		
 		}
@@ -280,16 +287,20 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 			if(i==nextPageOffset)
 			{
 				indexOfPage ++ ;
-				container->data[container->top].t[17] = indexOfPage*2;
+				container->data[container->top].t[17] = indexOfPage;
+				lastPageOffsetForIndex = nextPageOffset;
 				nextPageOffset = hasPPafterTheOffset(nextPageOffset,cLen);
 				//printf("#################################RECEIVE:%d\n",nextPageOffset);
 				if(nextPageOffset == 0) nextPageOffset = -1;
 				//printf("[P]");
 				//printfContextS(i,"P1");
 				hasContent = 1;
-			}else if(!haveDiffernecesH(i,nextPageOffset))
+			}else if(!haveDiffernecesE(i,nextPageOffset))
 			{
-				container->data[container->top].t[17] = indexOfPage*2-1;
+				container->data[container->top].t[17] = indexOfPage+1;
+			}else if(!haveDiffernecesE(i,nextPageOffset))
+			{
+				container->data[container->top].t[17] = indexOfPage;
 			}
 		
 		}
@@ -300,15 +311,18 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 			if(i==nextPage2Offset)
 			{
 				indexOfPage2 ++ ;
-				container->data[container->top].t[17] = indexOfPage2*2;
+				container->data[container->top].t[17] = indexOfPage2;
 				nextPage2Offset = hasPPafterTheOffset(nextPage2Offset,cLen);
 				if(nextPage2Offset == 0) nextPage2Offset = -1;
 				//printf("[PP]");
 				//printfContextS(i,"P2");
 				hasContent = 1;
-			}else if(!haveDiffernecesH(i,nextPage2Offset))
+			}else if(!haveDiffernecesE(i,nextPage2Offset))
 			{
-				container->data[container->top].t[17] = indexOfPage2*2-1;
+				container->data[container->top].t[17] = indexOfPage2+1;
+			}else if(!haveDiffernecesE(i,lastPage2OffsetForIndex))
+			{
+				container->data[container->top].t[17] = indexOfPage2;
 			}
 		}
 		
@@ -473,54 +487,64 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 		// 6 end of article (move down)
 
 		// 7 end year before ack
-		if(i>endYearBeforeAck && endYearBeforeAck)
+		
+		if(i>endYearBeforeAck && endYearBeforeAck && !container->data[container->top].t[7] )
 		{
-			container->data[container->top].t[7] = 2;
+			if(!haveDifferneces(endYearBeforeAck,i))
+				container->data[container->top].t[7] = 3;
 		}
 		
 		// 8 end year before table
-		if(i>endYearBeforeTable && endYearBeforeTable)
+		if(i>endYearBeforeTable && endYearBeforeTable && !container->data[container->top].t[8] )
 		{
-			container->data[container->top].t[8] = 2;
+			if(!haveDifferneces(endYearBeforeTable,i))
+				container->data[container->top].t[8] = 3;
 		}
 		// 9 end year before ack or table
-		if(i>endYearBeforeAckOrTable && endYearBeforeAckOrTable)
+		if(i>endYearBeforeAckOrTable && endYearBeforeAckOrTable && !container->data[container->top].t[9] )
 		{
-			container->data[container->top].t[9] = 2;
+			if((!haveDifferneces(endYearBeforeAck,i)) || (!haveDifferneces(endYearBeforeTable,i)))
+				container->data[container->top].t[9] = 3;
 		}
 
 		// 10 end page before ack
-		if(i>endPageBeforeAck && endPageBeforeAck)
+		if(i>endPageBeforeAck && endPageBeforeAck && !container->data[container->top].t[10] )
 		{
-			container->data[container->top].t[10] = 2;
+			if(!haveDifferneces(endPageBeforeAck,i))
+				container->data[container->top].t[10] = 3;
 		}
 		
 		// 11 end page before table
-		if(i>endPageBeforeTable && endPageBeforeTable)
+		if(i>endPageBeforeTable && endPageBeforeTable && !container->data[container->top].t[11] )
 		{
-			container->data[container->top].t[11] = 2;
+			if(!haveDifferneces(endPageBeforeTable,i))
+				container->data[container->top].t[11] = 3;
 		}
 		
 		// 12 end page before ack or table
-		if(i>endPageBeforeAckOrTable && endPageBeforeAckOrTable)
+		if(i>endPageBeforeAckOrTable && endPageBeforeAckOrTable && !container->data[container->top].t[12] )
 		{
-			container->data[container->top].t[12] = 2;
+			if((!haveDifferneces(endPageBeforeAck,i)) || (!haveDifferneces(endPageBeforeTable,i)))
+				container->data[container->top].t[12] = 2;
 		}
 		// 13 end page2 before ack
-		if(i>endPage2BeforeAck && endPage2BeforeAck)
+		if(i>endPage2BeforeAck && endPage2BeforeAck && !container->data[container->top].t[13] )
 		{
-			container->data[container->top].t[13] = 2;
+			if(!haveDifferneces(endPage2BeforeAck,i))
+				container->data[container->top].t[13] = 2;
 		}
 		// 14 end page2 before table
 		
-		if(i>endPage2BeforeTable && endPage2BeforeTable)
+		if(i>endPage2BeforeTable && endPage2BeforeTable && !container->data[container->top].t[14] )
 		{
-			container->data[container->top].t[14] = 2;
+			if(!haveDifferneces(endPage2BeforeTable,i))
+				container->data[container->top].t[14] = 2;
 		}
 		// 15 end page2 before ack or table
-		if(i>endPage2BeforeAckOrTable && endPage2BeforeAckOrTable)
+		if(i>endPage2BeforeAckOrTable && endPage2BeforeAckOrTable && !container->data[container->top].t[15] )
 		{
-			container->data[container->top].t[15] = 2;
+			if((!haveDifferneces(endPage2BeforeAck,i)) ||  (!haveDifferneces(endPage2BeforeTable,i)))
+				container->data[container->top].t[15] = 2;
 		}
 
 		// move up

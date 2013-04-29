@@ -204,8 +204,8 @@ int genEndSampleCtl(const char* fileName,int isDir)
 				start+=8;
 			}else
 			{
-				powerWrite(fp,start,_mfdc->data[i].t[j]+1,4);
-				start+=4;
+				powerWrite(fp,start,_mfdc->data[i].t[j]+1,8);
+				start+=8;
 			}
 			
 			
@@ -244,16 +244,17 @@ int genEndSampleCtl(const char* fileName,int isDir)
 					//fprintf(fp,"%d:%d ",start++,_mfdc->data[i].t[j]+1);
 					if(j==0)
 					{
-						powerWrite(fp,start,_mfdc->top-_mfdc->data[i].t[j],4);
-						start+=4;
+						rateWrite(fp,start,_mfdc->data[i].t[0]/_mfdc->top);
+						//powerWrite(fp,start,_mfdc->top-_mfdc->data[i].t[j],4);
+						start+=5;
 					}else if(j<16)
 					{
 						rankWrite(fp,start,_mfdc->data[i].t[j]+1,8);
 						start+=8;
 					}else
 					{
-						powerWrite(fp,start,_mfdc->data[i].t[j]+1,4);
-						start+=4;
+						powerWrite(fp,start,_mfdc->data[i].t[j]+1,8);
+						start+=8;
 					}
 			
 				}
