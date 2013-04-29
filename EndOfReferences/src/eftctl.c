@@ -144,7 +144,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 		printf(".");
 		//positive
 		
-		fprintf(fp,"%c1 ",!haveDifferneces(_mfdc->data[i].offset,targetOffset)?'+':'-');
+		fprintf(fp,"%c1 ",!haveDiffernecesD(_mfdc->data[i].offset,targetOffset)?'+':'-');
 		if(!haveDifferneces(_mfdc->data[i].offset,targetOffset)) pptag ++;
 		/*
 		if(ABSDIFF(_mfdc->data[i].offset,targetOffset)<100)
@@ -228,7 +228,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 	{
 		for(int i = 0; i < _mfdc->top;i++)
 		{
-			if(!haveDiffernecesE(_mfdc->data[i].offset,targetOffset))
+			if(!haveDiffernecesD(_mfdc->data[i].offset,targetOffset))
 			{
 				start = 1;
 				pptag = -1;
