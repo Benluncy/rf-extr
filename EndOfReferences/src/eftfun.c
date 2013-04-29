@@ -909,6 +909,8 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	fprintf(fp,"%d:%d ",start++,(hasNameafterTheOffset1(offset,lmt)?1:-1));
 	fprintf(fp,"%d:%d ",start++,(hasNameafterTheOffset2(offset,lmt)?1:-1));
 	*/
+	
+	
 	fprintf(fp,"%d:%d ",start++,((hasPPafterTheOffset(offset,lmt) >= hasPPafterTheOffset(offset,-lmt)))?1:-1);
 	fprintf(fp,"%d:%d ",start++,((hasPPafterTheOffset2(offset,lmt) >= hasPPafterTheOffset2(offset,-lmt)))?1:-1);
 	fprintf(fp,"%d:%d ",start++,((hasYearafterTheOffset(offset,lmt) >= hasYearafterTheOffset(offset,-lmt)))?1:-1);
@@ -929,20 +931,18 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	fprintf(fp,"%d:%d ",start++,(dataDensity(offset,lmt) >= dataDensity(offset,-lmt))?1:-1);
 	fprintf(fp,"%d:%d ",start++,(wordsNumber(offset,lmt) >= wordsNumber(offset,-lmt))?1:-1);
 	
-	lmt = -300;
-	int vote = 0;
-	for(int i=0;i<ENDCALLBACKLEN;i++)
-		if(endFunctionList[i](offset,lmt)) vote++;
-	rankWrite(fp,start+1,vote,ENDCALLBACKLEN);
-	start+=ENDCALLBACKLEN+1;	
 	
 	lmt = 30;
 	vote = 0;
 	for(int i=0;i<ENDCALLBACKLEN;i++)
-		if(endFunctionList[i](offset,lmt)) vote++;
-	rankWrite(fp,start+1,vote,ENDCALLBACKLEN);
-	start+=ENDCALLBACKLEN+1;
-
+		if(endFunctionList[i](offset,lmt))
+		{
+			fprintf(fp,"%d:%s ",start++,"1");
+		}else
+		{
+			fprintf(fp,"%d:%s ",start++,"-1");
+		}
+	
 
 	
 	lmt = -500;
