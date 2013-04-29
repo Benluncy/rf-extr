@@ -225,7 +225,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 				// 0 , 1 , 2,
 				//rankWrite(fp,start,_mfdc->data[i].t[j],3);
 				rankWrite(fp,start,_mfdc->data[i].t[j-1]+_mfdc->data[i].t[j-2],4);
-				start += 3;
+				start += 4;
 				break;
 			// */
 			
