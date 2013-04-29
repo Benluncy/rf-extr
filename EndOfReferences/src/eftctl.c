@@ -173,13 +173,6 @@ int genEndSampleCtl(const char* fileName,int isDir)
 			case 18:
 				break;
 			
-			case 9:
-			case 12:
-			case 15:
-			case 16:
-			case 17:
-			case 18:
-				break;
 			
 			default:
 			/*
@@ -243,13 +236,13 @@ int genEndSampleCtl(const char* fileName,int isDir)
 					case 18:
 						break;
 					///
-					case 9:
-					case 12:
-					case 15:
-					case 16:
-					case 17:
-					case 18:
-						break;
+					//case 9:
+					//case 12:
+					//case 15:
+					//case 16:
+					//case 17:
+					//case 18:
+					//	break;
 				
 					default:
 						if(j>18)
