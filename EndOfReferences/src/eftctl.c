@@ -160,44 +160,47 @@ int genEndSampleCtl(const char* fileName,int isDir)
 		start = 1;
 		for(int j=0;j<ENDLEN;j++)
 		{
-		/*
+		
 			switch(j)
 			{
-			
-			case 7:
-			case 8:
-			case 10:
-			case 11:
-			case 13:
-			case 14:
-			case 16:
-			case 17:
-			case 18:
+			case 0:
+				rateWrite(fp,start,_mfdc->data[j].t[0]/_mfdc->top);
+				start+=5;
 				break;
-			
-			
-			default:
-			
-				if(j>18)
-				{
-					powerWrite(fp,start,_mfdc->data[i].t[j],8);
-					start+=8;
-				}else
-				{
-					rankWrite(fp,start,_mfdc->data[i].t[j]+1,8);
-					start+=8;
-				}
-				
-				powerWrite(fp,start,_mfdc->data[i].t[j],4);
-				start+=4;
+			case 1:
+			case 2:
+				fprintf(fp,"%d:%d ",start++,container->data[container->top].t[j]);
+				break;
+			case 3:
+			case 4:
+			case 5:
+				// 0 , 1 , 2
+				rankWrite(fp,start,_mfdc->data[i].t[j],3);
+				start += 3;
+				break;
+			case 6:
+				fprintf(fp,"%d:%d ",start++,container->data[container->top].t[j]);
+				break;
+			case 9:
+			case 12:
+			case 15:
+				rankWrite(fp,start,_mfdc->data[i].t[j],3);
+				start += 3;
+				break;
+			case 21:
+			case 24:
+			case 27:
+				powerWrite(fp,start,_mfdc->data[i].t[j]+1,8);
+				start+=8;
+				break;
 			}
-		*/	
+			/*
+			
 			//fprintf(fp,"%d:%d ",start++,_mfdc->data[i].t[j]+1);
 			if(j==0)
 			{
 				//powerWrite(fp,start,-,4);
-				rateWrite(fp,start,_mfdc->data[i].t[0]/_mfdc->top);
-				start+=5;
+				
 			}else if(j<16)
 			{
 				rankWrite(fp,start,_mfdc->data[i].t[j]+1,8);
@@ -208,6 +211,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 				powerWrite(fp,start,_mfdc->data[i].t[j]+1,8);
 				start+=8;
 			}
+			*/
 			
 			
 		}
