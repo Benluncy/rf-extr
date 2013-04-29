@@ -169,50 +169,41 @@ int genEndSampleCtl(const char* fileName,int isDir)
 				break;
 			case 1:
 			case 2:
+				// 1 acknowledgements etc.
+				// 2 table , he is figure ... (a list)
 				fprintf(fp,"%d:%d ",start++,_mfdc->data[_mfdc->top].t[j]);
 				break;
 			case 3:
 			case 4:
 			case 5:
+				// 3 end of year // before end of content
+				// 4 end of page // before end of content
+				// 5 end of page2 // before end of content
 				// 0 , 1 , 2
 				rankWrite(fp,start,_mfdc->data[i].t[j],3);
 				start += 3;
 				break;
-			case 6:
+			case 6: // end of article
+				// 0 , 1
 				fprintf(fp,"%d:%d ",start++,_mfdc->data[_mfdc->top].t[j]);
 				break;
 			case 9:
 			case 12:
 			case 15:
+				// 9 end year before ack or table
+				// 12 end page before ack or table
 				rankWrite(fp,start,_mfdc->data[i].t[j],3);
 				start += 3;
 				break;
 			case 21:
 			case 24:
 			case 27:
-				powerWrite(fp,start,_mfdc->data[i].t[j]+1,8);
+				// the min the better
+				// ABSDIFF of INDEX
+				powerWrite(fp,start,_mfdc->data[i].t[j],8);
 				start+=8;
 				break;
 			}
-			/*
-			
-			//fprintf(fp,"%d:%d ",start++,_mfdc->data[i].t[j]+1);
-			if(j==0)
-			{
-				//powerWrite(fp,start,-,4);
-				
-			}else if(j<16)
-			{
-				rankWrite(fp,start,_mfdc->data[i].t[j]+1,8);
-				start+=8;
-				
-			}else
-			{
-				powerWrite(fp,start,_mfdc->data[i].t[j]+1,8);
-				start+=8;
-			}
-			*/
-			
 			
 		}
 			
@@ -232,7 +223,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 	
 	
 	//DEBUG
-	
+	pptag = -2;
 	if(!pptag)
 	{
 		for(int i = 0; i < _mfdc->top;i++)
@@ -244,27 +235,52 @@ int genEndSampleCtl(const char* fileName,int isDir)
 				fprintf(fp,"+1 ");
 				for(int j=0;j<ENDLEN;j++)
 				{
-					//powerWrite(fp,start,_mfdc->data[i].t[j]+1,4);
-					//start+=4;
-					//fprintf(fp,"%d:%d ",start++,_mfdc->data[i].t[j]+1);
-					if(j==0)
+		
+					switch(j)
 					{
-						rateWrite(fp,start,_mfdc->data[i].t[0]/_mfdc->top);
-						//powerWrite(fp,start,_mfdc->top-_mfdc->data[i].t[j],4);
+					case 0:
+						rateWrite(fp,start,_mfdc->data[j].t[0]/_mfdc->top);
 						start+=5;
-					}else if(j<16)
-					{
-						rankWrite(fp,start,_mfdc->data[i].t[j]+1,8);
+						break;
+					case 1:
+					case 2:
+						// 1 acknowledgements etc.
+						// 2 table , he is figure ... (a list)
+						fprintf(fp,"%d:%d ",start++,_mfdc->data[_mfdc->top].t[j]);
+						break;
+					case 3:
+					case 4:
+					case 5:
+						// 3 end of year // before end of content
+						// 4 end of page // before end of content
+						// 5 end of page2 // before end of content
+						// 0 , 1 , 2
+						rankWrite(fp,start,_mfdc->data[i].t[j],3);
+						start += 3;
+						break;
+					case 6: // end of article
+						// 0 , 1
+						fprintf(fp,"%d:%d ",start++,_mfdc->data[_mfdc->top].t[j]);
+						break;
+					case 9:
+					case 12:
+					case 15:
+						// 9 end year before ack or table
+						// 12 end page before ack or table
+						rankWrite(fp,start,_mfdc->data[i].t[j],3);
+						start += 3;
+						break;
+					case 21:
+					case 24:
+					case 27:
+						// the min the better
+						// ABSDIFF of INDEX
+						powerWrite(fp,start,_mfdc->data[i].t[j],8);
 						start+=8;
-					}else
-					{
-						powerWrite(fp,start,_mfdc->data[i].t[j]+1,8);
-						start+=8;
+						break;
 					}
 			
 				}
-				
-				
 				start = genNextDataForEndfeature(fp,_mfdc->data[i],start);
 				fprintf(fp," #%d",_mfdc->data[i].offset);
 				fprintf(fp,"\n");

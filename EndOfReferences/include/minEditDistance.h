@@ -7,6 +7,39 @@ enum true_or_false{false,true};
 #endif //__cplusplus
 
 
+#ifndef INSERT_COST
+#define INSERT_COST 1
+#endif // INSERT_COST
+
+#ifndef DELETE_COST
+#define DELETE_COST 1
+#endif // DELETE_COST
+
+#ifndef SUBSTITUTE_COST 
+#define SUBSTITUTE_COST 1
+#endif // SUBSTITUTE_COST
+
+#ifndef _MIN
+#define _MIN(x,y,z) ((x<y)?((x<z)?x:z):((y<z)?y:z))
+#endif // _MIN(x,y,z)
+
+#ifndef _MAX
+#define _MAX(x,y,z) ((x>y)?((x>z)?))
+#endif // _MAX
+
+#ifndef MIN2
+#define MIN2(x,y) ((x<y)?(x):(y))
+#endif //
+
+
+#ifndef MAX2
+#define MAX2(x,y) ((x>y)?(x):(y))
+#endif //
+
+#ifndef MIDDLEOF
+#define MIDDLEOF(a,b,c)  (a >= b && a <= c) // a is at the range of  [b,c]
+#endif 
+
 
 
 //inline int editDistance(const char *t,const char * s);

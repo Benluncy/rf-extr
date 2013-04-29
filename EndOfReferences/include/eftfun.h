@@ -3,7 +3,8 @@
 #include <stdio.h>
 #include "persistence.h"
 
-#define thresholdForDifferneces  5
+#define thresholdForDifferneces  2
+#define exThresholdForDifferences (thresholdForDifferneces*2)
 
 #define thresholdForGetOffsetSuggestion(x)  x*0.2
 #define T4GOS(x) thresholdForGetOffsetSuggestion(x)
@@ -21,7 +22,7 @@
 
 #define ABSDIFF(x,y) (x>y?x-y:y-x)
 #define INABSDIFF(x,y) (ABSDIFF(x,y)<=thresholdForDifferneces)
-
+#define EXINABSDIFF(x,y) (ABSDIFF(x,y)<=exThresholdForDifferences)
 
 // data set
 int cleanEndKWDContainer();
@@ -31,6 +32,7 @@ int insertEndKWD(const char *key);
 int haveDifferneces(int dest,int src);
 int haveDiffernecesE(int dest,int src);
 int haveDiffernecesH(int dest,int src);
+int haveDiffernecesD(int dest,int src);
 
 unsigned int getReferenceEndOffset(void);
 

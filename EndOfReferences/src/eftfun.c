@@ -651,7 +651,7 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 {
 	//return 1;
 	int j = 0;
-	//int lastOffset = container->data[0].offset;
+	int lastOffset = container->data[0].offset;
 	int th=0;
 	int realOffset[9];// 7 8 10 11  13 14
 	int markedReal[9];
@@ -746,26 +746,27 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 			} 
 		}
 		
-		/*
-		if(INABSDIFF(lastOffset,container->data[i].offset))
+		
+	}
+	
+	
+	// do combine
+	j=0;
+	for(int i=1;i<container->top;i++)
+	{
+		if(!haveDifferneces(lastOffset,container->data[i].offset))
 		{
-			for(int k=1;k<ENDLEN;k++)
+			for(int z=1;z<16;z++)
 			{
-				
-				if(container->data[j].t[k] != container->data[i].t[k])
-				{
-					j++;
-					container->data[j].offset = container->data[i].offset;
-					container->data[j].t[0] = j;
-					for(int z=1;z<ENDLEN;z++)
-					{
-						container->data[j].t[z] = container->data[i].t[z];
-					}
-				}
+				container->data[j].t[z] = MAX2(container->data[i].t[z],container->data[j].t[z]);
+			}
+			for(int z=16;z<ENDLEN;z++)
+			{
+				container->data[j].t[z] = MIN2(container->data[i].t[z],container->data[j].t[z]);
 			}
 		}else
 		{
-			container->data[j].offset = (container->data[j].offset+container->data[i-1].offset)/2;
+			container->data[j].offset = (container->data[j].offset+container->data[(i-1)<j?j:(i-1)].offset)/2;
 			j++;
 			container->data[j].offset = container->data[i].offset;
 			container->data[j].t[0] = j;
@@ -774,8 +775,9 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 				container->data[j].t[k] = container->data[i].t[k];
 			}
 			lastOffset = container->data[i].offset;
-		}*/
+		}
 	}
+	container->top = j+1;
 	/*
 	if(!haveDifferneces(lastOffset,getPclen()))
 	{
@@ -1127,13 +1129,15 @@ unsigned int getReferenceEndOffset()
 //TODO MAY USELESS ... 
 //int getLastElement(int (*callback)(int offset,int limit));
 
-int haveDifferneces(int dest,int src)
+int haveDifferneces(int dest,int src) // extend
 {
-	if(src>=getPclen()) src = getPclen()-1;
 	if(src<0) src = 0;
 	if(dest<0) dest = 0;
-	
+	if(src>=getPclen()) src = getPclen()-1;
 	if(dest>=getPclen()) dest = getPclen()-1;
+
+	if(INABSDIFF(dest,src)) return 0;
+
 	int th = 0;
 	char *content = getPcontent();
 
@@ -1143,22 +1147,62 @@ int haveDifferneces(int dest,int src)
 		src = dest;
 		dest = tmp;
 	}
-	if((dest - src) <= thresholdForDifferneces) return 0;
-	for(int i=src;i<dest;i++)
+	for(int i=src;i<dest-1;i++)
 	{
+		/*
 		// no ascii code
 		//if(!(content[i]>='a'&&content[i]<='z')||(content[i]>='A'&&content[i]<='Z')) th++;
-		if(content[i] != ' ' && content[i] != '\r' && content[i] != '\n') th++;
+		if(content[i] != ' ' && content[i] != '\r' && content[i] != '\n' &&fitPattern()) th++;
 		
 		if(th>2) return 1;
-		/*
+		*/
+		
 		if(fitPattern('a',content[i])&&fitPattern('a',content[i+1])) 
 		{
-			return 1;
-			//th++;
-			//if(th > 3) return 1;
-			//i+=2;
-		}*/
+			//return 1;
+			th++;
+			if(th > 0) return 1;
+			i+=2;
+		}
+	}
+	return 0;
+}
+
+int haveDiffernecesD(int dest,int src) // extend
+{
+	if(src<0) src = 0;
+	if(dest<0) dest = 0;
+	if(src>=getPclen()) src = getPclen()-1;
+	if(dest>=getPclen()) dest = getPclen()-1;
+
+	if(EXINABSDIFF(dest,src)) return 0;
+
+	int th = 0;
+	char *content = getPcontent();
+
+	if(dest < src)
+	{
+		int tmp = src;
+		src = dest;
+		dest = tmp;
+	}
+	for(int i=src;i<dest-1;i++)
+	{
+		/*
+		// no ascii code
+		//if(!(content[i]>='a'&&content[i]<='z')||(content[i]>='A'&&content[i]<='Z')) th++;
+		if(content[i] != ' ' && content[i] != '\r' && content[i] != '\n' &&fitPattern()) th++;
+		
+		if(th>2) return 1;
+		*/
+		
+		if(fitPattern('a',content[i])&&fitPattern('a',content[i+1])) 
+		{
+			//return 1;
+			th++;
+			if(th > 0) return 1;
+			i+=2;
+		}
 	}
 	return 0;
 }
@@ -1190,11 +1234,13 @@ int haveDiffernecesH(int dest,int src)
 
 int haveDiffernecesE(int dest,int src) // extend
 {
-	if(src>=getPclen()) src = getPclen()-1;
 	if(src<0) src = 0;
 	if(dest<0) dest = 0;
-	
+	if(src>=getPclen()) src = getPclen()-1;
 	if(dest>=getPclen()) dest = getPclen()-1;
+
+	if(EXINABSDIFF(dest,src)) return 0;
+
 	int th = 0;
 	char *content = getPcontent();
 
@@ -1204,8 +1250,7 @@ int haveDiffernecesE(int dest,int src) // extend
 		src = dest;
 		dest = tmp;
 	}
-	if((dest - src) <= thresholdForDifferneces*2) return 0;
-	for(int i=src;i<dest;i++)
+	for(int i=src;i<dest-1;i++)
 	{
 		/*
 		// no ascii code
@@ -1215,7 +1260,7 @@ int haveDiffernecesE(int dest,int src) // extend
 		if(th>2) return 1;
 		*/
 		
-		if(fitPattern('a',content[i])&&fitPattern('a',content[i+1])) 
+		if(fitPattern('d',content[i])&&fitPattern('d',content[i+1])) 
 		{
 			//return 1;
 			th++;
