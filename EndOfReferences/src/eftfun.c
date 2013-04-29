@@ -1048,7 +1048,7 @@ int prepareDensityData(void)
 	{
 		for(int j=0;j<ENDCALLBACKLEN;j++)
 		{
-			printf("X");
+			//printf("X");
 			mfdc.data[i].density[j][0][0] = (double)mfdc.data[i].fid[j][0]/NOTZERO(mfdc.data[i].offset);
 			mfdc.data[i].density[j][0][1] = (double)(mfdc.data[i].fid[j][1]-mfdc.data[i].fid[j][0])/NOTZERO(getPclen()-mfdc.data[i].fid[j][0]);
 			
