@@ -873,11 +873,11 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	//return 1;
 	//return 1;
 	int offset = fd.offset;
-	int lmt;
+//	int lmt;
 	
 	// prepareDensityData();
 	
-	lmt = -50;
+//	lmt = -50;
 /*
 	
 	fprintf(fp,"%d:%d ",start++,((hasPPafterTheOffset(offset,lmt) >= hasPPafterTheOffset(offset,-lmt)))?1:-1);
@@ -909,6 +909,7 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	start+=10;
 */	
 	// no use start
+	/*
 	int absdiff = ABSDIFF(offset,getReferenceEndOffset());
 	//!haveDiffernecesD(_mfdc->data[i].offset,targetOffset)
 	if(haveDiffernecesD(offset,getReferenceEndOffset()))
@@ -920,7 +921,7 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	}
 	
 	powerWrite(fp,start,absdiff,2);
-	start+=2;
+	start+=2;*/
 	// no use end 
 	
 /*
