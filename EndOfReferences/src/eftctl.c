@@ -220,7 +220,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 	
 	int mstart = 1;
 	//DEBUG
-	/*
+	
 	if(!pptag)
 	{
 		for(int i = 0; i < _mfdc->top;i++)
@@ -233,6 +233,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 				{
 					switch(j)
 					{
+					/*
 					//
 					case 7:
 					case 8:
@@ -252,6 +253,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 					case 17:
 					case 18:
 						break;
+					*/
 					default:
 						if(j>18)
 						{
@@ -288,7 +290,6 @@ int genEndSampleCtl(const char* fileName,int isDir)
 		printfContext(targetOffset);
 	///	
 	}
-	*/
 	//step 4: finish handle
 	printf("(%d)",pptag);
 	printf(" [done]\n");
