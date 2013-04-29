@@ -214,14 +214,8 @@ int genEndSampleCtl(const char* fileName,int isDir)
 		printf("[~]");
 	}
 	//step 4: finish handle
-	if(diffsj!=0)
-	{
-		printf("%d[%d]",diffs,diffsj);
-		if(diffs > 200) errs++;
-		if(errs > 3) printf("[EE%d]",errs);
-	}
-	printf("(%d)",pptag);
-	printf(" [done]\n");
+	//printf("(%d)",pptag);
+	printf(" [ok]\n");
 	id++;
 	
 	
