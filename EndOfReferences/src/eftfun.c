@@ -13,6 +13,19 @@
 //TODO DEBUG
 #include "debuginfo.h"
 
+struct endKWD
+{
+	unsigned int len;
+	char key[200];
+};
+
+typedef struct theEKContainer
+{
+	int top;
+	struct endKWD data[200];
+}ekContainer;
+ekContainer myEc;
+
 //#define INDEBUG 0
 
 
@@ -46,19 +59,10 @@ OffsetCallback endFunctionList[ENDCALLBACKLEN]={hasPPafterTheOffset,
 						hasLocationafterTheOffset,
 						hasWords};
 
-struct endKWD
-{
-	unsigned int len;
-	char key[200];
-};
 
-typedef struct theEKContainer
-{
-	int top;
-	struct endKWD data[200];
-}ekContainer;
+int edOffsetList[6];
 
-ekContainer myEc;
+
 
 inline int cleanEndKWDContainer()
 {
@@ -149,6 +153,8 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 	int endPage2BeforeAck = 0;
 	int endPage2BeforeTable = 0;
 	
+	for(int i=0;i<6;i++) edOffsetList[i] = 0;
+	
 	for(int i=startOffset;i<cLen;i++)
 	{
 		if(i!=0) if(fitPattern('d',content[i-1])) continue;
@@ -190,36 +196,44 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 	
 	
 	endYearBeforeAck = endYearBeforeAck == 0 ? 0 : getLastPageOffset(startOffset,endYearBeforeAck);
+	
 	//int isMarkedEYBA = 0;
 	
 	// 8 end year before table
 	endYearBeforeTable = endYearBeforeTable == 0 ? 0 : getLastPageOffset(startOffset,endYearBeforeTable);
+	
 	//int isMarkedEYBT = 0;
 	
 	// 9 end year before ack or table
 	int endYearBeforeAckOrTable = MINANDNZ(endYearBeforeAck,endYearBeforeTable);
+	
 	//int isMarkedEYBAOT = 0;
 	
 	
 	// 10 end page before ack
 	endPageBeforeAck = endPageBeforeAck == 0 ? 0 : getLastPageOffset(startOffset,endPageBeforeAck);
+	
 	//int isMarkedEPBA = 0;
 	
 	
 	// 11 end page before table
 	endPageBeforeTable = endPageBeforeTable == 0 ? 0 : getLastPageOffset(startOffset,endPageBeforeTable);
+	
 	//int isMarkedEPBT = 0;
 	
 	// 12 end page before ack or table
 	int endPageBeforeAckOrTable = MINANDNZ(endPageBeforeAck,endPageBeforeTable);
+	
 	//int isMarkedEPBAOT = 0;
 	
 	// 13 end page2 before ack
 	endPage2BeforeAck = endPage2BeforeAck == 0 ? 0 : getLastPage2Offset(startOffset,endPage2BeforeAck);
+	
 	//int isMarkedEP2BA = 0;
 	
 	// 14 end page2 before table
 	endPage2BeforeTable = endPage2BeforeTable == 0 ? 0 : getLastPage2Offset(startOffset,endPage2BeforeTable);
+	
 	//int isMarkedEP2BT = 0;
 	
 	// 15 end page2 before ack or table
@@ -243,38 +257,61 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 		hasContent = 0;
 		
 		// 16 index of year
-		if(i==nextYearOffset && nextYearOffset != -1)
+		if(nextYearOffset != -1)
 		{
-			indexOfYear ++;
-			container->data[container->top].t[16] = indexOfYear;
-			nextYearOffset = hasYearafterTheOffset(nextYearOffset,cLen);
-			if(nextYearOffset == 0) nextYearOffset = -1;
-			//printf("[Y]");
-			hasContent = 1;
+			if(i==nextYearOffset )
+			{
+				indexOfYear ++;
+				container->data[container->top].t[16] = indexOfYear*2;
+				nextYearOffset = hasYearafterTheOffset(nextYearOffset,cLen);
+				if(nextYearOffset == 0) nextYearOffset = -1;
+				//printf("[Y]");
+				hasContent = 1;
+			}else if(!haveDiffernecesH(i,nextYearOffset))
+			{
+				container->data[container->top].t[16] = indexOfYear*2-1;
+			}
+		
 		}
+		
 		// 17 index of page
-		if(i==nextPageOffset && nextPageOffset != -1)
+		if(nextPageOffset != -1)
 		{
-			indexOfPage ++ ;
-			container->data[container->top].t[17] = indexOfPage;
-			nextPageOffset = hasPPafterTheOffset(nextPageOffset,cLen);
-			//printf("#################################RECEIVE:%d\n",nextPageOffset);
-			if(nextPageOffset == 0) nextPageOffset = -1;
-			//printf("[P]");
-			//printfContextS(i,"P1");
-			hasContent = 1;
+			if(i==nextPageOffset)
+			{
+				indexOfPage ++ ;
+				container->data[container->top].t[17] = indexOfPage*2;
+				nextPageOffset = hasPPafterTheOffset(nextPageOffset,cLen);
+				//printf("#################################RECEIVE:%d\n",nextPageOffset);
+				if(nextPageOffset == 0) nextPageOffset = -1;
+				//printf("[P]");
+				//printfContextS(i,"P1");
+				hasContent = 1;
+			}else if(!haveDiffernecesH(i,nextPageOffset))
+			{
+				container->data[container->top].t[17] = indexOfPage*2-1;
+			}
+		
 		}
+		
 		// 18 index of page2
-		if(i==nextPage2Offset && nextPage2Offset != -1)
+		if(nextPage2Offset != -1)
 		{
-			indexOfPage2 ++ ;
-			container->data[container->top].t[17] = indexOfPage2;
-			nextPage2Offset = hasPPafterTheOffset(nextPage2Offset,cLen);
-			if(nextPage2Offset == 0) nextPage2Offset = -1;
-			//printf("[PP]");
-			//printfContextS(i,"P2");
-			hasContent = 1;
+			if(i==nextPage2Offset)
+			{
+				indexOfPage2 ++ ;
+				container->data[container->top].t[17] = indexOfPage2*2;
+				nextPage2Offset = hasPPafterTheOffset(nextPage2Offset,cLen);
+				if(nextPage2Offset == 0) nextPage2Offset = -1;
+				//printf("[PP]");
+				//printfContextS(i,"P2");
+				hasContent = 1;
+			}else if(!haveDiffernecesH(i,nextPage2Offset))
+			{
+				container->data[container->top].t[17] = indexOfPage2*2-1;
+			}
 		}
+		
 		
 		
 		if(i!=0)
@@ -284,6 +321,7 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 			if(endYearBeforeAck == i)
 			{
 				container->data[container->top].t[7] = 1;
+				edOffsetList[0] = container->top;
 				hasContent = 1;
 				//isMarkedEYBA = 1;
 			}
@@ -291,6 +329,7 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 			if(endYearBeforeTable == i)
 			{
 				container->data[container->top].t[8] = 1;
+				edOffsetList[1] = container->top;
 				hasContent = 1;
 				//isMarkedEYBT = 1;
 			}
@@ -305,6 +344,7 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 			if(endPageBeforeAck == i)
 			{
 				container->data[container->top].t[10] = 1;
+				edOffsetList[2] = container->top;
 				hasContent = 1;
 				//isMarkedEPBA = 1;
 			}
@@ -312,6 +352,7 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 			if(endPageBeforeTable == i)
 			{
 				container->data[container->top].t[11] = 1;
+				edOffsetList[3] = container->top;
 				hasContent = 1;
 				//isMarkedEPBT = 1;
 			}
@@ -326,6 +367,7 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 			if(endPage2BeforeAck == i)
 			{
 				container->data[container->top].t[13] = 1;
+				edOffsetList[4] = container->top;
 				hasContent = 1;
 				//isMarkedEP2BA = 1;
 			}
@@ -333,6 +375,7 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 			if(endPage2BeforeTable == i)
 			{
 				container->data[container->top].t[14] = 1;
+				edOffsetList[5] = container->top;
 				hasContent = 1;
 				//isMarkedEP2BT = 1;
 			}
@@ -564,9 +607,41 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 
 int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets and make sure 
 {
-	return 1;
+	//return 1;
 	int j = 0;
 	int lastOffset = container->data[0].offset;
+	int th=0
+	int realOffset[6];// 7 8 10 11  13 14
+	int markedReal[6];
+	for(j=0;j<6;j++) markedReal[j] = edOffsetList[j]==0?1:0;
+	//edOffsetList[0] = container->top;
+	/*
+	realOffset[0] = container->data[edOffsetList[0]].t[16];
+	realOffset[1] = container->data[edOffsetList[1]].t[16];
+	
+	realOffset[2] = container->data[edOffsetList[2]].t[17];
+	realOffset[3] = container->data[edOffsetList[3]].t[17];
+	
+	realOffset[4] = container->data[edOffsetList[4]].t[18];
+	realOffset[5] = container->data[edOffsetList[5]].t[18];
+	*/
+	for(th=0;!allMarked(markedReal,6);th++)
+	{
+		for(j=0;j<6;j++)
+		{
+			if(container->data[edOffsetList[j]+th].t[16+(j/2)]!=0)
+			{
+				realOffset[j] = container->data[edOffsetList[j]+th].t[16+(j/2)];
+				markedReal[j] = 1;
+			}else if(container->data[edOffsetList[j]-th].t[16+(j/2)]!=0)
+			{
+				realOffset[j] = container->data[edOffsetList[j]-th].t[16+(j/2)];
+				markedReal[j] = 1;
+			}
+		}
+	}
+	
+	
 	//introduce of settings
 	// 0 empty for valued -- index of all offsets
 	// 1 acknowledgements etc.
@@ -593,12 +668,12 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 		//container->data[j].offset = container->data[i].offset;
 		//haveDifferneces(int dest,int src)
 		//if(!haveDiffernecesH(lastOffset,container->data[i].offset))
-		for(j=i;(container->data[j].offset-container->data[i].offset)<=thresholdForDifferneces;j++)
+		for(j=0;j<6;j++)
 		{
-			if(INABSDIFF(container->data[j].offset,container->data[i].offset))
+			if(container->data[i].t[16+j] != 0)
 			{
-				
-			}
+				container->data[i].t[16+j] = ABSDIFF(container->data[i].t[16+j],realOffset[j])+1;
+			} 
 		}
 		
 		/*
@@ -657,7 +732,7 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 	}*/
 	
 	
-	container->top = j+1;
+	//container->top = j+1;
 	return 1;
 }
 
@@ -1103,6 +1178,18 @@ int haveDiffernecesH(int dest,int src)
 	return 0;
 }
 */
+
+
+int allMarked(int a[],int len)
+{
+	int i;
+	for(i=0;i<len;i++)
+	{
+		if(a[i]==0) return 0;
+	}
+	return 1;
+}
+
 
 //TODO MY LORD ...
 endFeatureDataContainer *getEndFeatureDataContainer(void)

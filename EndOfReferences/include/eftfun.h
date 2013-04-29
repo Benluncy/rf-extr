@@ -56,6 +56,7 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int step);
 
 int prepareDensityData(void);
 
+int allMarked(int a[],int len);
 
 
 
