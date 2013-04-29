@@ -155,14 +155,14 @@ int genEndSampleCtl(const char* fileName,int isDir)
 				break;
 			// */
 			
-			// /*
+			///*
 			// f 1
 			case 1:
 			case 2:
 				// 1 acknowledgements etc.
 				// 2 table , he is figure ... (a list)
 				//fprintf(fp,"%d:%d ",start++,_mfdc->data[i].t[j]);
-				rankWrite(fp,start,_mfdc->data[i].t[j],3);
+				rankWrite(fp,start,_mfdc->data[i].t[j]+1,3);
 				start += 3;
 				
 				//if(_mfdc->data[i].t[j])
@@ -176,6 +176,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 				//}
 				break;
 			// */
+			
 			/* 
 			// f 2
 			case 3:
@@ -185,7 +186,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 				// 4 end of page // before end of content
 				// 5 end of page2 // before end of content
 				// 0 , 1 , 2
-				rankWrite(fp,start,_mfdc->data[i].t[j],3);
+				rankWrite(fp,start,_mfdc->data[i].t[j]+1,3);
 				start += 3;
 				break;
 			// */
