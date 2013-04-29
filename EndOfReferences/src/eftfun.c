@@ -766,6 +766,7 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 				{
 					container->data[i].t[19+j] = ABSDIFF(container->data[i].t[16+j],realOffset[j]);
 					container->data[i].t[19+j] /= thresholdForDifferneces;
+					if(container->data[i].t[19+j] == 0) container->data[i].t[19+j] = 1;
 				}
 				//printf("[%d-%d-%d]",i,19+j,container->data[i].t[19+j]);
 			} 
