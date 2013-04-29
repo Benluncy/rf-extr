@@ -966,7 +966,7 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 		fprintf(fp,"%d:%d ",start++,(fd.density[i][0][1] < fd.density[i][0][0])?1:-1);
 		fprintf(fp,"%d:%d ",start++,(fd.density[i][1][1] < fd.density[i][1][0])?1:-1);
 		fprintf(fp,"%d:%d ",start++,(fd.density[i][2][1] < fd.density[i][2][0])?1:-1);
-		fprintf(fp,"%d:%d ",start++,(fd.vari[1] < fd.vari[0])?1:-1);
+		//fprintf(fp,"%d:%d ",start++,(fd.vari[1] < fd.vari[0])?1:-1);
 		
 		
 		// */
@@ -1020,8 +1020,6 @@ int prepareDensityData(void)
 	
 	//density and etc
 	
-	printf(".");fflush(NULL);//TODO TIPS
-	
 	// adjacencyOffset setting ... 
 	for(int i=0;i<mfdc.top;i++)
 	{
@@ -1038,12 +1036,11 @@ int prepareDensityData(void)
 	}
 	
 	
-	printf(".");fflush(NULL);//TODO TIPS
 	
 	int diff;
 	int lmt;
 	//density && variance setting ... 
-	CloseKWD ckwd;
+	//CloseKWD ckwd;
 	for(int i=0;i<mfdc.top;i++)
 	{
 		for(int j=0;j<ENDCALLBACKLEN;j++)
@@ -1070,9 +1067,9 @@ int prepareDensityData(void)
 			
 			// variance 
 			//int getCloseKWD(int offset,CloseKWD *closeKWD,int (*callback)(int offset,int limit));
-			getCloseKWD(mfdc.data[i].offset,&ckwd,endFunctionList[j]);
-			mfdc.data[i].vari[0] = getVariance(ckwd.prev,ckwd.pLen);
-			mfdc.data[i].vari[1] = getVariance(ckwd.next,ckwd.nLen);
+			//getCloseKWD(mfdc.data[i].offset,&ckwd,endFunctionList[j]);
+			//mfdc.data[i].vari[0] = getVariance(ckwd.prev,ckwd.pLen);
+			//mfdc.data[i].vari[1] = getVariance(ckwd.next,ckwd.nLen);
 		}
 		//printf("\n");
 	}
