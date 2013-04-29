@@ -547,8 +547,9 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 			return 1;
 		}*/
 		
-		if(hasContent)// || !haveDiffernecesH(cLen,i))
+		if(hasContent || !haveDiffernecesH(cLen,i))// || !haveDiffernecesH(cLen,i))
 		{
+			/*
 			if(container->top==0)
 			{
 				avgOffset += container->data[container->top].offset;
@@ -564,7 +565,7 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 			else
 			{
 			
-			/*	if(!haveDiffernecesH(container->data[container->top-1].offset,i))
+				if(!haveDiffernecesH(container->data[container->top-1].offset,i))
 				{
 					avgOffset += i;
 					offnum ++;
@@ -579,7 +580,7 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 					
 					container->data[container->top-1].offset = avgOffset / offnum;
 					offnum = 1;
-			*/		container->data[container->top].offset = i;
+					container->data[container->top].offset = i;
 					container->top++;
 					if(container->top >= ENDCTNMAX)
 					{
@@ -588,19 +589,29 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 					}
 			//	}
 			}
+			*/
+			
+			container->data[container->top].offset = i;
+			container->top++;
+			if(container->top >= ENDCTNMAX)
+			{
+				fprintf(stderr,"[ERROR] pool is full! %s %d",__FILE__,__LINE__);
+				getchar();
+			}
 
+			// 6 end of article
+			if(!haveDiffernecesH(cLen,i))
+			{
+				//container->data[container->top].offset = i;
+				container->data[container->top-1].t[6] = 1;
+				//container->top ++ ;
+				return 1;
+			}
 			
 			//if(container->top >= 200) printf("found!");
 			//maxLen = container->top > maxLen ? container->top : maxLen;
 		}
-		// 6 end of article
-		if(!haveDiffernecesH(cLen,i))
-		{
-			container->data[container->top].offset = i;
-			container->data[container->top].t[6] = 1;
-			container->top ++ ;
-			return 1;
-		}
+		
 	}
 	return 0;
 }
