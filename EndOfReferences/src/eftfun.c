@@ -351,7 +351,7 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 			// 9 end year before ack or table
 			if(endYearBeforeAckOrTable == i)
 			{
-				container->data[container->top].t[9] = 1;
+				container->data[container->top].t[9] = (endYearBeforeAck == i) || (endYearBeforeTable == i);
 				hasContent = 1;
 				edOffsetList[2] = container->top;
 				//isMarkedEYBAOT = 1;
@@ -375,7 +375,7 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 			// 12 end page before ack or table
 			if(endPageBeforeAckOrTable == i)
 			{
-				container->data[container->top].t[12] = 1;
+				container->data[container->top].t[12] = (endPageBeforeAck == i) || (endPageBeforeTable == i);
 				hasContent = 1;
 				edOffsetList[5] = container->top;
 				//isMarkedEPBAOT = 1;
@@ -399,7 +399,7 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 			// 15 end page2 before ack or table
 			if(endPage2BeforeAckOrTable == i)
 			{
-				container->data[container->top].t[15] = 1;
+				container->data[container->top].t[15] = (endPage2BeforeAck == i) || (endPage2BeforeTable == i);
 				hasContent = 1;
 				edOffsetList[8] = container->top;
 				//isMarkedEP2BAOT = 1;
