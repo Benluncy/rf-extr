@@ -161,7 +161,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 			default:
 				if(j>18)
 				{
-					powerWrite(fp,start,_mfdc->data[i].t[j]+1,8);
+					powerWrite(fp,start,_mfdc->data[i].t[j],8);
 					start+=8;
 				}else
 				{
