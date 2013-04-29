@@ -86,7 +86,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 		cleanFeature(fileName);	
 		// get head of references
 		basicFilter(_mfdc,startOffset);
-		//combineOffsets(_mfdc);
+		combineOffsets(_mfdc);
 		
 		//!INSERT INTO DB
 		/*
