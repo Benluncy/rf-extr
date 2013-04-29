@@ -1229,7 +1229,7 @@ int powerWrite(FILE *fp,int start,int value,int len)
 	{
 		value /= 2;
 	}
-	printf("[pw:%d]",i);
+	//printf("[pw:%d]",i);
 	rankWrite(fp,start,i,len);
 	return 1;
 }
