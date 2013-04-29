@@ -124,11 +124,12 @@ int genEndSampleCtl(const char* fileName,int isDir)
 		//rankWrite(fp,start,_mfdc->data[i].t[0]+1,10);
 		//start += 10;
 		//11-55
-		for(int j=1;j<16;j++)
+		for(int j=1;j<ENDLEN;j++)
 		{
-			//fprintf(fp,"%d:%d ",start++,_mfdc->data[i].t[j]+1);
 			rankWrite(fp,start,_mfdc->data[i].t[j]+1,8);
 			start+=8;
+			//fprintf(fp,"%d:%d ",start++,_mfdc->data[i].t[j]+1);
+			
 		}
 			
 		//	fprintf(fp,"%d:%d ",);

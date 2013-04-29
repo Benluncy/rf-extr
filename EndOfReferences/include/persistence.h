@@ -8,7 +8,7 @@
 #endif //LENOFT
 
 #ifndef ENDLEN
-#define ENDLEN 22
+#define ENDLEN 28
 #endif //ENDLEN
 //
 #ifndef ENDCALLBACKLEN //ENDCALLBACKLEN

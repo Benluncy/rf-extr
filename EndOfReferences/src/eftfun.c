@@ -60,7 +60,7 @@ OffsetCallback endFunctionList[ENDCALLBACKLEN]={hasPPafterTheOffset,
 						hasWords};
 
 
-int edOffsetList[6];
+int edOffsetList[9];
 
 
 
@@ -153,7 +153,7 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 	int endPage2BeforeAck = 0;
 	int endPage2BeforeTable = 0;
 	
-	for(int i=0;i<6;i++) edOffsetList[i] = 0;
+	for(int i=0;i<9;i++) edOffsetList[i] = 0;
 	
 	for(int i=startOffset;i<cLen;i++)
 	{
@@ -338,13 +338,14 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 			{
 				container->data[container->top].t[9] = 1;
 				hasContent = 1;
+				edOffsetList[2] = container->top;
 				//isMarkedEYBAOT = 1;
 			}
 			// 10 end page before ack
 			if(endPageBeforeAck == i)
 			{
 				container->data[container->top].t[10] = 1;
-				edOffsetList[2] = container->top;
+				edOffsetList[3] = container->top;
 				hasContent = 1;
 				//isMarkedEPBA = 1;
 			}
@@ -352,7 +353,7 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 			if(endPageBeforeTable == i)
 			{
 				container->data[container->top].t[11] = 1;
-				edOffsetList[3] = container->top;
+				edOffsetList[4] = container->top;
 				hasContent = 1;
 				//isMarkedEPBT = 1;
 			}
@@ -361,13 +362,14 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 			{
 				container->data[container->top].t[12] = 1;
 				hasContent = 1;
+				edOffsetList[5] = container->top;
 				//isMarkedEPBAOT = 1;
 			}
 			// 13 end page2 before ack
 			if(endPage2BeforeAck == i)
 			{
 				container->data[container->top].t[13] = 1;
-				edOffsetList[4] = container->top;
+				edOffsetList[6] = container->top;
 				hasContent = 1;
 				//isMarkedEP2BA = 1;
 			}
@@ -375,7 +377,7 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 			if(endPage2BeforeTable == i)
 			{
 				container->data[container->top].t[14] = 1;
-				edOffsetList[5] = container->top;
+				edOffsetList[7] = container->top;
 				hasContent = 1;
 				//isMarkedEP2BT = 1;
 			}
@@ -384,6 +386,7 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 			{
 				container->data[container->top].t[15] = 1;
 				hasContent = 1;
+				edOffsetList[8] = container->top;
 				//isMarkedEP2BAOT = 1;
 			}
 			//
@@ -611,9 +614,9 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 	int j = 0;
 	//int lastOffset = container->data[0].offset;
 	int th=0;
-	int realOffset[6];// 7 8 10 11  13 14
-	int markedReal[6];
-	for(j=0;j<6;j++)
+	int realOffset[9];// 7 8 10 11  13 14
+	int markedReal[9];
+	for(j=0;j<9;j++)
 	{
 		markedReal[j] = edOffsetList[j]==0?1:0;
 		realOffset[j] = 0;
@@ -631,35 +634,35 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 	*/
 	for(th=0;(!allMarked(markedReal,6)) && ((edOffsetList[j]+th)< container->top || (edOffsetList[j]-th) >= 0);th++)
 	{
-		for(j=0;j<6;j++)
+		for(j=0;j<9;j++)
 		{
 			if((edOffsetList[j]+th) < container->top)
 			{
-				if(container->data[edOffsetList[j]+th].t[16+(j/2)]!=0 && !markedReal[j])
+				if(container->data[edOffsetList[j]+th].t[16+(j/3)]!=0 && !markedReal[j])
 				{
-					realOffset[j] = container->data[edOffsetList[j]+th].t[16+(j/2)];
+					realOffset[j] = container->data[edOffsetList[j]+th].t[16+(j/3)];
 					markedReal[j] = 1;
 				}
 			}
 			if((edOffsetList[j]-th) >= 0)
 			{
-				if(container->data[edOffsetList[j]-th].t[16+(j/2)]!=0 && !markedReal[j])
+				if(container->data[edOffsetList[j]-th].t[16+(j/3)]!=0 && !markedReal[j])
 				{
-					realOffset[j] = container->data[edOffsetList[j]-th].t[16+(j/2)];
+					realOffset[j] = container->data[edOffsetList[j]-th].t[16+(j/3)];
 					markedReal[j] = 1;
 				}
 			}
 		}
 	}
 	
-	for(j=0;j<6;j++) markedReal[j] = realOffset[j] || !edOffsetList[j];
+	for(j=0;j<9;j++) markedReal[j] = realOffset[j] || !edOffsetList[j];
 	for(th=container->top;(!allMarked(markedReal,6)) && th>=0;th--)
 	{
-		for(j=0;j<6;j++)
+		for(j=0;j<9;j++)
 		{
 			if(container->data[th].t[16+(j/2)]!=0 && !markedReal[j])
 			{
-				realOffset[j] = container->data[th].t[16+(j/2)];
+				realOffset[j] = container->data[th].t[16+(j/3)];
 				markedReal[j] = 1;
 			}
 		}
@@ -691,11 +694,12 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 		//container->data[j].offset = container->data[i].offset;
 		//haveDifferneces(int dest,int src)
 		//if(!haveDiffernecesH(lastOffset,container->data[i].offset))
-		for(j=0;j<6;j++)
+		for(j=0;j<9;j++)
 		{
 			if(container->data[i].t[16+j] != 0)
 			{
-				container->data[i].t[16+j] = ABSDIFF(container->data[i].t[16+j],realOffset[j])+1;
+				container->data[i].t[19+j] = ABSDIFF(container->data[i].t[16+j],realOffset[j]);
+				printf("[%d-%d-%d]",i,19+j,container->data[i].t[19+j]);
 			} 
 		}
 		
