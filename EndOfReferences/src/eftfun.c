@@ -882,7 +882,7 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	int offset = fd.offset;
 	int lmt;
 	
-	prepareDensityData();
+	//prepareDensityData();
 	
 	/*
 	// f g1
@@ -963,9 +963,9 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	
 	for(int i=0;i<MECL;i++)
 	{
-		rateWrite(fp,start,(fd.offset == getPclen()) ? -1 :((double)fd.fid[i][0]/fd.offset)/
-					((fd.fid[i][1]-fd.fid[i][0])/(getPclen()-fd.offset)));
-		start+=5;
+		//rateWrite(fp,start,(fd.offset == getPclen()) ? -1 :((double)fd.fid[i][0]/fd.offset)/
+		//			((fd.fid[i][1]-fd.fid[i][0])/(getPclen()-fd.offset)));
+		//start+=5;
 		
 		/*
 		// f g6
@@ -1010,7 +1010,7 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 
 int prepareDensityData(void)
 {
-	//return 1;
+	return 1;
 	int beforeData;
 	int totalData;
 	for(int i=0;i<mfdc.top;i++)
