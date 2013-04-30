@@ -6,6 +6,10 @@
 #endif //DEBUGFLAG
 
 
+#ifndef SWAP
+#define SWAP(a,b) {a=a^b;b=a^b;a=a^b;}
+#endif //SWAP
+
 
 // for debug
 int printfContext(int offset);

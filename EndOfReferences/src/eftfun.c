@@ -756,8 +756,32 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 	minid[2] = minid[5]; // page2
 	// get min offset of  year , page and page 2
 	
-	int a[3] = {1,1,1};//
-	int b[3] = {1,1,1};//
+	int a;//
+	
+	for(int k=0;k<3;k++)
+	{
+		a = 1;
+		
+		for(int i=minid[k];i >= 0 ; i --)
+		{
+			if(container->data[i].t[16+k] != 0)
+			{
+				container->data[i].t[16+k] = a;
+				a++;
+			}
+		}
+		a = 2;
+		for(int i=minid[k]+1;i < container->top;i++)
+		{
+			if(container->data[i].t[16+k] != 0)
+			{
+				container->data[i].t[16+k] = a;
+				a++;
+			}
+		}
+	}
+	
+	/*
 	
 	for(int i=0;i<container->top;i++)
 	{
@@ -768,6 +792,7 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 			 minid[k] -- ;
 		}
 	}
+	*/
 	
 	// debug : output 16 ~ 18
 	// 16 : year 17 : page 18 : page2 
