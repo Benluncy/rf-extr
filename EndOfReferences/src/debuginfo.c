@@ -25,9 +25,9 @@ int printfContextF(int offset,const char *str,FILE *fp)
 	int x;
 	fprintf(fp,"\n$TITIL(%s)@[%d]{\n",str,offset);
 	fprintf(fp,"\n>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n");
-	for(x=(offset<=100)?0:(offset-100);x<offset;x++) putchar(*(getPcontent()+x));
+	for(x=(offset<=100)?0:(offset-100);x<offset;x++) fputc(*(getPcontent()+x),fp);
 	fprintf(fp,"\n================================================================\n");
-	for(x=offset;x<offset+100 && x < getPclen();x++) putchar(*(getPcontent()+x));
+	for(x=offset;x<offset+100 && x < getPclen();x++) fputc(*(getPcontent()+x),fp);
 	fprintf(fp,"\n<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n");
 	fprintf(fp,"}\n");	
 	//fflush(NULL);
