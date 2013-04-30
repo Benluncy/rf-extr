@@ -779,7 +779,6 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 	
 	
 	
-	printf("\n")
 	for(int k=0;k<3;k++)
 	{
 		a = 1;
