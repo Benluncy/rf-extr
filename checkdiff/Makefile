@@ -76,6 +76,7 @@ train			:
 
 test			:
 	./checkdiff test.txt
+	
 
 checkdiff		: ${OBJS}
 	${CC} ${CFLAGS} $@.c -o $@ ${OBJS} ${LIBS}
@@ -110,4 +111,5 @@ clean    :
 	${DEL} ${OBJS} 
 	${DEL} *~ include/*~ src/*~ data/*~
 	${DEL} *.swp
+	${DEL} data/fa/*~ data/oraby/*~ data/orbz/*~ data/orbz_sec/*~
 

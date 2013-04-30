@@ -102,7 +102,10 @@ int main(int argc,char *argv[])
 				printf("%s",paperName+2);
 				printf("%d:%s%s\n",xx,strPredictFileContent,strTestFileContent);
 				system(command);
-				break;
+				//break;
+			}else
+			{
+				printf("no offset ... \n");
 			}
 				
 		}
