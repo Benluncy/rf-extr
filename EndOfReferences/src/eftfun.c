@@ -677,7 +677,7 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 	int th=0;
 	int realOffset[9];// 7 8 10 11  13 14
 	int markedReal[9];
-	//lstOffsetList
+	//lstOffsetList 0:year 1:page 2:page2
 	//edOffsetList
 	//19,20,21 year
 	//22,23,24 pp
@@ -739,10 +739,7 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 		min[i] = container->data[i].t[19+i];
 		minid[i] = 0;							
 	}
-	
-	int a[3] = {0,0,0};
-	int b[3] = {0,0,0};
-	
+
 	for(int i=0;i<container->top;i++)
 	{
 		for(int k=0;k<9;k++)
@@ -754,9 +751,13 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 	}
 	for(int i=0;i<3;i++) // year , page , page2
 		minid[i*3] = _MIN(minid[i*3],minid[i*3+1],minid[i*3+2]);
-	minid[1] = minid[3];
-	minid[2] = minid[5];
+	// minid[0] : year
+	minid[1] = minid[3]; // page 
+	minid[2] = minid[5]; // page2
 	// get min offset of  year , page and page 2
+	
+	int a[3] = {1,1,1};//
+	int b[3] = {1,1,1};//
 	
 	for(int i=0;i<container->top;i++)
 	{
@@ -768,6 +769,9 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 		}
 	}
 	
+	// debug : output 16 ~ 18
+	// 16 : year 17 : page 18 : page2 
+	// 19,20,21: year 22,23,24:page 25,26,27:page2
 	printf("\n");
 	for(int i=1;i<container->top;i++)
 	{
