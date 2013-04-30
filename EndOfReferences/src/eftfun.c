@@ -756,6 +756,8 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 		minid[i*3] = _MIN(minid[i*3],minid[i*3+1],minid[i*3+2]);
 	minid[1] = minid[3];
 	minid[2] = minid[5];
+	// get min offset of  year , page and page 2
+	
 	for(int i=0;i<container->top;i++)
 	{
 		for(int k=0;k<3;k++)
@@ -766,6 +768,7 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 		}
 	}
 	
+	printf("\n");
 	for(int i=1;i<container->top;i++)
 	{
 		for(int k=0;k<3;k++)
