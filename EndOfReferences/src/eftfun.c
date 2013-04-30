@@ -723,8 +723,13 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 				ABSDIFF(container->data[i].offset,lstOffsetList[2]):
 				ABSDIFF(container->data[i].offset,edOffsetList[0]);
 		
+		for(int k=0;k<9;k++)
+			if(container->data[i].t[k+19] == 0) container->data[i].t[k+19] = 1;
+		
 	}
 	
+	
+	// 16 ~ 19
 	int min[9];
 	int minid[9];
 	for(int i=0;i<9;i++)
@@ -757,13 +762,13 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 			 minid[k] -- ;
 		}
 	}
-	
+	/*
 	for(int i=1;i<container->top;i++)
 	{
 		for(int k=0;k<9;k++)
 			printf("[%d:%d:%d]",i,k+19,container->data[i].t[19+k]);
 		printf("\n");
-	}
+	}*/
 	
 	//edOffsetList[0] = container->top;
 	/*

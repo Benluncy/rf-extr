@@ -268,7 +268,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 				//{
 				//	printf("[E:%d(i:%dj:%d)]",_mfdc->data[i].t[j],i,j);
 				//}
-				powerWrite(fp,start,_mfdc->data[i].t[j],5);
+				powerWrite(fp,start,_mfdc->data[i].t[j]+1,5);
 				start+=5;
 				break;
 			// */
