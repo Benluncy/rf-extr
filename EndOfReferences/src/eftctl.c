@@ -229,7 +229,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 				break;
 			// */
 			
-			/*
+			//*
 			// f5
 			//
 			//
@@ -241,20 +241,23 @@ int genEndSampleCtl(const char* fileName,int isDir)
 				powerWrite(fp,start,_mfdc->data[i].t[j],5);
 				start+=5;
 				break;
-			
+			//*
 			case 19:
 			case 20:
 			case 22:
 			case 23:
-			
 			case 25:
 			case 26:
-			*/
+			// */
 			//*
+			
+			// */
+			/*
 			case 21:
 			case 24:
 			case 27:
-				// the min the better
+			// */
+			/*	// the min the better
 				// ABSDIFF of INDEX
 				// problem
 				
