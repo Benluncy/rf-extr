@@ -749,17 +749,37 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 				minid[k] = i;
 			}
 	}
+	
+	printf("\nminids:");
+	for(int i=0;i<9;i++)
+	{
+		printf("%d~",minid[i]);
+	}
+	printf("\n");
+	
 	for(int i=0;i<3;i++) // year , page , page2
 		minid[i*3] = _MIN(minid[i*3],minid[i*3+1],minid[i*3+2]);
 	// minid[0] : year
+	for(int i=0;i<9;i++)
+	{
+		printf("%d~",minid[i]);
+	}
+	printf("\n");
+	
 	minid[1] = minid[3]; // page 
 	minid[2] = minid[5]; // page2
 	// get min offset of  year , page and page 2
 	
 	int a;//
+	for(int i=0;i<9;i++)
+	{
+		printf("%d~",minid[i]);
+	}
+	printf("\n");
 	
-	printf("minids:%d~%d~%d\n",minid[0],minid[1],minid[2]);
 	
+	
+	printf("\n")
 	for(int k=0;k<3;k++)
 	{
 		a = 1;
