@@ -752,7 +752,7 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 		for(int k=0;k<9;k++)
 			if(container->data[i].t[19+k]<min[k])
 			{
-				printf("CDT[%d][%d](%d) < min[%d](%d)\n",i,19+k,container->data[i].t[19+k]
+				printf("CDT[%d][%d](%d) < min[%d](%d)\n",i,19+k,container->data[i].t[19+k],
 						k,min[k]);
 				min[k] = container->data[i].t[19+i];
 				minid[k] = i;
