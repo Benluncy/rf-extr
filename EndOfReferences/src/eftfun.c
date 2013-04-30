@@ -734,11 +734,13 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 	int minid[9];
 	for(int i=0;i<9;i++)
 	{
-		container->data[i].t[19+i] = (container->data[i].t[19+i]/thresholdForDifferneces) == 0? 1:
-								container->data[i].t[19+i]/thresholdForDifferneces;
-		min[i] = container->data[i].t[19+i];
+	//	container->data[i].t[19+i] = (container->data[i].t[19+i]/thresholdForDifferneces) == 0? 1:
+	//							container->data[i].t[19+i]/thresholdForDifferneces;
+		min[i] = container->data[0].t[19+i];
 		minid[i] = 0;							
 	}
+	
+	
 
 	for(int i=0;i<container->top;i++)
 	{
