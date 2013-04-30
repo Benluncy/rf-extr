@@ -743,7 +743,7 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 	printf("\nmins:");
 	for(int i=0;i<9;i++)
 	{
-		printf("%d~",minid[i]);
+		printf("%d~",min[i]);
 	}
 	printf("\n");
 
