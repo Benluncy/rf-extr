@@ -724,6 +724,12 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 				ABSDIFF(container->data[i].offset,edOffsetList[0]);
 		
 	}
+	for(int i=1;i<container->top;i++)
+	{
+		for(k=0;k<9;k++)
+			printf("[%d:%d:%d]",i,j,container->data[i].t[19+k]);
+	}
+	
 	int min[9];
 	int minid[9];
 	for(int i=0;i<9;i++)
