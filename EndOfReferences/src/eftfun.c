@@ -729,7 +729,7 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 	}
 	
 	
-	// 16 ~ 19
+	// 16 ~ 18
 	int min[9];
 	int minid[9];
 	for(int i=0;i<9;i++)
@@ -739,6 +739,9 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 		min[i] = container->data[i].t[19+i];
 		minid[i] = 0;							
 	}
+	
+	int a[3] = {0,0,0};
+	int b[3] = {0,0,0};
 	
 	for(int i=0;i<container->top;i++)
 	{
@@ -761,6 +764,13 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 			 		(minid[k]>0?minid[k]:-minid[k]);
 			 minid[k] -- ;
 		}
+	}
+	
+	for(int i=1;i<container->top;i++)
+	{
+		for(int k=0;k<3;k++)
+			printf("[%d:%d:%d]",i,k+16,container->data[i].t[16+k]);
+		printf("\n");
 	}
 	/*
 	for(int i=1;i<container->top;i++)
