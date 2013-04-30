@@ -19,6 +19,22 @@ int printfContext(int offset)
 	return 1;
 }
 
+int printfContextF(int offset,const char *str,FILE *fp)
+{
+	if(NODEBUG) return 1;
+	int x;
+	fprintf(fp,"\n$TITIL(%s)@[%d]{\n",str,offset);
+	fprintf(fp,"\n>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n");
+	for(x=(offset<=100)?0:(offset-100);x<offset;x++) putchar(*(getPcontent()+x));
+	fprintf(fp,"\n================================================================\n");
+	for(x=offset;x<offset+100 && x < getPclen();x++) putchar(*(getPcontent()+x));
+	fprintf(fp,"\n<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n");
+	fprintf(fp,"}\n");	
+	//fflush(NULL);
+	//getchar(); getchar();
+	return 1;
+}
+
 int printfContextS(int offset,const char *str)
 {
 	if(NODEBUG) return 1;
