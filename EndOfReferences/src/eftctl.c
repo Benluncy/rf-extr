@@ -147,7 +147,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 		
 			switch(j)
 			{
-			/*
+			//*
 			// f 0
 			case 0:
 				rateWrite(fp,start,(double)_mfdc->data[i].t[0]/_mfdc->top);
@@ -155,7 +155,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 				break;
 			// */
 			
-			/*
+			//*
 			// f 1
 			case 1:
 			case 2:
@@ -177,7 +177,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 				break;
 			// */
 			
-			/* 
+			//* 
 			// f 2
 			case 3:
 			case 4:
@@ -191,7 +191,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 				break;
 			// */
 	
-			/*
+			//*
 			// f 3
 			case 6: // end of article
 				// 0 , 1
@@ -199,7 +199,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 				break;
 			// */
 			
-			/*
+			//*
 			// f 4
 			case 7:
 			case 8:
@@ -215,7 +215,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 				start += 3;
 				break;	
 			// */
-			/*		
+			//*		
 			case 9:
 			case 12:
 			case 15:
@@ -241,7 +241,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 				powerWrite(fp,start,_mfdc->data[i].t[j],5);
 				start+=5;
 				break;
-			/*
+			//*
 			case 19:
 			case 20:
 			case 22:
@@ -252,12 +252,12 @@ int genEndSampleCtl(const char* fileName,int isDir)
 			//*
 			
 			// */
-			/*
+			//*
 			case 21:
 			case 24:
 			case 27:
 			// */
-			/*	// the min the better
+			//*	// the min the better
 				// ABSDIFF of INDEX
 				// problem
 				
@@ -285,10 +285,13 @@ int genEndSampleCtl(const char* fileName,int isDir)
 		start = genNextDataForEndfeature(fp,_mfdc->data[i],start);
 		fprintf(fp," #%d",_mfdc->data[i].offset);
 		fprintf(fp,"\n");
+		// debuginfo to file
+		/*
 		printfContextF(_mfdc->data[i].offset,"DEBUG INFO",fp);
 		for(int j=0;j<ENDLEN;j++)
 			fprintf(fp,"[%d:%d]",j,_mfdc->data[i].t[j]);
 		fprintf(fp,"\n");
+		*/
 	}
 	
 	
