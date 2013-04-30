@@ -285,7 +285,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 		start = genNextDataForEndfeature(fp,_mfdc->data[i],start);
 		fprintf(fp," #%d",_mfdc->data[i].offset);
 		fprintf(fp,"\n");
-		printfContextF(int offset,const char *str,FILE *fp);
+		printfContextF(_mfdc->data[i].offset,"DEBUG INFO",fp);
 		for(int j=0;j<ENDLEN;j++)
 			fprintf(fp,"[%d:%d]",j,_mfdc->data[i].t[j]);
 		fprintf(fp,"\n");
