@@ -241,7 +241,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 				powerWrite(fp,start,_mfdc->data[i].t[j],5);
 				start+=5;
 				break;
-			//*
+			/*
 			case 19:
 			case 20:
 			case 22:
