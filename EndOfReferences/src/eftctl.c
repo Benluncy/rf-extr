@@ -253,12 +253,11 @@ int genEndSampleCtl(const char* fileName,int isDir)
 			//*
 			
 			// */
-			//*
+			/*
 			case 21:
 			case 24:
 			case 27:
-			// */
-			//*	// the min the better
+				// the min the better
 				// ABSDIFF of INDEX
 				// problem
 				
