@@ -285,12 +285,12 @@ int genEndSampleCtl(const char* fileName,int isDir)
 		fprintf(fp," #%d",_mfdc->data[i].offset);
 		fprintf(fp,"\n");
 		// debuginfo to file
-		/*
+		//*
 		printfContextF(_mfdc->data[i].offset,"DEBUG INFO",fp);
 		for(int j=0;j<ENDLEN;j++)
 			fprintf(fp,"[%d:%d]",j,_mfdc->data[i].t[j]);
 		fprintf(fp,"\n");
-		*/
+		//*/
 	}
 	
 	
