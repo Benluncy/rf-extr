@@ -253,7 +253,7 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 	// 13 <del>end page2 before ack</del> ack's first
 	//endPage2BeforeAck = endPage2BeforeAck == 0 ? 0 : getLastPage2Offset(startOffset,endPage2BeforeAck);
 	//MAX2
-	int endPage2BeforeAck = MAX2(endYearBeforeAck,endPageBeforeAck);
+	endPage2BeforeAck = MAX2(endYearBeforeAck,endPageBeforeAck);
 	
 	//int isMarkedEP2BA = 0; 
 	
