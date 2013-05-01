@@ -1240,11 +1240,43 @@ int makeSequenceForCombinedOffsets(endFeatureDataContainer *container)
 
 int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 {
-	//return 1;
-	
-	/*
 	int offset = fd.offset;
-	int lmt;
+	//int lmt;
+	int spflg = 0;
+	int diff = (hasPPafterTheOffset(offset,30);
+	if(diff<20)
+	{
+		offset+=20;
+	}
+	
+	for(int i=offset;i<offset+30;i++)
+	{
+		if(i!=0) if(fitPattern('d',content[i-1])) continue;
+		if(INLMT("APPENDIX")
+			|| INLMT("ACKNOWLEDGEMENT")
+			|| INLMT("AUTHOR BIBLIOGRAPHIES")
+			|| INLMT("AUTHOR BIBLIOGRAPHY")
+			|| INLMT("AUTHOR BIOGRAPHIES")
+			|| INLMT("AUTHOR BIOGRAPHY")
+			|| INLMT("ADDRESS INFORMATION")
+			|| INLMT("Bibliographical"))
+		{
+			
+			spflg = 1;
+		}
+		for(int x = 0;x < myEc.top;x++)
+		{
+			spflg = 1
+		}
+		if(spflg) break;
+	}
+	fprintf(fp,"%d:%d ",start++,spflg);
+	
+	//AUTHOR BIOGRAPHIES 
+	//pages
+	//appendix
+	//
+	
 	//*/
 	
 	//prepareDensityData();

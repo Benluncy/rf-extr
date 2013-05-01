@@ -135,14 +135,14 @@ int genEndSampleCtl(const char* fileName,int isDir)
 	//int pptag = 0;
 	int start = 1;
 
-	for(int i = 0; i < _mfdc->top;i++)
+	for(int i = 0; i < _mfdc->top ;i++)
 	{
 		printf(".");
 		//positive
 		fprintf(fp,"%c1 ",!haveDiffernecesD(_mfdc->data[i].offset,targetOffset)?'+':'-');
 		//if(!haveDifferneces(_mfdc->data[i].offset,targetOffset)) pptag ++;
 		start = 1;
-		for(int j=0;j<ENDLEN;j++)
+		for(int j=0;j<ENDLEN && j !=0;j++)
 		{
 		
 			switch(j)
