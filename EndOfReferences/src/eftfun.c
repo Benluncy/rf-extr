@@ -731,9 +731,9 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 		{
 			printf("data[%d].t[%d]:%d]{\n",i,k+19,container->data[i].t[k+19]);
 			printf("offset:%d\nlstOffset[%d]:%d\nedOffset:%d\n\
-				diff:%d:%d:%d",container->data[i].offset,
+				diff:%d:%d:%d\n",container->data[i].offset,
 							k/3,lstOffsetList[k/3],
-							edOffsetList[k]
+							edOffsetList[k],
 							ABSDIFF(container->data[i].offset,lstOffsetList[k/3]),
 							ABSDIFF(container->data[i].offset,edOffsetList[k]),
 							container->data[i].t[19+k]);
