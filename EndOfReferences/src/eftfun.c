@@ -785,13 +785,17 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 		///*
 		for(int k=0;k<9;k++)
 		{
-			printf("data[%d].t[%d]:%d]{\n",i,k+19,container->data[i].t[k+19]);
-			printf("offset:%d\nlstOffset[%d]:%d\nedOffset[%d]:%d\ndiff:%d:%d:%d\n",container->data[i].offset,
-							k/3,lstOffsetList[k/3],
-							k,edOffsetList[k],
-							ABSDIFF(container->data[i].offset,lstOffsetList[k/3]),
-							ABSDIFF(container->data[i].offset,edOffsetList[k]),
-							container->data[i].t[19+k]);
+			//printf("data[%d].t[%d]:%d]{\n",i,k+19,container->data[i].t[k+19]);
+			//printf("offset:%d\nlstOffset[%d]:%d\nedOffset[%d]:%d\ndiff:%d:%d:%d\n",container->data[i].offset,
+			//				k/3,lstOffsetList[k/3],
+			//				k,edOffsetList[k],
+			//				ABSDIFF(container->data[i].offset,lstOffsetList[k/3]),
+			//				ABSDIFF(container->data[i].offset,edOffsetList[k]),
+			//				container->data[i].t[19+k]);
+			printf("%dvs%d: {%d|%d|%d}",container->data[i].offset,lstOffsetList[k/3],
+					ABSDIFF(container->data[i].offset,lstOffsetList[k/3]),
+					ABSDIFF(container->data[i].offset,edOffsetList[k]),
+					container->data[i].t[19+k]);
 			printf("}\n");
 		}
 			
@@ -812,14 +816,14 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 		min[i] = container->data[0].t[19+i];
 		minid[i] = 0;							
 	}
-	/*
+	//*
 	printf("\nmins0:");
 	for(int i=0;i<9;i++)
 	{
 		printf("%d~",min[i]);
 	}
 	printf("\n");
-	*/
+	//*/
 
 	for(int i=0;i<container->top;i++)
 	{
@@ -840,7 +844,7 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 
 		//printf("\n");
 	}
-	/*
+	//*
 	printf("mins1:");
 	for(int i=0;i<9;i++)
 	{
@@ -855,35 +859,35 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 		printf("%d~",minid[i]);
 	}
 	printf("\n");
-	*/
+	//*/
 	
 	for(int i=0;i<3;i++) // year , page , page2
 		minid[i*3] = _MIN(minid[i*3],minid[i*3+1],minid[i*3+2]);
 	// minid[0] : year
-	/*
+	//*
 	printf("minids2:");
 	for(int i=0;i<9;i++)
 	{
 		printf("%d~",minid[i]);
 	}
 	printf("\n");
-	*/
+	//*/
 	minid[1] = minid[3]; // page 
 	minid[2] = minid[5]; // page2
 	// get min offset of  year , page and page 2
 	
-	int a;//
+	//
 	
-	/*
+	//*
 	printf("minids3:");
 	for(int i=0;i<9;i++)
 	{
 		printf("%d~",minid[i]);
 	}
 	printf("\n");
-	*/
+	//*/
 	
-	
+	int a;
 	for(int k=0;k<3;k++)
 	{
 		a = 1;
