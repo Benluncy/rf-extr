@@ -466,7 +466,7 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 		{
 			if(INLMT(myEc.data[x].key))
 			{
-				printf("\n>>[%s]\n",myEc.data[x].key);
+				//printf("\n>>[%s]\n",myEc.data[x].key);
 				//printf("[+]");
 				container->data[container->top].t[2] = 3;
 				hasContent = 1;
@@ -694,6 +694,7 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 	//25,26,27 pp2
 	for(int i=0;i<3;i++)
 		if(lstOffsetList[i] == 0) lstOffsetList[i] = getPclen();
+	/*
 	for(int i=0;i<9;i++)
 	{
 		switch(i/3)
@@ -723,6 +724,7 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 		printf("edOffsetList[%d] = %d\n",i,edOffsetList[i]);
 		printfContextS(edOffsetList[i],"ed");
 	}
+	*/
 	/*
 	for(int i=0;i<3;i++)
 		printf("lo[%d]:%d ",i,lstOffsetList[i]);
