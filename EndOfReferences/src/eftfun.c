@@ -1267,7 +1267,7 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 		}
 		for(int x = 0;x < myEc.top;x++)
 		{
-			spflg = 1
+			spflg = 1;
 		}
 		if(spflg) break;
 	}
