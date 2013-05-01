@@ -1156,9 +1156,11 @@ int makeSequenceForCombinedOffsets(endFeatureDataContainer *container)
 int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 {
 	//return 1;
-	//return 1;
+	
+	/*
 	int offset = fd.offset;
 	int lmt;
+	//*/
 	
 	//prepareDensityData();
 	
