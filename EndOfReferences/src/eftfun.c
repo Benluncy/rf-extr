@@ -740,6 +740,7 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 		}
 			
 		printf("\n");
+		fflush(NULL);
 		
 	}
 	
