@@ -749,14 +749,16 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 
 	for(int i=0;i<container->top;i++)
 	{
-		printf(">>");
+		printf("#");
 		for(int k=0;k<9;k++)
 		{
 			if(container->data[i].t[19+k]<min[k])
 			{
+				printf("> ");
 				min[k] = container->data[i].t[19+i];
 				minid[k] = i;
-			}
+			}else
+				printf("$ ");
 			
 			printf("{%d:%d}~",min[k],minid[k]);
 		}
