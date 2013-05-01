@@ -142,7 +142,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 		fprintf(fp,"%c1 ",!haveDiffernecesD(_mfdc->data[i].offset,targetOffset)?'+':'-');
 		//if(!haveDifferneces(_mfdc->data[i].offset,targetOffset)) pptag ++;
 		start = 1;
-		for(int j=0;j<ENDLEN && j !=0;j++)
+		for(int j=0;j<ENDLEN;j++)
 		{
 		
 			switch(j)
