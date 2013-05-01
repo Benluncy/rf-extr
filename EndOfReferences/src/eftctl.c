@@ -214,8 +214,8 @@ int genEndSampleCtl(const char* fileName,int isDir)
 				// 12 end page before ack or table
 				// end year before article
 				// 0 , 1 , 2,
-				rankWrite(fp,start,_mfdc->data[i].t[j],3);
-				start += 3;
+				rankWrite(fp,start,_mfdc->data[i].t[j],5);
+				start += 5;
 				break;	
 			// */
 			
