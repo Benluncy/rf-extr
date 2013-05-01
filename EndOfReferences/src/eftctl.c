@@ -36,7 +36,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 	 *
 	 */
 	
-       	ONLY("data/orbz_sec/Antecedents and consequences of job satifaction among information center employees.txt");
+       	//ONLY("data/orbz_sec/Antecedents and consequences of job satifaction among information center employees.txt");
 	FILE *fp;
 	static int id = 0;
 	int trainOrTest;
