@@ -538,8 +538,8 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 				container->data[container->top].t[7] = 2;
 			else if(ABSDIFF(edOffsetList[0],endYearBeforeAck)<30)
 				container->data[container->top].t[7] = 5;
-			else if(i > endYearBeforeAck)
-				container->data[container->top].t[7] = 1;
+			//else if(i > endYearBeforeAck)
+			//	container->data[container->top].t[7] = 1;
 		}
 		
 		// 8 end year before table
@@ -551,8 +551,8 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 				container->data[container->top].t[8] = 2;
 			else if(ABSDIFF(edOffsetList[1],endYearBeforeTable)<30)
 				container->data[container->top].t[8] = 5;
-			else if(i > endYearBeforeTable)
-				container->data[container->top].t[8] = 1;
+			//else if(i > endYearBeforeTable)
+			//	container->data[container->top].t[8] = 1;
 		}
 		// 9 end year before ack or table
 		if(endYearBeforeAckOrTable && !container->data[container->top].t[9] )
@@ -563,8 +563,8 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 				container->data[container->top].t[9] = 2;
 			else if(ABSDIFF(edOffsetList[2],endYearBeforeAckOrTable)<30)
 				container->data[container->top].t[9] = 5;
-			else if(i > endYearBeforeAckOrTable)
-				container->data[container->top].t[9] = 1;
+			//else if(i > endYearBeforeAckOrTable)
+			//	container->data[container->top].t[9] = 1;
 				
 		}
 
@@ -577,8 +577,8 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 				container->data[container->top].t[10] = 2;
 			else if(ABSDIFF(edOffsetList[3],endPageBeforeAck)<30)
 				container->data[container->top].t[10] = 5;
-			else if(i > endPageBeforeAck)
-				container->data[container->top].t[10] = 1;
+			//else if(i > endPageBeforeAck)
+			//	container->data[container->top].t[10] = 1;
 		}
 		
 		// 11 end page before table
@@ -590,8 +590,8 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 				container->data[container->top].t[11] = 2;
 			else if(ABSDIFF(edOffsetList[4],endPageBeforeTable)<30)
 				container->data[container->top].t[11] = 5;
-			else if(i > endPageBeforeTable)
-				container->data[container->top].t[11] = 1;
+			//else if(i > endPageBeforeTable)
+			//	container->data[container->top].t[11] = 1;
 		}
 		
 		// 12 end page before ack or table
@@ -603,8 +603,8 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 				container->data[container->top].t[12] = 2;
 			else if(ABSDIFF(edOffsetList[5],endPageBeforeAckOrTable)<30)
 				container->data[container->top].t[12] = 5;
-			else if(i > endPageBeforeAckOrTable)
-				container->data[container->top].t[12] = 1;
+			//else if(i > endPageBeforeAckOrTable)
+			//	container->data[container->top].t[12] = 1;
 		}
 		// 13 end page2 before ack
 		if(endPage2BeforeAck && !container->data[container->top].t[13] )
@@ -615,8 +615,8 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 				container->data[container->top].t[13] = 2;
 			else if(ABSDIFF(edOffsetList[6],endPage2BeforeAck)<30)
 				container->data[container->top].t[13] = 5;
-			else if(i > endPage2BeforeAck)
-				container->data[container->top].t[13] = 1;
+			//else if(i > endPage2BeforeAck)
+			//	container->data[container->top].t[13] = 1;
 		}
 		// 14 end page2 before table
 		
@@ -628,8 +628,8 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 				container->data[container->top].t[14] = 2;
 			else if(ABSDIFF(edOffsetList[7],endPage2BeforeTable)<30)
 				container->data[container->top].t[14] = 5;
-			else if(i > endPage2BeforeTable)
-				container->data[container->top].t[14] = 1;
+			//else if(i > endPage2BeforeTable)
+			//	container->data[container->top].t[14] = 1;
 		}
 		// 15 end page2 before ack or table
 		if(endPage2BeforeAckOrTable && !container->data[container->top].t[15] )
@@ -640,8 +640,8 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 				container->data[container->top].t[15] = 2;
 			else if(ABSDIFF(edOffsetList[8],endPage2BeforeAckOrTable)<30)
 				container->data[container->top].t[15] = 5;
-			else if(i > endPage2BeforeAckOrTable)
-				container->data[container->top].t[15] = 1;
+			//else if(i > endPage2BeforeAckOrTable)
+			//	container->data[container->top].t[15] = 1;
 		}
 
 		// move up
