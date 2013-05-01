@@ -62,6 +62,7 @@ int prepareDensityData(void);
 int allMarked(int a[],int len);
 
 int powerWrite(FILE *fp,int start,int value,int len);
+int rankWriteNoMore(FILE *fp,int start,int rank,int len);
 
 //int getMaxLen(void);
 #endif // __EFTFUN_H__
