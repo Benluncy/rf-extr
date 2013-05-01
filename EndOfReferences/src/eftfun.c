@@ -1671,6 +1671,7 @@ int powerWriteNoMore(FILE *fp,int start,int value,int len)
 		value /= 2;
 	}
 	//printf("[pw:%d]",i);
+	printf("write:%d",i);
 	rankWriteNoMore(fp,start,i,len);
 	return 1;
 }
