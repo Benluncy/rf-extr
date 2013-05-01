@@ -862,6 +862,7 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 	// debug : output 16 ~ 18
 	// 16 : year 17 : page 18 : page2 
 	// 19,20,21: year 22,23,24:page 25,26,27:page2
+	/*
 	printf("\n");
 	for(int i=1;i<container->top;i++)
 	{
@@ -869,6 +870,7 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 			printf("[%d:%d:%d]",i,k+16,container->data[i].t[16+k]);
 		printf("\n");
 	}
+	*/
 	/*
 	for(int i=1;i<container->top;i++)
 	{
