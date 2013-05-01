@@ -219,7 +219,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 				break;	
 			// */
 			
-			/*		
+			//*		
 			case 9:
 			case 12:
 			case 15:
@@ -288,10 +288,9 @@ int genEndSampleCtl(const char* fileName,int isDir)
 		fprintf(fp," #%d",_mfdc->data[i].offset);
 		fprintf(fp,"\n");
 		// debuginfo to file
-		//*
+		/*
 		printfContextF(_mfdc->data[i].offset,"DEBUG INFO",fp);
-		fprintf(fp,"[0:%f][0:%d]",(double)_mfdc->data[i].t[0]/_mfdc->top
-					,_mfdc->top-_mfdc->data[i].t[0]+1);
+		fprintf(fp,"[0:%d]",_mfdc->top-_mfdc->data[i].t[0]+1);
 		for(int j=1;j<ENDLEN;j++)
 			fprintf(fp,"[%d:%d]",j,_mfdc->data[i].t[j]);
 		fprintf(fp,"\n");
