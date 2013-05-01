@@ -1250,7 +1250,7 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 		offset+=20;
 	}
 	
-	for(int i=offset;i<offset+30;i++)
+	for(int i=offset;i<offset+50;i++)
 	{
 		if(i!=0) if(fitPattern('d',content[i-1])) continue;
 		if(INLMT("APPENDIX")
@@ -1276,6 +1276,7 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 		}
 		if(spflg) break;
 	}
+	if(getPclen()-offset<100) spflg = 1;
 	fprintf(fp,"%d:%d ",start++,spflg);
 	
 	//AUTHOR BIOGRAPHIES 
