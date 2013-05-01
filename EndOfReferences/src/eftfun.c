@@ -782,7 +782,10 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 				ABSDIFF(container->data[i].offset,edOffsetList[8]);
 		
 		for(int k=0;k<9;k++)
-			if(container->data[i].t[k+19] == 0) container->data[i].t[k+19] = 1;
+		{
+			 container->data[i].t[k+19]/= exThresholdForDifferences;
+			 if(container->data[i].t[k+19] == 0) container->data[i].t[k+19] = 1;
+		}
 		
 		/*
 		for(int k=0;k<9;k++)
