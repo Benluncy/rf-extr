@@ -67,7 +67,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 	//printf("[%d] %s:%s",id,(trainOrTest?"train":"test"),fileName);
 	printf("[%d] %s:%s",id,(trainOrTest?"train":"test"),queryEscape(fileName));
 	
-	printf("\n");
+	//printf("\n");
 	//TODO 	
         
         // parse tag or etc ,move data to RAM
