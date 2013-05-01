@@ -69,6 +69,7 @@ OffsetCallback endFunctionList[ECBL]={hasPPafterTheOffset,
 
 int edOffsetList[9];
 int lstOffsetList[3];
+int endOfArticleOffset;
 int absOffset[2]; // ack fig
 
 
@@ -664,6 +665,7 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 			{
 				//container->data[container->top].offset = i;
 				container->data[container->top-1].t[6] = 1;
+				endOfArticleOffset = i;
 				//container->top ++ ;
 				return 1;
 			}
@@ -684,7 +686,7 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 	//return 1;
 	int j = 0;
 	int lastOffset = container->data[0].offset;
-	int th=0;
+	//int th=0;
 	int realOffset[9];// 7 8 10 11  13 14
 	int markedReal[9];
 	//lstOffsetList 0:year 1:page 2:page2
@@ -693,7 +695,7 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 	//22,23,24 pp
 	//25,26,27 pp2
 	for(int i=0;i<3;i++)
-		if(lstOffsetList[i] == 0) lstOffsetList[i] = getPclen();
+		if(lstOffsetList[i] == 0) lstOffsetList[i] = endOfArticleOffset;
 	//*
 	for(int i=0;i<9;i++)
 	{
