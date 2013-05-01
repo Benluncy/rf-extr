@@ -1243,7 +1243,7 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	int offset = fd.offset;
 	//int lmt;
 	int spflg = 0;
-	int diff = (hasPPafterTheOffset(offset,30);
+	int diff = ABSDIFF(offset,hasPPafterTheOffset(offset,30));
 	if(diff<20)
 	{
 		offset+=20;
