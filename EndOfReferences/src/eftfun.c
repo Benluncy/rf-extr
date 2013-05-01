@@ -696,7 +696,7 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 	//25,26,27 pp2
 	for(int i=0;i<3;i++)
 		if(lstOffsetList[i] == 0) lstOffsetList[i] = endOfArticleOffset;
-	//*
+	/*
 	for(int i=0;i<9;i++)
 	{
 		switch(i/3)
