@@ -6,7 +6,7 @@
 #define thresholdForDifferneces  2
 #define exThresholdForDifferences (thresholdForDifferneces*2)
 
-#define thresholdForGetOffsetSuggestion(x)  x*0.2
+#define thresholdForGetOffsetSuggestion(x)  x*0.1
 #define T4GOS(x) thresholdForGetOffsetSuggestion(x)
 #define INLMT(x) (editDistanceT(\
 			x,\
