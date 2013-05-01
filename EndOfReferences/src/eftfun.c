@@ -531,7 +531,7 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 				container->data[container->top].t[7] = 3;
 			else if(!haveDiffernecesE(endYearBeforeAck,i))
 				container->data[container->top].t[7] = 2;
-			else if(ABSDIFF(edOffsetList[0],container->data[container->top].t[7])<30)
+			else if(ABSDIFF(edOffsetList[0],endYearBeforeAck)<30)
 				container->data[container->top].t[7] = 5;
 			else if(i > endYearBeforeAck)
 				container->data[container->top].t[7] = 1;
@@ -544,7 +544,7 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 				container->data[container->top].t[8] = 3;
 			else if(!haveDiffernecesE(endYearBeforeTable,i))
 				container->data[container->top].t[8] = 2;
-			else if(ABSDIFF(edOffsetList[1],container->data[container->top].t[8])<30)
+			else if(ABSDIFF(edOffsetList[1],endYearBeforeTable)<30)
 				container->data[container->top].t[8] = 5;
 			else if(i > endYearBeforeTable)
 				container->data[container->top].t[8] = 1;
@@ -556,7 +556,7 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 				container->data[container->top].t[9] = 3;
 			else if(!haveDiffernecesE(endYearBeforeAckOrTable,i))
 				container->data[container->top].t[9] = 2;
-			else if(ABSDIFF(edOffsetList[2],container->data[container->top].t[9])<30)
+			else if(ABSDIFF(edOffsetList[2],endYearBeforeAckOrTable)<30)
 				container->data[container->top].t[9] = 5;
 			else if(i > endYearBeforeAckOrTable)
 				container->data[container->top].t[9] = 1;
@@ -570,7 +570,7 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 				container->data[container->top].t[10] = 3;
 			else if(!haveDiffernecesE(endPageBeforeAck,i))
 				container->data[container->top].t[10] = 2;
-			else if(ABSDIFF(edOffsetList[3],container->data[container->top].t[10])<30)
+			else if(ABSDIFF(edOffsetList[3],endPageBeforeAck)<30)
 				container->data[container->top].t[10] = 5;
 			else if(i > endPageBeforeAck)
 				container->data[container->top].t[10] = 1;
@@ -583,7 +583,7 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 				container->data[container->top].t[11] = 3;
 			else if(!haveDiffernecesE(endPageBeforeTable,i))
 				container->data[container->top].t[11] = 2;
-			else if(ABSDIFF(edOffsetList[4],container->data[container->top].t[11])<30)
+			else if(ABSDIFF(edOffsetList[4],endPageBeforeTable)<30)
 				container->data[container->top].t[11] = 5;
 			else if(i > endPageBeforeTable)
 				container->data[container->top].t[11] = 1;
@@ -596,7 +596,7 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 				container->data[container->top].t[12] = 3;
 			else if(!haveDiffernecesE(endPageBeforeAckOrTable,i))
 				container->data[container->top].t[12] = 2;
-			else if(ABSDIFF(edOffsetList[5],container->data[container->top].t[12])<30)
+			else if(ABSDIFF(edOffsetList[5],endPageBeforeAckOrTable)<30)
 				container->data[container->top].t[12] = 5;
 			else if(i > endPageBeforeAckOrTable)
 				container->data[container->top].t[12] = 1;
@@ -608,7 +608,7 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 				container->data[container->top].t[13] = 3;
 			else if(!haveDiffernecesE(endPage2BeforeAck,i))
 				container->data[container->top].t[13] = 2;
-			else if(ABSDIFF(edOffsetList[6],container->data[container->top].t[13])<30)
+			else if(ABSDIFF(edOffsetList[6],endPage2BeforeAck)<30)
 				container->data[container->top].t[13] = 5;
 			else if(i > endPage2BeforeAck)
 				container->data[container->top].t[13] = 1;
@@ -621,7 +621,7 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 				container->data[container->top].t[14] = 3;
 			else if(!haveDiffernecesE(endPage2BeforeTable,i))
 				container->data[container->top].t[14] = 2;
-			else if(ABSDIFF(edOffsetList[7],container->data[container->top].t[14])<30)
+			else if(ABSDIFF(edOffsetList[7],endPage2BeforeTable)<30)
 				container->data[container->top].t[14] = 5;
 			else if(i > endPage2BeforeTable)
 				container->data[container->top].t[14] = 1;
@@ -633,7 +633,7 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 				container->data[container->top].t[15] = 3;
 			else if(!haveDiffernecesE(endPage2BeforeAckOrTable,i))
 				container->data[container->top].t[15] = 2;
-			else if(ABSDIFF(edOffsetList[8],container->data[container->top].t[15])<30)
+			else if(ABSDIFF(edOffsetList[8],endPage2BeforeAckOrTable)<30)
 				container->data[container->top].t[15] = 5;
 			else if(i > endPage2BeforeAckOrTable)
 				container->data[container->top].t[15] = 1;
