@@ -137,9 +137,8 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 	// 2 table , he is figure ... (a list)
 	// 3 end of year // before end of content
 	int lastYearOffset = getLastYearOffset(startOffset,cLen);
-	printfContextS(lastYearOffset,"last year offset");
-	
-	if(lastYearOffset == 0) lastYearOffset = getPclen(); // TODO make sure
+	//printfContextS(lastYearOffset,"last year offset");
+	//if(lastYearOffset == 0) lastYearOffset = getPclen(); // TODO make sure
 	lstOffsetList[0] = lastYearOffset;
 	
 	
@@ -147,18 +146,16 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 	
 	// 4 end of page // before end of content
 	int lastPageOffset = getLastPageOffset(startOffset,cLen);
-	printfContextS(lastPageOffset,"last page offset");
+	//printfContextS(lastPageOffset,"last page offset");
 	
-	if(lastPageOffset == 0 ) lastPageOffset =  getPclen(); // TODO make sure
+	//if(lastPageOffset == 0 ) lastPageOffset =  getPclen(); // TODO make sure
 	lstOffsetList[1] =  lastPageOffset;
 	int isMarkedEOP = 0;
 	
 	// 5 end of page2 // before end of content
 	int lastPageOffset2 = getLastPage2Offset(startOffset,cLen);
-	printfContextS(lastPageOffset2,"last page2 offset");
-	
-	
-	if(lastPageOffset2 == 0 ) lastPageOffset2 =  getPclen(); // TODO make sure
+	//printfContextS(lastPageOffset2,"last page2 offset");
+	//if(lastPageOffset2 == 0 ) lastPageOffset2 =  getPclen(); // TODO make sure
 	lstOffsetList[2] =  lastPageOffset2;
 	int isMarkedEOP2 = 0;
 	// 6 end of article
@@ -489,7 +486,7 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 				hasContent = 1;
 			}
 			container->data[container->top].t[3] = 2;
-		}else if(i > lastYearOffset)
+		}else if(i > lastYearOffset && isMarkedEOY)
 		{
 			container->data[container->top].t[3] = 1;
 		}
@@ -503,7 +500,7 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 				hasContent = 1;
 			}
 			container->data[container->top].t[4] = 2;
-		}else if(i > lastPageOffset)
+		}else if(i > lastPageOffset && isMarkedEOP)
 		{
 			container->data[container->top].t[4] = 1;
 		}
@@ -517,7 +514,7 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 				hasContent = 1;
 			}
 			container->data[container->top].t[5] = 2;
-		}else if(i > lastPageOffset2)
+		}else if(i > lastPageOffset2 && isMarkedEOP2)
 		{
 			container->data[container->top].t[5] = 1;
 		}
@@ -694,11 +691,41 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 	//19,20,21 year
 	//22,23,24 pp
 	//25,26,27 pp2
+	for(int i=0;i<3;i++)
+		if(lstOffsetList[i] == 0) lstOffsetList[i] = getPclen();
+	for(int i=0;i<9;i++)
+	{
+		switch(i/3)
+		{
+			case 0:
+				printf("YY  ");
+				break;
+			case 1:
+				printf("PP  ");
+				break;
+			case 2:
+				printf("PP2 ");
+				break;
+		}
+		switch(i%3)
+		{
+			case 0:
+				printf("ACK ");
+				break;
+			case 1:
+				printf("TAB ");
+				break;
+			case 2:
+				printf("A&T ");
+				break;
+		}
+		printf("edOffsetList[%d] = %d\n",i,edOffsetList[i]);
+		printfContextS(edOffsetList[i],"ed");
+	}
 	/*
 	for(int i=0;i<3;i++)
 		printf("lo[%d]:%d ",i,lstOffsetList[i]);
-	for(int i=0;i<3;i++)
-		if(lstOffsetList[i] == 0) lstOffsetList[i] = getPclen();
+	
 	printf("\t");
 	for(int i=0;i<3;i++)
 		printf("lo2[%d]:%d ",i,lstOffsetList[i]);
