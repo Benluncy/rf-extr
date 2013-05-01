@@ -752,6 +752,8 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 		printf("#");
 		for(int k=0;k<9;k++)
 		{
+			if(container->data[i].t[19+k] ==0)
+				printf("ERROR:data[%d].t[%d] is zero !!\n",i,19+k);
 			if(container->data[i].t[19+k]<min[k])
 			{
 				printf("> ");
