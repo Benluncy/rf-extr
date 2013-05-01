@@ -241,6 +241,16 @@ int rankWrite(FILE *fp,int start,int rank,int len)
 	return 1;
 }
 
+int rankWriteNoMore(FILE *fp,int start,int rank,int len)
+{
+	
+	for(int i=0;i<len;i++)
+	{
+		fprintf(fp,"%d:%d ",start+i,rank == i+1 ? 1 : 0);
+	}
+	return 1;
+}
+
 inline int offsetStat(int offset,int *totalData,int *beforeData,
 					OffsetCallback offsetFunction)
 {
