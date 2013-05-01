@@ -688,47 +688,54 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 	
 		container->data[i].t[19] = edOffsetList[0]==0?
 				ABSDIFF(container->data[i].offset,lstOffsetList[0]):
-				ABSDIFF(container->data[i].offset,edOffsetList[1]);
+				ABSDIFF(container->data[i].offset,edOffsetList[0]);
 				
 		container->data[i].t[20] = edOffsetList[1]==0?
 				ABSDIFF(container->data[i].offset,lstOffsetList[0]):
-				ABSDIFF(container->data[i].offset,edOffsetList[2]);
+				ABSDIFF(container->data[i].offset,edOffsetList[1]);
 				
 		container->data[i].t[21] = edOffsetList[2]==0?
 				ABSDIFF(container->data[i].offset,lstOffsetList[0]):
-				ABSDIFF(container->data[i].offset,edOffsetList[3]);
+				ABSDIFF(container->data[i].offset,edOffsetList[2]);
 				
 				
 		container->data[i].t[22] = edOffsetList[3]==0?
 				ABSDIFF(container->data[i].offset,lstOffsetList[1]):
-				ABSDIFF(container->data[i].offset,edOffsetList[4]);
+				ABSDIFF(container->data[i].offset,edOffsetList[3]);
 				
 		container->data[i].t[23] = edOffsetList[4]==0?
 				ABSDIFF(container->data[i].offset,lstOffsetList[1]):
-				ABSDIFF(container->data[i].offset,edOffsetList[5]);
+				ABSDIFF(container->data[i].offset,edOffsetList[4]);
 				
 		container->data[i].t[24] = edOffsetList[5]==0?
 				ABSDIFF(container->data[i].offset,lstOffsetList[1]):
-				ABSDIFF(container->data[i].offset,edOffsetList[6]);
+				ABSDIFF(container->data[i].offset,edOffsetList[5]);
 		
 		
 		container->data[i].t[25] = edOffsetList[6]==0?
 				ABSDIFF(container->data[i].offset,lstOffsetList[2]):
-				ABSDIFF(container->data[i].offset,edOffsetList[7]);
+				ABSDIFF(container->data[i].offset,edOffsetList[6]);
 		
 		container->data[i].t[26] = edOffsetList[7]==0?
 				ABSDIFF(container->data[i].offset,lstOffsetList[2]):
-				ABSDIFF(container->data[i].offset,edOffsetList[0]);
+				ABSDIFF(container->data[i].offset,edOffsetList[7]);
 		
 		container->data[i].t[27] = edOffsetList[8]==0?
 				ABSDIFF(container->data[i].offset,lstOffsetList[2]):
-				ABSDIFF(container->data[i].offset,edOffsetList[0]);
+				ABSDIFF(container->data[i].offset,edOffsetList[8]);
 		
 		for(int k=0;k<9;k++)
 			if(container->data[i].t[k+19] == 0) container->data[i].t[k+19] = 1;
 		
-		for(int k=0;k<9;k++)	
-			printf("[%d|%d:%d]",i,k+19,container->data[i].t[k+19]);
+		for(int k=0;k<9;k++)
+		{
+			printf("data[%d].t[%d]:%d]{\n",i,k+19,container->data[i].t[k+19]);
+			printf("offset:%d\nlstOffset:%d\nedOffset:%d",container->data[i].offset,
+							lstOffsetList[k/3],
+							edOffsetList[k]);
+			printf("}\n");
+		}
+			
 		printf("\n");
 		
 	}
