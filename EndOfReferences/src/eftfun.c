@@ -757,7 +757,8 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 				min[k] = container->data[i].t[19+i];
 				minid[k] = i;
 			}
-			printf("{%d:%d}~",min[i],minid);
+			
+			printf("{%d:%d}~",min[k],minid[k]);
 		}
 
 		printf("\n");
