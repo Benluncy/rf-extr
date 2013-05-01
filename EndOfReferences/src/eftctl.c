@@ -283,6 +283,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 		*/
 		//start += 8;
 			
+		setNextElemOffset(i<_mfdc->top?_mfdc->data[i+1].offset:0);
 		start = genNextDataForEndfeature(fp,_mfdc->data[i],start);
 		fprintf(fp," #%d",_mfdc->data[i].offset);
 		fprintf(fp,"\n");

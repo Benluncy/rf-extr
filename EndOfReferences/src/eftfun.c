@@ -1237,6 +1237,12 @@ int makeSequenceForCombinedOffsets(endFeatureDataContainer *container)
 	return 1;
 }
 
+int nextElemOffset = 0;
+void setNextElemOffset(int neo)
+{
+	nextElemOffset = neo;
+}
+
 
 int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 {
@@ -1252,7 +1258,7 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 		offset+=diff;
 	}
 	
-	for(int i=st_offset;i<offset;i++)
+	for(int i=st_offset;i<nextElemOffset;i++)
 	{
 		if(i!=0) if(fitPattern('d',content[i-1])) continue;
 		if(INLMT("APPENDIX")
@@ -1264,14 +1270,19 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 			|| INLMT("ADDRESS INFORMATION")
 			|| INLMT("Bibliographical"))
 		{
-			
-			bf_flg[0] ++;
+			if(i<offset)
+				bf_flg[0] ++;
+			else
+				bf_flg[1] ++;
 		}
 		for(int x = 0;x < myEc.top;x++)
 		{
 			if(INLMT(myEc.data[x].key))
 			{
-				bf_flg[1] ++;
+				if(i<offset)
+					bf_flg[0] ++;
+				else
+					bf_flg[1] ++;
 				break;
 			}
 				
@@ -1307,7 +1318,7 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 				
 		}
 	}
-	if(getPclen()-offset<50) af_flg[2] = 1;
+	if(getPclen()-offset<30) af_flg[2] = 1;
 	for(int i=0;i<3;i++)
 		fprintf(fp,"%d:%d ",start++,af_flg[i]);	
 	

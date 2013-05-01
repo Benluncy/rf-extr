@@ -66,6 +66,8 @@ int powerWriteNoMore(FILE *fp,int start,int value,int len);
 int rankWriteNoMore(FILE *fp,int start,int rank,int len);
 
 
+void setNextElemOffset(int neo);
+
 //int getMaxLen(void);
 #endif // __EFTFUN_H__
 
