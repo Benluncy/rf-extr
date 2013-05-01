@@ -1241,6 +1241,7 @@ int makeSequenceForCombinedOffsets(endFeatureDataContainer *container)
 int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 {
 	int offset = fd.offset;
+	char *content = getPcontent();
 	//int lmt;
 	int spflg = 0;
 	int diff = ABSDIFF(offset,hasPPafterTheOffset(offset,30));
