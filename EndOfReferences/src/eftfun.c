@@ -777,7 +777,7 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 		for(int k=0;k<9;k++)
 			if(container->data[i].t[k+19] == 0) container->data[i].t[k+19] = 1;
 		
-		/*
+		///*
 		for(int k=0;k<9;k++)
 		{
 			printf("data[%d].t[%d]:%d]{\n",i,k+19,container->data[i].t[k+19]);
@@ -792,7 +792,7 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 			
 		printf("\n");
 		fflush(NULL);
-		*/
+		//*/
 		
 	}
 	
