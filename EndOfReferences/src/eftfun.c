@@ -726,7 +726,7 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 		
 		for(int k=0;k<9;k++)
 			if(container->data[i].t[k+19] == 0) container->data[i].t[k+19] = 1;
-		
+		/*
 		for(int k=0;k<9;k++)
 		{
 			printf("data[%d].t[%d]:%d]{\n",i,k+19,container->data[i].t[k+19]);
@@ -737,7 +737,7 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 		}
 			
 		printf("\n");
-		
+		*/
 	}
 	
 	
@@ -751,31 +751,35 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 		min[i] = container->data[0].t[19+i];
 		minid[i] = 0;							
 	}
-	
+	/*
 	printf("\nmins0:");
 	for(int i=0;i<9;i++)
 	{
 		printf("%d~",min[i]);
 	}
 	printf("\n");
+	*/
 
 	for(int i=0;i<container->top;i++)
 	{
-		printf("#");
+		//printf("#");
 		for(int k=0;k<9;k++)
 		{
 			if(container->data[i].t[19+k]<min[k])
 			{
-				printf("> ");
+			//	printf("> ");
 				min[k] = container->data[i].t[19+i];
 				minid[k] = i;
-			}else
+			}
+			/*else
 				printf("$ ");
 			printf("{%d-%d:%d:%d} ",k,container->data[i].t[19+k],min[k],minid[k]);	
+			*/
 		}
 
-		printf("\n");
+		//printf("\n");
 	}
+	/*
 	printf("mins1:");
 	for(int i=0;i<9;i++)
 	{
@@ -790,30 +794,33 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 		printf("%d~",minid[i]);
 	}
 	printf("\n");
+	*/
 	
 	for(int i=0;i<3;i++) // year , page , page2
 		minid[i*3] = _MIN(minid[i*3],minid[i*3+1],minid[i*3+2]);
 	// minid[0] : year
+	/*
 	printf("minids2:");
 	for(int i=0;i<9;i++)
 	{
 		printf("%d~",minid[i]);
 	}
 	printf("\n");
-	
+	*/
 	minid[1] = minid[3]; // page 
 	minid[2] = minid[5]; // page2
 	// get min offset of  year , page and page 2
 	
 	int a;//
 	
+	/*
 	printf("minids3:");
 	for(int i=0;i<9;i++)
 	{
 		printf("%d~",minid[i]);
 	}
 	printf("\n");
-	
+	*/
 	
 	
 	for(int k=0;k<3;k++)
