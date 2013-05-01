@@ -1662,6 +1662,19 @@ int powerWrite(FILE *fp,int start,int value,int len)
 	return 1;
 }
 
+int powerWriteNoMore(FILE *fp,int start,int value,int len)
+{
+	int i;
+	value = value < 0 ? -value : value;
+	for(i=0;value>0;i++)
+	{
+		value /= 2;
+	}
+	//printf("[pw:%d]",i);
+	rankWriteNoMore(fp,start,i,len);
+	return 1;
+}
+
 int rankWriteNoMore(FILE *fp,int start,int rank,int len)
 {
 	
