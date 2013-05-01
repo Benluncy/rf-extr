@@ -825,7 +825,7 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 	printf("\n");
 	//*/
 
-	for(int i=0;i<container->top;i++)
+	for(int i=1;i<container->top;i++)
 	{
 		//printf("#");
 		for(int k=0;k<9;k++)
@@ -833,6 +833,7 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 			if(container->data[i].t[19+k]<min[k])
 			{
 			//	printf("> ");
+				printf("[%d]%dvs%d, id = %d\n",k+19,container->data[i].t[19+k],min[k],i);
 				min[k] = container->data[i].t[19+i];
 				minid[k] = i;
 			}
