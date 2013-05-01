@@ -134,7 +134,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 	fprintf(fp,"# %s \n",fileName);
 	//int pptag = 0;
 	int start = 1;
-
+	fst = 1;
 	for(int i = 0; i < _mfdc->top ;i++)
 	{
 		printf(".");

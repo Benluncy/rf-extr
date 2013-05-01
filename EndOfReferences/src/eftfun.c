@@ -1277,7 +1277,8 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 		if(spflg) break;
 	}
 	if(getPclen()-offset<100) spflg = 1;
-	fprintf(fp,"%d:%d ",start++,spflg);
+	fprintf(fp,"%d:%d ",start++,spflg&&fst);
+	if(spflg) fst = 0;
 	
 	//AUTHOR BIOGRAPHIES 
 	//pages
