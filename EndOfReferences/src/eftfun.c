@@ -729,8 +729,8 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 	//*/
 	
 	for(int i=0;i<3;i++)
-		printf("lo[%d]:%d ",i,lstOffsetList[i]);
-	
+	//	printf("lo[%d]:%d ",i,lstOffsetList[i]);
+		printfContextS(lstOffsetList[i],"lo");
 	
 	printf("\n");
 	/*
