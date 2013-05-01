@@ -1267,7 +1267,12 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 		}
 		for(int x = 0;x < myEc.top;x++)
 		{
-			spflg = 1;
+			if(INLMT(myEc.data[x].key))
+			{
+				spflg = 1;
+				break;
+			}
+				
 		}
 		if(spflg) break;
 	}
