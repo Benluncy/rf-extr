@@ -250,18 +250,23 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 	
 	//int isMarkedEPBAOT = 0;
 	
-	// 13 end page2 before ack
-	endPage2BeforeAck = endPage2BeforeAck == 0 ? 0 : getLastPage2Offset(startOffset,endPage2BeforeAck);
+	// 13 <del>end page2 before ack</del> ack's first
+	//endPage2BeforeAck = endPage2BeforeAck == 0 ? 0 : getLastPage2Offset(startOffset,endPage2BeforeAck);
+	//MAX2
+	int endPage2BeforeAck = MAX2(endYearBeforeAck,endPageBeforeAck);
 	
-	//int isMarkedEP2BA = 0;
+	//int isMarkedEP2BA = 0; 
 	
-	// 14 end page2 before table
-	endPage2BeforeTable = endPage2BeforeTable == 0 ? 0 : getLastPage2Offset(startOffset,endPage2BeforeTable);
+	// <del>14 end page2 before table</del> year && page's last 
+	//endPage2BeforeTable = endPage2BeforeTable == 0 ? 0 : getLastPage2Offset(startOffset,endPage2BeforeTable);
+	endPage2BeforeTable = MAX2(endYearBeforeTable,endPageBeforeTable);
+	
 	
 	//int isMarkedEP2BT = 0;
 	
-	// 15 end page2 before ack or table
-	int endPage2BeforeAckOrTable = MINANDNZ(endPage2BeforeAck,endPage2BeforeTable);
+	// 15 <del>end page2 before ack or table</del>
+	//int endPage2BeforeAckOrTable = MINANDNZ(endPage2BeforeAck,endPage2BeforeTable);
+	int endPage2BeforeAckOrTable = MAX2(endYearBeforeAckOrTable,endPageBeforeAckOrTable);
 	//int isMarkedEP2BAOT = 0;
 	
 	// 16 index of year

@@ -202,7 +202,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 				break;
 			// */
 			
-			/*
+			//*
 			// f 4
 			case 7:
 			case 8:
