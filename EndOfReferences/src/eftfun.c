@@ -741,9 +741,10 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 							container->data[i].t[19+k]);
 			printf("}\n");
 		}
-		*/	
+			
 		printf("\n");
 		fflush(NULL);
+		*/
 		
 	}
 	
