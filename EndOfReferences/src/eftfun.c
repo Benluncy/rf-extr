@@ -687,8 +687,8 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 	int j = 0;
 	int lastOffset = container->data[0].offset;
 	//int th=0;
-	int realOffset[9];// 7 8 10 11  13 14
-	int markedReal[9];
+	//int realOffset[9];// 7 8 10 11  13 14
+	//int markedReal[9];
 	//lstOffsetList 0:year 1:page 2:page2
 	//edOffsetList
 	//19,20,21 year
