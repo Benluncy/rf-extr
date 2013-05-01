@@ -1318,7 +1318,7 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 				
 		}
 	}
-	if(getPclen()-offset<30) af_flg[2] = 1;
+	if(!haveDiffernecesD(getPclen(),offset)) af_flg[2] = 1;
 	for(int i=0;i<3;i++)
 		fprintf(fp,"%d:%d ",start++,af_flg[i]);	
 	
@@ -1341,13 +1341,14 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 			endFunctionList[z](offset,-lmt)))?1:0);
 	}
 	// */
-	/*
-	fprintf(fp,"%d:%d ",start++,((hasPPafterTheOffset(offset,lmt) >= hasPPafterTheOffset(offset,-lmt)))?1:-1);
-	fprintf(fp,"%d:%d ",start++,((hasPPafterTheOffset2(offset,lmt) >= hasPPafterTheOffset2(offset,-lmt)))?1:-1);
-	fprintf(fp,"%d:%d ",start++,((hasYearafterTheOffset(offset,lmt) >= hasYearafterTheOffset(offset,-lmt)))?1:-1);
-	fprintf(fp,"%d:%d ",start++,((hasNameafterTheOffset0(offset,lmt) >= hasNameafterTheOffset0(offset,-lmt)))?1:-1);
-	fprintf(fp,"%d:%d ",start++,((hasNameafterTheOffset1(offset,lmt) >= hasNameafterTheOffset1(offset,-lmt)))?1:-1);
-	fprintf(fp,"%d:%d ",start++,((hasNameafterTheOffset2(offset,lmt) >= hasNameafterTheOffset2(offset,-lmt)))?1:-1);
+	//*
+	lmt = -50;
+	fprintf(fp,"%d:%d ",start++,(((hasPPafterTheOffset(offset,lmt)>0) >= (hasPPafterTheOffset(offset,-lmt)>0)))?1:-1);
+	fprintf(fp,"%d:%d ",start++,(((hasPPafterTheOffset2(offset,lmt)>0) >= (hasPPafterTheOffset2(offset,-lmt)>0)))?1:-1);
+	fprintf(fp,"%d:%d ",start++,(((hasYearafterTheOffset(offset,lmt)>0) >= (hasYearafterTheOffset(offset,-lmt)>0)))?1:-1);
+	fprintf(fp,"%d:%d ",start++,(((hasNameafterTheOffset0(offset,lmt)>0) >= (hasNameafterTheOffset0(offset,-lmt)>0)))?1:-1);
+	fprintf(fp,"%d:%d ",start++,(((hasNameafterTheOffset1(offset,lmt)>0) >= (hasNameafterTheOffset1(offset,-lmt)>0)))?1:-1);
+	fprintf(fp,"%d:%d ",start++,(((hasNameafterTheOffset2(offset,lmt)>0) >= (hasNameafterTheOffset2(offset,-lmt)>0)))?1:-1);
 	// */
 	
 	/*
