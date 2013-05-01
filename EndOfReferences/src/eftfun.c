@@ -1544,7 +1544,8 @@ int haveDiffernecesH(int dest,int src)
 	{
 		// no ascii code
 		//if(!(content[i]>='a'&&content[i]<='z')||(content[i]>='A'&&content[i]<='Z')) th++;
-		if(content[i] != ' ' && content[i] != '\r' && content[i] != '\n') return 1;
+		if(content[i] != ' ' && content[i] != '\r' && content[i] != '\n' 
+			&& content[i] != '\t') return 1;
 	}
 	return 0;
 }
