@@ -685,6 +685,7 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 	//19,20,21 year
 	//22,23,24 pp
 	//25,26,27 pp2
+	/*
 	for(int i=0;i<3;i++)
 		printf("lo[%d]:%d ",i,lstOffsetList[i]);
 	for(int i=0;i<3;i++)
@@ -692,6 +693,7 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 	printf("\t");
 	for(int i=0;i<3;i++)
 		printf("lo2[%d]:%d ",i,lstOffsetList[i]);
+	*/
 	for(int i=0;i<container->top;i++)
 	{
 	
