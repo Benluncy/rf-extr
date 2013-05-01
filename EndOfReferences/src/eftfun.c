@@ -137,16 +137,19 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 	// 2 table , he is figure ... (a list)
 	// 3 end of year // before end of content
 	int lastYearOffset = getLastYearOffset(startOffset,cLen);
+	if(lastYearOffset == 0) lastYearOffset = getPclen(); // TODO make sure
 	lstOffsetList[0] = lastYearOffset;
 	int isMarkedEOY = 0;
 	
 	// 4 end of page // before end of content
 	int lastPageOffset = getLastPageOffset(startOffset,cLen);
+	if(lastPageOffset == 0 ) lastPageOffset =  getPclen(); // TODO make sure
 	lstOffsetList[1] =  lastPageOffset;
 	int isMarkedEOP = 0;
 	
 	// 5 end of page2 // before end of content
 	int lastPageOffset2 = getLastPage2Offset(startOffset,cLen);
+	if(lastPageOffset2 == 0 ) lastPageOffset2 =  getPclen(); // TODO make sure
 	lstOffsetList[2] =  lastPageOffset2;
 	int isMarkedEOP2 = 0;
 	// 6 end of article

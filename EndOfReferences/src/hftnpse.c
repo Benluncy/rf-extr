@@ -172,6 +172,7 @@ inline int isPageNumberS(const char *content,int limit)
 	return 0;
 }*/
 
+// 123-345
 inline int hasPPafterTheOffset(int offset,int limit)
 {
 	int i;	
@@ -192,6 +193,7 @@ inline int hasPPafterTheOffset(int offset,int limit)
 	return 0;
 }
 
+// pp. 123-345 || page2.
 inline int hasPPafterTheOffset2(int offset,int limit)
 {
 	int j;
