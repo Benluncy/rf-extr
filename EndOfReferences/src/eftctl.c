@@ -241,6 +241,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 			case 18:
 				powerWrite(fp,start,_mfdc->data[i].t[j],5);
 				start+=5;
+				printf("[[[]]]%d.%d<<%d -- \n",i,j,);
 				break;
 			// */
 			
