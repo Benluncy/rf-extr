@@ -466,6 +466,7 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 		{
 			if(INLMT(myEc.data[x].key))
 			{
+				printf("\n>>[%s]\n",myEc.data[x].key);
 				//printf("[+]");
 				container->data[container->top].t[2] = 3;
 				hasContent = 1;

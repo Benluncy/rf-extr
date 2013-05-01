@@ -38,13 +38,13 @@ int genSamples4Endness()
 	 * Before KWD is collected 
 	 */
 	insertEndKWD("TABLE ");
-	insertEndKWD("He is");
-	insertEndKWD("Figure");
-	insertEndKWD("Fig.");
-	insertEndKWD("In this appendix");
-	insertEndKWD("NOTICE OF");
-	insertEndKWD("He has");
-	insertEndKWD("Are there");
+	insertEndKWD("He is ");
+	insertEndKWD("Figure ");
+	insertEndKWD("Fig. ");
+	insertEndKWD("In this appendix ");
+	insertEndKWD("NOTICE OF ");
+	insertEndKWD("He has ");
+	insertEndKWD("Are there ");
 	
 	openLogFile();
 	
