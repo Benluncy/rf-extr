@@ -1241,16 +1241,18 @@ int makeSequenceForCombinedOffsets(endFeatureDataContainer *container)
 int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 {
 	int offset = fd.offset;
+	int st_offset = getReferenceHeadOffset();
 	char *content = getPcontent();
 	//int lmt;
-	int spflg = 0;
+	int bf_flg[2] = {0,0};
+	int af_flg[3] = {0,0,0};
 	int diff = ABSDIFF(offset,hasPPafterTheOffset(offset,30));
 	if(diff<20)
 	{
-		offset+=20;
+		offset+=diff;
 	}
 	
-	for(int i=offset;i<offset+50;i++)
+	for(int i=st_offset;i<offset;i++)
 	{
 		if(i!=0) if(fitPattern('d',content[i-1])) continue;
 		if(INLMT("APPENDIX")
@@ -1263,22 +1265,52 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 			|| INLMT("Bibliographical"))
 		{
 			
-			spflg = 1;
+			bf_flg[0] ++;
 		}
 		for(int x = 0;x < myEc.top;x++)
 		{
 			if(INLMT(myEc.data[x].key))
 			{
-				spflg = 1;
+				bf_flg[1] ++;
 				break;
 			}
 				
 		}
-		if(spflg) break;
 	}
-	if(getPclen()-offset<100) spflg = 1;
-	fprintf(fp,"%d:%d ",start++,spflg&&fst);
-	if(spflg) fst = 0;
+	powerWrite(fp,start,bf_flg[0]+1,4);
+	start+=4;
+	powerWrite(fp,start,bf_flg[1]+1,4);
+	start+=4;
+	
+	for(int i=offset;i<offset+30;i++)
+	{
+		if(i!=0) if(fitPattern('d',content[i-1])) continue;
+		if(INLMT("APPENDIX")
+			|| INLMT("ACKNOWLEDGEMENT")
+			|| INLMT("AUTHOR BIBLIOGRAPHIES")
+			|| INLMT("AUTHOR BIBLIOGRAPHY")
+			|| INLMT("AUTHOR BIOGRAPHIES")
+			|| INLMT("AUTHOR BIOGRAPHY")
+			|| INLMT("ADDRESS INFORMATION")
+			|| INLMT("Bibliographical"))
+		{
+			
+			af_flg[0] = 1;
+		}
+		for(int x = 0;x < myEc.top;x++)
+		{
+			if(INLMT(myEc.data[x].key))
+			{
+				af_flg[1] = 1;
+				break;
+			}
+				
+		}
+	}
+	if(getPclen()-offset<50) af_flg[2] = 1;
+	for(int i=0;i<3;i++)
+		fprintf(fp,"%d:%d ",start++,af_flg[i]);	
+	
 	
 	//AUTHOR BIOGRAPHIES 
 	//pages

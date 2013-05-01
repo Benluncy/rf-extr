@@ -65,7 +65,6 @@ int powerWrite(FILE *fp,int start,int value,int len);
 int powerWriteNoMore(FILE *fp,int start,int value,int len);
 int rankWriteNoMore(FILE *fp,int start,int rank,int len);
 
-int fst;
 
 //int getMaxLen(void);
 #endif // __EFTFUN_H__
