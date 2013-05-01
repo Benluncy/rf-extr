@@ -152,7 +152,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 			case 0:
 				//rateWrite(fp,start,(double)_mfdc->data[i].t[0]/_mfdc->top);
 				//start+=5;
-				rankWrite(fp,start,_mfdc->top-_mfdc->data[i].t[0],5);
+				rankWrite(fp,start,_mfdc->top-_mfdc->data[i].t[0]+1,5);
 				start+=5;
 				break;
 			// */
@@ -290,7 +290,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 		//*
 		printfContextF(_mfdc->data[i].offset,"DEBUG INFO",fp);
 		fprintf(fp,"[0:%f][0:%d]",(double)_mfdc->data[i].t[0]/_mfdc->top
-					,_mfdc->top-_mfdc->data[i].t[0]);
+					,_mfdc->top-_mfdc->data[i].t[0]+1);
 		for(int j=1;j<ENDLEN;j++)
 			fprintf(fp,"[%d:%d]",j,_mfdc->data[i].t[j]);
 		fprintf(fp,"\n");
