@@ -1249,7 +1249,7 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	int offset = fd.offset;
 	int st_offset = getReferenceHeadOffset();
 	char *content = getPcontent();
-	//int lmt;
+	int lmt;
 	int bf_flg[2] = {0,0};
 	int af_flg[3] = {0,0,0};
 	int diff = ABSDIFF(offset,hasPPafterTheOffset(offset,30));
