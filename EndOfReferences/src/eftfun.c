@@ -682,6 +682,7 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 	//19,20,21 year
 	//22,23,24 pp
 	//25,26,27 pp2
+	printf("settings ...");
 	for(int i=0;i<container->top;i++)
 	{
 	
@@ -726,6 +727,10 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 		for(int k=0;k<9;k++)
 			if(container->data[i].t[k+19] == 0) container->data[i].t[k+19] = 1;
 		
+		for(int k=0;k<9;k++)	
+			printf("[%d|%d:%d]",i,k+19,container->data[i].t[k+19]);
+		printf("\n");
+		
 	}
 	
 	
@@ -752,7 +757,6 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 		printf("#");
 		for(int k=0;k<9;k++)
 		{
-			printf("{%d-%d:%d:%d} ",k,container->data[i].t[19+k],min[k],minid[k]);
 			if(container->data[i].t[19+k]<min[k])
 			{
 				printf("> ");
@@ -760,8 +764,7 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 				minid[k] = i;
 			}else
 				printf("$ ");
-			
-			printf("{%d:%d}~",min[k],minid[k]);
+			printf("{%d-%d:%d:%d} ",k,container->data[i].t[19+k],min[k],minid[k]);	
 		}
 
 		printf("\n");
