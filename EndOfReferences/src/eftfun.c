@@ -359,7 +359,7 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 			// 7 end year before ack
 			if(endYearBeforeAck == i)
 			{
-				container->data[container->top].t[7] = 2;
+				container->data[container->top].t[7] = 4;
 				edOffsetList[0] = i;
 				hasContent = 1;
 				//isMarkedEYBA = 1;
@@ -367,7 +367,7 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 			// 8 end year before table
 			if(endYearBeforeTable == i)
 			{
-				container->data[container->top].t[8] = 2;
+				container->data[container->top].t[8] = 4;
 				edOffsetList[1] = i;
 				hasContent = 1;
 				//isMarkedEYBT = 1;
@@ -376,7 +376,7 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 			if(endYearBeforeAckOrTable == i)
 			//if((endYearBeforeAck == i) || (endYearBeforeTable == i))
 			{
-				container->data[container->top].t[9] = 2;
+				container->data[container->top].t[9] = 4;
 				hasContent = 1;
 				edOffsetList[2] = i;
 				//isMarkedEYBAOT = 1;
@@ -384,7 +384,7 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 			// 10 end page before ack
 			if(endPageBeforeAck == i)
 			{
-				container->data[container->top].t[10] = 2;
+				container->data[container->top].t[10] = 4;
 				edOffsetList[3] = i;
 				hasContent = 1;
 				//isMarkedEPBA = 1;
@@ -392,7 +392,7 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 			// 11 end page before table
 			if(endPageBeforeTable == i)
 			{
-				container->data[container->top].t[11] = 2;
+				container->data[container->top].t[11] = 4;
 				edOffsetList[4] = i;
 				hasContent = 1;
 				//isMarkedEPBT = 1;
@@ -401,7 +401,7 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 			if(endPageBeforeAckOrTable == i)
 			//if((endPageBeforeAck == i) || (endPageBeforeTable == i))
 			{
-				container->data[container->top].t[12] = 2;
+				container->data[container->top].t[12] = 4;
 				hasContent = 1;
 				edOffsetList[5] = i;
 				//isMarkedEPBAOT = 1;
@@ -409,7 +409,7 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 			// 13 end page2 before ack
 			if(endPage2BeforeAck == i)
 			{
-				container->data[container->top].t[13] = 2;
+				container->data[container->top].t[13] = 4;
 				edOffsetList[6] = i;
 				hasContent = 1;
 				//isMarkedEP2BA = 1;
@@ -417,7 +417,7 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 			// 14 end page2 before table
 			if(endPage2BeforeTable == i)
 			{
-				container->data[container->top].t[14] = 2;
+				container->data[container->top].t[14] = 4;
 				edOffsetList[7] = i;
 				hasContent = 1;
 				//isMarkedEP2BT = 1;
@@ -426,7 +426,7 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 			if(endPage2BeforeAckOrTable == i)
 			//if((endPage2BeforeAck == i) || (endPage2BeforeTable == i))
 			{
-				container->data[container->top].t[15] = 2;
+				container->data[container->top].t[15] = 4;
 				hasContent = 1;
 				edOffsetList[8] = i;
 				//isMarkedEP2BAOT = 1;
@@ -528,6 +528,10 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 		if(endYearBeforeAck && !container->data[container->top].t[7] )
 		{
 			if(!haveDifferneces(endYearBeforeAck,i))
+				container->data[container->top].t[7] = 3;
+			else if(!haveDiffernecesE(endYearBeforeAck,i))
+				container->data[container->top].t[7] = 2;
+			else if(i > endYearBeforeAck)
 				container->data[container->top].t[7] = 1;
 		}
 		
@@ -535,19 +539,32 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 		if(endYearBeforeTable && !container->data[container->top].t[8] )
 		{
 			if(!haveDifferneces(endYearBeforeTable,i))
+				container->data[container->top].t[8] = 3;
+			else if(!haveDiffernecesE(endYearBeforeTable,i))
+				container->data[container->top].t[8] = 2;
+			else if(i > endYearBeforeTable)
 				container->data[container->top].t[8] = 1;
 		}
 		// 9 end year before ack or table
-		if( endYearBeforeAckOrTable && !container->data[container->top].t[9] )
+		if(endYearBeforeAckOrTable && !container->data[container->top].t[9] )
 		{
 			if(!haveDifferneces(endYearBeforeAckOrTable,i))
+				container->data[container->top].t[9] = 3;
+			else if(!haveDiffernecesE(endYearBeforeAckOrTable,i))
+				container->data[container->top].t[9] = 2;
+			else if(i > endYearBeforeAckOrTable)
 				container->data[container->top].t[9] = 1;
+				
 		}
 
 		// 10 end page before ack
 		if(endPageBeforeAck && !container->data[container->top].t[10] )
 		{
 			if(!haveDifferneces(endPageBeforeAck,i))
+				container->data[container->top].t[10] = 3;
+			else if(!haveDiffernecesE(endPageBeforeAck,i))
+				container->data[container->top].t[10] = 2;
+			else if(i > endPageBeforeAck)
 				container->data[container->top].t[10] = 1;
 		}
 		
@@ -555,6 +572,10 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 		if(endPageBeforeTable && !container->data[container->top].t[11] )
 		{
 			if(!haveDifferneces(endPageBeforeTable,i))
+				container->data[container->top].t[11] = 3;
+			else if(!haveDiffernecesE(endPageBeforeTable,i))
+				container->data[container->top].t[11] = 2;
+			else if(i > endPageBeforeTable)
 				container->data[container->top].t[11] = 1;
 		}
 		
@@ -562,12 +583,20 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 		if(endPageBeforeAckOrTable && !container->data[container->top].t[12] )
 		{
 			if(!haveDifferneces(endPageBeforeAckOrTable,i))
+				container->data[container->top].t[12] = 3;
+			else if(!haveDiffernecesE(endPageBeforeAckOrTable,i))
+				container->data[container->top].t[12] = 2;
+			else if(i > endPageBeforeAckOrTable)
 				container->data[container->top].t[12] = 1;
 		}
 		// 13 end page2 before ack
 		if(endPage2BeforeAck && !container->data[container->top].t[13] )
 		{
 			if(!haveDifferneces(endPage2BeforeAck,i))
+				container->data[container->top].t[13] = 3;
+			else if(!haveDiffernecesE(endPage2BeforeAck,i))
+				container->data[container->top].t[13] = 2;
+			else if(i > endPage2BeforeAck)
 				container->data[container->top].t[13] = 1;
 		}
 		// 14 end page2 before table
@@ -575,12 +604,20 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 		if(endPage2BeforeTable && !container->data[container->top].t[14] )
 		{
 			if(!haveDifferneces(endPage2BeforeTable,i))
+				container->data[container->top].t[14] = 3;
+			else if(!haveDiffernecesE(endPage2BeforeTable,i))
+				container->data[container->top].t[14] = 2;
+			else if(i > endPage2BeforeTable)
 				container->data[container->top].t[14] = 1;
 		}
 		// 15 end page2 before ack or table
 		if(endPage2BeforeAckOrTable && !container->data[container->top].t[15] )
 		{
 			if(!haveDifferneces(endPage2BeforeAckOrTable,i))
+				container->data[container->top].t[15] = 3;
+			else if(!haveDiffernecesE(endPage2BeforeAckOrTable,i))
+				container->data[container->top].t[15] = 2;
+			else if(i > endPage2BeforeAckOrTable)
 				container->data[container->top].t[15] = 1;
 		}
 
