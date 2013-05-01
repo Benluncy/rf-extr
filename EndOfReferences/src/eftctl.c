@@ -255,7 +255,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 			case 25:
 			case 26:
 			// */
-			//*
+			/*
 			case 21:
 			case 24:
 			case 27:
@@ -268,7 +268,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 				//	printf("[E:%d(i:%dj:%d)]",_mfdc->data[i].t[j],i,j);
 				//}
 				powerWriteNoMore(fp,start,_mfdc->data[i].t[j],8);
-				start+=5;
+				start+=8;
 				break;
 			// */
 			}
@@ -288,7 +288,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 		fprintf(fp," #%d",_mfdc->data[i].offset);
 		fprintf(fp,"\n");
 		// debuginfo to file
-		/*
+		//*
 		printfContextF(_mfdc->data[i].offset,"DEBUG INFO",fp);
 		fprintf(fp,"[0:%f][0:%d]",(double)_mfdc->data[i].t[0]/_mfdc->top
 					,_mfdc->top-_mfdc->data[i].t[0]+1);
