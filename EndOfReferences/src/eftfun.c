@@ -684,6 +684,8 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 	//25,26,27 pp2
 	printf("settings ...");
 	for(int i=0;i<3;i++)
+		printf("lastoffset[%d]:%d ",i,lstOffsetList[i]);
+	for(int i=0;i<3;i++)
 		if(lstOffsetList[i] == 0) lstOffsetList[i] = getPclen();
 	for(int i=0;i<container->top;i++)
 	{
