@@ -219,12 +219,12 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 	
 	
 	
-	endYearBeforeAck = endYearBeforeAck == 0 ? 0 : getLastPageOffset(startOffset,endYearBeforeAck);
+	endYearBeforeAck = endYearBeforeAck == 0 ? lastYearOffset : getLastPageOffset(startOffset,endYearBeforeAck);
 	
 	//int isMarkedEYBA = 0;
 	
 	// 8 end year before table
-	endYearBeforeTable = endYearBeforeTable == 0 ? 0 : getLastPageOffset(startOffset,endYearBeforeTable);
+	endYearBeforeTable = endYearBeforeTable == 0 ? lastYearOffset : getLastPageOffset(startOffset,endYearBeforeTable);
 	
 	//int isMarkedEYBT = 0;
 	
@@ -235,13 +235,13 @@ int basicFilter(endFeatureDataContainer *container,unsigned int startOffset)
 	
 	
 	// 10 end page before ack
-	endPageBeforeAck = endPageBeforeAck == 0 ? 0 : getLastPageOffset(startOffset,endPageBeforeAck);
+	endPageBeforeAck = endPageBeforeAck == 0 ? lastPageOffset : getLastPageOffset(startOffset,endPageBeforeAck);
 	
 	//int isMarkedEPBA = 0;
 	
 	
 	// 11 end page before table
-	endPageBeforeTable = endPageBeforeTable == 0 ? 0 : getLastPageOffset(startOffset,endPageBeforeTable);
+	endPageBeforeTable = endPageBeforeTable == 0 ? lastPageOffset : getLastPageOffset(startOffset,endPageBeforeTable);
 	
 	//int isMarkedEPBT = 0;
 	
