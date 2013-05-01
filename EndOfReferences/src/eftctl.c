@@ -152,8 +152,8 @@ int genEndSampleCtl(const char* fileName,int isDir)
 			case 0:
 				//rateWrite(fp,start,(double)_mfdc->data[i].t[0]/_mfdc->top);
 				//start+=5;
-				//rankWrite(fp,start,_mfdc->top-_mfdc->data[i].t[0]+1,5);
-				rankWriteNoMore(fp,start,_mfdc->top-_mfdc->data[i].t[0]+1,5);
+				rankWrite(fp,start,_mfdc->top-_mfdc->data[i].t[0]+1,5);
+				//rankWriteNoMore(fp,start,_mfdc->top-_mfdc->data[i].t[0]+1,5);
 				start+=5;
 				break;
 			// */
