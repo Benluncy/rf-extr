@@ -289,7 +289,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 		// debuginfo to file
 		//*
 		printfContextF(_mfdc->data[i].offset,"DEBUG INFO",fp);
-		fprintf(fp,"[0:%f][0:%d]",j,(double)_mfdc->data[i].t[0]/_mfdc->top
+		fprintf(fp,"[0:%f][0:%d]",(double)_mfdc->data[i].t[0]/_mfdc->top
 					,_mfdc->top-_mfdc->data[i].t[0]);
 		for(int j=1;j<ENDLEN;j++)
 			fprintf(fp,"[%d:%d]",j,_mfdc->data[i].t[j]);
