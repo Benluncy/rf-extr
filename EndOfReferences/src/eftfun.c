@@ -683,6 +683,8 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 	//22,23,24 pp
 	//25,26,27 pp2
 	printf("settings ...");
+	for(int i=0;i<3;i++)
+		if(lstOffsetList[i] == 0) stOffsetList[i] = getPclen();
 	for(int i=0;i<container->top;i++)
 	{
 	
@@ -727,6 +729,7 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 		for(int k=0;k<9;k++)
 			if(container->data[i].t[k+19] == 0) container->data[i].t[k+19] = 1;
 		
+		/*
 		for(int k=0;k<9;k++)
 		{
 			printf("data[%d].t[%d]:%d]{\n",i,k+19,container->data[i].t[k+19]);
@@ -738,7 +741,7 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 							container->data[i].t[19+k]);
 			printf("}\n");
 		}
-			
+		*/	
 		printf("\n");
 		fflush(NULL);
 		
