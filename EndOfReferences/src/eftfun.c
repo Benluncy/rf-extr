@@ -1261,7 +1261,7 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	offset+=diff;
 	diff = ABSDIFF(offset,hasYearafterTheOffset(offset,15));
 	offset+=diff;
-	//*
+	/*
 	for(int i=st_offset;i<nextElemOffset;i++)
 	{
 		if(i!=0) if(fitPattern('d',content[i-1])) continue;
@@ -1337,7 +1337,7 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	
 	//prepareDensityData();
 	
-	//*
+	/*
 
 	lmt = -100;
 	//fprintf(fp,"%d:%d ",start++,(hasPPafterTheOffset(offset,-lmt)>0)?1:-1);
@@ -1392,7 +1392,7 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	fprintf(fp,"%d:%d ",start++,((hasNameafterTheOffset2(offset,lmt) >= hasNameafterTheOffset2(offset,-lmt)))?1:-1);
 	// */	
 
-	//*	
+	/*	
 	// f g4
 	//absOffset[0] = 
 	lmt = 30;
