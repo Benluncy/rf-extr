@@ -1324,6 +1324,8 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	if(!haveDiffernecesD(getPclen(),offset)) af_flg[2] = 1;
 	for(int i=0;i<3;i++)
 		fprintf(fp,"%d:%d ",start++,af_flg[i]);	
+	fprintf(fp,"%d:%d ",start++,af_flg[2]&&af_flg[0]);
+	fprintf(fp,"%d:%d ",start++,af_flg[2]&&af_flg[1]);
 	
 	
 	//AUTHOR BIOGRAPHIES 
@@ -1341,15 +1343,19 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	//fprintf(fp,"%d:%d ",start++,(hasPPafterTheOffset(offset,-lmt)>0)?1:-1);
 	int p = hasPPafterTheOffset(offset,lmt)>0;
 	int n = hasPPafterTheOffset(offset,-lmt)>0;
-	fprintf(fp,"%d:%d ",start++,p>n?1:(p==n?0:-1));
+	//fprintf(fp,"%d:%d ",start++,p>n?1:(p==n?0:-1));
+	fprintf(fp,"%d:%d ",start++,p);
+	fprintf(fp,"%d:%d ",start++,n);
 	
 	p = hasYearafterTheOffset(offset,lmt)>0;
 	n = hasYearafterTheOffset(offset,-lmt)>0;
-	fprintf(fp,"%d:%d ",start++,p>n?1:(p==n?0:-1));
+	fprintf(fp,"%d:%d ",start++,p);
+	fprintf(fp,"%d:%d ",start++,n);
 	
 	p = hasNameafterTheOffset0(offset,lmt)>0;
 	n = hasNameafterTheOffset0(offset,-lmt)>0;
-	fprintf(fp,"%d:%d ",start++,p>n?1:(p==n?0:-1));
+	fprintf(fp,"%d:%d ",start++,p);
+	fprintf(fp,"%d:%d ",start++,n);
 	
 	//fprintf(fp,"%d:%d ",start++,(((hasNameafterTheOffset1(offset,lmt)>0) >= (hasNameafterTheOffset1(offset,-lmt)>0)))?1:-1);
 	//fprintf(fp,"%d:%d ",start++,(((hasNameafterTheOffset2(offset,lmt)>0) >= (hasNameafterTheOffset2(offset,-lmt)>0)))?1:-1);
@@ -1360,15 +1366,18 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	//lmt = -300;
 	p = asciiCodeDensity(offset,lmt);
 	n = asciiCodeDensity(offset,-lmt);
-	fprintf(fp,"%d:%d ",start++,p>n?1:(p==n?0:-1));
+	fprintf(fp,"%d:%d ",start++,p);
+	fprintf(fp,"%d:%d ",start++,n);
 	
 	p = dataDensity(offset,lmt);
 	n = dataDensity(offset,-lmt);
-	fprintf(fp,"%d:%d ",start++,p>n?1:(p==n?0:-1));
+	fprintf(fp,"%d:%d ",start++,p);
+	fprintf(fp,"%d:%d ",start++,n);
 	
 	p = wordsNumber(offset,lmt);
 	n = wordsNumber(offset,-lmt);
-	fprintf(fp,"%d:%d ",start++,p>n?1:(p==n?0:-1));
+	fprintf(fp,"%d:%d ",start++,p);
+	fprintf(fp,"%d:%d ",start++,n);
 
 	// */
 	
