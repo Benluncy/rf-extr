@@ -1260,7 +1260,8 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	//*
 	int diff = MAX2(ABSDIFF(offset,hasYearafterTheOffset(offset-4,15)),
 			ABSDIFF(offset,hasPPafterTheOffset(offset-4,15)));
-	printf("%d-%d",offset,diff);
+	printf("DIFF:%d-%d",offset,diff);
+	offset+=diff;
 	printfContextS(offset,"CONTEXTS");
 	//*/
 	/*
