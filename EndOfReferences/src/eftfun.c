@@ -1296,7 +1296,7 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	start+=4;
 	powerWrite(fp,start,bf_flg[1]+1,4);
 	start+=4;
-	for(int i=offset;i<offset+30&&i<;i++)
+	for(int i=offset;i<offset+30&&i<en_offset;i++)
 	{
 		if(i!=0) if(fitPattern('d',content[i-1])) continue;
 		if(INLMT("APPENDIX")
