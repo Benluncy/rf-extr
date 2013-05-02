@@ -1341,15 +1341,15 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	//fprintf(fp,"%d:%d ",start++,(hasPPafterTheOffset(offset,-lmt)>0)?1:-1);
 	int p = hasPPafterTheOffset(offset,lmt)>0;
 	int n = hasPPafterTheOffset(offset,-lmt)>0;
-	fprintf(fp,"%d:%d",start++,p>n?1:(p==n?0:-1));
+	fprintf(fp,"%d:%d ",start++,p>n?1:(p==n?0:-1));
 	
 	p = hasYearafterTheOffset(offset,lmt)>0;
 	n = hasYearafterTheOffset(offset,-lmt)>0;
-	fprintf(fp,"%d:%d",start++,p>n?1:(p==n?0:-1));
+	fprintf(fp,"%d:%d ",start++,p>n?1:(p==n?0:-1));
 	
 	p = hasNameafterTheOffset0(offset,lmt)>0;
 	n = hasNameafterTheOffset0(offset,-lmt)>0;
-	fprintf(fp,"%d:%d",start++,p>n?1:(p==n?0:-1));
+	fprintf(fp,"%d:%d ",start++,p>n?1:(p==n?0:-1));
 	
 	//fprintf(fp,"%d:%d ",start++,(((hasNameafterTheOffset1(offset,lmt)>0) >= (hasNameafterTheOffset1(offset,-lmt)>0)))?1:-1);
 	//fprintf(fp,"%d:%d ",start++,(((hasNameafterTheOffset2(offset,lmt)>0) >= (hasNameafterTheOffset2(offset,-lmt)>0)))?1:-1);
