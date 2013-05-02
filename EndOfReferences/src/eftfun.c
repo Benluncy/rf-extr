@@ -1257,10 +1257,12 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	char *content = getPcontent();
 	int bf_flg[2] = {0,0};
 	int af_flg[3] = {0,0,0};
+	/*
 	int diff = ABSDIFF(offset,hasPPafterTheOffset(offset,15));
 	offset+=diff;
 	diff = ABSDIFF(offset,hasYearafterTheOffset(offset,15));
 	offset+=diff;
+	*/
 	/*
 	for(int i=st_offset;i<nextElemOffset;i++)
 	{
