@@ -198,8 +198,8 @@ int genEndSampleCtl(const char* fileName,int isDir)
 			case 6: // end of article
 				// 0 , 1 , 2
 				fprintf(fp,"%d:%d ",start++,chkSpecialFlag()?
-						_mfdc->data[i].t[j]*2:
-						_mfdc->data[i].t[j]);
+						_mfdc->data[i].t[j]:
+						_mfdc->data[i].t[j]*2);
 				break;
 			// */
 			
