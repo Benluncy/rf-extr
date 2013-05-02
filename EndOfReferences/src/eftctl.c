@@ -143,7 +143,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 		start = 1;
 		for(int j=0;j<ENDLEN;j++)
 		{
-			//break;//TODO DEBUG
+			break;//TODO DEBUG
 			switch(j)
 			{
 			/*
