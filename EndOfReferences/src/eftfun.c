@@ -1322,7 +1322,7 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 		}
 	}
 	if(!haveDiffernecesD(getPclen(),offset)) af_flg[2] = 1;
-	for(int i=0;i<3;i++)
+	for(int i=0;i<2;i++)
 		fprintf(fp,"%d:%d ",start++,af_flg[i]);	
 	fprintf(fp,"%d:%d ",start++,af_flg[2]&&af_flg[0]);
 	fprintf(fp,"%d:%d ",start++,af_flg[2]&&af_flg[1]);
@@ -1339,7 +1339,7 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	
 	//*
 
-	lmt = -300;
+	lmt = -100;
 	//fprintf(fp,"%d:%d ",start++,(hasPPafterTheOffset(offset,-lmt)>0)?1:-1);
 	int p = hasPPafterTheOffset(offset,lmt)>0;
 	int n = hasPPafterTheOffset(offset,-lmt)>0;
