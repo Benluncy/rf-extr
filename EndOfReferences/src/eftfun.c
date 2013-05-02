@@ -1260,7 +1260,7 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	offset+=diff;
 	diff = ABSDIFF(offset,hasYearafterTheOffset(offset,15));
 	offset+=diff;
-	/*
+	//*
 	for(int i=st_offset;i<nextElemOffset;i++)
 	{
 		if(i!=0) if(fitPattern('d',content[i-1])) continue;
@@ -1358,9 +1358,18 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	//*
 	// f g2
 	//lmt = -300;
-	fprintf(fp,"%d:%d ",start++,(asciiCodeDensity(offset,lmt) >= asciiCodeDensity(offset,-lmt))?1:-1);
-	fprintf(fp,"%d:%d ",start++,(dataDensity(offset,lmt) >= dataDensity(offset,-lmt))?1:-1);
-	fprintf(fp,"%d:%d ",start++,(wordsNumber(offset,lmt) >= wordsNumber(offset,-lmt))?1:-1);
+	p = asciiCodeDensity(offset,lmt);
+	n = asciiCodeDensity(offset,-lmt);
+	fprintf(fp,"%d:%d ",start++,p>n?1:(p==n?0:-1));
+	
+	p = dataDensity(offset,lmt);
+	n = dataDensity(offset,-lmt);
+	fprintf(fp,"%d:%d ",start++,p>n?1:(p==n?0:-1));
+	
+	p = wordsNumber(offset,lmt);
+	n = wordsNumber(offset,-lmt);
+	fprintf(fp,"%d:%d ",start++,p>n?1:(p==n?0:-1));
+
 	// */
 	
 	/*
