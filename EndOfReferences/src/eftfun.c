@@ -1336,8 +1336,8 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	//*
 
 	lmt = -300;
-	fprintf(fp,"%d:%d ",start++,((hasPPafterTheOffset(offset,-lmt)>0)?1:-1);
-	//fprintf(fp,"%d:%d ",start++,(((hasPPafterTheOffset2(offset,lmt)>0) >= (hasPPafterTheOffset2(offset,-lmt)>0)))?1:-1);
+	//fprintf(fp,"%d:%d ",start++,(hasPPafterTheOffset(offset,-lmt)>0)?1:-1);
+	fprintf(fp,"%d:%d ",start++,(((hasPPafterTheOffset(offset,lmt)>0) >= (hasPPafterTheOffset(offset,-lmt)>0)))?1:-1);
 	fprintf(fp,"%d:%d ",start++,(((hasYearafterTheOffset(offset,lmt)>0) >= (hasYearafterTheOffset(offset,-lmt)>0)))?1:-1);
 	fprintf(fp,"%d:%d ",start++,(((hasNameafterTheOffset0(offset,lmt)>0) >= (hasNameafterTheOffset0(offset,-lmt)>0)))?1:-1);
 	//fprintf(fp,"%d:%d ",start++,(((hasNameafterTheOffset1(offset,lmt)>0) >= (hasNameafterTheOffset1(offset,-lmt)>0)))?1:-1);
