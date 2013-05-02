@@ -59,13 +59,13 @@ OffsetCallback endFunctionList[ENDCALLBACKLEN]={hasPPafterTheOffset,
 						hasSpecialKeyWords,
 						hasLocationafterTheOffset,
 						hasWords};
-/*						
+//*						
 OffsetCallback endFunctionList[ECBL]={hasPPafterTheOffset,
 						hasPPafterTheOffset2,
 						hasYearafterTheOffset,
 						hasSpecialKeyWords,
 						hasWords};
-*/
+//*/
 
 int edOffsetList[9];
 int lstOffsetList[3];
@@ -1334,28 +1334,19 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	//prepareDensityData();
 	
 	//*
-	// f g1
-	lmt = 30;
-	for(int z=0;z<ECBL;z++)//ENDCALLBACKLEN
-	{
-		//fprintf(fp,"%d:%d ",start++,((endFunctionList[z](offset,lmt) > 
-		//	endFunctionList[z](offset,-lmt)))?1:0);
-		fprintf(fp,"%d:%d ",start++,(endFunctionList[z](offset,lmt))?-1:1);
-	}
-	// */
-	/*
-	lmt = -50;
+
+	lmt = -300;
 	fprintf(fp,"%d:%d ",start++,((hasPPafterTheOffset(offset,-lmt)>0)?1:-1);
-	fprintf(fp,"%d:%d ",start++,(((hasPPafterTheOffset2(offset,lmt)>0) >= (hasPPafterTheOffset2(offset,-lmt)>0)))?1:-1);
+	//fprintf(fp,"%d:%d ",start++,(((hasPPafterTheOffset2(offset,lmt)>0) >= (hasPPafterTheOffset2(offset,-lmt)>0)))?1:-1);
 	fprintf(fp,"%d:%d ",start++,(((hasYearafterTheOffset(offset,lmt)>0) >= (hasYearafterTheOffset(offset,-lmt)>0)))?1:-1);
 	fprintf(fp,"%d:%d ",start++,(((hasNameafterTheOffset0(offset,lmt)>0) >= (hasNameafterTheOffset0(offset,-lmt)>0)))?1:-1);
-	fprintf(fp,"%d:%d ",start++,(((hasNameafterTheOffset1(offset,lmt)>0) >= (hasNameafterTheOffset1(offset,-lmt)>0)))?1:-1);
-	fprintf(fp,"%d:%d ",start++,(((hasNameafterTheOffset2(offset,lmt)>0) >= (hasNameafterTheOffset2(offset,-lmt)>0)))?1:-1);
+	//fprintf(fp,"%d:%d ",start++,(((hasNameafterTheOffset1(offset,lmt)>0) >= (hasNameafterTheOffset1(offset,-lmt)>0)))?1:-1);
+	//fprintf(fp,"%d:%d ",start++,(((hasNameafterTheOffset2(offset,lmt)>0) >= (hasNameafterTheOffset2(offset,-lmt)>0)))?1:-1);
 	// */
 	
-	/*
+	//*
 	// f g2
-	lmt = -300;
+	//lmt = -300;
 	fprintf(fp,"%d:%d ",start++,(asciiCodeDensity(offset,lmt) >= asciiCodeDensity(offset,-lmt))?1:-1);
 	fprintf(fp,"%d:%d ",start++,(dataDensity(offset,lmt) >= dataDensity(offset,-lmt))?1:-1);
 	fprintf(fp,"%d:%d ",start++,(wordsNumber(offset,lmt) >= wordsNumber(offset,-lmt))?1:-1);
