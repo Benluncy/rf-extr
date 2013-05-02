@@ -59,7 +59,7 @@ OffsetCallback endFunctionList[ENDCALLBACKLEN]={hasPPafterTheOffset,
 						hasSpecialKeyWords,
 						hasLocationafterTheOffset,
 						hasWords};
-//*						
+/*						
 OffsetCallback endFunctionList[ECBL]={hasPPafterTheOffset,
 						hasPPafterTheOffset2,
 						hasYearafterTheOffset,
@@ -1363,14 +1363,14 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	fprintf(fp,"%d:%d ",start++,((hasNameafterTheOffset2(offset,lmt) >= hasNameafterTheOffset2(offset,-lmt)))?1:-1);
 	// */	
 
-	/*	
+	//*	
 	// f g4
 	//absOffset[0] = 
 	lmt = 30;
-	powerWrite(fp,start,ABSDIFF(offset,absOffset[0]),10);
-	start+=10;
-	powerWrite(fp,start,ABSDIFF(offset,absOffset[1]),10);
-	start+=10;
+	powerWriteNoMore(fp,start,ABSDIFF(offset,absOffset[0])/20+1,4);
+	start+=4;
+	powerWriteNoMore(fp,start,ABSDIFF(offset,absOffset[1])/20+1,4);
+	start+=4;
 	//*/
 	
 		
