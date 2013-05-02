@@ -196,12 +196,14 @@ int genEndSampleCtl(const char* fileName,int isDir)
 			//*
 			// f 3
 			case 6: // end of article
-				// 0 , 1
-				fprintf(fp,"%d:%d ",start++,_mfdc->data[i].t[j]);
+				// 0 , 1 , 2
+				fprintf(fp,"%d:%d ",start++,chkSpecialFlag()?
+						_mfdc->data[i].t[j]*2:
+						_mfdc->data[i].t[j]);
 				break;
 			// */
 			
-			//*
+			/*
 			// f 4
 			case 7:
 			case 8:
@@ -238,6 +240,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 			//
 			//
 			
+			//
 			case 16:
 			case 17:
 			case 18:

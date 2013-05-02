@@ -1361,7 +1361,7 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	//fprintf(fp,"%d:%d ",start++,(((hasNameafterTheOffset2(offset,lmt)>0) >= (hasNameafterTheOffset2(offset,-lmt)>0)))?1:-1);
 	// */
 	
-	//*
+	/*
 	// f g2
 	//lmt = -300;
 	p = asciiCodeDensity(offset,lmt);
@@ -1869,6 +1869,10 @@ endFeatureData *getEndFeatureData(void)
 	return &mfd;
 }
 
+int chkSpecialFlag(void)
+{
+	return !(absOffset[0]!=0||absOffset[1]!=0)
+}
 
 
 

@@ -67,6 +67,7 @@ int rankWriteNoMore(FILE *fp,int start,int rank,int len);
 
 
 void setNextElemOffset(int neo);
+int chkSpecialFlag(void);
 
 //int getMaxLen(void);
 #endif // __EFTFUN_H__
