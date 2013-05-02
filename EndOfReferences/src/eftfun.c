@@ -1871,7 +1871,7 @@ endFeatureData *getEndFeatureData(void)
 
 int chkSpecialFlag(void)
 {
-	return !(absOffset[0]!=0||absOffset[1]!=0)
+	return !(absOffset[0]!=0||absOffset[1]!=0);
 }
 
 
