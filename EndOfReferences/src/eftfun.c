@@ -1260,7 +1260,7 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	offset+=diff;
 	diff = ABSDIFF(offset,hasYearafterTheOffset(offset,15));
 	offset+=diff;
-	//*
+	/*
 	for(int i=st_offset;i<nextElemOffset;i++)
 	{
 		if(i!=0) if(fitPattern('d',content[i-1])) continue;
