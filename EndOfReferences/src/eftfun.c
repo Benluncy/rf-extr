@@ -1249,17 +1249,16 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	int lmt;
 	int offset = fd.offset;
 	
-	/*
+	
 	int st_offset = getReferenceHeadOffset();
 	char *content = getPcontent();
 	int bf_flg[2] = {0,0};
 	int af_flg[3] = {0,0,0};
-	int diff = ABSDIFF(offset,hasPPafterTheOffset(offset,30));
-	if(diff<20)
-	{
-		offset+=diff;
-	}
-	
+	int diff = ABSDIFF(offset,hasPPafterTheOffset(offset,15));
+	offset+=diff;
+	diff = ABSDIFF(offset,hasYearafterTheOffset(offset,15));
+	offset+=diff;
+	/*
 	for(int i=st_offset;i<nextElemOffset;i++)
 	{
 		if(i!=0) if(fitPattern('d',content[i-1])) continue;
@@ -1334,18 +1333,19 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	
 	//prepareDensityData();
 	
-	/*
+	//*
 	// f g1
-	lmt = -50;
+	lmt = 30;
 	for(int z=0;z<ECBL;z++)//ENDCALLBACKLEN
 	{
-		fprintf(fp,"%d:%d ",start++,((endFunctionList[z](offset,lmt) > 
-			endFunctionList[z](offset,-lmt)))?1:0);
+		//fprintf(fp,"%d:%d ",start++,((endFunctionList[z](offset,lmt) > 
+		//	endFunctionList[z](offset,-lmt)))?1:0);
+		fprintf(fp,"%d:%d ",start++,(endFunctionList[z](offset,lmt))?-1:1);
 	}
 	// */
-	//*
+	/*
 	lmt = -50;
-	fprintf(fp,"%d:%d ",start++,(((hasPPafterTheOffset(offset,lmt)>0) >= (hasPPafterTheOffset(offset,-lmt)>0)))?1:-1);
+	fprintf(fp,"%d:%d ",start++,((hasPPafterTheOffset(offset,-lmt)>0)?1:-1);
 	fprintf(fp,"%d:%d ",start++,(((hasPPafterTheOffset2(offset,lmt)>0) >= (hasPPafterTheOffset2(offset,-lmt)>0)))?1:-1);
 	fprintf(fp,"%d:%d ",start++,(((hasYearafterTheOffset(offset,lmt)>0) >= (hasYearafterTheOffset(offset,-lmt)>0)))?1:-1);
 	fprintf(fp,"%d:%d ",start++,(((hasNameafterTheOffset0(offset,lmt)>0) >= (hasNameafterTheOffset0(offset,-lmt)>0)))?1:-1);
