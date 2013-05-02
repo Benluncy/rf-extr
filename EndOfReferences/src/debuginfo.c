@@ -7,12 +7,12 @@
 int printfContext(int offset)
 {
 	if(NODEBUG) return 1;
-	int x;
-	
+	int x;	
 	printf("\n>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n");
-	for(x=(offset<=100)?0:(offset-100);x<offset;x++) putchar(*(getPcontent()+x));
+	for(x=(offset<=100)?0:(offset-100);x<offset && x < getPclen();x++) 
+		putchar(*(getPcontent()+x));
 	printf("\n================================================================\n");
-	for(x=offset;x<offset+100 && x < getPclen();x++) putchar(*(getPcontent()+x));
+	for(x=(offset<0?0:offset);x<offset+100 && x < getPclen();x++) putchar(*(getPcontent()+x));
 	printf("\n<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n");
 	fflush(NULL);
 	//getchar(); getchar();
@@ -25,9 +25,11 @@ int printfContextF(int offset,const char *str,FILE *fp)
 	int x;
 	fprintf(fp,"\n$TITIL(%s)@[%d]{\n",str,offset);
 	fprintf(fp,"\n>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n");
-	for(x=(offset<=100)?0:(offset-100);x<offset;x++) fputc(*(getPcontent()+x),fp);
+	for(x=(offset<=100)?0:(offset-100);x<offset && x < getPclen();x++) 
+		fputc(*(getPcontent()+x),fp);
 	fprintf(fp,"\n================================================================\n");
-	for(x=offset;x<offset+100 && x < getPclen();x++) fputc(*(getPcontent()+x),fp);
+	for(x=(offset<0?0:offset);x<offset+100 && x < getPclen();x++) 
+		fputc(*(getPcontent()+x),fp);
 	fprintf(fp,"\n<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n");
 	fprintf(fp,"}\n");	
 	//fflush(NULL);
