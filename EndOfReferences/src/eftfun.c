@@ -1363,7 +1363,7 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	//fprintf(fp,"%d:%d ",start++,(((hasNameafterTheOffset2(offset,lmt)>0) >= (hasNameafterTheOffset2(offset,-lmt)>0)))?1:-1);
 	// */
 	
-	/*
+	//*
 	// f g2
 	//lmt = -300;
 	p = asciiCodeDensity(offset,lmt);
@@ -1383,7 +1383,7 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 
 	// */
 	
-	/*
+	//*
 	// f g3
 	lmt = 30;
 	fprintf(fp,"%d:%d ",start++,((hasPPafterTheOffset(offset,lmt) >= hasPPafterTheOffset(offset,-lmt)))?1:-1);
@@ -1394,7 +1394,7 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	fprintf(fp,"%d:%d ",start++,((hasNameafterTheOffset2(offset,lmt) >= hasNameafterTheOffset2(offset,-lmt)))?1:-1);
 	// */	
 
-	/*	
+	//*	
 	// f g4
 	//absOffset[0] = 
 	lmt = 30;
