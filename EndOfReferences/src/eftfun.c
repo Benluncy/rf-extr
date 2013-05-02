@@ -1396,20 +1396,20 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	// f g4
 	//absOffset[0] = 
 	lmt = 30;
-	if(absOffset[0] == 0) absOffset[0] =  absOffset[1] ;
-	if(absOffset[1] == 0) absOffset[1] =  absOffset[0] ;
-	if((absOffset[0] == 0) &&(absOffset[1] == 0) )
-		absOffset[0] =  absOffset[1] = getPclen();
+	//if(absOffset[0] == 0) absOffset[0] =  absOffset[1] ;
+	//if(absOffset[1] == 0) absOffset[1] =  absOffset[0] ;
+	//if((absOffset[0] == 0) &&(absOffset[1] == 0) )
+	//	absOffset[0] =  absOffset[1] = getPclen();
 	
-	powerWriteNoMore(fp,start,ABSDIFF(offset,absOffset[0])/20+1,4);
+	powerWriteNoMore(fp,start,(absOffset[0] == 0)?0:(ABSDIFF(offset,absOffset[0])/20+1),4);
 	start+=4;
-	powerWriteNoMore(fp,start,ABSDIFF(offset,absOffset[1])/20+1,4);
+	powerWriteNoMore(fp,start,(absOffset[1] == 0)?0:(ABSDIFF(offset,absOffset[1])/20+1),4);
 	start+=4;
 	//*/
 	
 		
 	// no use start
-	/*
+	//*
 	int absdiff = ABSDIFF(offset,getReferenceEndOffset());
 	//!haveDiffernecesD(_mfdc->data[i].offset,targetOffset)
 	if(haveDiffernecesD(offset,getReferenceEndOffset()))
@@ -1421,7 +1421,8 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	}
 	
 	powerWrite(fp,start,absdiff,2);
-	start+=2;*/
+	start+=2;
+	//*/
 	// no use end 
 	
 	/*
