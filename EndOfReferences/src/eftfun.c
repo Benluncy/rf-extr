@@ -1258,12 +1258,12 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	int bf_flg[2] = {0,0};
 	int af_flg[3] = {0,0,0};
 	//*
-	int diff = ABSDIFF(offset,hasPPafterTheOffset(offset,10));
-	offset+=diff;
-	diff = ABSDIFF(offset,hasYearafterTheOffset(offset,10));
-	offset+=diff;
+	//int diff = ABSDIFF(offset,hasPPafterTheOffset(offset,10));
+	//offset+=diff;
+	//diff = ABSDIFF(offset,hasYearafterTheOffset(offset,10));
+	//offset+=diff;
 	//*/
-	/*
+	//*
 	for(int i=st_offset;i<nextElemOffset;i++)
 	{
 		if(i!=0) if(fitPattern('d',content[i-1])) continue;
