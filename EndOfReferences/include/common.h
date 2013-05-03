@@ -1,5 +1,6 @@
 #ifndef __COMMON_H__
 #define __COMMON_H__
+#include <stdio.h>
 
 #define thresholdForDifferneces  2
 #define exThresholdForDifferences (thresholdForDifferneces*2)
