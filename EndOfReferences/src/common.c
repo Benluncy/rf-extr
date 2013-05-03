@@ -1,4 +1,6 @@
 #include "common.h"
+#include "virtualcontent.h"
+#include <stdio.h>
 
 
 //TODO MAY USELESS ... 
