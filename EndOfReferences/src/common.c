@@ -1,5 +1,6 @@
 #include "common.h"
 #include "virtualcontent.h"
+#include "minEditDistance.h"
 #include <stdio.h>
 
 
