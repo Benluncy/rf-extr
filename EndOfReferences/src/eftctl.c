@@ -107,8 +107,8 @@ int genEndSampleCtl(const char* fileName,int isDir)
 	}
 
 
-	// log
-	fprintf(flog,"##[[DATA:%s|\n%20s]]\n",fileName,getPcontent()+targetOffset);
+	// log TODO
+	//fprintf(flog,"##[[DATA:%s|\n%20s]]\n",fileName,getPcontent()+targetOffset);
 		
 	// 0 empty for valued -- index of all offsets
 	// 1 acknowledgements etc.

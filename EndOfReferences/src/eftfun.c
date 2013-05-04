@@ -1267,6 +1267,8 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	//offset+=diff;
 	if(diff != 0) offset = diff;
 	printfContextS(offset,"CONTEXTS");
+	
+	
 	//*/
 	/*
 	for(int i=st_offset;i<nextElemOffset;i++)
@@ -1498,7 +1500,7 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 
 
 
-
+//In no way the function helped , for take too much time 
 int prepareDensityData(void)
 {
 	return 1;

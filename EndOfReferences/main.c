@@ -46,7 +46,7 @@ int genSamples4Endness()
 	insertEndKWD("He has ");
 	insertEndKWD("Are there ");
 	
-	openLogFile();
+	//openLogFile();
 	
 	setTrainFile(fopen("train.txt","w")); // train.txt
 	setTestFile(fopen("test.txt","w")); // test.txt   
@@ -66,7 +66,7 @@ int genSamples4Endness()
 	fclose(getTestFile());	
 	
 	
-	closeLogFile();
+	//closeLogFile();
 	
 	return getFileNum();
 }
