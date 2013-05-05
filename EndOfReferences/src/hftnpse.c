@@ -556,7 +556,7 @@ int hasSpecialKeyWords(int offset,int limit) // in references
 			ETTESTSTR("Press",content+i);
 			ETTESTSTR("PROCEEDINGS",content+i);
 
-			
+			/*
 			//23(3) // volume
 			int z = i;
 			int tmp = z;
@@ -577,7 +577,7 @@ int hasSpecialKeyWords(int offset,int limit) // in references
 				}
 				if(z>=offend) break;
 				if(content[z] == ')') return i+z+1;
-			}
+			}*/
 		}
 	}
 	return 0;
