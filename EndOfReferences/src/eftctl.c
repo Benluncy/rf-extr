@@ -234,7 +234,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 				break;	
 			// */
 			
-			/*		
+			//*		
 			case 9:
 			case 12:
 			case 15:
