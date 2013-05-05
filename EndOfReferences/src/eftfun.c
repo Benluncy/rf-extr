@@ -1342,7 +1342,7 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	
 	//int keysNumber(int offset,int limit,int (*keyFind)(int,int));
 	//after offset to judge is name?
-	fprintf(fp,"%d:%d ",start++,hasNameafterTheOffset0(offset,20)==0?1:0);
+	fprintf(fp,"%d:%d ",start++,hasNameafterTheOffset0(offset,40)==0?1:0);
 	fprintf(fp,"%d:%d ",start++,(hasSeqOfTheOffset(offset,20)==0?1:-1));
 	fprintf(fp,"%d:%d ",start++,(hasSeqOfTheOffset2(offset,20)==0?1:-1));
 	
@@ -1396,8 +1396,30 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	rankWrite(fp,start,p-n2,5);
 	start+=5;
 	
+	p = keysNumber(offset,-150,hasSpecialKeyWords)
+		+keysNumber(offset,-150,hasNameafterTheOffset)
+		+keysNumber(offset,-150,hasSeqOfTheOffset)
+		+keysNumber(offset,-150,hasSeqOfTheOffset2)
+		+keysNumber(offset,-150,hasMonth)
+		+keysNumber(offset,-150,hasLocationafterTheOffset)
+	n = keysNumber(offset,150,hasSpecialKeyWordsN)
+		+keysNumber(offset,40,hasNameafterTheOffset)
+		+keysNumber(offset,40,hasSeqOfTheOffset)
+		+keysNumber(offset,40,hasSeqOfTheOffset2)
+		+keysNumber(offset,150,hasMonth)
+		+keysNumber(offset,150,hasLocationafterTheOffset)	
+	
+	
+	rankWrite(fp,start,p,5);
+	start+=5;
+	rankWrite(fp,start,n,5);
+	start+=5;
+	rankWrite(fp,start,p-n,5);
+	start+=5;
+
+	
 	p = wordsNumber(offset,-40);
-	p = wordsNumber(offset,+40);
+	n = wordsNumber(offset,+40);
 	fprintf(fp,"%d:%d ",start++,p);
 	fprintf(fp,"%d:%d ",start++,n);
 	fprintf(fp,"%d:%d ",start++,p-n);

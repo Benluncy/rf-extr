@@ -587,6 +587,36 @@ int hasSpecialKeyWords(int offset,int limit) // in references
 }
 
 
+
+
+int hasSpecialKeyWordsN(int offset,int limit) // not in references
+{
+	int i;
+	int offend;
+	char *content = getPcontent();
+	defineStartAndEnd(&offset,&offend,limit);
+	for(i=offset;i<offend;i++)
+	{
+		if(content[i-1]==' ')
+		{
+			TESTMATSTR("Fig.",content+i);
+			TESTMATSTR("Fig,",content+i);
+			TESTMATSTR("Figure",content+i);
+			TESTMATSTR("Here ",content+i);
+			TESTMATSTR("We ",content+i);			
+			TESTMATSTR("Are ",content+i);
+			//TESTMATSTR("A ",content+i);
+			TESTMATSTR("An ",content+i);
+			TESTMATSTR("Our ",content+i);
+			ETTESTSTR("Samples ",content+i);
+			ETTESTSTR("A Proof of ",content+i);
+			ETTESTSTR("In this ",content+i);
+			ETTESTSTR("BIOGRAPHIES",content+i);
+		}
+	}
+	return 0;
+}
+
 int hasMonth(int offset,int limit)
 {
 	int i;
@@ -612,35 +642,6 @@ int hasMonth(int offset,int limit)
 	return 0;
 }
 
-int hasSpecialKeyWordsN(int offset,int limit) // not in references
-{
-	int i;
-	int offend;
-	char *content = getPcontent();
-	defineStartAndEnd(&offset,&offend,limit);
-	for(i=offset;i<offend;i++)
-	{
-		if(content[i-1]==' ')
-		{
-			TESTMATSTR("Fig.",content+i);
-			TESTMATSTR("Fig,",content+i);
-			TESTMATSTR("Figure",content+i);
-			TESTMATSTR("Here ",content+i);
-			TESTMATSTR("We ",content+i);			
-			TESTMATSTR("Are ",content+i);
-			//TESTMATSTR("An ",content+i);
-			ETTESTSTR("Samples ",content+i);
-			ETTESTSTR("A Proof of ",content+i);
-			ETTESTSTR("In this ",content+i);
-			ETTESTSTR("BIOGRAPHIES",content+i);
-			
-		}
-	}
-	return 0;
-}
-
-			
-			 
 
 int hasWords(int offset,int limit)
 {
