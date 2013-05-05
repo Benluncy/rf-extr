@@ -874,7 +874,7 @@ int keysNumber(int offset,int limit,int (*keyFind)(int,int))
 {
 	int offend;
 	int num = 0;
-	int len = getPclen();
+	//int len = getPclen();
 	defineStartAndEnd(&offset,&offend,limit);
 	while((offset=keyFind(offset,offend-offset))>0)
 	{
