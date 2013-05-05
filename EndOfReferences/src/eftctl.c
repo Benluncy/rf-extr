@@ -6,6 +6,7 @@
 #include "virtualcontent.h"
 #include "tokens.h"
 #include "minEditDistance.h"
+#include "common.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
