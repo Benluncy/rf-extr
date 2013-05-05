@@ -1257,7 +1257,6 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	int lmta=0;
 	int offset = fd.offset;
 	
-	printf("A");fflush(NULL);
 	
 	int st_offset = getReferenceHeadOffset();
 	int en_offset = getReferenceEndOffset();
@@ -1352,28 +1351,21 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	fprintf(fp,"%d:%d ",start++,(hasSpecialKeyWordsN(offset,-150)==0?1:-1));
 	fprintf(fp,"%d:%d ",start++,(hasSpecialKeyWordsN(offset,150)==0?1:-1));
 	
-	printf("B");fflush(NULL);
 	
 	rankWrite(fp,start,keysNumber(offset,-150,hasSpecialKeyWords),5);
-	printf("BO");fflush(NULL);
 	start+=5;
 	rankWrite(fp,start,keysNumber(offset,150,hasSpecialKeyWords),5);
-	printf("BO");fflush(NULL);
 	start+=5;
 	rankWrite(fp,start,keysNumber(offset,-150,hasSpecialKeyWordsN),5);
-	printf("BO");fflush(NULL);
 	start+=5;
 	rankWrite(fp,start,keysNumber(offset,150,hasSpecialKeyWordsN),5);
 	start+=5;
-	
-	printf("C");fflush(NULL);
 	
 	fprintf(fp,"%d:%d ",start++,(hasMonth(offset,-150)==0?1:-1));
 	fprintf(fp,"%d:%d ",start++,(hasMonth(offset,150)==0?1:-1));
 
 	fprintf(fp,"%d:%d ",start++,(hasLocationafterTheOffset(offset,150)==0?1:-1));
 
-	printf("D");fflush(NULL);
 	
 	//AUTHOR BIOGRAPHIES 
 	//pages
