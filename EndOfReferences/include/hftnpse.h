@@ -47,6 +47,7 @@ double wordsDensity(int offset,int limit);
 double asciiCodeDensity(int offset,int limit);
 double dataDensity(int offset,int limit);
 
+int keysNumber(int offset,int limit,int (*keyFind)(int,int));
 
 typedef int (*CKWDfun)(int offset,int limit);
 

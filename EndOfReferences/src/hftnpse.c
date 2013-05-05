@@ -452,7 +452,8 @@ int hasSeqOfTheOffset(int offset,int limit)
 					return j;
 				}
 				if((content[j]<'0' || content[j] >'9') 
-					&& content[j] != 'i' && content[j] != 'l')
+					&& content[j] != 'i' && content[j] != 'l'
+					&& content[j] != 'O' && content[j] != 'o')
 					break;
 			}
 		}else if(fitPattern('n',content[i]))
@@ -547,6 +548,7 @@ int hasSpecialKeyWords(int offset,int limit) // in references
 			TESTMATSTR("http://",content+i);
 			TESTMATSTR("No.",content+i);
 			
+			
 			ETTESTSTR("Vol.",content+i);
 			ETTESTSTR("Volumn",content+i);
 			ETTESTSTR("SIGCSE",content+i);
@@ -617,7 +619,8 @@ int hasSpecialKeyWordsN(int offset,int limit) // not in references
 			TESTMATSTR("Here ",content+i);
 			TESTMATSTR("We ",content+i);			
 			TESTMATSTR("Are ",content+i);
-			TESTMATSTR("An ",content+i);
+			//TESTMATSTR("An ",content+i);
+			TESTMATSTR("Samples ",content+i);
 		}
 	}
 	return 0;
@@ -630,21 +633,34 @@ int hasWords(int offset,int limit)
 {
 	int i;
 	int offend;
+	int sum;
+	int diff;
+	char key;
 	char *content = getPcontent();
 	defineStartAndEnd(&offset,&offend,limit);
-	for(i=offset;i<offend-3;i++)
+	for(i=offset;i<offend;i++)
 	{
-		if(fitPattern('a',content[i])&&fitPattern('a',content[i+1])
-			&&fitPattern('a',content[i+2])&&fitPattern('a',content[i+3]))
+		sum = 0;
+		diff= 0;
+		while(fitPattern('a',content[i]) && i<offend-1)
 		{
-			return i+4;
+			sum++;
+			i++;
+			if(diff == 0) key = content[i];
+			else if(key != content[i])
+			{
+				diff++;
+				key = content[i];
+			}
 		}
+		if(sum >= 4 && diff>2) return sum+1+i;
 	}
 	return 0;	
 }
 
 int wordsNumber(int offset,int limit)
 {
+	/*
 	int i;
 	int offend;
 	char *content = getPcontent();
@@ -666,8 +682,25 @@ int wordsNumber(int offset,int limit)
 			num ++ ;
 		}
 	}
+	return num;
+	*/
+	return keysNumber(offset,offend-offset,hasWords);
+}
+
+int keysNumber(int offset,int limit,int (*keyFind)(int,int))
+{
+	int offend;
+	char *content = getPcontent();
+	int in = 0 ;
+	int num = 0;
+	defineStartAndEnd(&offset,&offend,limit);
+	while((offset=keyFind(offset,offend-offset))!=0)
+	{
+		sum++;
+	}
 	return num;	
 }
+
 
 /*
 	int pLen;
