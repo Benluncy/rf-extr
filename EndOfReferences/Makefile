@@ -72,6 +72,11 @@ run			:
 test			: 
 	svm_learn -c 0.1 test.txt
 	svm_classify train.txt svm_model 
+	
+check			:
+	make -C ../checkdiff/ test 
+	gedit ../checkdiff/tips.log
+	
 
 main			: ${OBJS}
 	${CC} ${CFLAGS} $@.c -o $@ ${OBJS} ${LIBS}
