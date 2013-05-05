@@ -1396,7 +1396,12 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	rankWrite(fp,start,p-n2,5);
 	start+=5;
 	
-
+	p = wordsNumber(offset,-40);
+	p = wordsNumber(offset,+40);
+	fprintf(fp,"%d:%d ",start++,p);
+	fprintf(fp,"%d:%d ",start++,n);
+	fprintf(fp,"%d:%d ",start++,p-n);
+	
 
 	
 	
@@ -1427,10 +1432,12 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	double dp;
 	double dn;
 	lmta = 100;
-	//dp = asciiCodeDensity(offset,lmta);
-	//dn = asciiCodeDensity(offset,-lmta);
-	//fprintf(fp,"%d:%f ",start++,dp);
-	//fprintf(fp,"%d:%f ",start++,dn);
+	dp = asciiCodeDensity(offset,lmta);
+	dn = asciiCodeDensity(offset,-lmta);
+	fprintf(fp,"%d:%f ",start++,dp);
+	fprintf(fp,"%d:%f ",start++,dn);
+	fprintf(fp,"%d:%f ",start++,dp-dn);
+	
 	
 	//dp = dataDensity(offset,lmta);
 	//dn = dataDensity(offset,-lmta);
@@ -1438,16 +1445,18 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	//fprintf(fp,"%d:%f ",start++,dn);
 	
 	//inline double effectiveWordsDensity(int offset,int limit)
-	dp = effectiveWordsDensity(offset,-lmta);
-	dn = effectiveWordsDensity(offset,lmta);
 	
-	fprintf(fp,"%d:%d ",start++,dp==-1);
-	fprintf(fp,"%d:%f ",start++,dp);
-	rateWrite(fp,start,dp);
-	start+=5;
-	fprintf(fp,"%d:%d ",start++,dn==-1);
-	rateWrite(fp,start,dn);
-	start+=5;
+	
+	//dp = effectiveWordsDensity(offset,-lmta);
+	//dn = effectiveWordsDensity(offset,lmta);
+	
+	//fprintf(fp,"%d:%d ",start++,dp==-1);
+	//fprintf(fp,"%d:%f ",start++,dp);
+	//rateWrite(fp,start,dp);
+	//start+=5;
+	//fprintf(fp,"%d:%d ",start++,dn==-1);
+	//rateWrite(fp,start,dn);
+	//start+=5;
 	//fprintf(fp,"%d:%d ",start++,dp>dn?1:-1);
 
 	// */
