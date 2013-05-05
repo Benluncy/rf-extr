@@ -690,8 +690,6 @@ int wordsNumber(int offset,int limit)
 int keysNumber(int offset,int limit,int (*keyFind)(int,int))
 {
 	int offend;
-	char *content = getPcontent();
-	int in = 0 ;
 	int num = 0;
 	defineStartAndEnd(&offset,&offend,limit);
 	while((offset=keyFind(offset,offend-offset))!=0)
