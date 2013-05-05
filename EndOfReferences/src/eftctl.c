@@ -140,10 +140,12 @@ int genEndSampleCtl(const char* fileName,int isDir)
 	{
 		printf(".");
 		//adjust offset 
-		int adja = hasYearafterTheOffset(_mfdc->data[i].offset-4,15);
-		int adjb = hasPPafterTheOffset(_mfdc->data[i].offset-4,15);
+		int adja = hasYearafterTheOffset(_mfdc->data[i].offset-4,30);
+		int adjb = hasPPafterTheOffset(_mfdc->data[i].offset-4,30);
 		int adj = MAX2(adja,adjb);
-		//printf("DIFF:%d-%d",_mfdc->data[i].offset,adj);
+		//"%c1 ",);
+		//printf("[%c1 ]DIFF:%d-%d",!haveDiffernecesD(_mfdc->data[i].offset,targetOffset)?'+':'-'
+		//		,_mfdc->data[i].offset,adj);
 		//offset+=diff;
 		if(adj != 0) _mfdc->data[i].offset = adj;
 		//printfContextS(_mfdc->data[i].offset,"CONTEXTS");
@@ -159,7 +161,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 			//break;//when debuging .. .. ingore these info
 			switch(j)
 			{
-			/*
+			//*
 			// f 0
 			case 0:
 				//rateWrite(fp,start,(double)_mfdc->data[i].t[0]/_mfdc->top);

@@ -45,6 +45,8 @@ int genSamples4Endness()
 	insertEndKWD("NOTICE OF ");
 	insertEndKWD("He has ");
 	insertEndKWD("Are there ");
+	insertEndKWD("CONFIGURATION ");
+	
 	
 	//openLogFile();
 	

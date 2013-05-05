@@ -1339,12 +1339,17 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 		
 	//after offset to judge is name?
 	fprintf(fp,"%d:%d ",start++,hasNameafterTheOffset0(offset,20)==0?1:0);
-	fprintf(fp,"%d:%d ",start++,hasNameafterTheOffset1(offset,20)==0?1:0);
-	fprintf(fp,"%d:%d ",start++,hasNameafterTheOffset2(offset,20)==0?1:0);
 	fprintf(fp,"%d:%d ",start++,(hasSeqOfTheOffset(offset,20)==0?1:-1));
 	fprintf(fp,"%d:%d ",start++,(hasSeqOfTheOffset2(offset,20)==0?1:-1));
 	
+	fprintf(fp,"%d:%d ",start++,(hasSpecialKeyWords(offset,-150)==0?1:-1));
 	fprintf(fp,"%d:%d ",start++,(hasSpecialKeyWords(offset,150)==0?1:-1));
+	fprintf(fp,"%d:%d ",start++,(hasSpecialKeyWordsN(offset,-150)==0?1:-1));
+	fprintf(fp,"%d:%d ",start++,(hasSpecialKeyWordsN(offset,150)==0?1:-1));
+	
+	fprintf(fp,"%d:%d ",start++,(hasMonth(offset,-150)==0?1:-1));
+	fprintf(fp,"%d:%d ",start++,(hasMonth(offset,150)==0?1:-1));
+
 	fprintf(fp,"%d:%d ",start++,(hasLocationafterTheOffset(offset,150)==0?1:-1));
 
 	
@@ -1394,10 +1399,10 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	fprintf(fp,"%d:%f ",start++,dp);
 	fprintf(fp,"%d:%f ",start++,dn);
 	
-	dp = dataDensity(offset,lmta);
-	dn = dataDensity(offset,-lmta);
-	fprintf(fp,"%d:%f ",start++,dp);
-	fprintf(fp,"%d:%f ",start++,dn);
+	//dp = dataDensity(offset,lmta);
+	//dn = dataDensity(offset,-lmta);
+	//fprintf(fp,"%d:%f ",start++,dp);
+	//fprintf(fp,"%d:%f ",start++,dn);
 	
 	dp = wordsNumber(offset,lmta);
 	dn = wordsNumber(offset,-lmta);

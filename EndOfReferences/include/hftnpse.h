@@ -33,6 +33,8 @@ int hasSeqOfTheOffset(int offset,int limit);
 int hasSeqOfTheOffset2(int offset,int limit);
 
 int hasSpecialKeyWords(int offset,int limit);
+int hasSpecialKeyWordsN(int offset,int limit);
+int hasMonth(int offset,int limit);
 
 int hasLocationafterTheOffset(int offset,int limit);
 

@@ -519,10 +519,15 @@ int hasSeqOfTheOffset2(int offset,int limit)
 }
 
 //int strncmp(const char *s1, const char *s2, size_t n);
-#ifndef TESTMATSTR
+#ifndef TESTMATSTR //editDistanceS
 #define TESTMATSTR(a,b) {if(strncmp(a,b,strlen(a)) == 0 ) return i + strlen(a);}
+//#define TESTMATSTR(a,b) {if(editDistanceS(a,b,strlen(a),strlen(a)) <= 0 ) return i + strlen(a);}
 #endif
-int hasSpecialKeyWords(int offset,int limit)
+#ifndef ETTESTSTR //editDistanceS
+//#define TESTMATSTR(a,b) {if(strncmp(a,b,strlen(a)) == 0 ) return i + strlen(a);}
+#define ETTESTSTR(a,b) {if(editDistanceS(a,b,strlen(a),strlen(a)) <= 0 ) return i + strlen(a);}
+#endif
+int hasSpecialKeyWords(int offset,int limit) // in references
 {
 	int i;
 	int offend;
@@ -537,21 +542,89 @@ int hasSpecialKeyWords(int offset,int limit)
 			TESTMATSTR("ACM",content+i);
 			TESTMATSTR("Inc.",content+i);
 			TESTMATSTR("Proc.",content+i);
+			TESTMATSTR("pp.",content+i);
 			TESTMATSTR("Ph.D. Thesis",content+i);
 			TESTMATSTR("http://",content+i);
-			if(content[i]=='V'||content[i]=='v')
+			TESTMATSTR("No.",content+i);
+			
+			ETTESTSTR("Vol.",content+i);
+			ETTESTSTR("Volumn",content+i);
+			ETTESTSTR("SIGCSE",content+i);
+			ETTESTSTR("Bulletin",content+i);
+			ETTESTSTR("Press",content+i);
+			ETTESTSTR("PROCEEDINGS",content+i);
+
+			
+			//23(3) // volume
+			int z = i;
+			while(fitPattern('n',content[z]) && z < offend)
 			{
-				i++;
-				TESTMATSTR("ol.",content+i);
+				z++;
 			}
-			TESTMATSTR("volumn",content+i);
-			TESTMATSTR("Volumn",content+i);
-			TESTMATSTR("Fig,",content+i);
-				
+			if(content[z] == '(')
+			{
+				z++;
+				while(fitPattern('n',content[z]))
+				{
+					z++;
+				}
+				if(content[z] == ')') return i+z+1;
+			}
 		}
 	}
 	return 0;
 }
+
+
+int hasMonth(int offset,int limit)
+{
+	int i;
+	int j;
+	int offend;
+	char *content = getPcontent();
+	char kwds[12][10]={"January","February","March","April","May","June","July",
+			"August","September","October","November","December"};
+	defineStartAndEnd(&offset,&offend,limit);
+	for(i=offset;i<offend;i++)
+	{
+		if(content[i-1]==' ')
+		{
+			for(j=0;j<12;j++)
+			{
+				TESTMATSTR(kwds[j],content+i);
+				if((strncmp(kwds[j],content+i,3) == 0)&& content[i+3]=='.') 
+					return i + 4;
+			}
+			
+		}
+	}
+	return 0;
+}
+
+int hasSpecialKeyWordsN(int offset,int limit) // not in references
+{
+	int i;
+	int offend;
+	char *content = getPcontent();
+	defineStartAndEnd(&offset,&offend,limit);
+	for(i=offset;i<offend;i++)
+	{
+		if(content[i-1]==' ')
+		{
+			TESTMATSTR("Fig.",content+i);
+			TESTMATSTR("Fig,",content+i);
+			TESTMATSTR("Figure",content+i);
+			TESTMATSTR("Here ",content+i);
+			TESTMATSTR("We ",content+i);			
+			TESTMATSTR("Are ",content+i);
+			TESTMATSTR("An ",content+i);
+		}
+	}
+	return 0;
+}
+
+			
+			 
 
 int hasWords(int offset,int limit)
 {
