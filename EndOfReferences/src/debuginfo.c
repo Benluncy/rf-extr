@@ -28,7 +28,7 @@ int printfContextF(int offset,const char *str,FILE *fp)
 	for(x=(offset<=100)?0:(offset-100);x<offset && x < getPclen();x++) 
 		fputc(*(getPcontent()+x),fp);
 	fprintf(fp,"\n================================================================\n");
-	for(x=(offset<0?0:offset);x<offset+100 && x < getPclen();x++) 
+	for(x=(offset<0?0:offset);x<offset+100 && x < getPclen()-1;x++) 
 		fputc(*(getPcontent()+x),fp);
 	fprintf(fp,"\n<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n");
 	fprintf(fp,"}\n");	

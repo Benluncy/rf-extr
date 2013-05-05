@@ -35,7 +35,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 	 * data/oraby/A framework for assisted exploration with collaboration.txt
 	 *
 	 */
-	ONLY("data/orbz_sec/Animating facial expressions.txt");
+	//ONLY("data/orbz_sec/Animating facial expressions.txt");
        	//ONLY("data/orbz_sec/Antecedents and consequences of job satifaction among information center employees.txt");
 	FILE *fp;
 	static int id = 0;
@@ -198,7 +198,8 @@ int genEndSampleCtl(const char* fileName,int isDir)
 			case 6: // end of article
 				// 0 , 1 , 2
 				fprintf(fp,"%d:%d ",start++,chkSpecialFlag()?
-						_mfdc->data[i].t[j]:
+						//_mfdc->data[i].t[j]:
+						0:
 						_mfdc->data[i].t[j]*2);
 				break;
 			// */
