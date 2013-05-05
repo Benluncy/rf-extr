@@ -834,7 +834,6 @@ int keysNumber(int offset,int limit,int (*keyFind)(int,int))
 	{
 		num++;
 	}
-	printf(">");
 	return num;	
 }
 
