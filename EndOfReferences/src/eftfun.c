@@ -1268,6 +1268,9 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	//printfContextS(offset,"CONTEXTS");
 	
 	
+	//after offset to judge is name?
+	fprintf(fp,"%d:%d ",start++,hasNameafterTheOffset0(offset,20));
+	
 	//*/
 	/*
 	for(int i=st_offset;i<nextElemOffset;i++)

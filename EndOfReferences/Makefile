@@ -75,7 +75,7 @@ test			:
 	
 check			:
 	make -C ../checkdiff/ test 
-	gedit ../checkdiff/tips.log
+#gedit ../checkdiff/tips.log
 	
 
 main			: ${OBJS}
