@@ -1401,13 +1401,13 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 		+keysNumber(offset,-150,hasSeqOfTheOffset)
 		+keysNumber(offset,-150,hasSeqOfTheOffset2)
 		+keysNumber(offset,-150,hasMonth)
-		+keysNumber(offset,-150,hasLocationafterTheOffset)
+		+keysNumber(offset,-150,hasLocationafterTheOffset);
 	n = keysNumber(offset,150,hasSpecialKeyWordsN)
 		+keysNumber(offset,40,hasNameafterTheOffset)
 		+keysNumber(offset,40,hasSeqOfTheOffset)
 		+keysNumber(offset,40,hasSeqOfTheOffset2)
 		+keysNumber(offset,150,hasMonth)
-		+keysNumber(offset,150,hasLocationafterTheOffset)	
+		+keysNumber(offset,150,hasLocationafterTheOffset);	
 	
 	
 	rankWrite(fp,start,p,5);
@@ -1453,7 +1453,7 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	// f g2
 	double dp;
 	double dn;
-	lmta = 100;
+	lmta = 200;
 	dp = asciiCodeDensity(offset,lmta);
 	dn = asciiCodeDensity(offset,-lmta);
 	fprintf(fp,"%d:%f ",start++,dp);

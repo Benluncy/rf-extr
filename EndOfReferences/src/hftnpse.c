@@ -611,7 +611,7 @@ int hasSpecialKeyWordsN(int offset,int limit) // not in references
 			ETTESTSTR("Samples ",content+i);
 			ETTESTSTR("A Proof of ",content+i);
 			ETTESTSTR("In this ",content+i);
-			ETTESTSTR("BIOGRAPHIES",content+i);
+			ETTESTSTR("is a ",content+i);
 		}
 	}
 	return 0;
@@ -636,6 +636,7 @@ int hasMonth(int offset,int limit)
 				if((strncmp(kwds[j],content+i,3) == 0)&& content[i+3]=='.') 
 					return i + 4;
 			}
+			if(strncmp("Sept",content+i,4) == 0) return 5;
 			
 		}
 	}
@@ -795,7 +796,9 @@ double asciiCodeDensity(int offset,int limit)
 	for(i=offset;i<offend;i++)
 	{
 		if(fitPattern('a',content[i])) num++;
+		if(content[i]==' ') length = 0;
 	}
+	if(length == 0) return 1;
 	return (double)num/length;
 }
 
