@@ -144,7 +144,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 		printf("DIFF:%d-%d",_mfdc->data[i].offset,adj);
 		//offset+=diff;
 		if(adj != 0) _mfdc->data[i].offset = adj;
-		printfContextS(offset,"CONTEXTS");
+		printfContextS(_mfdc->data[i].offset,"CONTEXTS");
 		
 		
 		
