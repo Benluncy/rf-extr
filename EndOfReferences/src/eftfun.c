@@ -1352,15 +1352,6 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	fprintf(fp,"%d:%d ",start++,(hasSpecialKeyWordsN(offset,150)==0?1:-1));
 	
 	
-	rankWrite(fp,start,keysNumber(offset,-150,hasSpecialKeyWords),5);
-	start+=5;
-	rankWrite(fp,start,keysNumber(offset,150,hasSpecialKeyWords),5);
-	start+=5;
-	rankWrite(fp,start,keysNumber(offset,-150,hasSpecialKeyWordsN),5);
-	start+=5;
-	rankWrite(fp,start,keysNumber(offset,150,hasSpecialKeyWordsN),5);
-	start+=5;
-	
 	fprintf(fp,"%d:%d ",start++,(hasMonth(offset,-150)==0?1:-1));
 	fprintf(fp,"%d:%d ",start++,(hasMonth(offset,150)==0?1:-1));
 
@@ -1381,8 +1372,36 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	lmtp = -30;
 	lmtn = 150;
 	//fprintf(fp,"%d:%d ",start++,(hasPPafterTheOffset(offset,-lmt)>0)?1:-1);
-	int p = hasPPafterTheOffset(offset,lmtp)>0;
-	int n = hasPPafterTheOffset(offset,lmtn)>0;
+	
+	int p,p2;
+	int n,n2;
+	p = keysNumber(offset,-150,hasSpecialKeyWords);
+	n = keysNumber(offset,150,hasSpecialKeyWords);
+	rankWrite(fp,start,p,5);
+	start+=5;
+	rankWrite(fp,start,n,5);
+	start+=5;
+	rankWrite(fp,start,p-n,5);
+	start+=5;
+	
+	p2 = keysNumber(offset,-150,hasSpecialKeyWordsN);
+	n2 = keysNumber(offset,150,hasSpecialKeyWordsN);
+	rankWrite(fp,start,p2,5);
+	start+=5;
+	rankWrite(fp,start,n2,5);
+	start+=5;
+	rankWrite(fp,start,p2-n2,5);
+	start+=5;
+	
+	rankWrite(fp,start,p-n2,5);
+	start+=5;
+	
+
+
+	
+	
+	p = hasPPafterTheOffset(offset,lmtp)>0;
+	n = hasPPafterTheOffset(offset,lmtn)>0;
 	//fprintf(fp,"%d:%d ",start++,p>n?1:(p==n?0:-1));
 	fprintf(fp,"%d:%d ",start++,p);
 	fprintf(fp,"%d:%d ",start++,n);
@@ -1407,21 +1426,29 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	// f g2
 	double dp;
 	double dn;
-	lmta = -300;
-	dp = asciiCodeDensity(offset,lmta);
-	dn = asciiCodeDensity(offset,-lmta);
-	fprintf(fp,"%d:%f ",start++,dp);
-	fprintf(fp,"%d:%f ",start++,dn);
+	lmta = 100;
+	//dp = asciiCodeDensity(offset,lmta);
+	//dn = asciiCodeDensity(offset,-lmta);
+	//fprintf(fp,"%d:%f ",start++,dp);
+	//fprintf(fp,"%d:%f ",start++,dn);
 	
 	//dp = dataDensity(offset,lmta);
 	//dn = dataDensity(offset,-lmta);
 	//fprintf(fp,"%d:%f ",start++,dp);
 	//fprintf(fp,"%d:%f ",start++,dn);
 	
-	dp = wordsNumber(offset,lmta);
-	dn = wordsNumber(offset,-lmta);
+	//inline double effectiveWordsDensity(int offset,int limit)
+	dp = effectiveWordsDensity(offset,-lmta);
+	dn = effectiveWordsDensity(offset,lmta);
+	
+	fprintf(fp,"%d:%d ",start++,dp==-1);
 	fprintf(fp,"%d:%f ",start++,dp);
-	fprintf(fp,"%d:%f ",start++,dn);
+	rateWrite(fp,start,dp);
+	start+=5;
+	fprintf(fp,"%d:%d ",start++,dn==-1);
+	rateWrite(fp,start,dn);
+	start+=5;
+	//fprintf(fp,"%d:%d ",start++,dp>dn?1:-1);
 
 	// */
 	

@@ -43,6 +43,7 @@ int hasWords(int offset,int limit);
 int wordsNumber(int offset,int limit);
 
 double wordsDensity(int offset,int limit);
+double effectiveWordsDensity(int offset,int limit);
 
 double asciiCodeDensity(int offset,int limit);
 double dataDensity(int offset,int limit);

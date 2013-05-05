@@ -824,6 +824,47 @@ inline double wordsDensity(int offset,int limit)
 }
 
 
+inline double effectiveWordsDensity(int offset,int limit)
+{
+	int i;
+	int offend;
+	int sum;
+	int allsum;
+	int diff;
+	char key;
+	int allcontent;
+	char *content = getPcontent();
+	defineStartAndEnd(&offset,&offend,limit);
+	allcontent = offset
+	for(i=offset;i<offend;i++)
+	{
+		if(!fitPattern('a',content[i]))
+		{
+			allcontent --;
+			continue;
+		}
+		sum = 0;
+		diff= 0;
+		while(fitPattern('a',content[i]) && i<offend-1)
+		{
+			sum++;
+			i++;
+			if(diff == 0) key = content[i];
+			else if(key != content[i])
+			{
+				diff++;
+				key = content[i];
+			}
+		}
+		if(sum >= 4 && diff>2)
+		{
+			allsum+=sum;
+		}
+	}
+	if(allcontent == 0) return -1;
+	return allsum/allcontent;
+}
+
 
 int keysNumber(int offset,int limit,int (*keyFind)(int,int))
 {
