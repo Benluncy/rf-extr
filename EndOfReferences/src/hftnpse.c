@@ -836,7 +836,7 @@ int keysNumber(int offset,int limit,int (*keyFind)(int,int))
 	fflush(NULL);
 	while((newoffset=keyFind(offset,newlimit))>0)
 	{
-		printf("{%d|%d|%d}",newoffset,offend,offend - newoffset);
+		printf("{%d|%d|%d}\n",newoffset,offend,offend - newoffset);
 		fflush(NULL);
 		num++;
 		offset = newoffset;
