@@ -146,7 +146,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 		printf("DIFF:%d-%d",_mfdc->data[i].offset,adj);
 		//offset+=diff;
 		if(adj != 0) _mfdc->data[i].offset = adj;
-		printfContextS(_mfdc->data[i].offset,"CONTEXTS");
+		//printfContextS(_mfdc->data[i].offset,"CONTEXTS");
 		
 		
 		
@@ -170,7 +170,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 				break;
 			// */
 			
-			/*
+			//*
 			// f 1
 			case 1:
 			case 2:
@@ -192,7 +192,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 				break;
 			// */
 			
-			/* 
+			//* 
 			// f 2
 			case 3:
 			case 4:
@@ -217,7 +217,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 				break;
 			// */
 			
-			/*
+			//*
 			// f 4
 			case 7:
 			case 8:
@@ -248,7 +248,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 				break;
 			// */
 			
-			/*
+			//*
 			// f5
 			//
 			//
@@ -263,7 +263,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 				break;
 			// */
 			
-			/*
+			//*
 			case 19:
 			case 20:
 			case 22:
@@ -271,7 +271,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 			case 25:
 			case 26:
 			// */
-			/*
+			//*
 			case 21:
 			case 24:
 			case 27:

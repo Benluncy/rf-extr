@@ -1250,7 +1250,9 @@ void setNextElemOffset(int neo)
 
 int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 {
-	int lmt;
+	int lmtp=0; //prev
+	int lmtn=0; //next
+	int lmta=0;
 	int offset = fd.offset;
 	
 	
@@ -1355,47 +1357,52 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	
 	//prepareDensityData();
 	
-	/*
+	//*
 
-	lmt = -100;
+	lmtp = -30;
+	lmtn = 150;
 	//fprintf(fp,"%d:%d ",start++,(hasPPafterTheOffset(offset,-lmt)>0)?1:-1);
-	int p = hasPPafterTheOffset(offset,lmt)>0;
-	int n = hasPPafterTheOffset(offset,-lmt)>0;
+	int p = hasPPafterTheOffset(offset,lmtp)>0;
+	int n = hasPPafterTheOffset(offset,lmtn)>0;
 	//fprintf(fp,"%d:%d ",start++,p>n?1:(p==n?0:-1));
 	fprintf(fp,"%d:%d ",start++,p);
 	fprintf(fp,"%d:%d ",start++,n);
 	
-	p = hasYearafterTheOffset(offset,lmt)>0;
-	n = hasYearafterTheOffset(offset,-lmt)>0;
+	p = hasYearafterTheOffset(offset,lmtp)>0;
+	n = hasYearafterTheOffset(offset,lmtn)>0;
 	fprintf(fp,"%d:%d ",start++,p);
 	fprintf(fp,"%d:%d ",start++,n);
 	
-	p = hasNameafterTheOffset0(offset,lmt)>0;
-	n = hasNameafterTheOffset0(offset,-lmt)>0;
+	/*
+	p = hasNameafterTheOffset0(offset,lmtp)>0;
+	n = hasNameafterTheOffset0(offset,lmtn)>0;
 	fprintf(fp,"%d:%d ",start++,p);
 	fprintf(fp,"%d:%d ",start++,n);
-	
+	*/
+
 	//fprintf(fp,"%d:%d ",start++,(((hasNameafterTheOffset1(offset,lmt)>0) >= (hasNameafterTheOffset1(offset,-lmt)>0)))?1:-1);
 	//fprintf(fp,"%d:%d ",start++,(((hasNameafterTheOffset2(offset,lmt)>0) >= (hasNameafterTheOffset2(offset,-lmt)>0)))?1:-1);
 	// */
 	
-	/*
+	//*
 	// f g2
-	//lmt = -300;
-	p = asciiCodeDensity(offset,lmt);
-	n = asciiCodeDensity(offset,-lmt);
-	fprintf(fp,"%d:%d ",start++,p);
-	fprintf(fp,"%d:%d ",start++,n);
+	double dp;
+	double dn;
+	lmta = -300;
+	dp = asciiCodeDensity(offset,lmta);
+	dn = asciiCodeDensity(offset,-lmta);
+	fprintf(fp,"%d:%f ",start++,dp);
+	fprintf(fp,"%d:%f ",start++,dn);
 	
-	p = dataDensity(offset,lmt);
-	n = dataDensity(offset,-lmt);
-	fprintf(fp,"%d:%d ",start++,p);
-	fprintf(fp,"%d:%d ",start++,n);
+	dp = dataDensity(offset,lmta);
+	dn = dataDensity(offset,-lmta);
+	fprintf(fp,"%d:%f ",start++,dp);
+	fprintf(fp,"%d:%f ",start++,dn);
 	
-	p = wordsNumber(offset,lmt);
-	n = wordsNumber(offset,-lmt);
-	fprintf(fp,"%d:%d ",start++,p);
-	fprintf(fp,"%d:%d ",start++,n);
+	dp = wordsNumber(offset,lmta);
+	dn = wordsNumber(offset,-lmta);
+	fprintf(fp,"%d:%f ",start++,dp);
+	fprintf(fp,"%d:%f ",start++,dn);
 
 	// */
 	
@@ -1410,7 +1417,7 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	fprintf(fp,"%d:%d ",start++,((hasNameafterTheOffset2(offset,lmt) >= hasNameafterTheOffset2(offset,-lmt)))?1:-1);
 	// */	
 
-	/*	
+	//*	
 	// f g4
 	//absOffset[0] = 
 	lmt = 30;
