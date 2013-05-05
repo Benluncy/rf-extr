@@ -1358,8 +1358,10 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	printf("BO");fflush(NULL);
 	start+=5;
 	rankWrite(fp,start,keysNumber(offset,150,hasSpecialKeyWords),5);
+	printf("BO");fflush(NULL);
 	start+=5;
 	rankWrite(fp,start,keysNumber(offset,-150,hasSpecialKeyWordsN),5);
+	printf("BO");fflush(NULL);
 	start+=5;
 	rankWrite(fp,start,keysNumber(offset,150,hasSpecialKeyWordsN),5);
 	start+=5;
