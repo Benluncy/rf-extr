@@ -684,7 +684,7 @@ int wordsNumber(int offset,int limit)
 	}
 	return num;
 	*/
-	return keysNumber(offset,offend-offset,hasWords);
+	return keysNumber(offset,limit,hasWords);
 }
 
 int keysNumber(int offset,int limit,int (*keyFind)(int,int))
