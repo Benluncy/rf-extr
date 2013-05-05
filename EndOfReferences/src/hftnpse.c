@@ -538,7 +538,6 @@ int hasSpecialKeyWords(int offset,int limit) // in references
 	{
 		if(content[i-1]==' ')
 		{
-			printf("<%d>",i);
 			TESTMATSTR("ISO",content+i);
 			TESTMATSTR("IEEE",content+i);
 			TESTMATSTR("ACM",content+i);
