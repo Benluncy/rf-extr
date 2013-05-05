@@ -707,6 +707,7 @@ int keysNumber(int offset,int limit,int (*keyFind)(int,int))
 		num++;
 		offset = newoffset;
 		newlimit = offend - offset;
+		printf("{%d|%d|%d}",offset,offend,newlimit);
 		
 	}
 	printf(">");
