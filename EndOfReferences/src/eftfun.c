@@ -1274,7 +1274,7 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	fprintf(fp,"%d:%d ",start++,hasNameafterTheOffset2(offset,20)==0?1:0);
 	
 	//*/
-	/*
+	//*
 	for(int i=st_offset;i<nextElemOffset;i++)
 	{
 		if(i!=0) if(fitPattern('d',content[i-1])) continue;
