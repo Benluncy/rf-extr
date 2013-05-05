@@ -559,18 +559,21 @@ int hasSpecialKeyWords(int offset,int limit) // in references
 			
 			//23(3) // volume
 			int z = i;
+			int tmp = z;
 			while(fitPattern('n',content[z]) && z < offend -2)
 			{
 				z++;
+				if(z>=offend || z-tmp > 2) break;
 			}
 			if(z>=offend-2) break;
 			if(content[z] == '(')
 			{
 				z++;
+				tmp = z;
 				while(fitPattern('n',content[z]))
 				{
 					z++;
-					if(z>=offend) break;
+					if(z>=offend || z-tmp > 2) break;
 				}
 				if(z>=offend) break;
 				if(content[z] == ')') return i+z+1;
