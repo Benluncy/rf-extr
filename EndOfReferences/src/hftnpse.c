@@ -697,31 +697,7 @@ int wordsNumber(int offset,int limit)
 	return keysNumber(offset,limit,hasWords);
 }
 
-int keysNumber(int offset,int limit,int (*keyFind)(int,int))
-{
-	int offend;
-	int num = 0;
-	int newoffset;
-	int newlimit;
-	defineStartAndEnd(&offset,&offend,limit);
-	newoffset = offset;
-	newlimit = offend - offset;
-	printf("#");
-	printf("{%d|%d|%d}",offset,offend,newlimit);
-	fflush(NULL);
-	while((newoffset=keyFind(offset,newlimit))>0)
-	{
-		printf("{%d|%d|%d}",offset,offend,newlimit);
-		fflush(NULL);
-		num++;
-		offset = newoffset;
-		newlimit = offend - offset;
-		
-		
-	}
-	printf(">");
-	return num;	
-}
+
 
 
 /*
@@ -846,6 +822,31 @@ inline double wordsDensity(int offset,int limit)
 
 
 
+int keysNumber(int offset,int limit,int (*keyFind)(int,int))
+{
+	int offend;
+	int num = 0;
+	int newoffset;
+	int newlimit;
+	defineStartAndEnd(&offset,&offend,limit);
+	newoffset = offset;
+	newlimit = offend - offset;
+	printf("#");
+	printf("{%d|%d|%d}",offset,offend,newlimit);
+	fflush(NULL);
+	while((newoffset=keyFind(offset,newlimit))>0)
+	{
+		printf("{%d|%d|%d}",newoffset,offend,offend - newoffset);
+		fflush(NULL);
+		num++;
+		offset = newoffset;
+		newlimit = offend - offset;
+		
+		
+	}
+	printf(">");
+	return num;	
+}
 
 
 
