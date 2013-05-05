@@ -143,7 +143,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 		int adja = hasYearafterTheOffset(_mfdc->data[i].offset-4,15);
 		int adjb = hasPPafterTheOffset(_mfdc->data[i].offset-4,15);
 		int adj = MAX2(adja,adjb);
-		printf("DIFF:%d-%d",_mfdc->data[i].offset,adj);
+		//printf("DIFF:%d-%d",_mfdc->data[i].offset,adj);
 		//offset+=diff;
 		if(adj != 0) _mfdc->data[i].offset = adj;
 		//printfContextS(_mfdc->data[i].offset,"CONTEXTS");
