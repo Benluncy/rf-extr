@@ -701,6 +701,7 @@ int keysNumber(int offset,int limit,int (*keyFind)(int,int))
 	newoffset = offset;
 	newlimit = offend - offset;
 	printf("#");
+	fflush(NULL);
 	while((newoffset=keyFind(offset,newlimit))>0)
 	{
 		num++;
