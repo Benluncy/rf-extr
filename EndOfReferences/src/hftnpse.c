@@ -701,13 +701,16 @@ int keysNumber(int offset,int limit,int (*keyFind)(int,int))
 	newoffset = offset;
 	newlimit = offend - offset;
 	printf("#");
+	printf("{%d|%d|%d}",offset,offend,newlimit);
 	fflush(NULL);
 	while((newoffset=keyFind(offset,newlimit))>0)
 	{
+		if(num==0)printf("{%d|%d|%d}",offset,offend,newlimit);
+		fflush(NULL);
 		num++;
 		offset = newoffset;
 		newlimit = offend - offset;
-		printf("{%d|%d|%d}",offset,offend,newlimit);
+		
 		
 	}
 	printf(">");
