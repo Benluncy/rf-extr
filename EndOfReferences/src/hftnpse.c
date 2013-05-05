@@ -695,11 +695,19 @@ int keysNumber(int offset,int limit,int (*keyFind)(int,int))
 {
 	int offend;
 	int num = 0;
+	int newoffset;
+	int newlimit;
 	defineStartAndEnd(&offset,&offend,limit);
-	while((offset=keyFind(offset,offend-offset))!=0)
+	newoffset = offset;
+	newlimit = offend - offset;
+	while((newoffset=keyFind(offset,newlimit))>0)
 	{
 		num++;
+		offset = newoffset;
+		newlimit = offend - offset;
+		
 	}
+	printf(">");
 	return num;	
 }
 
