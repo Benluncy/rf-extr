@@ -673,32 +673,32 @@ int hasWords(int offset,int limit)
 	return 0;	
 }
 
+/*
+int i;
+int offend;
+char *content = getPcontent();
+int in = 0 ;
+int num = 0;
+defineStartAndEnd(&offset,&offend,limit);
+for(i=offset;i<offend-3;i++)
+{
+	if(in)
+	{
+		if(!fitPattern('a',content[i]))
+		{
+			in = 0;
+		}
+	}else if(fitPattern('a',content[i])&&fitPattern('a',content[i+1])
+		&&fitPattern('a',content[i+2])&&fitPattern('a',content[i+3]))
+	{
+		in = 1;
+		num ++ ;
+	}
+}
+return num;
+*/
 int wordsNumber(int offset,int limit)
 {
-	/*
-	int i;
-	int offend;
-	char *content = getPcontent();
-	int in = 0 ;
-	int num = 0;
-	defineStartAndEnd(&offset,&offend,limit);
-	for(i=offset;i<offend-3;i++)
-	{
-		if(in)
-		{
-			if(!fitPattern('a',content[i]))
-			{
-				in = 0;
-			}
-		}else if(fitPattern('a',content[i])&&fitPattern('a',content[i+1])
-			&&fitPattern('a',content[i+2])&&fitPattern('a',content[i+3]))
-		{
-			in = 1;
-			num ++ ;
-		}
-	}
-	return num;
-	*/
 	return keysNumber(offset,limit,hasWords);
 }
 
