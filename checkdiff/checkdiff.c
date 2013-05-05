@@ -35,6 +35,7 @@ int main(int argc,char *argv[])
 	FILE *fpTestfile = fopen("test.txt","r");
 	FILE *fpPredictfile = fopen("svm_predictions","r");
 	FILE *fpResultfile = fopen("diff.log","w");
+	FILE *fpTipfile = fopen("tips.log","w");
 	const char *btu="/home/yu/Workspace/cc/features/GetContext/main ";
 	//const char *path="/home/yu/Workspace/cc/features/GetContext/";
 	
@@ -93,19 +94,22 @@ int main(int argc,char *argv[])
 				}
 				
 			}
-			sprintf(command,"%s \"%s\" %d",btu,doEscape(paperName+2),dOffset);
+			sprintf(command,"%s \"%s\" %d >>  tips.log",btu,doEscape(paperName+2),dOffset);
 			if(dOffset!=0)
 			{
 				//printf("run: {%s}\n",command);
 				//printf("content: {%s}\n",strTestFileContent);
 				//break;
-				printf("%s",paperName+2);
-				printf("%d:%s%s\n",xx,strPredictFileContent,strTestFileContent);
+				fprintf(fpTipfile,"%s",paperName+2);
+				fprintf(fpTipfile,"%d:%s%s\n",xx,strPredictFileContent,strTestFileContent);
+				fflush(NULL);
 				system(command);
+				fflush(NULL);
+				fseek(fpTipfile,0L,SEEK_END);
 				//break;
 			}else
 			{
-				printf("no offset ... \n");
+				fprintf(fpTipfile,"no offset ... \n");
 			}
 				
 		}
@@ -114,6 +118,7 @@ int main(int argc,char *argv[])
 	fclose(fpTestfile);
 	fclose(fpPredictfile);
 	fclose(fpResultfile);
+	fclose(fpTipfile);
 	return 0;
 }
 

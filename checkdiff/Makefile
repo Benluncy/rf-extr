@@ -41,6 +41,7 @@ CP			:= cp
 DEL			:= rm -rf
 MV			:= mv
 SAY			:= @echo
+CLS			:= @clear
 
 ########################COMPILE SETTINGS################################
 VPATH			:= include/:src/:../include/	
@@ -72,9 +73,13 @@ show			:
 	gedit diff.log
 
 train			:
+	${CLS}
+	${CLS}
 	./checkdiff train.txt
 
 test			:
+	${CLS}
+	${CLS}
 	./checkdiff test.txt
 	
 
