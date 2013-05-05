@@ -1422,7 +1422,7 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	
 		
 	// no use start
-	//*
+	/*
 	int absdiff = ABSDIFF(fd.offset,getReferenceEndOffset());
 	//!haveDiffernecesD(_mfdc->data[i].offset,targetOffset)
 	if(haveDiffernecesD(fd.offset,getReferenceEndOffset()))
