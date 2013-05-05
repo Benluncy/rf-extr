@@ -835,7 +835,7 @@ inline double effectiveWordsDensity(int offset,int limit)
 	int allcontent;
 	char *content = getPcontent();
 	defineStartAndEnd(&offset,&offend,limit);
-	allcontent = offset
+	allcontent = offset;
 	for(i=offset;i<offend;i++)
 	{
 		if(!fitPattern('a',content[i]))
