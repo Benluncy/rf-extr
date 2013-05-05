@@ -1399,7 +1399,6 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	p = keysNumber(offset,-150,hasSpecialKeyWords)
 		+keysNumber(offset,-150,hasNameafterTheOffset0)
 		+keysNumber(offset,-150,hasSeqOfTheOffset)
-		+keysNumber(offset,-150,hasSeqOfTheOffset2)
 		+keysNumber(offset,-150,hasMonth)
 		+keysNumber(offset,-150,hasLocationafterTheOffset);
 	n = keysNumber(offset,150,hasSpecialKeyWordsN)

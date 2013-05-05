@@ -636,7 +636,7 @@ int hasMonth(int offset,int limit)
 				if((strncmp(kwds[j],content+i,3) == 0)&& content[i+3]=='.') 
 					return i + 4;
 			}
-			if(strncmp("Sept",content+i,4) == 0) return 5;
+			if(strncmp("Sept",content+i,4) == 0) return i+5;
 			
 		}
 	}
@@ -878,7 +878,7 @@ int keysNumber(int offset,int limit,int (*keyFind)(int,int))
 	defineStartAndEnd(&offset,&offend,limit);
 	while((offset=keyFind(offset,offend-offset))>0)
 	{
-		if(offend - offset < 0 || offset > len) return num;
+		//if(offend - offset < 0 || offset > len) return num;
 		num++;
 	}
 	return num;	
