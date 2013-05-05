@@ -1420,7 +1420,7 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	//*	
 	// f g4
 	//absOffset[0] = 
-	lmt = 30;
+	//lmt = 30;
 	//if(absOffset[0] == 0) absOffset[0] =  absOffset[1] ;
 	//if(absOffset[1] == 0) absOffset[1] =  absOffset[0] ;
 	//if((absOffset[0] == 0) &&(absOffset[1] == 0) )
