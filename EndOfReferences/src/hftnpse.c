@@ -525,7 +525,7 @@ int hasSeqOfTheOffset2(int offset,int limit)
 #endif
 #ifndef ETTESTSTR //editDistanceS
 //#define TESTMATSTR(a,b) {if(strncmp(a,b,strlen(a)) == 0 ) return i + strlen(a);}
-#define ETTESTSTR(a,b) {if(editDistanceS(a,b,strlen(a),strlen(a)) <= 0 ) return i + strlen(a);}
+#define ETTESTSTR(a,b) {if(editDistanceS(a,strlen(a),b,strlen(a)) <= 0 ) return i + strlen(a);}
 #endif
 int hasSpecialKeyWords(int offset,int limit) // in references
 {
