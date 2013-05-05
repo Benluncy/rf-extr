@@ -700,6 +700,7 @@ int keysNumber(int offset,int limit,int (*keyFind)(int,int))
 	defineStartAndEnd(&offset,&offend,limit);
 	newoffset = offset;
 	newlimit = offend - offset;
+	printf("#");
 	while((newoffset=keyFind(offset,newlimit))>0)
 	{
 		num++;
