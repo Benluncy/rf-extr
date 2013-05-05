@@ -694,7 +694,7 @@ int keysNumber(int offset,int limit,int (*keyFind)(int,int))
 	defineStartAndEnd(&offset,&offend,limit);
 	while((offset=keyFind(offset,offend-offset))!=0)
 	{
-		sum++;
+		num++;
 	}
 	return num;	
 }
