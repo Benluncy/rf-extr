@@ -7,6 +7,7 @@
 #include "tokens.h"
 #include "minEditDistance.h"
 #include "common.h"
+#include "hftnpse.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
