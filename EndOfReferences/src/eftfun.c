@@ -1267,12 +1267,6 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	//if(diff != 0) offset = diff;
 	//printfContextS(offset,"CONTEXTS");
 	
-	
-	//after offset to judge is name?
-	fprintf(fp,"%d:%d ",start++,hasNameafterTheOffset0(offset,20)==0?1:0);
-	fprintf(fp,"%d:%d ",start++,hasNameafterTheOffset1(offset,20)==0?1:0);
-	fprintf(fp,"%d:%d ",start++,hasNameafterTheOffset2(offset,20)==0?1:0);
-	
 	//*/
 	//*
 	for(int i=st_offset;i<nextElemOffset;i++)
@@ -1340,6 +1334,17 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	fprintf(fp,"%d:%d ",start++,af_flg[2]&&af_flg[0]);
 	fprintf(fp,"%d:%d ",start++,af_flg[2]&&af_flg[1]);
 	
+		
+	//after offset to judge is name?
+	fprintf(fp,"%d:%d ",start++,hasNameafterTheOffset0(offset,20)==0?1:0);
+	fprintf(fp,"%d:%d ",start++,hasNameafterTheOffset1(offset,20)==0?1:0);
+	fprintf(fp,"%d:%d ",start++,hasNameafterTheOffset2(offset,20)==0?1:0);
+	fprintf(fp,"%d:%d ",start++,(hasSeqOfTheOffset(offset,20)==0?1:-1));
+	fprintf(fp,"%d:%d ",start++,(hasSeqOfTheOffset2(offset,20)==0?1:-1));
+	
+	fprintf(fp,"%d:%d ",start++,(hasSpecialKeyWords(offset,150)==0?1:-1));
+	fprintf(fp,"%d:%d ",start++,(hasLocationafterTheOffset(offset,150)==0?1:-1));
+
 	
 	//AUTHOR BIOGRAPHIES 
 	//pages
@@ -1439,12 +1444,10 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	// no use end 
 	
 	//*
-	// f g5
-	lmt = -200;
-	fprintf(fp,"%d:%d ",start++,(hasSeqOfTheOffset(offset,lmt)?1:-1));
-	fprintf(fp,"%d:%d ",start++,(hasSeqOfTheOffset2(offset,lmt)?1:-1));	
-	fprintf(fp,"%d:%d ",start++,((hasSeqOfTheOffset(offset,lmt) >= hasSeqOfTheOffset(offset,-lmt)))?1:-1);
-	fprintf(fp,"%d:%d ",start++,((hasSeqOfTheOffset2(offset,lmt) >= hasSeqOfTheOffset2(offset,-lmt)))?1:-1);
+	// f g5	
+	//fprintf(fp,"%d:%d ",start++,((hasSeqOfTheOffset(offset,lmt) >= hasSeqOfTheOffset(offset,-lmt)))?1:-1);
+	//fprintf(fp,"%d:%d ",start++,((hasSeqOfTheOffset2(offset,lmt) >= hasSeqOfTheOffset2(offset,-lmt)))?1:-1);
+	
 	//*/	
 	//fprintf(fp,"%d:%d ",start++,asciiCodeDensity(offset,lmt) >= asciiCodeDensity(offset,-lmt));
 	//fprintf(fp,"%d:%d ",start++,dataDensity(offset,lmt) >= dataDensity(offset,-lmt));
