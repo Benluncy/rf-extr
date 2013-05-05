@@ -620,7 +620,11 @@ int hasSpecialKeyWordsN(int offset,int limit) // not in references
 			TESTMATSTR("We ",content+i);			
 			TESTMATSTR("Are ",content+i);
 			//TESTMATSTR("An ",content+i);
-			TESTMATSTR("Samples ",content+i);
+			ETTESTSTR("Samples ",content+i);
+			ETTESTSTR("A Proof of ",content+i);
+			ETTESTSTR("In this ",content+i);
+			ETTESTSTR("BIOGRAPHIES",content+i);
+			
 		}
 	}
 	return 0;
