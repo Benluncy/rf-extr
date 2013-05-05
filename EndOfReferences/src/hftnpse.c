@@ -528,6 +528,9 @@ int hasSeqOfTheOffset2(int offset,int limit)
 //#define TESTMATSTR(a,b) {if(strncmp(a,b,strlen(a)) == 0 ) return i + strlen(a);}
 #define ETTESTSTR(a,b) {if(editDistanceS(a,strlen(a),b,strlen(a)) <= 0 ) return i + strlen(a);}
 #endif
+
+int ONOROFF = 0;
+
 int hasSpecialKeyWords(int offset,int limit) // in references
 {
 	int i;
@@ -556,7 +559,7 @@ int hasSpecialKeyWords(int offset,int limit) // in references
 			ETTESTSTR("Press",content+i);
 			ETTESTSTR("PROCEEDINGS",content+i);
 
-			/*
+			
 			//23(3) // volume
 			int z = i;
 			int tmp = z;
@@ -576,8 +579,8 @@ int hasSpecialKeyWords(int offset,int limit) // in references
 					if(z>=offend || z-tmp > 2) break;
 				}
 				if(z>=offend) break;
-				if(content[z] == ')') return i+z+1;
-			}*/
+				if(content[z] == ')') return z+1;
+			}
 		}
 	}
 	return 0;
@@ -826,23 +829,10 @@ int keysNumber(int offset,int limit,int (*keyFind)(int,int))
 {
 	int offend;
 	int num = 0;
-	int newoffset;
-	int newlimit;
 	defineStartAndEnd(&offset,&offend,limit);
-	newoffset = offset;
-	newlimit = offend - offset;
-	printf("#");
-	printf("{%d|%d|%d}",offset,offend,newlimit);
-	fflush(NULL);
-	while((newoffset=keyFind(offset,newlimit))>0)
+	while((offset=keyFind(offset,offend-offset))>0)
 	{
-		printf("{%d|%d|%d}\n",newoffset,offend,offend - newoffset);
-		fflush(NULL);
 		num++;
-		offset = newoffset;
-		newlimit = offend - offset;
-		
-		
 	}
 	printf(">");
 	return num;	
