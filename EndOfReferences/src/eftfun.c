@@ -1269,7 +1269,9 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	
 	
 	//after offset to judge is name?
-	fprintf(fp,"%d:%d ",start++,hasNameafterTheOffset0(offset,20));
+	fprintf(fp,"%d:%d ",start++,hasNameafterTheOffset0(offset,20)==0?1:0);
+	fprintf(fp,"%d:%d ",start++,hasNameafterTheOffset1(offset,20)==0?1:0);
+	fprintf(fp,"%d:%d ",start++,hasNameafterTheOffset2(offset,20)==0?1:0);
 	
 	//*/
 	/*
