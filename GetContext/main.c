@@ -6,6 +6,7 @@
 #include "persistence.h"
 #include "virtualcontent.h"
 #include "debuginfo.h"
+#include "common.h"
 #include "main.h"
 #include <stdio.h>
 #include <string.h>

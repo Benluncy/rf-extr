@@ -55,7 +55,7 @@ GNUFLAGS		:= -Wall	${INCFLAG} -std=gnu99
 OBJS			:= eftfun.o eftctl.o hftctl.o hftnpse.o sqlite3.o persistence.o \
 				ini.o tokens.o virtualcontent.o \
 				minEditDistance.o dirTraversal.o\
-				debuginfo.o myMath.o
+				debuginfo.o myMath.o common.o
 PROGS			:= main
 
 .PHONY			: all clean succ gitupdate
