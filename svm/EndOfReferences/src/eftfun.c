@@ -1396,7 +1396,7 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	rankWrite(fp,start,p-n2,5);
 	start+=5;
 	
-	printf(fp,"%d:%d ",start++,p>n2);
+	fprintf(fp,"%d:%d ",start++,p>n2);
 	
 	/*
 	p = keysNumber(offset,-150,hasMonth)+keysNumber(offset,-150,hasLocationafterTheOffset);
