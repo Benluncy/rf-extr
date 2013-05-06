@@ -1461,10 +1461,11 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 		
 	
 	
-	//dp = dataDensity(offset,lmta);
-	//dn = dataDensity(offset,-lmta);
-	//fprintf(fp,"%d:%f ",start++,dp);
-	//fprintf(fp,"%d:%f ",start++,dn);
+	dp = dataDensity(offset,lmta);
+	dn = dataDensity(offset,-lmta);
+	fprintf(fp,"%d:%f ",start++,dp);
+	fprintf(fp,"%d:%f ",start++,dn);
+	fprintf(fp,"%d:%f ",start++,dp-dn);
 	
 	//inline double effectiveWordsDensity(int offset,int limit)
 	
