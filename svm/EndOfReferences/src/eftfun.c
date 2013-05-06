@@ -1458,6 +1458,13 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	fprintf(fp,"%d:%f ",start++,dn);
 	fprintf(fp,"%d:%f ",start++,dp-dn);
 	
+	dp = wordsDensity(offset,lmta);
+	dn = wordsDensity(offset,-lmta);
+	fprintf(fp,"%d:%f ",start++,dp);
+	fprintf(fp,"%d:%f ",start++,dn);
+	fprintf(fp,"%d:%f ",start++,dp-dn);
+		
+	
 	
 	//dp = dataDensity(offset,lmta);
 	//dn = dataDensity(offset,-lmta);
