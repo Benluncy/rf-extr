@@ -1,0 +1,278 @@
+
+ 190 TFlops Astrophysical N-body Simulation on cluster of GPUs Tsuyoshi Hamada Keigo Nitadori Nagasaki 
+Advanced Computing Center High-Performance Molecular Simulation Team Nagasaki University RIKEN Advanced 
+Science Institute 1 14 Bunkyo machi, Nagasaki city 61 1 Onocho, Tsurumi, Yokohama city Nagasaki, 852 
+8521, Japan Kanagawa, 230 0046, Japan Email: hamada@nacc.nagasaki-u.ac.jp Email: keigo@riken.jp Abstract 
+We present the results of a hierarchical N-body simulation on DEGIMA, a cluster of PCs with 576 graphic 
+processing units (GPUs) and using an In.niBand interconnect. DEGIMA stands for DEstination for GPU Intensive 
+MAchine, andis locatedat NagasakiAdvanced Computing Center(NACC), Nagasaki University. In this work, 
+we have upgraded DEGIMA s interconnect using In.niBand. DEGIMA is composed by 144 nodes with 576 GT200 
+GPUs. An astrophysical N-body simulation with 3,278,982,596 particles using a treecode algorithm shows 
+a sustained performance of 190.5 T.ops on DEGIMA. The overall cost of the hardware was $411,921 dollars. 
+The maximum corrected performance is 104.8 T.ops for the simulation, resulting in a cost performance 
+of 254.4 MFlops/$. This corrections is performed by counting the FLOPS based on the most ef.cient CPU 
+algorithm. Any extra FLOPS that arise from the GPU implementation and parameter differences are not included 
+in the 254.4 MFLOPS/$. I. INTRODUCTION Ground-breaking N-body simulations have won the Gordon Bell prize 
+in 1992 [24],1995-2003 [18], [4], [25], [23], [13], [15], [17], [16], 2006 [19], and 2009 [9] in many 
+cases with the aid of special-purpose computers, i.e. GRAPE. However, in the .eld of N-body simulations 
+during the past few years, graphics processing units (GPUs) have been preferred, rather than the expensive 
+special-purpose computers. In astrophysical N-body simulations, we solve for the force due to gravitational 
+interactions between N bodies, which is given by: . mj rij fi = mi G , (1) 2 j (r+ .2)3/2 ij where ri 
+and mi are the position and mass of i-th particle. rij = rj - ri, . is a softening parameter, and G is 
+the gravitational constant. The direct O(N2) N-body simulations of equation (1) using NVIDIA s CUDA (Compute 
+Uni.ed Device Architecture) programming environment have achieved a performance of over 200 GFlops on 
+a single GPU: Hamada et al. reported a performance of 256 GFlops for a 131,072-body simulation on an 
+NVIDIA GeForce 8800 GTX [8]. Nyland et al. reported a performance of 342 GFlops for a 16,384-body simulation 
+on an NVIDIA GeForce 8800 GTX [20]. Belleman et al. also reported a GPU performance of 340 GFlops for 
+a 131,072­body simulation on an NVIDIA GeForce 8800 GTX with their code Kirin [3]. More recently, Hamada 
+reported a perfor­mance of 653 GFlops for a 131,072-body simulation on an NVIDIA GeForce 8800 GTS/512 
+[10]1. Gaburov et al. report a performance of 800 GFlops for a 106 particle simulation on two GeForce 
+9800GX2s with their code Sapporo [5]. The use of such data-parallel processors are a necessary but not 
+suf.cient condition for executing large scale N-body simulations within a reasonable amount of time. 
+Hierarchical algorithms such as the tree algorithm [1] and fast multipole method (FMM) [6] are also indispensable 
+requisites, because they bring the order of the operation count from O(N2) down to O(N log N) or even 
+O(N). Stock &#38; Gharakhani [22] implemented the treecode on the GPU to accelerate their vortex method 
+calculation. Similarly, Gumerov&#38;Duraiswami [7] calculated the Coulomb interaction using the FMM on 
+GPUs. One of the most common problems in previous GPU implementations of hierarchical algorithms was 
+the inef.cient use of parallel pipelines when the number of target particles per cell was small. In order 
+to solve this problem, we de­veloped a method that could pack multiple walks that are evaluated by the 
+GPU simultaneously[9]. As a result, a drastic gain in performance was achieved as compared to previous 
+implementations of these hierarchical algorithms on GPUs. We performed an astrophysical N-body simulation 
+of a sphere of radius 1,152 Mpc (mega parsec) with 3,278,982,596 particles for 1,000 time-steps using 
+our GPU-tree algorithm. II. GPUTREECODE A. TheTreecode The treecode by Barnes and Hut [1] represents 
+a system of N particles in a hierarchical manner by the use of a spatial tree data structure, as shown 
+in Figure 1. Whenever the force on a particle is required, the tree is traversed, starting at the root. 
+At each level, a gravity center of particles in a cell is added to an interaction list if it is distant 
+enough for the truncated series approximation to maintain suf.cient accuracy 1http://progrape.jp/cs/ 
+.2010 IEEE Personal use of this material is permitted. However, permission to reprint/republish this 
+material for advertising or promotional purposes or for creating new collective works for resale or redistribution 
+to servers or lists, or to reuse any copyrighted component of this work in other works must be obtained 
+from the IEEE. SC10 November 2010, New Orleans, Louisiana, USA 978-1-4244-7558-2/10/$26.00 Fig. 2. Interaction 
+list in Barnes modi.ed tree algorithm. The small black dots represent the interacting particles. The 
+white circles represent the truncated series expansions for each cell. Both the dots and circles are 
+included in an interaction list. in the force. If the cell is too close, the sub-cells are used for the 
+force evaluation or opened further. This tree traversal procedure is called a walk . The interaction 
+list contains particles themselves or gravity centers of cells. The original BH algorithm performs the 
+walk for each particle separately.Wehave modi.ed a parallel treecode [14] for GPU which is based on Barnes 
+modi.ed tree algorithm [2], where the neighboring particles are grouped together to share an interaction 
+list . Figure 2 is an illustration of the shared interaction list for the particles shown in red. The 
+modi.ed tree algorithm terminates the tree traversal when the cell contains less than Ncrit particles. 
+This results in an average number of particles per cell Ng in between Ncrit/8 and Ncrit, depending on 
+the non-uniformity. The modi.ed tree algorithm reduces the calculation cost of the host computer by roughly 
+a factor of Ng. On the other hand, the amount Fig. 3. De.nition of the conceptual diagram used in the 
+following three .gures. of work on the force pipelines increases as we increase Ng, since the interaction 
+list becomes longer. There is, therefore, an optimal Ng at which the total computation time is minimum. 
+On CPUs, the optimal value is typically Ng . 32 [2]. On GPUs, Ncrit is around 2000. Note that the performance 
+(Flops) we are reporting is the corrected value after the difference in the Ng between the CPU and GPU 
+is taken into account. This correction is performed by counting the Flops based on the most ef.cient 
+CPU algorithm. Any extra Flops that arise from the difference in Ncrit are not counted. Load balancing 
+in our parallel code was achieved by space decomposition using an orthogonal recursive bisection (ORB) 
+[24]. In an ORB, the box of particles is partitioned into two boxes with an equal number of particles 
+using a separating hyper-plane oriented to lie along the smallest dimension. This partitioning process 
+is repeated recursively until the number of divided boxes becomes the same as the number of processors. 
+When the number of processors is not a power of two, it is a trivial matter to adjust the division at 
+each step accordingly. It is expensive to recompute the ORB at each time step, but the cost of incremental 
+load-balancing is negligible. The interaction list diagram and a conceptual diagram of the computations, 
+shown in Figure 2 and Figure 3 respectively, are used to graphically describe different treecode imple­mentations, 
+and to clearly depict its parallel and sequential computations. For brevity we shall call the target 
+particles i-particles and the source particles j-particles . Ni is the number of i-particles in the terminal 
+cell, and Nj is the number of j-particles that interact with it. A GPU implementation used in [20] and 
+[3] is depicted in Figure 4. In these works, each thread calculates the force on a different i-particle 
+we call this the i-parallel approach. In this method, when the number of i-particles in a walk Ng (which 
+shares the same interaction list as the j-particles) is smaller than the number of physical processor 
+units, the rest of the processors remain idle. Since the optimal Ng for GPUs is typically of the order 
+of several hundreds, the ef.ciency of processor usage tends to be low in this implementation. Belleman 
+et al. [3] use a large Ng up to 32,768 to cover for this inef.ciency. An alternative approach proposed 
+by Hamada et al. [8] is Fig. 4. Implementation of the GPU code reported by Nyland et al.[20] and Belleman 
+et al.[3]. shown in Figure 5. In this case, the so-called j-parallel approach is used in addition to 
+the i-parallel approach. The j-particles are divided into several groups, and the partial forces on the 
+i-particles are calculated by different blocks. Multiple threads on each block evaluate different i-particles. 
+The number of parallel i-particles is equal to the number of physical processors divided by the number 
+of thread-blocks (Nblocks), which is usually smaller than Ng. Therefore, the performance is better than 
+that of the .rst approach. However, the resultsofthekernel benchmarks ([9])showonlya marginal increase 
+in performance over the Phantom-GRAPE. This is due to the overhead of the reduction operations required 
+for the partial forces. Indeed, in this approach, partial forces on an i­particle are calculated by different 
+blocks. Consequently, they need to be summed. Unfortunately, the reduction operations on a GPU are slow 
+due to the large overhead in the thread synchronization. There is a report available on the reduction 
+operations that run on GPUs [21]. However, it is only valid for reductions of large arrays with thousands 
+of elements. Therefore, thefastest method for the reduction of small arrays is to use the host CPU. Hence, 
+the amount of communication between the GPU and the host CPU increases by Nblocks. B. Details of proposed 
+code In this section, we explain the details of our novel approach and present its advantagesover previous 
+approaches. Theykey idea of our novel approach comes from viewing each thread block as one GRAPE, and 
+mapping the previous tree-GRAPE algorithm accordingly. Figure6presentsa conceptual diagram of our method: 
+at the thread-block level, multiple walks (tree traversals) are evaluated by different blocks, where 
+only a Fig. 5. Implementation of GPU code reported by Hamada et al.[8]. complete interaction lists is 
+evaluated within a single block; andatthe threadlevel, threads withina blockevaluatedifferent i-particles 
+that belong to the same walk. The sequence of the algorithm is as follows: 1. First, the data of the 
+multiple walks are prepared on the host CPU, i.e. the lists of i-particles and j-particles of each walk 
+are prepared. The number of walks in each calculation is determined by the size of the GPU global memory. 
+ 2. Multiple walks are then sent to the GPU. 3. Calculations are performed. The GPU is partitioned so 
+that each GPU block evaluates a single walk. 4. The forces calculated by the different blocks in the 
+GPU are receivedinabundle. 5. The orbital integration and other calculations are per­formed on the host 
+CPU. 6. The process is repeated.  A pseudo C++ code for one GPU call from the host is as follows: void 
+force_nwalk( float4 xi[], float4 xj[], float4 accp[], int ioff[], int joff[], int nwalk) { // block level 
+parallelism for(int iw=0; iw<nwalk; iw++){ int ni = ioff[iw+1] -ioff[iw]; int nj = joff[iw+1] -joff[iw]; 
+// thread level parallelism for(int i=0; i<ni; i++){ int ii = ioff[iw] + i; float x = xi[ii].x; float 
+y = xi[ii].y; float z = xi[ii].z; float eps2 = xi[ii].w; float ax = 0; float ay = 0; float az = 0; float 
+pot = 0; for(int j=0; j<nj; j++){ int jj = joff[iw] + j; float dx = xj[jj].x -x; float dy = xj[jj].y 
+-y; float dz = xj[jj].z -z; float r2 = eps2 + dx*dx + dy*dy + dz*dz; float r2inv = 1.f / r2; float rinv 
+= xj[jj].w * sqrtf(r2inv); pot += rinv; float r3inv = rinv * r2inv; ax += dx * r3inv; ay += dy * r3inv; 
+az += dz * r3inv; } accp[ii].x = ax; accp[ii].y = ay; accp[ii].z = az; accp[ii].w = -pot; } } } In 
+all the previous approaches, the outer most loop (walk­loop) has been performed serially, and either 
+the next i-loop or the inner most j-loop has been mapped to the multiple blocks of GPU. In our new approach, 
+the outer most walk­loop is mapped to the multiple blocks, hence we can fully exploit the parallel nature 
+of the GPU. Our approach has several advantages. First, the reduction of partial forces is no longer 
+necessary since each walk is calculated in a block and no j-parallelization is used. This solves the 
+problem in the previous approach proposedby Hamada et al. Second, multiple walks are sent to a GPU simultaneously, 
+and the forces of the multiple walks are also retrieved from the GPU at the same time. This enables a 
+more ef.cient communication between the CPU and GPU, since the number of direct memory access (DMA) requests 
+decrease, and the length of each DMA transfer becomes longer. Third, it makes parallelization in the 
+host computation easier. Our approach involves the calculation of multiple walks at the same time. Therefore, 
+each thread in the GPU can process a group of different walks in parallel. In summary, we have successfully 
+developed a novel tree algorithm that can be implemented ef.ciently on GPUs. Im­plementation results 
+[9] show that our new algorithm has a speed performance that is 2.4 times that of the previous GPU implementations. 
+III. PERFORMANCE In this section, we present an astrophysical N-body simula­tion that uses our novel 
+algorithm, on our DEGIMA GPU clus­ter.We used CentOS for the machines that used x86 64 Linux (version 
+5.1) as the operating system, and OpenMPI (version 1.2.8) for the implementation of message passing interface 
+and OFED 1.4 for In.niBand. The CPU code was written in C++ and compiled with the GNU compiler collection 
+(version 4.1.2). The GPU code was also written in CUDA/C++ and complied with the NVIDIA CUDA compilation 
+tool (version 2.3), respectively. A. Performance on a single node As a reference for the parallel results, 
+we present the single node performance of our tree algorithm that make use of all four GPU chips. The 
+test problem is based on an uniform distribution of points for which we present the total computational 
+time for a single time-step, this includes: spatial division, tree construction, sorting of particles, 
+list construction, Host-GPU data transfers, force evaluation on the GPU, and time integration. The single 
+node test runs 4 MPI processes, where each process exclusively handles one of the four GPUs. Figure 7 
+presents the results for a single node performance: Figure 7(a) shows the total computational time for 
+a single time-step for different problem sizes (from 262,144 bodies to 67,108,864 bodies), and a breakdown 
+for the each stage of the tree algorithm (Host to GPU data transfer, GPU kernel execution, GPU to Host 
+data transfer, and all other calculations on the host); Figure 7(b) shows the effective bandwidth utilization 
+of the Host-GPU data transfers through PCI-express gen 2.0 link (with a theoretical peak 8 [GB/sec]) 
+(a) Breakdown of the calculation time per time-step for different problem sizes (b) Bandwidth utilization 
+for Host to GPU and GPU to Host data-transfers. Fig. 7. Single node benchmark with an uniform distribution 
+of points. The opening parameter(.)and Barnes modi.cation parameter(Ncrit)are .xed to . =0.4 and Ncrit 
+= 2000, respectively. for one of the MPI processes. In Figure 7(b), we can see the performance drop for 
+the case in 33,554,432 bodies and 67,108,864 bodies, this is because of swapping . If our tree algorithm 
+consumes all of the random access memory (RAM) of the host for storing particles, it can employ the swap 
+.lesystem that makes use of the hard disk drive (HDD) to store particles over.owing from the RAM. B. 
+Performance on DEGIMA system We performed an astrophysical N-body simulation of a sphere of radius 1,152 
+Mpc (mega parsec) with 3,278,982,596 particles for 1,000 timesteps.A particle represents 1.7 × 1010 solar 
+masses. We assigned initial positions and velocities to particles of a spherical region selected from 
+a discrete realization of a density contrast .eld based on a standard cold dark matter scenario.We performed 
+the simulation from z = 23.8, where z is red-shifted, to z =0. Figure 10 shows images of the simulation 
+with 64M particles. The change in the performance with the evolution of the system is shown in Figure 
+8, along with its breakdown in Figure 9. In Figure 9, we can see a constant oscillation of the CPU time 
+that is caused by our algorithm, as sorting of particles takes placeevery5time-steps. The sorting algorithm 
+uses a Morton-ordering scheme. Here, we use an operation count of 38 operations per in­teraction. The 
+.oating point operation count used by previous Gordon Bell winners for hierarchical N-body simulations 
+has always been 38, both on general and special purpose comput­ers [25], [23], [13], [12], [9]. The 38 
+comes from the method of calculating gravity using the Newton-Raphson method with an initial guess by 
+Chebyshev interpolation [11]. It is close to 38 when a division and a square root are counted as ten 
+.oating point operations, respectively. Although this operation count strictly holds for CPU only, as 
+GPUs can perform division or square root operations in less than 10 multiplications or additions.We have 
+adapted this operation count once again in our calculations for the sake of comparability as an equivalent 
+CPU Flops rather than a GPU Flops . In total, the number of particle-particle interactions was 3.1 × 
+1016. The whole 1,000 time-step simulation took 6,180 seconds and the resulting average computing speed 
+was 190.5 TFlops. It should be noted that our modi.ed tree algorithm performs a larger number of operations 
+than the conventional tree algorithm that runs on a general-purpose microprocessor. In order to rectify 
+this, we estimated the operation count of the original tree algorithm for the same simulation based on 
+the data of a simulation image (at z =0)and the same accuracy parameter. The number of interaction counts 
+was then found to be 1.7×1016, consequentlya correctionfactor 0.55is used. Using the correctionfactor, 
+we obtained an effective sustained speed of 104.8 TFlops, which results on a price/performance ratio 
+of 254.4 MFlops/$ ($3.93/GFlops). Finally, it should also be noted that our modi.ed tree algorithm is 
+more accurate than the original tree algorithm for the same accuracy parameter, as shown in [2][13]. 
+IV. HARDWARE CONFIGURATION We have built a 144-node cluster of PCs in which each node has two GeForce 
+GTX295 graphics cards (Figure 13(b)), and each card has two GT200 GPU chips (Figure 11). As a whole, 
+DEGIMA is composed by 576 GT200 GPU chips. One compute node consists of 2.66 GHz Intel Core i7 920 processor, 
+MSI X58 pro-E mother board, 12 GB DDR3-1333 memory and Mellanox MHES14-XTC SDR In.niBand host adaptor. 
+Figure 12 shows a block diagram of DEGIMA. Compute nodes are physically organized in groups of 24, the 
+nodes of each group are connected to a 36-port QDR switch through 10 Gbps SDR links. The six switches 
+are interconnected with trunked QDR links (80 Gbps), in a bar topology arrangement. For all connections, 
+we used passive copper cables.A photo­graph of the GPU cluster is shown in Figure 13(a). Fig.10. Snapshotsofthe 
+simulation with64M particlesatz =18.8 (left),z =4.5 (middle left),z =2.6 (middle right),andz =0 (right). 
+Fig.12. Block diagramoftheGPU cluster (DEGIMA).24 computenodeis connectedtoa 36-port switchwith In.niBandx4SDR(10Gbps)and6switches 
+are connected with2 In.niBandx4QDR(80 Gbps)cablesina simple bar topology. (a) Picture of one half of 
+DEGIMA (b) Picture of a single node of DEGIMA Fig. 13. Photographs of DEGIMA cluster. Fig. 11. A photograph 
+of GeForce GTX295 board. The costs of the constituent elements of DEGIMA are sum­marized inTable I. The 
+total price of 576 GPUs, 144 PCs, and In.niBand networks was $411,921. All prices are inclusive of a 
+sales tax of 5%. The sustained performance was 190.5 TFlops. The corrected performance of the astrophysical 
+N­body simulation in section III is 104.8 TFlops, which results in a cost performance of 254.4 MFlops/$ 
+and $3.93/GFlops. The cumulative power consumption for the whole simu­lation time of 6,180 seconds results 
+172 kWh, it includes power for air-conditioners and electricfans, anditwas directly measured from the 
+power meter. Therefore, this simulation achieved an averaged power consumption of 100 kW and a performance 
+per watt value of 1.05 GFlops/W. A. Application mapping To compensate the relatively narrow inter-switch 
+bandwidth which comes from the low-cost con.guration, the application program was optimized to map its 
+spatial locality to the network topology. The 576 MPI processes map to the same number of sub-domains 
+that have been created as follows: First, the root domain is divided into 12 slabs in x-direction. TABLEI 
+PRICE OF THE GPUCLUSTER Elements Price ($) GPUs $ 152,675 Host PCs $ 155,979 In.niBand SDR cards $ 20,646 
+In.niBand cables $ 30,905 In.niBand switches $ 51,717 Total $ 411,921 Then, each slab is divided into 
+6 columns in y-direction, and each column is divided into 8 boxes in z-direction. In this way, 2 slabs 
+.t in 1 switch and 4 boxes .t in 1 compute node. All y-or z-directional communications are con.ned within 
+a switch, and x-directional communications only occur between neighbor switches. This kind of approach 
+might be bene.cial for many other short-range interaction applications, however, rarely em­ployed unless 
+the network con.guration is designed from the application side. V. CONCLUSION A hierarchical N-body simulation 
+has been performed on a cluster of 576 graphics processing units (GPUs). Using this fast N-body solver, 
+an astrophysical N-body simulation using 3,278,982,596 particles was performed as a standard benchmark. 
+With our approach, the tree algorithm shows a signi.cant performancegain whenexecutedon GPUsas comparedtothe 
+performance of the hierarchical algorithms running on CPUs. The previous implementations of the hierarchical 
+algorithms made it dif.cult to achieve an effective GPU performance, especially compared to their performances 
+on conventional PC clusters. Using our approach, however, a GPU cluster can out­perform a PC cluster 
+from the viewpoints of cost/performance, power/performance, and hardware footprint/performance. The astrophysical 
+N-body simulation showed a sustained perfor­mance of 190.5 TFlops. The overall cost of the hardware was 
+$411,921 dollars. The corrected performance is 104.8 TFlops, which results in a cost performance of 254.4 
+MFlops/$ and $3.93/GFlops. The correction is performed by counting the Flops based on the most ef.cient 
+CPU algorithm. Any extra Flops that arise from the GPU implementation and parameter differences are not 
+counted. Compared to the Gordon Bell winner of 2009 [9], the number of particles used in the present 
+simulation is 2.04 times larger. Furthermore, the performance is 4.52 times higher and the price/performance 
+is 2.51 times better as shown in Table II. ACKNOWLEDGMENTS This study was supported by a grant called 
+Tokubetsu Kyouiku Kenkyu Keihi (Kenkyu Sokushin), Developing the Next Generation GPU-based Supercomputing 
+Environment from the Special Coordination Funds for Promoting Science andTechnology, Ministry of Education, 
+Culture, Sports, Science andTechnology, Japan (MEXT). TABLE II COMPARISON WITH SC09GBWINNER.  09 winner 
+This work Ratio Number of particles 1,608,044,129 3,278,982,596 2.04 Price $ 228,912 $ 411,921 1.80 TFlops 
+(uncorrected) 42.15 190.5 4.52 MFlops/ $ 101.4 254.4 2.51 REFERENCES <RefA>[1]<SinRef><author> J. Barnes </author>and <author>P. Hut</author>. <title>O(nlogn) 
+force-calculation algorithm</title>. <journal>Nature</journal>, <volume>324</volume>:<pages>446 449</pages>, <date>1986</date></SinRef>. [2]<SinRef> <author>J. E. Barnes</author>. <title>A modi.ed tree code: Don t 
+laugh; it runs</title>. <journal>Jouranl of Computational Physics</journal>, <volume>87</volume>:<pages>161 170</pages>, <date>1990</date></SinRef>. [3] <SinRef><author>R. G. Belleman</author>, <author>J. Bedorf</author>, and 
+<author>S.F. Portegies Zwart</author>. <title>High performance direct gravitational n-body simulations on graphics processing 
+units ii: An implementation in cuda</title>. <journal>New Astronomy</journal>, <volume>13</volume>:<pages>103 112</pages>, <date>2008</date></SinRef>. [4] <SinRef><author>T. Fukushige </author>and <author>J. Makino</author>. 
+<title>N-body simulation of galaxy formation on grape-4 special-purpose computer</title>. In <booktitle>Proceedings of the 1996 
+ACM/IEEE conference on Supercomputing</booktitle>, pages <pages>1 9</pages>, <date>1996</date></SinRef>. [5] <SinRef><author>E.Gaburov</author>,<author>S. Harfst</author>,and<author>S. PortegiesZwart</author>. 
+<title>Sapporo:A wayto turn your graphics cards into a grape-6</title>.<journal> New Astronomy</journal>,<volume> 14</volume>:<pages>630 637</pages>, <date>2009</date></SinRef>. [6]<SinRef> <author>L. Greengard </author>
+and<author>V. Rokhlin</author>.<title>Afast algorithm for particle simulations</title>.<journal> Journal of Computational Physics</journal>, <volume>73(2)</volume>:<pages>325 348</pages>, 
+<date>1987</date></SinRef>. [7] <SinRef><author>N. A. Gumerov </author>and <author>R. Duraiswami</author>.<title>Fast multipole methods on graphics processors</title>. <journal>Journal of Computational 
+Physics</journal>, <volume>227</volume>:<pages>8290 8313</pages>, <date>2008</date></SinRef>. [8] <SinRef><author>T. Hamada </author>and <author>T. Iitaka</author>. <title>The chamomile scheme: An optimized algorithm 
+for n-body simulations on programmable graphics processing units</title>. arXiv:astro-ph/0703100v1, <date>2007</date></SinRef>. [9]<SinRef><author>T. 
+Hamada</author>,<author>T. Narumi</author>,<author>R.Yokota</author>,<author>K.Yasuoka</author>,<author>K. Nitadori</author>,and<author>M.Taiji</author>. <title>42 t.ops hierarchical n-body simulations 
+on gpus with applications in both astrophysics and turbulence</title>. In <booktitle>SC 09: Proceedings of the Conference 
+on High Performance Computing Networking, Storage and Analysis</booktitle>, pages <pages>1 12</pages>,<location>NewYork,NY, USA</location>, <date>2009</date>.<publisher>ACM</publisher></SinRef>. 
+[10] <SinRef><author>T. Hamada</author>,<author> K. Nitadori</author>,<author> K. Benkrid</author>,<author>Y. Ohno</author>, <author>G. Morimoto</author>,<author>T. Masada</author>, <author>Y. Shibata</author>, <author>K. Oguri</author>, and <author>M. 
+Taiji</author>. <title>A novel multiple-walk parallel algorithm for the barnes-hut treecode on gpus-towards cost effective, 
+high performence n-body simulation</title>. <journal>Computer Science -Researchand Development, Special Issue Paper</journal>:<volume>1 </volume>
+<date>11, 2009</date></SinRef>. [11]<SinRef> <author>A. H. Karp</author>. <title>Speeding up n-body calculations on machines without hardware square root</title>. 
+<journal>Scienti.c Programming</journal>, <volume>1</volume>:<pages>133 141</pages>, <date>1992</date></SinRef>. [12] <SinRef><author>A.Kawai </author>and<author>T. Fukushige</author>. <title>$158/g.ops astrophysical n-body 
+simulation with recon.gurable add-in card and hierarchical tree algorithm</title>. In <booktitle>Proceedings of the 2006 
+ACM/IEEE conference on Supercomputing</booktitle>, pages <pages>1 8</pages>, <date>2006</date></SinRef>. [13] <SinRef><author>A. Kawai</author>, <author>T. Fukushige</author>, and <author>J. Makino</author>. <title>$ 
+7.0/m.ops astrophysical n­body simulation with treecode on grape-5</title>. In <booktitle>Proceedings of the 1999 ACM/IEEE 
+conference on Supercomputing</booktitle>, pages <pages>1 6</pages>, <date>1999</date></SinRef>. [14] <SinRef><author>J. Makino</author>. <title>A fast parallel treecode with grape</title>. <journal>Publications 
+of the Astronomical Society ofJapan</journal>, <volume>56</volume>:<pages>521 531</pages>, <date>2004</date></SinRef>. [15] <SinRef><author>J. Makino</author>, <author>T. Fukushige</author>, and <author>M. Koga</author>. <title>A 1.349 
+t.ops simulation of black holesinagalactic centeron grape-6</title>.In <booktitle>Proceedings of the 2000 ACM/IEEE conference 
+on Supercomputing</booktitle>, pages <pages>1 18</pages>, <date>2000</date></SinRef>. [16] <SinRef><author>J. Makino</author>, <author>E. Kokubo</author>, and <author>T. Fukushige</author>. <title>Performance evaluation 
+and tuning of grape-6 towards 40 real t.ops</title>. In <booktitle>Proceedings of the 2003 ACM/IEEE conference on Supercomputing</booktitle>, 
+pages <pages>1 11</pages>, <date>2003</date></SinRef>. [17] <SinRef><author>J. Makino</author>,<author> E. Kokubo</author>, <author>T. Fukushige</author>, and <author>H. Daisaka</author>. <title>A 29.5 t.ops simulation of 
+planetesimals in uranus-neptune region on grape-6</title>. In <booktitle>Proceedings of the 2002 ACM/IEEE conference on 
+Supercomputing</booktitle>, pages <pages>1 14</pages>, <date>2002</date></SinRef>. [18] <SinRef><author>J. Makino </author>and <author>M. Taiji</author>. <title>Astrophysical n-body simulations on grape­4 
+special-purpose computer</title>. In <booktitle>Proceedings of the 1995 ACM/IEEE conference on Supercomputing</booktitle>, pages <pages>1 10</pages>, 
+<date>1995</date></SinRef>. [19] <SinRef><author>T. Narumi</author>,<author>Y. Ohno</author>, <author>N. Okimoto</author>,<author>T.Koishi</author>, <author>A. Suenaga</author>, <author>N. Futatsugi</author>, <author>R. Yanai</author>,<author> R. Himeno</author>,<author> S. 
+Fujikawa</author>, <author>M. Taiji</author>, and <author>M. Ikei</author>.<title> A 55 t.ops simulation of amyloid-forming peptides from yeast prion sup35 
+with the special-purpose computer system mdgrape-3</title>. In <booktitle>Proceedings of the 2006 ACM/IEEE conference on 
+Supercomputing</booktitle>, pages <pages>1 16</pages>, <location>Tampa, Florida</location>, <date>2006</date></SinRef>. [20] <SinRef><author>L. Nyland</author>, <author>M. Harris</author>, and <author>J. Prins</author>. <title>Fast n-body 
+simulation with cuda</title>. <journal>GPU Gems</journal>, <volume>3</volume>:<pages>677 695</pages>, <date>2007</date></SinRef>. [21] <SinRef><author>S. Sengupta</author>, <author>M. Harris</author>, <author>Y. Zhang</author>, and <author>J. D. Owens</author>. 
+<title>Scan prim­itives for gpu computing</title>. In <booktitle>Proceedings of the 22nd ACM SIG-GRAPH/EUROGRAPHICS Symposium on 
+Graphics Hardware</booktitle>, pages <pages>1 11</pages>, 2007</SinRef>. [22] <SinRef><author>M.J. Stock</author><author>andA. Gharakhani</author>.<title>Towardef.cient gpu-accelerated n-body 
+simulations</title>. <journal>AIAA Paper, 2008-608, 46th AIAA Aerospace Sciences Meeting and Exhibit</journal>, <location>Reno, Nevada</location>, <date>Jan.7 
+-10:1 13, 2008</date></SinRef>. [23] <SinRef><author>M. S.Warren</author>,<author>T. C. Germann</author>,<author>P. S. Lomdahl</author>, <author>D. M. Beazley</author>, and <author>J. K. Salmon</author>. <title>Avalon: 
+An alpha/linux cluster achieves 10 g.ops for $150k</title>. In <booktitle>Proceedings of the 1998 ACM/IEEE conference on 
+Supercomputing</booktitle>, pages <pages>1 10</pages>, <date>1998</date></SinRef>. [24] <SinRef><author>M. S.Warren </author>and <author>J. K. Salmon</author>.<title> Astrophysical n-body simulation 
+using hierarchical tree data structures</title>. In <booktitle>Proceedings of the 1992ACM/IEEE Conference on Supercomputing</booktitle>, 
+pages <pages>570 576</pages>, <date>1992</date></SinRef>. [25] <SinRef><author>M. S.Warren</author>, <author>J. K. Salmon</author>,<author> D. J. Becker</author>, <author>M.P. Goda</author>, <author>andT. Sterling</author>. <title>Pentium 
+pro inside: I. a treecode at 430 giga.ops on asci red, ii. price/performance of$ 50/m.op on loki andhyglac</title>. 
+In<booktitle> Proceedings of the 1997ACM/IEEE conference on Supercomputing</booktitle>, pages <pages>1 16</pages>, <date>1997</date></SinRef>.</RefA> 
+			

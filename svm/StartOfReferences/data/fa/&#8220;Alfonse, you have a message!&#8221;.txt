@@ -1,0 +1,145 @@
+
+ "Alfonse, You Have a Message!" Stephen J. Hartley Computer Science and Information Systems Richard Stockton 
+College Pomona, NJ 08240-0195 -I-1 609 652 4968 hartleys@loki,stockton.edu Abstract Synchronization 
+of multiple threads in a Java program using the built-in features of the language has serious pitfalls 
+for the programmer, particularly if a thread is interrupted while waiting inside a monitor. These con- 
+cerns have lead to a movement to avoid Java monitors altogether and use message passing instead. This 
+paper visits the field of concurrent programming to show that replacing all Java monitors with message 
+passing is an overreaction to these problems. Problems with Java Synchronization Synchronization in 
+the Java programming language [3] is based on Hoare's monitor concept [11]. Java moni- tors are implemented 
+with user-defined synchronized methods, and the wait (), not ify (), and not ifygll () methods inherited 
+from class Object. They have these features: * only a single anonymous condition variable per mon- itor 
+object, signal-and-continue signaling discipline [1], and  barging [7].  Although Java's monitors 
+appear easy to use, they are surprisingly tricky and suffer from subtle race conditions [9]. For example, 
+suppose several threads are blocked Permission to make digital or hard copies of all or part,of this 
+work for personal or classroom use is granted without fee provided that copies are not made or distributed 
+for profit or commercial advant -age and that copies bear this notice and the full citation on the first 
+page. To copy otherwise, to !'ePublish, to post on servers or to redistribute to lists, requires prior 
+specific permission and/or a fee, SIGCSE 2000 3/00 Austin, TX, USA &#38;#169; 2000 ACM 1-58113-213-1/00/0003...$5.00 
+inside wait () and one of them is notified and then inter- rupted before it reacquires the monitor lock. 
+An insid- ious race condition exists between the events initiated by the interrupt() and the notify(): 
+the notifica- tion gets "lost" in that one of the other waiting threads should now proceed. The following 
+attempt to code a semaphore as a Java monitor illustrates this race con- dition. public class CountingSemaphore 
+{ private int value = O; public CountingSemaphore(int initial) { if (initial > O) value = initial; 
+} public synchronized void P() throws InterruptedException { while (value == O) wait(); value--; 
+ } public synchronized void V() { value++; notify(); } } Suppose the internal value of the semaphore 
+is zero and several threads have called PO and are waiting inside the monitor. If a thread calls V (), 
+one of the waiting threads will be moved from the waiting set of the sema- phore object to the (re)acquire 
+set (those threads want- ing to acquire or reacquire the monitor object's lock). If the notified thread 
+is interrupted before it reacquires the monitor lock, the resulting state of the semaphore is a positive 
+internal value with one or more waiting threads. This is an incorrect, inconsistent state for a semaphore. 
+The programmer must catch the Interrupted-Exception thrown by wait() and regenerate the no- tify() when 
+a notified thread is interrupted before reacquiring the monitor lock. Or the programmer must use notifyAll() 
+instead of notify() to wake up all waiting threads in spite of the fact that just one thread should logically 
+proceed. The first approach is complex to code and the second introduces extra overhead and inefficiency. 
+Another race condition occurs when a thread calls wait (ms), where the ms argument specifies the max- 
+imum number of milliseconds to wait. When this call returns, the thread cannot determine with complete 
+cer- tainty whether the wait was notified or it timed out because the specified number of milliseconds 
+elapsed. 2 Proposed Solution A movement [4, 8, 10, 14] has developed, reminiscent of the shared-memory 
+versus distributed-memory par- allel programming debates of the past, to dispense en- tirely with Java 
+monitors and use message passing chan- nels in their place, based on Hoare's CSP (communi- cating sequential 
+processes) [12]. "Channels are inter- mediate objects between threads ... [that] are easy to use ... 
+to avoid deadlock and free the programmer from low-level synchronization ... constructs, such as moni- 
+tors and semaphores" [5]. A message passing channel is implemented in Java with a shared monitor object. 
+A thread wishing to send a message invokes a moni-tor method to write into the channel object's state; 
+a thread wishing to receive a message invokes a monitor method to read that state. Only the implementers 
+of the channel objects need be concerned with the above monitor pitfalls. Semaphores have a bad reputation 
+as an unstructured synchronization tool, analogous to the "go to" state-ment in sequential programming. 
+Monitors were de- signed by Hoare as a structured synchronization tool in which the shared data is encapsulated 
+in the monitor, mutual exclusive access to the shared data is automatic and guaranteed, and the shared 
+data can be manipu- lated only with the monitor's methods as specified by the programmer. Note that the 
+V and P semaphore operations are equivalent to the asynchronous message passing send and receive operations 
+in which the mes- sages are empty. Message passing channels "can be viewed as extending semaphores to 
+convey data as well as provide synchronization" [1, p. 339]. Thus, in a sense, using message passing 
+channels instead of monitors is a step backwards! 3 A Fresh Perspective Object-oriented programming 
+blurs the distinction be- tween calling monitor methods in a shared-memory multiprocessor and message 
+passing in a distributed-memory multicomputer. As distributed shared memory (DSM) becomes more widespread, 
+using a shared mem- ory versus a distributed memory computer architecture will be an implementation issue, 
+not a choice for (or even visible to) the programmer. As Figure 1 shows, each object has its own private 
+ad- dress space distinct from that of other objects. Threads in objects communicate by invoking methods 
+in other objects. Calling a method is conceptually equivalent to placing the method's actual arguments 
+into a message and sending the message to the called method's object.  The calling thread blocks and 
+a new thread is created in the called method's object to execute the method's code.  Or an already existing 
+thread in the method's object is waiting to receive the message and continues exe- cution when the message 
+arrives.  Or a thread in the called method's object selects one of several queued messages to receive 
+based on some criterion and that thread executes the method asso- ciated with the received message (rendezvous). 
+ If the calling thread does not block after sending the message containing the method's actual arguments, 
+then we have asynchronous rather than synchronous behavior.  If the calling thread's object and the 
+called method's object are in different Java virtual machines, perhaps on different physical machines, 
+then we have a remote procedure call, (remote method invocation or RMI in Java terminology).  The significant 
+abstractions here are operations, invok- ing an operation, and implementing an operation. Op- erations 
+are the public methods or services provided by an object. An operation is invoked by sending param- eters 
+to it. An operation is implemented with code ex- ecuted by the invoking thread, by a new thread, or by 
+an existing thread. An example of these blurred distinctions is the Orca object-based programming language 
+[15, p. 365] and the Amoeba distributed operating system [15, p. 376]. Orca's runtime system implements 
+an object-based dis- tributed shared memory. Shared objects, which may be replicated, are kept coherent 
+using Amoeba's reliable, totally ordered broadcast message passing. The pro- grammer is not aware of 
+whether the system is running on shared or distributed physical memory. Operations on remote objects 
+are implemented with a remote pro- cedure call, which is implemented with message passing. Thus, in Orca 
+and Amoeba there is no distinction be- tween method calling and message passing and no dis- tinction 
+between shared and distributed memory; they are transparent to the programmer. Message passing, monitors, 
+and the rendezvous are. equivalent [1, p. 341]. A concurrent program can be 61 ('I) °. "::r°  ,=_~, 
+Q  ,y qjf_~, ~_ , i,~, ~< "' ":::~" . ~ 0 u. ~  . 0 "~" \ ~ ~r / .9,.\ _~ tO Figure 1: Method calling 
+compared to message passing. written using any one of these tools, although one tool might be easier 
+to use in certain situations than the others. Instead of focusing on monitors versus message passing, 
+the concurrent programmer should focus on the following design decisions. What is the relationship be- 
+tween the multiple threads in the application? Some possibilities are client and server, peers, or filters 
+[1, p. 341]. If the relationship is peers or filters, then message passing is indeed appropriate and 
+the most convenient expression tool for the programmer. On the other hand, if the relationship is client 
+to server, then client requests can be handled with a monitor or the rendezvous. If the server is remote 
+to the client, then invoking a service will be implemented with message passing between the ma- chines 
+by the language runtime system, as it is in Orca and Amoeba. Another design decision is which objects 
+are to be ac- tive, containing a thread, and which objects are to be passive, containing only methods 
+and data fields. Peers, filters, and clients are all active; servers can be either active or passive. 
+A server implemented as a monitor is passive, as in this Java skeleton; public class Server { o.* public 
+Server(...) { ... } public synchronized type servicel (...) throws InterruptedException { while (! condition1) 
+wait() ; ,,. notifyAll () ; } public synchronized type service2(...) throws InterruptedException { 
+while (! condition2) wait() ; . ,. notifyAll () ; } o *, } whereas one implemented using a rendezvous 
+that has guards is active, as in this SR [2] skeleton. resource Server op servicel(...), service2(...) 
+body Server(...) process serving do true -> in service1(...) st conditionl -> o o° [] service2(...) 
+st condition2-> ,, . ni od end serving end Server The SR language has an elegant synchronization and 
+in- terprocess communication design from which Java could benefit. There are four design combinations 
+for opera- tion invocation and implementation: 1. asynchronous message passing invocation: send xyz(a, 
+b, c.... ) implementation: receive xyz(a, b, c, .,,)  2. synchronous message passing invocation: call 
+xyz(a, b, c.... ) implementation: receive xyz(a, b, c, ...)  3. local or remote procedure call invocation: 
+call xyz(a, b, c.... ) implementation: proc xyz(a, b, c, ...)  4. rendezvous invocation: call or send 
+xyz(a, b, c.... ) implementation:  in abc(...) st ... -> ... [] def(...) st ... -> ... [] ... [] 
+xyz(a, b, c .... ) st ... -> ... [] ... ni It is important to note that the caller does not know how 
+the xyz(a, b, c .... ) operation is implemented (proc, receive, or in...ni). The language runtime system 
+and/or the underlying operating system imple- ment the operations in shared memory or distributed memory, 
+transparent to the programmer. 4 Conclusions The problem with concurrent programming in Java is not with 
+the concepts behind monitors--they have earned a place in the synchronization toolbox--but with their 
+peculiar properties in the Java language: lack of multiple condition variables, and  race conditions 
+between the effects of interrupt()  and notify(). Techniques are available to prove concurrent programs 
+correct, regardless of the synchronization tool used. The recent book by Magee and Kramer [13] presents 
+a bal- anced view of concurrent programming in Java using monitors, message passing, and the rendezvous. 
+A model-checking analysis and verification tool, Labeled Transition System Analyzer or LTSA, is used 
+to detect deadlock and other undesirable program states. An-drews [1] shows how to verify program assertions 
+and invariants with predicate logic. Java monitors need not be totally abandoned in favor of message 
+passing. The Java compiler and interpreter should be enhanced and improved to make its monitors secure 
+in the sense of the monitors in Brinch Hansen's Concurrent Pascal [6]. Analogous to the "byte veri- fier" 
+in the Java virtual machine, a concurrency verifier should be added. It is a shame that the designers 
+of Java spent so much time on security, but completely botched it as it applies to monitors. References 
+<RefA>[1] <SinRef><author>Andrews, G. </author><title>Concurrent Programming: Principles and Practice</title>. <publisher>Benjamin/Cummings</publisher>, <date>1991</date>. </SinRef>[2] <SinRef><author>Andrews, 
+G., </author>and <author>Olsson, R. </author><title>The SR Program- ruing Language: Concurrency in Practice</title>. <publisher>Benja-min/Cummings </publisher>Publishing, 
+<date>1993</date>. </SinRef>[3] <SinRef><author>Arnold, K., </author>and <author>Gosling, J. </author><title>The Java Programming Language, 2 nd ed. </title><publisher>Addison-Wesley</publisher>, <date>1998</date>. </SinRef>[4]<SinRef><author>Austin, 
+P., </author>and <author>Welch, P. </author><title>JCSP web page</title> at <location>the University of Kent, Canterbury, UK. On-line. Internet</location>. [<date>November 
+12, 1999</date>]. Available WWW: <url>http ://www. cs .ukc. ac .uk/proj ects/ ofa/jcsp/</url> </SinRef>[5] <SinRef><author>Bergin, J., </author><author>et al. </author>
+<title>Java Resources for Computer Sci- ence Instruction</title>. Report of the Working Group on Curricular Opportunities 
+of Java Based Soft- ware Development, 3 rd Annual Conference on In- tegrating Technology into Computer 
+Science Edu- cation, Dublin, Ireland, August 17-21, 1998. <journal>ACM SIGCSE Bulletin </journal><volume>30, 4 </volume>(<date>December 1998</date>), 
+<pages>18b-38b</pages></SinRef>. [6] <SinRef><author>Brinch Hansen, P. </author><title>Java's Insecure Parallelism</title>.<journal> ACM SIGPLAN </journal>No$ices<volume> 34, 4 </volume>(<date>April 1999</date>), <pages>38- 
+45</pages>. </SinRef>[7] <SinRef><author>Buhr, P., </author><author>Fortier, M., </author>and <author>Coffin, M. </author><title>Monitor Clas- sification. ACM Computing Surveys </title><volume>27, 1 </volume>(<date>March 
+1995</date>). </SinRef>[8]<SinRef><author>Chalmers, A. </author><title>JavaPP Web page </title>at <location>the Univer-sity of Bristol, UK. Online. Internet. </location>[<date>Novem-ber 
+12, 1999</date>]. Available WWW: <url>http://~x,r~, cs. bris. ac. uk/'alan/j avapp, html</url>. </SinRef>[9] <SinRef><author>Hartley, S.</author> <title>Alfonse, 
+Wait Here For My Signal! </title><journal>ACM SIGCSE Bulletin </journal><volume>31, 1 </volume>(<date>March 1999</date>), <pages>58- 62</pages></SinRef>. [10] <SinRef><author>Hilderink, G.</author> <title>JavaPP Web 
+page </title>at the <location>University of Twente, Netherlands. Online. Internet</location>. [<date>Novem- ber 12, 1999</date>]. Available WWW: 
+<url>http://w~.rt. el. utwent e. nl/j avapp/. </url></SinRef>[n] <SinRef><author>Hoare, C. A. R. </author><title>Monitors: An Operating System Structuring 
+Concept</title>. <journal>Communications of the A CM </journal><volume>17, 10 </volume>(<date>October 1974</date>), <pages>549-557</pages>. </SinRef>[12] <SinRef><author>Hoare, C. A. R. </author><title>Communicating 
+Sequential Pro-cesses</title>. <publisher>Prentice-Hall International</publisher>, <date>1985</date>. </SinRef>[13]<SinRef><author>Magee, J.</author>, and <author>Kramer, J. </author><title>Concurrency: 
+State Models and Java Programs</title>. <publisher>Wiley</publisher>, <date>1999</date>. </SinRef>[14]<SinRef><author>Schaller, N., </author>moderator. <title>Using Java in Com-puter Science 
+Education</title>. Panel session on Java, 2 nd Annual Conference on Integrating Technology into Computer Science 
+Education, Uppsala, Swe- den, June 1-5, 1997.<location> Online. Internet.</location> [<date>November 12, 1999</date>]. Available WWW: <url>http://wcw, 
+cs.rit. edu/'ncs/Uppsala97/index, html</url>. </SinRef>[15] <SinRef><author>Tanenbaum, A. </author><title>Distributed Operating Systems</title>. <publisher>Prentice Hall</publisher>, 
+<date>1995</date></SinRef>. </RefA>  
+			

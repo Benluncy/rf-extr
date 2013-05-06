@@ -1,0 +1,280 @@
+
+ A LIGHTWEIGHT CAUSAL LOGGING SCHEME FOR RECOVERABLE DISTRIBUTED SHARED MEMORY Taesoon Park Department 
+of Computer Engineering Sejong University Kwangjin-Ku, Kunja-Dong 98 Seoul, 143-747, KOREA  tspark@ 
+kunja.sejong.ac.kr Keywords Checkpointing, Distributed shared memory, Fault toler- ant systems, Message 
+logging, Lazy release consistency. ABSTRACT This paper presents a new causal logging scheme for lazy 
+release consistent distributed shared memory sys- tems. For the efficient implementation of causal logging, 
+data structures and operations supported by the lazy re- lease consistency memory model are utilized. 
+Also, un- like the previous scheme which logs the vector clock for each synchronization operation, the 
+proposed scheme adds the minimum information to recreate the corre-sponding vector clock, into the existing 
+write notice structures. As a result, the additional information car- ried in each message becomes less 
+than two integers for each synchronization interval, and hence, fault-tolerance can be achieved with 
+very little overhead. Moreover, the size of the additional information is independent of the number of 
+processes in the system, which means that the new scheme can be very effective for the large size systems. 
+To evaluate the performance of the proposed scheme, the logging protocols have been implemented on top 
+of the CVM(Coherent Virtual Machine), and the experimental results show that the proposed scheme achieves 
+35% - 66% of reduction in the log size. 1. INTRODUCTION Distributed shared memory(DSM) systems [5] provide 
+a simple mean of programming for the networks of work- stations, which are gaining popularity due to 
+their cost- effective high computing power. However, as the num- ber of workstations participating in 
+a DSM system in- creases, the probability of failure also increases, which Permission to make digital 
+or hard copies of all or part of this work for personal or classroom use is granted without fee provided 
+that copies are not made or distributed for profit or commercial advantage and that copies bear this 
+notice and the full citation on the first page. To copy otherwise, to republish, to post on servers or 
+to redistribute to lists, requires prior specific permission and or fee. SAC'00 March 19-21 Como, Italy 
+ (c) 2000 ACM 1-58113-239-5/00/003>...>$5.00  Heon Y. Yeom Department of Computer Science Seoul National 
+University Kwanak-Ku, Shinlim-Dong Seoul, 151-742, KOREA  yeom @ arirang.snu.ac.kr could render the 
+system useless for long-running appli- cations. For DSM systems to be of any practical use, it is important 
+for the system to be recoverable so that the processes do not have to restart from the beginning when 
+a failure occurs. One solution to provide fault- tolerance for DSM systems is to use message logging 
+in addition to independent checkpointing [8], and many message logging schemes have been suggested. In 
+the reader-based logging schemes [8; 11], each process logs the data items it has accessed into the stable 
+stor- age in the access order, so that the process can retrieve the logged messages at the same computational 
+points after the failure-recovery. However, these schemes could incur high logging overheads during the 
+failure-free op- erations. The writer-based logging schemes [6; 7] utilize the volatile log of the writer 
+process for each data item, and the corresponding readers only log the access in- formation into the 
+stable storage. As a result, the log- ging overhead can be reduced, however, the overhead of stable logging 
+is still non-negligible. One solution sug- gested in [2] uses only the volatile log of the reader to 
+store the access information. This scheme removes the overhead of stable logging, however, concurrent 
+failures of multiple processes cannot be tolerated. Causal logging is one logging approach which is gain- 
+ing a lot of attention for the message-passing based distributed computing systems [1]. In the causal 
+log- ging technique, the writer-based logging of data items is performed and the access information is 
+logged at the volatile storage of the dependent processes. Since this scheme completely eliminates the 
+needs for stable logging, logging overhead can significantly be reduced. Also, since the storage of the 
+dependent processes are utilized, concurrent and multiple failures can be han- dled. However, in this 
+scheme, the log of the access in- formation has to be causally spread over the dependent processes, which 
+may cause the non-negligible message overhead. A causal logging scheme for the DSM system based on lazy 
+release consistent(LRC) memory model[3] has been suggested in [12]. In this scheme, to reduce the message 
+overhead, the data structures and operations supported by the LRC model, such as dig, write notices, 
+and vec- tor clocks, are utilized. Moreover, logging is performed 661 ..................... ::::::::::::::::::::::::::: 
+................... only at the synchronization points instead of every mes- sage passing point. However, 
+since this scheme utilizes the vector clock to trace the access information, a vector clock for each 
+synchronization interval must be logged. As a result, the message overhead turns out to be non- negligible 
+for the system with a large number of pro- cesses. Especially, for the barrier operations, the log- ging 
+overhead can be significant, since each process has to perform the logging for all the other processes. 
+In this paper, we propose an efficient implementation technique for the causal logging. In the proposed 
+scheme, instead of logging the vector clock for each synchroniza- tion operation, the sufficient and 
+necessary information to recreate the corresponding vector clock is inserted into the existing write 
+notice structures. As a result, the additional information carried by each message becomes less than 
+two integers for each synchronization interval, and hence, fault-tolerance can be achieved with a very 
+little overhead. Moreover, the size of the additional in- formation is independent of the number of processes 
+in the system, and hence, the new scheme can be very efficient for the large size systems. The rest of 
+this paper is organized as follows: In Sec- tion 2, the system model and the definition of consistent 
+logging for the correct recovery are presented and in Section 3, the protocols for causal logging and 
+recovery are presented with their correctness. The performance of the proposed protocol is discussed 
+with the experi- mental results in Section 4 and Section 5 concludes the paper. 2. BACKGROUND 2.1 System 
+Model We consider a DSM system consisting of a number of fail-stop nodes [9], connected through a communication 
+network. Each node consists of a processor, a volatile main memory and a non-volatile secondary memory. 
+The processors in the system do not share any physical memory and communicate by message passing. How-ever, 
+the system can be viewed as a set of processes com- municating through the logically shared memory space, 
+which is composed of the distributed local memorys of the nodes. The distributed shared memory space 
+is as- sumed to consist of a set of fixed-size pages. The com-munication subsystem is assumed to be reliable, 
+how- ever, no assumption is made on the message delivery order. Failures considered in the system axe 
+transient and a number of concurrent node failures may happen in the system. The computation of a process 
+is assumed to be piece-wise deterministic; that is, the computational states of a process is fully determined 
+by a sequence of data values provided for the sequence of read operations. For the memory consistency, 
+the invalidation-based lazy release consistent(LRC) memory model [3] is assumed, and the model also employs 
+the multiple-reader, multiple-writer protocol. A number of different memory semantics for the DSM have 
+been proposed, however, in this paper, we focus on the LRC memory model for its enhanced Ci .-W(Xi U(A) 
+". Failure  Pi [~1 I '.v  x :l L(A) R(X) . Cj ............................................ Figure 
+h An Inconsistent Recovery Line performance. In the LRC memory model, the synchro- nization operations, 
+such as the acquire, release, bar- tier, are used to guarantee the correct execution order between the 
+conflicting operations. Also, if a process writes on a data page and releases a lock, other pro- cesses 
+can invalidate the old copy of the page and read the new page after it acquires the corresponding lock. 
+2.2 Consistent Recovery We define a state interval, denoted by I(i,c~), as the computation sequence between 
+the (a -1)-th and the a-th synchronization operations of a process pl, where c~ > 1 and the 0-th synchronization 
+operation means the initial state of pi. Then, in the LRC based DSM sys- tem, the computational dependency 
+between the state intervals can be defined as follows: Definition 1: A state interval I(i, a) is dependent 
+on another state interval I(j, 13) if any one of the following conditions is satisfied: (a) i=j anda=~+l. 
+ (b) I(j,/3) ends with a release(x) and I(i,a) begins with an acquire(x), and pi in I(i,c~) accesses 
+a data page written by pj in I(j,/3). (c) I(j,/3) ends with a barrier(x) and I(i, a) begins with the 
+same barrier(x), and pi in I(i,a) accesses a data page written by pj in I(j,/3). (d) I(i, a) is dependent 
+on I(k, 7) and I(k, 7) is depen- dent on I(j,~). 0  Definition 1.(a) indicates the natural dependency 
+within a process, Definition 1.(b) and (c) present the inter- process dependency caused by accessing 
+the common data page, and Definition 1.(d) states that the depen- dency relation is transitive. Such 
+dependency relation between the state intervals may cause possible inconsistency problems during the 
+rollback-recovery. Figure 1 shows a typical example of inconsistent recovery case [6]. The notations, 
+R(X) and W(X), in the figure represent the read and the write operations on a data page X, respectively, 
+and the no- tations U(A) and L(A) represent the release and the acquire operations on a lock A, respectively. 
+Now, sup- pose that process pi should roll back to its latest check- point Ci due to its failure but 
+it cannot regenerate the same computation for W(X). Then, the consistency between pi and pj becomes violated 
+since pj's current computation depends on p,'s computation invalidated by a rollback. Such a case is 
+called an orphan state case and a process is said to recover to a consistent recovery line, if any process 
+in the system is not involved in the Acq(A) W(X) W(Y) ReI(A) Ti: 1=10,0,0) Ti:2 ) ~(A) R(X) W(Y) ReI(A) 
+[ Tj:2~ 1,0) Tj:I=(I,O,O) "~cq(A) R(X) R(Y) ReI(A) Pkl ~ I I I" Tk:l~ 1,1,0) Tk:2=(|,1,0) Figure 2: 
+An Example of Vector Clocks orphan state case after the rollback-recovery. Definition 2: A state interval 
+I(i, a) is said to be an orphan, if for any interval I(j,13), I(i, a) is dependent on I(j, t3) and I(j, 
+13) is discarded by a rollback. Definition 3: A process is said to recover to a consis- tent recovery 
+line, if any state interval of the system is not an orphan after the rollback-recovery. 3. PROTOCOL DESCRIPTION 
+ 3.1 Overview Causal logging is one way to achieve the consistent re-covery. Let Log(ek) be the information 
+logged to re-generate the exactly same event ek. Under the as-sumption of the piece-wise deterministic 
+computation, if Log(ek) for every read and write event, which may cause the potential orphan state, can 
+be retrieved at the time of rollback-recovery, the consistent recovery can be guaranteed. For the correct 
+regeneration of an event, Log(ek) must include the data page which have been provided for the event ek, 
+the identifier of the write event which creates that page and the identifier of the event ek. The causal 
+logging consists of two parts; one is the writer-based logging of the data page contents, and the other 
+is the causal logging of the data access infor- mation, such as the event identifiers, by the dependent 
+processes. For logging of the data pages, the dig structure main-tained by each process can be utilized, 
+since the dig can be regenerated from a correct recovery even after a system failure. As for the event 
+identifiers to trace the data access, the vector clock associated with each synchronization operation 
+can be used. Figure 2 shows an example of vector clocks associated with each syn- chronization operation. 
+Note from the figure that if each process knows the vector clock of its current state interval and accesses 
+the page made from the diffs cre-ated at the intervals with smaller vector clocks, then the consistent 
+recovery can be achieved [7]. To causally log the vector clocks, the operations han- dling the write 
+notice structures can be used. One no- table point of write notice handling operations is that the write 
+notice records are causally propagated to the processes in the dependency relation. Another notable point 
+is that the propagation is not redundant. If a write notice record is propagated to a process, the same 
+record is not delivered to the same process, again. The write notices, however, reflect only the information 
+re- garding the write operations. In other words, only the Acq(a) Acq(b> Acq(c) Acq(a) (a)An Example 
+of the Inter-Process Dependency ®- (b) Dependency Tracking Figure 3: An Example of Dependency Tracking 
+ vector clocks for release operations following any write operation are included in the write notices. 
+Hence, the write notice structure needs to be slightly modified so that the vector clock for each synchronization 
+operation can be reflected in the structure. However, considering the size of the vector clock, it is 
+more efficient to save some information to recreate the vector clock, instead of saving the vector clock 
+itself. Hence, in the proposed protocol, for each synchroniza- tion operation, the sufficient and necessary 
+information to recreate the corresponding vector clock is inserted into the write notice structure. 
+3.2 Dependency Tracking The state intervals or the intervals of the LRC mem-ory model can partially 
+be ordered according to the happened-before-1 relation[3], as follows: An interval, I(i,a), is said to 
+precede another interval, I(j, fl), if I(i,a) ends with a release(x) and I(j,13) begins with the acquire(x) 
+for the same lock x. An interval, I(i, or), also precedes its following intervals, and the happened- 
+before-1 relation is also transitive. As for the barrier operation, the arrival to the barrier is considered 
+as a release operation, and the departure from the barrier is considered as an acquire operation. The 
+vector clock associated with each interval reflects the precedence order in the happened-before-1 relation. 
+For example, in Figure 3.(a), the vector clock for Acq(a) of Pk must be the entry-wise maximum of the 
+vector clocks of its preceding intervals. In the figure, the cir- cled release operations denote the 
+ones following a write operation, and the ones without any circle denote the release operations having 
+no write operation before. Since the i-th entry of a vector clock Vi is updated only at the release time 
+after a write operation, the acquire opera- tions and the release operations without any circle need 
+not be considered for the vector clock calculation. As a result, only the vector clocks for Rel(a) and 
+Rel(b) of pi, Rel(c) of pj, and Rel(d) of pk need to be used to calculate the vector clock for Acq(a) 
+of Pk. Figure 3.(b) represents the happened-before-1 relation as a graph, in which the release operations 
+without any 663 --Hi i 2.o.o,i w(z, i i w x,.w(Y, I J I w(x.,.w(z, t   (o.o..I (a) Write Notice 
+Structure Supported by LRC Memory Model ----~q i [ (2,0,0, ] W(Z, ~""-~ I i [ (1,0,0)I W(X), w(Y)I (b) 
+Revised Write Notice Structure Figure 4: The Revised Write Notice Structure write are omitted since they 
+do not influence the vector clocks. The arrow from a node NA to Ns in the figure denotes the fact that 
+NB precedes NA. Now, the vector clock for any acquire operation can be obtained as the entry-wise maximum 
+of the release operations reachable from that acquire. Let P.Seti,~ be the set of release op- erations 
+preceding the c~-th acquire operation of pi, and P.Set;,~ be the set of release operations which are 
+reach- able by a path from that acquire operation, but no other release operation exists before in that 
+path. For exam- ple, in Figure 3.(b), P.Setk,Acq(a)={Rel(a), Rel(b), Rel(c), Rel(d)} and P.Setk,Acq(a) 
+={Rel(b), Rel(c), Rel(d)}. Then, we can notice from the definition that the vector clock obtained from 
+P.Set[~ must be equal to the one obtained from P.Seti,~. 3.3 Causal Logging Now, we have to slightly 
+modify the write notice struc- ture so that the happened-before-1graph shown in Fig- ure 3 can be reflected 
+in the write notices. Figure 4.(a) represents the write notice structure supported by the existing LRC 
+memory model for the computation shown in Figure 3, which consists of an array of N pointers, where N 
+is the number of processes in the system. Each pointer indicates the list of the interval records created 
+by each process, and each interval record contains the identifier of the corresponding process and the 
+vector clock of the interval and a list of write notices for the write operations happened at the interval. 
+The interval is created only at the release time after a write opera- tion. As shown in the figure, since 
+the intervals are ar- ranged in the descending order of the vector clock, the structure naturally supports 
+the directed edges within a process in the happened-before-1graph. To represent the edges between the 
+distinct processes, we use a pair of integers, (i,a), which indicates the a-th synchronization operation 
+of pi. The inter-process edges are of two types; one from an acquire operation to a release operation; 
+and the other is from an acquire operation to another acquire operation. Each release operation of pi 
+followed by any write can uniquely be (i,2),0,3),(k,3) "~:':'~ t  r--I - Figure 5: The Revised Write 
+Notice Structure for Bar- rier Operation identified by the i-th entry of 1~ (Vi[i]), however, each acquire 
+operation may not be distinguishable. Hence, in the proposed scheme, the i-the entry of 1,~ is also incremented 
+by one at each acquire operation. The re- vised clocks do not violate the semantics of the vector clock[2]. 
+The causal logging can be completed by insert- ing an interval entry for each acquire operation, which 
+contains the pair, (i,c~), indicating that the lock is ac- quired from pi and pi's current value of ~[i] 
+is a. Figure 4.(b) represents the revised write notice struc- ture supporting the causal logging. The 
+vector clock for each acquire operation can be obtained from the structure as we mentioned before. Note 
+here that the obtained vector clock may not be the same as the ac-tual clock since the value of I~ [i] 
+is also incremented for each acquire operation. Hence, the number of acquire operations in each path 
+has to be counted and reflected to the calculated vector clock. Now, we consider a barrier operation. 
+When a set of processes pass the same barrier, inter-process de-pendency may happen between every pair 
+of processes, which may make the write notice structure very compli- cated. To reduce the overhead of 
+recording the prece- dence relation between every pair of processes, we mod- ify the write notice structure 
+for the barrier operation as shown in Figure 5. The order of the processes in the cycle can be determined 
+by the barrier manager, and we can notice that in both structures shown in Figure 5, the same set of 
+release operations can be obtained for the vector clock calculation. Theorem 1: The proposed logging 
+protocol ensures that if for each read or write event, e,~, an event e~ dependent on e~ exists, then 
+Log(e~) can be retrieved after a failure. Proof Sketch: According to the proposed logging pro- tocol, 
+the state interval containing e~ must be able to calculate the vector clocks for the interval containing 
+e~ and also for the intervals which have generated the data page for the event e~. As a result, Log(eQ)can 
+be retrieved after a failure. [] 3.4 Checkpointingand Rollback-Recovery Each process in the system periodically 
+takes a check- point to reduce the amount of recomputation in case of a system failure. A checkpoint 
+includes the intermediate state of the process, the current vector clock, the cur-rent content of the 
+diff structure and other information required for memory consistency. Checkpointing activi- ties among 
+the related processes need not be performed in a coordinated way, however, if checkpointing is incor- 
+porated into the barrier operation or garbage collection, the overhead of checkpointing can be reduced. 
+For a process pi to be recovered from a failure, a re-covery process, say p~, is first created and p~ 
+broadcasts the recovery message to all the other processes in the system. On the receipt of the recovery 
+message, each process pj first determines whether it is a dependent of pi or not. If so, it replies with 
+its write notice structure, which includes pi's intervals and their preceding inter- vals. When p~ collects 
+the reply message from every process, it eliminates the duplicates of interval records and reconstructs 
+its own write notice structure. The recovery process p~ then restores the latest checkpoint of pi and 
+from the reconstructed state, pi begins the recomputation as follows: At the lock acquire time: pi calculates 
+the vector clock from the information saved in the write notices and sets its current vector clock as 
+the calculated one. pi also searches the write notice structure with the new vector clock, to select 
+the write notices with which the new invalidation has to be performed. At the data page access miss: 
+pi searches the write notice structure and sends the diff requests to the se-lected writer of the pages 
+as before. Each writer process then replies with the diffs of the data page it has pro- duced before 
+the given vector clock, pi arranges the received diffs in the timing order and applies them on the data 
+page to create an up-to-date version, as per-formed during the normal execution. If the operation performed 
+is the write, pi creates a diffwith its current vector clock. At the lock release time or at the barrier: 
+If Pi has performed any new write operation in this interval, it increments the i-th entry of its vector 
+clock by one. Since for each synchronization operation, the process can retrieve the vector clock same 
+as the one created before the failure, it can retrieve the same diffs from other processes and creates 
+the same data page for its read and write operations. Theorem 2: The rollback-recovery under the proposed 
+protocol is consistent. Proof Sketch: If for every read/write event e,~, an event e~ dependent on e,~ 
+exists, Log(e~) can be re-trieved after a failure (by Theorem 1). As a result, the rollback-recovery 
+of a process must be consistent. [] 4. PERFORMANCE STUDY To evaluate the performance of the proposed 
+logging scheme, we have implemented the logging scheme on top of CVM[4] distributed shared memory system. 
+CVM is written using C++ and well modularized and it was pretty straightforward to add the logging scheme. 
+For the experiment, we have selected LMW(lazy release con- sistency + multiple writer) protocol, and 
+for the volatile logging, each process is allocated some memory space in the beginning. Our experimental 
+environment consists of a 40-processor IBM SP/2 running AIX 4.1.2 with 5.8GB of total memory and 134GB 
+of disk space. Eight of the processors axe wide nodes with 512MB memory and the rest of them are thin 
+nodes with 128MB of main memory. All processors are connected through the IBM SP/2 high-performance switch(HPS). 
+The HPS is a two-level cross-bar switch and provides a point-to-point bandwidth of 40MB/sec[10]. We have 
+used 8 thin nodes residing on the same frame for the experiment. We have run three application programs, 
+BARNS, FFT and TSP, without any logging (denoted by NO LOG- GING), with the causal logging scheme proposed 
+in [12] (denoted by CL SCHEME2), and then with the log- ging scheme proposed in this paper (denoted by 
+CL SCHEME1). To examine the effects of the system size on the performance, we have run each application 
+with four nodes and also with eight nodes. First, Figure 6 presents the amount of the data added to the 
+write notice structure maintained at each proces- sor for the purpose of logging. The figure shows that 
+the proposed scheme achieves 35%-69% of reduction in the log amount, and the reduction becomes more as 
+the number of processors increases. Figure ? shows the amount of the data added to the write notices 
+carried in each message and the proposed scheme also shows 37.5% -66% of reduction in the data size. 
+From both figures, we can conclude that the proposed scheme in- duces much less overhead in the size 
+of the log car- ried in each message and also maintained by each pro- cess. Also, the size of the log 
+shows slow increase as the number of processors increases, which indicates that the proposed scheme can 
+be a good logging choice for the systems with a large size. Figure 8 shows the execution times of the 
+various appli- cation programs. From the figure, we can observe that in all cases, the execution time 
+under the causal logging scheme is only slightly longer than the one under no log- ging. Comparing the 
+proposed logging scheme with the earlier one, there is a slight reduction in the execution time. However, 
+considering the fact that processing of the message and the log can be the major overhead as the system 
+size increases, it is expected that the reduc- tion can be more as the number of processors increases. 
+ 5. CONCLUSIONS In this paper, we have proposed a causal logging pro- tocol for LRC based DSM systems. 
+The notable points of the proposed protocol is to utilize the data struc-tures and operations inherited 
+from the LRC memory model. As a result, causal logging can be achieved by inserting some information 
+to recreate the vector clock value for each interval, and the message overhead can be much smaller than 
+the earlier causal logging schemes. To evaluate the performance of the proposed protocol, the logging 
+protocol has been implemented on top of 120 100 IDCL-Schemel 1 "E 80 ill CL-Scheme~ ~ 40 _J BARNS-8 
+BARNS-4 FFT-8 FFT-4 Figure 6: Amount of the Logged Data 70 60 iElCL-Schemel I 50 '~ 40 o g 2o BARNS-8 
+BARNS-4 FFT-8 FFT-4 TSP-8 TSP-4 Figure 7: Message Overhead [] No-Logging ICL-Schemel C~CL-Scheme2 BARNS-8 
+BARNS-4 FFT-8 FFT-4 TSP-8 TSP-4 Figure 8: Execution Time CVM distributed shared memory system. The experi- 
+mental results show that the proposed scheme requires 35%-66% less log size compared to the earlier causal 
+logging schemes. 6. REFERENCES <RefA>[1] Alvisi, L., Hoppe, B., and Marzullo, K. Nonblock- ing and orphan-free 
+message logging protocols. In Proc. of the 23rd Fault-Tolerant Computing Sym- posium, (Nov. 1996), 145-154. 
+[2] Costa, M., Guedes, P., Sequeira, M., Neves, N., and Castro, M. Lightweight logging for lazy release 
+consistent distributed shared memory. In Proc. of the USENIX 2nd Symposium on Operating Systems Design 
+and Implementation, (Oct. 1996), 59-73. [3] Keleher, P., Cox, A.L., and Zwaenepoel, W. Lazy release consistency 
+for software distributed shared memory. In Proc. of the 18th Annual Int'l Syrup. on Computer Architecture 
+, (May 1992), 13-21. [4] Keleher, P. CVM: The coherent virtual machine. http:www.cs.umd.eduprojectscvm. 
+[5] Li, K. Shared virtual memory on loosely coupled multiprocessors. PhD thesis, Department of Com- puter 
+Science, Yale University, Sep. 1986. [6] Park, T., Cho, S.B., and Yeom, H.Y. An efficient logging scheme 
+for recoverable distributed shared memory systems. In Proc. of the 17th Int'l Conf. Distributed Computing 
+Systems, (May 1997), 305- 313. [7] Park, T., and Yeom, H.Y. An efficient log-ging scheme for lazy release 
+consistent distributed shared memory systems. In Proc. of the 12th Int'l Parallel Processing Symposium, 
+(Max. 1998), 670- 674. [8] Richard III, G.G., and Singhal, M. Using logging and asynchronous checkpointing 
+to implement re- coverable distributed shared memory. In Proc. of the 12th Symp. on Reliable Distributed 
+Systems, (Oct. 1993), 58-67. [9] Schlichting, R.D., and Schneider, F.B. Fail-stop processors: An approach 
+to designing fault-tolerant computing systems. A CM Trans. on Com- puter Systems, Vol. 1, No. 3, (Aug. 
+1983), 222-238. [10] Stunkel, C.B., et. al. The SP2 high performance switch. IBM Systems Journal, Vol. 
+24, No. 2, (1995), 185-204. [11] Suri, G., Janssens, B., and Fuchs, W.K. Re-duced overhead logging for 
+rollback recovery in distributed shared memory. In Proc. of the 25th Annual Int'l Syrup. on Fault-Tolerant 
+Computing, (Jun. 1995), 279-288. [12] Yi, Y., Park, T., and Yeom, H.Y. A causal log- ging scheme for 
+lazy release consistent distributed shared memory systems. In Prac. of the 1998 Int'l Conf. on Parallel 
+and Distributed Systems, (Dec. 1998), 139-146.</RefA>   
+			

@@ -1,0 +1,551 @@
+
+ A Bisimulation for Dynamic Sealing Eijiro Sumii Benjamin C. Pierce University of Pennsylvania University 
+of Pennsylvania sumii@saul.cis.upenn.edu bcpierce@cis.upenn.edu Abstract We de.ne .seal, an untyped call-by-value 
+.-calculus with primi­tives for protecting abstract data by sealing, and develop a bisim­ulation proof 
+method that is sound and complete with respect to contextual equivalence. This provides a formal basis 
+for reason­ing about data abstraction in open, dynamic settings where static techniques such as type 
+abstraction and logical relations are not ap­plicable. Categories and Subject Descriptors D.3.3 [Programming 
+Languages]: Language Constructs and Fea­tures abstract data types; D.3.1 [Programming Languages]: Formal 
+De.nitions and Theory; F.3 [Theory of Computation]: Logics and Meanings of Programs; E.3 [Data]: Data 
+Encryption; C.2.2 [Computer-Communication Networks]: Network Proto­cols protocol veri.cation General 
+Terms Theory, Languages, Security 1 Introduction Dynamic sealing: Birth, death, and rebirth Sealing 
+is a linguistic mechanism for protecting abstract data. As originally proposed by Morris [18, 19], it 
+consists of three con­structs: seal creation, sealing, and unsealing. A fresh seal is created for each 
+module that de.nes abstract data. Data is sealed when it is passed out of the module, so that it cannot 
+be inspected or modi.ed by outsiders who do not know the seal; the data is unsealed again when it comes 
+back into the module, so that it can be manipulated concretely. Data abstraction is preserved as long 
+as the seal is kept local to the module. Permission to make digital or hard copies of all or part of 
+this work for personal or classroom use is granted without fee provided that copies are not made or distributed 
+for pro.t or commercial advantage and that copies bear this notice and the full citation on the .rst 
+page. To copy otherwise, to republish, to post on servers or to redistribute to lists, requires prior 
+speci.c permission and/or a fee. POPL 04, January 14 16, 2004, Venice, Italy. Copyright 2004 ACM 1-58113-729-X/04/0001 
+...$5.00 Originally, sealing was a dynamic mechanism. Morris also pro­posed a static variant [19], in 
+which the creation and use of seals at module boundaries follow a restricted pattern that can be veri.ed 
+by the compiler, removing the need for run-time sealing and unsealing. Other researchers found that a 
+similar effect could be obtained by enriching a static type system with mechanisms for type abstraction 
+(see CLU [13], for example). Type abstraction became the primary method for achieving data abstraction 
+in languages from CLU to the present day. It is also well understood via the theory of existential types 
+[16]. Recently, however, as programming languages and the environ­ments in which they operate become 
+more and more open e.g., addressing issues of persistence and distribution dynamic sealing is being rediscovered. 
+For example, Rossberg [26] proposes to use a form of dynamic sealing to allow type abstraction to coexist 
+with dynamic typing; Leifer et al. [12] use hashes of implementations of abstract types to protect abstractions 
+among different programs running on different sites; Dreyer et al. [7] use a variant of sealing (somewhere 
+between static and dynamic) to give a type-theoretic account of ML-like modules and functors; .nally, 
+we [21] have proposed a translation (conjectured to be fully abstract) of System­F-style type abstraction 
+into dynamic sealing. Another reason for the renewal of interest in sealing is that it hap­pens to coincide 
+with perfect encryption (under shared-key cryp­tography), that is, with an ideal encryption scheme where 
+a cipher­text can be decrypted only if the key under which it was encrypted is known explicitly. Perfect 
+encryption is a common abstraction in current research on both systems security and programming lan­guages, 
+for example in modeling and reasoning about cryptographic protocols (e.g., the spi-calculus [3]). Problem 
+Although interest in dynamic sealing is reviving, there remains a signi.cant obstacle to its extensive 
+study: the lack of suf.ciently powerful methods for reasoning about sealing. First, to the best of our 
+knowledge, there has been no work at all on proof techniques for sealing in untyped sequential languages. 
+(There are several ver­sions of bisimulation for the spi-calculus, but encoding other lan­guages such 
+as .-calculus into spi-calculus raises the question of what abstraction properties are preserved by the 
+encoding itself.) Second, even in statically typed settings, the published techniques for obtaining abstraction 
+properties are in general very weak. For instance, the .rst two [12, 26] of the works cited above use 
+(variants of) the colored brackets of Zdancewic et al. [8, 32] but only prove (or even state) abstraction 
+properties for cases where abstract data is published by itself with no interface functions provided 
+(i.e., once sealed, data is never unsealed). Abstraction as equivalence We aim to establish a method 
+for proving abstraction of programs using dynamic sealing in an untyped setting. To this end, let us 
+.rst consider how to state the property of abstraction in the .rst place. Take, for example, the following 
+module implementing complex numbers in an imaginary ML-like language. module PolarComplex = abstype t 
+= real * real let from_re_and_im : real * real -> t = fun (x, y) -> (sqrt(x * x+y* y), atan2(y, x)) 
+let to_re_and_im : t -> real * real = fun (r, t) -> (r * cos(t), r * sin(t)) let multiply :t*t-> t = 
+fun ((r1, t1), (r2, t2)) -> (r1 * r2, t1 + t2) end Using dynamic sealing instead of type abstraction, 
+this module can be written as follows for some secret seal k. module PolarComplex = let from_re_and_im 
+= fun (x, y) -> let z = (sqrt(x * x+y*y), atan2(y, x)) in <seal z under k> let to_re_and_im = fun 
+z -> let (r, t) = <unseal z under k> in (r * cos(t), r * sin(t)) let multiply = fun (z1, z2) -> let 
+(r1, t1) = <unseal z1 under k> in let (r2, t2) = <unseal z2 under k> in let z = (r1 * r2, t1 + t2) in 
+<seal z under k> end Now, the question is: Is this use of sealing correct? That is, does it really 
+protect data abstraction? In particular, can we show that this module has the same external behavior 
+as another sealed module that also implements complex numbers, e.g., the following module with another 
+secret seal k ? module CartesianComplex = let from_re_and_im = fun (x, y) -> <check that x and y are 
+real numbers>; let z = (x, y) in <seal z under k > let to_re_and_im = fun z -> let (x, y) = <unseal 
+z under k > in (x, y) let multiply = fun (z1, z2) -> let (x1, y1) = <unseal z1 under k > in let (x2, 
+y2) = <unseal z2 under k > in letz=(x1 *x2-y1*y2, x1*y2+ x2*y2) in <seal z under k > end Formally, 
+we want to show the contextual equivalence [17] of the two modules PolarComplex and CartesianComplex. 
+In general, however, it is dif.cult to directly prove contextual equivalence be­cause it demands that 
+we consider an in.nite number of contexts. Equivalence by bisimulation To overcome this dif.culty, we 
+de.ne a notion of bisimulation for our language (by extending applicative bisimulation [4]) and use it 
+as a tool for proving contextual equivalence. Essentially, a bisimulation records a set of pairs of corresponding 
+values of two different programs. In the example of PolarComplex and CartesianComplex, the bisimulation 
+is (roughly): {(PolarComplex,CartesianComplex)}. {(PolarComplex.from_re_and_im, CartesianComplex.from_re_and_im), 
+(PolarComplex.to_re_and_im, CartesianComplex.to_re_and_im), (PolarComplex.multiply, CartesianComplex.multiply)}. 
+{((x,y),(x, y)) |x,y real numbers}. {({(r,.)}k,{(r cos ., r sin.)}k') |r =0} The .rst part is the modules 
+themselves. The second part is the individual elements of the modules. The third is arguments of from_re_and_im 
+as well as results of to_re_and_im. The last is the representations of complex numbers sealed under k 
+or k', where {}denotes sealing. From the soundness of bisimulation, we obtain the contextual equivalence 
+of the two modules. Furthermore, our bisimulation is complete: if two programs are contextually equivalent, 
+then there always exists a bisimulation between them. This means that (at least in theory) we can use 
+bisimulation to prove any valid contex­tual equivalence. Contribution The main contribution of this 
+work is a sound and complete bisimu­lation proof method for contextual equivalence in an untyped func­tional 
+language with dynamic sealing. Along the way, we are led to re.ne the usual contextual equivalence to 
+account for the vari­ations in observing power induced by the context s knowledge (or ignorance) of the 
+seals used in observed terms. Parts of our theory are analogous to bisimulation techniques de­veloped 
+for the spi-calculus [1, 2, 5, 6]. However, our bisimulation is technically simpler and thus more suitable 
+for reasoning about dynamic sealing for data abstraction in sequential languages. Fur­thermore, our setting 
+requires us to extend even the de.nition of contextual equivalence in a natural but signi.cant way, as 
+discussed in Section 3. Structure of the paper The rest of this paper is structured as follows. Section 
+2 formal­izes the syntax and the semantics of our language, .seal. Sec­tion 3 de.nes a suitable notion 
+of contextual equivalence. Sec­tion 4 presents our bisimulation and gives several examples, includ­ing 
+the complex number packages discussed above and an encoding of the Needham-Schroeder-Lowe key exchange 
+protocol. Section 5 proves soundness and completeness of the bisimulation with re­spect to contextual 
+equivalence. Section 7 discusses related work, and Section 8 sketches future work. d,e ::= term x variable 
+.x.e function e1 e2 application c constant op(e1,...,en) primitive if e1 then e2 else e3 conditional 
+branch (e1,...,en) tupling #i(e) projection k seal .x.e fresh seal generation {e1}e2 sealing let {x}= 
+e2 in e3 else e4 unsealing e1 u,v,w ::= value .x.e function c constant (v1,...,vn) tuple k seal {v}sealed 
+value k Figure 1. Syntax of .seal Notation Throughout the paper, we use overbars as shorthands for sequences 
+e.g., we write x and ( v, v) instead of x1,...,xn and (v1,v1'),...,(vn,v') where n =0. Similarly, {k 
+}is a shorthand for nthe set {k1,...,kn}where ki= kj for any i and j. When s and t are sets, s t is de.ned 
+to be s .t if s nt = 0/, and unde.ned otherwise. 2 Syntax and Semantics .seal is the standard untyped, 
+call-by-value .-calculus extended with sealing. Its syntax is given in Figure 1. Seal k is an element 
+of the countably in.nite set K of all seals. We use meta-variables s and t for .nite subsets of K . Fresh 
+seal generation .x.e generates a fresh seal k, binds it to x and evaluates e. The meaning of freshness 
+will soon be clari.ed below. Sealing {e1}evaluates e1 to value e2 v and e2 to seal k, and seals v under 
+k. Unsealing let {x}= e1 e2 in e3 else e4 evaluates e1 to seal k1 and e2 to sealed value {v}.If k1 = 
+k2, the unsealing succeeds and e3 is evaluated with x k2 bound to v. Otherwise, the unsealing fails and 
+e4 is evaluated. The calculus is also parametrized by .rst-order constants and prim­itives such as real 
+numbers and their arithmetics. We use in.x no­tations for binary primitives like e1 + e2. We assume that 
+constants include booleans true and false. We also assume that op includes the equality = for constants. 
+We adopt the standard notion of variable binding and write FV(e) for the set of free variables in e. 
+We also write Seals(e) for the set of seals that appear in term e. We write let x = e1 in e2 for (.x.e2)e1. 
+We also write .for (.x.xx)(.x.xx) and .{x}k.e for .y.let {x}= y in e else . k where y .FV(e). Furthermore, 
+we write .(x,y).e for .z.let x = #1(z) in let y = #2(z) in e where z .FV(e). We use similar no­tations 
+of pattern matching throughout the paper. The semantics of .seal is given in Figure 2 by big-step evaluation 
+(s)e .(t)v annotated with the set s of seals before the evaluation and the set t of seals after the evaluation. 
+It is parametrized by the meaning [[op(c1,...,cn)]] of primitives. For example, [[1.23 + 4.56]] = 5.79. 
+For simplicity, we adopt the left-to-right evaluation order. As usual, substitutions [e/x] avoid capturing 
+free variables by implicit a-conversion. The meaning of freshness is formalized by requiring k. s in 
+(E-New). We write (s)e .if (s)e .(t)v for some t and v. Because of fresh seal generation, our evaluation 
+is not quite de­terministic. For instance, we have both (0/).x.x .({k1})k1 and (0/).x.x .({k2})k2 for 
+k1= k2. Nevertheless, we have the follow­ing property: Property 2.1. Evaluation is deterministic modulo 
+the names of freshly generated seals. That is, for any (s)e .(t)v and (s)e . '(t')v', we have v =[k/x]e0 
+and v' =[k/x]e0 for some e0 with Seals(e0) .s, some k with {k}.t \s, and some k'with {k'}.t'\s. PROOF. 
+Straightforward induction on the derivation of (s)e . (t)v. In what follows, we implicitly use the following 
+properties of eval­uation without explicitly referring to them.   Property 2.2. Every value evaluates 
+only to itself. That is, for any s and v with s .Seals(v), we have (s)v .(s)v. Furthermore, if (s)v .(t)w, 
+then t = s and w = v. PROOF. Straightforward induction on the syntax of values. Property 2.3. Evaluation 
+never decreases the seal set. That is, for any (s)e .(t)v, we have s .t. PROOF. Straightforward induction 
+on the derivation of (s)e . (t)v.  3 Contextual Equivalence In standard untyped .-calculus, contextual 
+equivalence for closed values1 can be de.ned by saying that v and v' are contextually equivalent if [v/x]e 
+... [v'/x]e .for any term e.In .seal, however, contextual equivalence cannot be de.ned for two values 
+in isolation. For instance, consider .{x}k.x + 1 and .{x}k'.x + 2. Whether these values are equivalent 
+or not depends on what val­ues sealed under k or k' are known to the context. If the origi­nal terms 
+which created k and k' were .z.({2}z,.{x}z.x + 1) and .z.({1}z,.{x}z.x+2), for example, then the only 
+values sealed un­der k or k' are 2 and 1, respectively. Thus, the equivalence above does hold. On the 
+other hand, it does not hold if the terms were, say, .z.({3}z,.{x}z.x + 1) and .z.({4}z,.{x}z.x + 2). 
+This ob­servation that we have to consider multiple pairs of values at once leads to the following de.nition 
+of contextual equivalence. De.nition 3.1. A value relation R is a set of pairs of values. De.nition 3.2. 
+The contextual equivalence =is the largest rela­ tion among seal sets s and s' and value relations R 
+, such that for ' any (s,s,R ) .=and for any (v,'v) .R , we have the following properties. ' 1. Seals(v) 
+.s and Seals('v) .s. 1For the sake of simplicity, we focus on equivalence of closed values (as opposed 
+to open expressions) in this paper. For open expressions e and e'with free variables x1,...,xn, it suf.ces 
+to con­sider the equivalence of .x1.....xn.e and .x1.....xn.e'instead.  Seals(e) .s (s)e1 .(s1).x.e 
+(s1)e2 .(s2)v (s2)[v/x]e .(t)w (E-Lam) (E-App) (s).x.e .(s).x.e (s)e1 e2 .(t)w (s)e1 .(s1)c1 ... (sn-1)en 
+.(sn)cn [[op(c1,...,cn)]] = c (E-Const) (E-Prim) (s)c .(s)c (s)op(e1,...,en) .(sn)c (s)e1 .(s1)true 
+(s1)e2 .(t)v (s)e1 .(s1)false (s1)e3 .(t)v (E-Cond-True) (E-Cond-False) (s)if e1 then e2 else e3 .(t)v 
+(s)if e1 then e2 else e3 .(t)v (s)e1 .(s1)v1 ... (sn-1)en .(sn)vn (s)e .(t)(v1,...,vn) 1 =i =n (E-Tuple) 
+(E-Proj) (s)(e1,...,en) .(sn)(v1,...,vn) (s)#i(e) .(t)vi k .s (s {k})[k/x]e .(t)v (s)e1 .(s1)v (s1)e2 
+.(s2)k (E-Seal) (E-New) (E-Do-Seal) (s)k .(s)k (s).x.e .(t)v (s){e1}.(s2){v}k e2 (s)e1 .(s1)k (s1)e2 
+.(s2){v}k (s2)[v/x]e3 .(t)w (E-Unseal-Succ) (s)let {x}= e2 in e3 else e4 .(t)w e1 (s)e1 .(s1)k1 (s1)e2 
+.(s2){v}k2 k1 = k2 (s2)e4 .(t)w (E-Unseal-Fail) (s)let {x}= e2 in e3 else e4 .(t)w e1 Figure 2. Semantics 
+of .seal '' 2. (s)[v/x]e ...(s )[v /x]e .for any e with Seals(e)= 0/. ''' '' We write (s)v1,...,vn =(s 
+)v1,...,v for (s,s ,{(v1,v1),..., n ' (vn,v )}) .=. In order to lighten the notation, we do not en­ n 
+'' close these v1,...,vn and v1,...,v in parentheses. We also write n ''' (s)v =R (s )v ' when (v,v ) 
+.R and (s,s ,R ) .=. Intuitively, it ' can be read as value v with seal set s and value v ' with seal 
+set s are contextually equivalent under contexts knowledge R . Note that no generality is lost by requiring 
+Seals(e)= 0/ in the def­inition above: if e needs its own seals, it can freshly generate an arbitrary 
+number of them by using .;if e knows some of the seals k ' ' ' in s and k in s , it suf.ces to require 
+(k,k ) .R . Thus, our contex­tual equivalence subsumes standard contextual equivalence where a context 
+knows none, all, or part of the seals (or, more generally, values involving the seals). Example 3.3. 
+Let s = {k} and s ' = {k '}. We have (s){2}k = ' (s ){1}k' since the context has no means to unseal the 
+values sealed under k or k '. (A formal proof of this claim based on bisimulation ' will be given later.) 
+We also have (s).{x}k .x+1 =(s ).{x}k' .x+2 'since the context cannot make up any values sealed under 
+k or k . Furthermore, we have ' (s){2}k,.{x}k.x + 1 =(s ){1}k' ,.{x}k' .x + 2 because applications of 
+the functions to the sealed values yield the same integer 3. Similarly, ' (s){4}k,.{x}k.x + 1 =(s ){5}k' 
+,.{x}k' .x holds. However, (s){2}k ,.{x}k.x + 1,{4}k,.{x}k.x + 1 ' =(s ){1}k' ,.{x}k' .x + 2,{5}k' ,.{x}k' 
+.x does not hold, because applications of the last functions to the .rst sealed values yield different 
+integers 3 and 1. '' As the last example shows, even if (s,s ,R1) .=and (s,s ,R2) .=, ' we do not always 
+have (s,s ,R1 .R2) .=. Intuitively, this means that we should not confuse two worlds where the uses of 
+seals are different. This is the reason why we de.ned =as a set of triples '' (s,s ,R ) rather than just 
+a function that takes a pair (s,s ) of seal sets and returns the largest set R of pairs of equivalent 
+values. Conversely, again as the examples above suggest, there are cases '' where (s,s ,R1) .= and (s,s 
+,R2) .= for R1 .R2. This im­plies that there is a partial order among the value relations R in contextual 
+equivalence. We could alternatively de.ne contextual equivalence only with such value relations that 
+are maximal in this ordering, but this would just complicate the technicalities that fol­low. We will 
+use the following lemmas about contextual equivalence in what follows. Lemma 3.4. Application, projection, 
+fresh seal generation, and unsealing preserve contextual equivalence. That is: ''' 1. For any (u,u ) 
+.R and (v,v ) .R with (s,s ,R ) .=,if ''' ' (s)uv .(t)w and (s)uv .(t)w , then (t,t ' ,R .{(w,w )}) . 
+=. '' ' 2. For any ((v1,...,vn),(v1,...,v )) .R with (s,s ,R ) .=,we n '' have (s,s ,R .{(vi,vi)}) .=for 
+any 1 =i =n. ' ' 3. For any (s,s ,R ) .=, we have (s {k},s {k '},R ' {(k,k ')}) .=for any k .s and k 
+'.s . ' ' 4. For any ({v}k,{v }k') .R and (k,k ') .R with (s,s ,R ) .=, '' we have (s,s ,R .{(v,v )}) 
+.=. PROOF. Take e as let z = xy in e0, let y = #i(x) in e0, .x.e0, ' and let {z}x = y in e0, respectively, 
+in the de.nition of (s,s ,R ) . =. Lemma 3.5. Contextually equivalent values put in the same value context 
+yield contextually equivalent values. That is, for any '' ' = ' '' (s,s ,R ) .=and (v,v ) .R , and for 
+any w =[v/x]e0 and w [v /x]e0 with Seals(e0)= 0/,wehave (s,s ,R .{(w,w )}) .=. PROOF. Immediate from 
+the de.nition of contextual equivalence, using the property of substitution that [[ v/ x]e0/x]e =[v / 
+x]([e0/x]e) when { x}n FV(e)= 0/. Lemma 3.6. Any subset of contextually equivalent values are con­ ' 
+textually equivalent. That is, for any (s,s ,R ) .=, we have ' (s,s ,S) .= for any S . R . PROOF. Immediate 
+from the de.nition of contextual equiva­lence.  4 Bisimulation Giving a direct proof of contextual equivalence 
+is generally dif.­cult, because the de.nition involves universal quanti.cation over an in.nite number 
+of contexts. Thus, we want a more convenient tool for proving contextual equivalence. For this purpose, 
+we de.ne the notion of bisimulation as follows. De.nition 4.1. A bisimulation X is a relation among seal 
+sets s and '' s and value relations R such that every (s,s ,R ) . X satis.es the following conditions. 
+' 1. For each (v,v ') . R , we have Seals(v) . s and Seals(v ') . s . ' 2. For each (v,v ') . R , v and 
+v are of the same kind. That is, both are functions, both are constants, both are tuples, both are seals, 
+or both are sealed values. ' 3. For each (c,c ') . R , we have c = c . '' ' 4. For each ((v1,...,vn),(v1,...,vn 
+' )) . R , we have n = n and '' (s,s ,R .{(vi,vi)}) . X for every 1 = i = n. 5. For each (k1,k1' ) . 
+R and (k2,k2' ) . R ,wehave k1 = k2 .. k1 ' = k2' . 6. For each ({v}k,{v '}k' ) . R , we have either 
+(k,k ') . R and '  (s,s ,R .{(v,v ')}) . X, or else (k,k '') . R and (k '' ,k ') . R for every k '' 
+. ' ' 7. Take any (.x.e,.x.e ) . R . Take also any k and k with s n ' {k } = s 'n{ k } = 0/. Moreover, 
+let v =[ u/ x]d and v ' =[u ' /x ]d ' for any (u, u ') . R {(k,k )} and Seals (d)= 0/. Then, we ' ' 
+have (s {k})( .x.e)v ...(s {k })(.x.e ')v '.. Further­' ' ' more, if (s {k})(.x.e) v .(t)w and (s {k 
+})(.x.e ')v . ' (t ')w ', then (t,t ' ,R {(k,k )}.{(w,w ')}) . X. ' For any bisimulation X, we write 
+(s)vXR (s ')v when (v,v ') . R '' and (s,s ,R ) . X. This can be read values v and v with seal sets s 
+' and s are bisimilar under contexts knowledge R . The intuitions behind the de.nition of bisimulation 
+are as follows. Each of the conditions excludes pairs of values that are distin­guishable by a context 
+(except for Condition 1, which just re­stricts the scoping of seals). Condition 2 excludes pairs of val­ues 
+of different kinds, e.g., 123 and .x.x. Condition 3 excludes pairs of different constants. Condition 
+4 excludes pairs of tuples with distinguishable elements. Condition 5 excludes cases such as (k,k ') 
+. R and (k,k '') . R with k ' = k '', for which contexts like let {x}y = {()}z in x else . can distinguish 
+the left-hand side (setting y = z = k) and the right-hand side (setting y = k ' and z = k ''). Condition 
+6 excludes cases where (i) the context can un­seal both of two sealed values whose contents are distinguishable, 
+or (ii) the context can unseal only one of the two sealed values. Condition 7, the most interesting one, 
+is about what a context can do to distinguish two functions. Obviously, this will involve ap­plying them 
+to some arguments but what arguments? Certainly not arbitrary terms, because in general a context has 
+only a par­ ' tial knowledge of (values involving) the seals in s and s . All that a context can do for 
+making up the arguments is to carry out some computation d using values u and u ' from its knowledge. 
+Therefore, the arguments have forms [ u/ x]d and [ u ' /x ]d. An important and perhaps surprising point 
+here is that it actually suf.ces to consider cases where these arguments are values. This restriction 
+is useful and even crucial for proving bisimulation of functions: if the arguments [ u/ x]d and [ u ' 
+/x ]d were not values, we should evaluate them before applying the functions; in particular, if evaluation 
+of one argument converges, then evaluation of the other argument must converge as well; proving this 
+property amounts to proving the contextual equivalence of u and u ', which was the whole purpose of our 
+bisimulation! Fortunately, our restriction of the arguments to values can be jus­ti.ed by the fundamental 
+property proved in the next section, which says that the special forms [ u/ x]d and [ u ' /x ]d are preserved 
+by evaluation. The only change required as a result of this restric­ ' tion is the addition of {(k,k 
+)} to knowledge R in Condition 7: it compensates for the fact that d can no longer be a fresh seal gen­eration, 
+while the context can still generate its own fresh seals k ' and k when making up the arguments. Without 
+such a change, our bisimulation would indeed be unsound: a counter-example would be (0/,0/,{(.x.{true}x,.x.{false}x)}), 
+for which contexts like .y.let {z}y =[]y in if z then () else . can distinguish the two functions. ' 
+The rest of Condition 7 is straightforward: the results w and w of function application should also be 
+bisimilar. ' Example 4.2. Let s = {k}, s = {k '}, and R = {({2}k,{1}k' )}. ' Then {(s,s ,R )} is a bisimulation, 
+as can be seen by a straightfor­ward check of the conditions above. Example 4.3. Let s = {k1,k2}, s ' 
+= {k '}, and R = {(({2}k1 ,{4}k' ),({1}k2 ,{5}k' )), ({2}k1 ,{1}k' ), ({4}k2 ,{5}k' )}. ' Then {(s,s 
+,R )} is a bisimulation. This example illustrates the fact that the number of seals may differ in the 
+left-hand side and in the right-hand side of bisimulation. Note that the closure con­dition (Condition 
+4) in the de.nition of bisimulation demands that we include not only the original pairs, but also their 
+corresponding components. Example 4.4. Suppose we want to show that the pair ({2}k,.{x}k.x + 1) is bisimilar 
+to ({1}k' ,.{x}k' .x + 2)), as­suming that seals k and k ' are not known to the context. Again, the closure 
+conditions in the de.nition force us to include the corresponding components of the pairs (Condition 
+4), as well as the results of evaluating the second components applied to the .rst components (Condition 
+7); moreover, since Condition 7 allows the context to enrich the set of seals with arbitrary seals of 
+its own, our bisimulation will consist of an in.nite collection of similar sets, differing in the context 
+s choice of seals. Formally, let G be the following function on sets of pairs of seals: G{(k0,k0)} = 
+{(({2}k, .{x}k.x + 1), ({1}k', .{x}k'.x + 2)), ({2}k, {1}k'), (.{x}k.x + 1, .{x}k' .x + 2), (3 , 3 )} 
+' .{(k0, k0)} Then '' ' X = {({k,k 0}, {k ' ,k 0}, G{(k0,k0)}) |k .{k 0}.k '.{k 0}} is a bisimulation. 
+The only non-trivial work required to show this is checking Condition 7 for the pair  (.{x} k.x + 1, 
+.{x}k ' .x + 2) . '' ' G{(k0,k0)}, for each k0 and k0 with k .{k0}and k '.{k0}. ' Consider any v =[ u/ 
+x]d and v =[u ' /x ]d with (u , u ') . '' ' G {(k 0,k0)}{(k1,k 1)}and Seals(d)= {k, k0}n{k 1}= {k ' ,k 
+0}n' ' {k1}= 0/. If the evaluations of (.{x}k.x + 1)v and (.{x}k' .x + 2)v diverge, then the condition 
+holds. Let us focus on cases where the evaluation of (.{x}k.x + 1)v con­verges (without loss of generality, 
+thanks to symmetry), that is, where v is of the form {w}k. Then, either d is of the form {d0}xi and ui 
+= k, or else d is a variable xi and ui = {w}k. However, the former  ' case is impossible: k is not 
+in the .rst projection of G{(k0,k0)} or ' {(k1,k1)}by their de.nitions. So we must be in the latter case. 
+Since the only element of the form  {w}k in the .rst projection of '' G{(k0,k0)}{(k1,k1)} is {2}k where 
+the corresponding element ' in its second projection is {1}k', we have v = {2}k and v = {1}k'. ' Then, 
+the only evaluations of (.{x}k.x + 1)v and (.{x}k' .x + 2)v are ({k,k0}{k1})(.{x}k.x + 1)v .({k,k0,k1})3 
+and '' '' ' ({k ' ,k 0}{k1})(.{x}k' .x + 2)v .({k ' ,k 0,k1})3. Thus, the condition follows from '' '' 
+1)} and ({k,k0,k1},{k ' ,k0,k1},G{(k0,k0),(k1,k1)}) .X. Example 4.5 (Complex Numbers). Now let us show 
+a bisimula­tion relating the two implementations of complex numbers in Sec­tion 1. First, let v =(.(x,y). 
+{(x + 0.0,y + 0.0)}k , .{(x,y)}k .(x,y), .({(x1,y1)}k,{(x2,y2)}k). {(x1 ×x2 -y1 ×y2,x1 ×y2 + y1 ×x2)}k 
+' v =(.(x,y).{(sqrt(x ×x + y ×y),atan2(y,x))}k' , .{(r,.)}k' .(r ×cos .,r ×sin .), .({(r1,.1)}k' ,{(r2,.2)}k').{(r1 
+×r2,.1 + .2)}k'). The .rst component of each triple corresponds to the from_re_and_im functions in 1. 
+The implementation in v just seals the x and y coordinates provided as arguments, after checking that 
+they are indeed real numbers by attempting to add ' them to 0.0. The implementation in v performs an 
+appropriate change of representation before sealing. The second components correspond to the to_re_and_im 
+functions in 1, and the third components to the multiply functions.  The construction of the bisimulation 
+follows the same pattern as Example 4.4, except that the operator G is more interesting: G{(k0,k0)}= 
+{(v,v ')} .{(.(x,y).{(x + 0.0,y + 0.0)}k , .(x,y).{(sqrt(x ×x + y ×y),atan2(y,x))}k'), (.{(x,y)}k .(x,y), 
+.{(r,.)}k' .(r ×cos .,r ×sin .)), (.({(x1,y1)}k,{(x2,y2)}k). {(x1 ×x2 -y1 ×y2,x1 ×y2 + y1 ×x2)}k, .({(r1,.1)}k' 
+,{(r2,.2)}k').{(r1 ×r2,.1 + .2)}k')}.{((x,y),(x, y)) |x and y are arbitrary real numbers}.{({ (r cos 
+., r sin.)}k,{(r,.)}k') |r =0} ' .{(k0,k0)} Example 4.6 (Applicative vs. Generative Functors). In this 
+ex­ample, we use bisimulation to show the equivalence of two instan­tiations of a generative functor, 
+where generativity is modeled by fresh seal generation and the equivalence really depends on the gen­erativity. 
+A functor is a parameterized module a function from modules to modules. For example, a module implementing 
+sets by binary trees can be parameterized by the type of elements and their comparison function. In the 
+same imaginary ML-like language as in Section 1, such a functor might be written as follows: functor 
+Set(module Element : sig type t val less_than : t -> t -> bool end) = type elt = Element.t abstype set 
+= Element.t tree let empty : set = Leaf let rec add : elt -> set -> set = fun x -> <check that x has 
+type elt>; fun Leaf -> Node(x, Leaf, Leaf) | Node(y, l, r) -> if Element.less_than x y then Node(y, 
+add x l, r) else if Element.less_than y x then Node(y, l, add x r) else Node(y, l, r) let rec is_elt_of 
+: elt -> set -> bool = fun x -> fun Leaf -> false | Node(y, l, r) -> if Element.less_than x y then is_elt_of 
+x l else if Element.less_than y x then is_elt_of x r else true end Now, consider the following three 
+applications of this functor: module IntSet1 = Set(module Element = type t = int let less_than : t -> 
+t -> bool = funx-> funy-> (x<int y) end) module IntSet2 = Set(module Element = type t = int let less_than 
+: t -> t -> bool = funx-> funy-> (x<int y) end) module IntSet3 = Set(module Element = type t = int 
+ let less_than : t -> t -> bool = funx-> funy-> (x>int y) end) If the functor Set is applicative, the 
+abstract type IntSet3.set becomes compatible with IntSet1.set and IntSet2.set,even though the comparison 
+function of IntSet3 is not compatible with that of IntSet1 or IntSet2. As a result, (part of) their abstraction 
+as sets of integers is lost: for instance, IntSet2 and IntSet3 are distinguished by a context like C[] 
+= lets= [].add 7 ([].add 3 [].empty) in IntSet1.is_elt_of 7 s while they should be equivalent if considered 
+just as two different implementations of integer sets. This situation can be translated into .seal as 
+follows. First, the applicative functor can be implemented by the following function f , using a standard 
+call-by-value .xed-point operator fix (which is de.nable since the language is untyped). .lt. ({nil}k, 
+fix(.add..(x,{y}k). if lt(x,x) then . else if y = nil then {(x,nil,nil)}k else if lt(x,#1(y)) then {(#1(y),add(x,#2(y)),#3(y))}k 
+else if lt(#1(y),x) then {(#1(y),#2(y),add(x,#3(y)))}k else {y}k), fix(.is elt of. .(x,{y}k). if y = 
+nil then false else if lt(x,#1(y)) then is elt of(x,#2(y)) else if lt(#1(y),x) then is elt of(x,#3(y)) 
+else true)) Next, we translate the three applications of the functor into three applications of f to 
+appropriate comparison functions: ({k}) f (.(x,y).x <int y) .({k})v1 ({k}) f (.(x,y).x <int y) .({k})v2 
+({k}) f (.(x,y).x >int y) .({k})v3 The values v2 and v3 are not contextually equivalent when the con­text 
+knows v1. That is, ({k},{k},{(v1 ,v1),(v2,v3)}) .=. To see this, take e = #3(x)(7, #2(y)(7, #2(y)(3, 
+#1(y)))), setting x = v1, y = v2 in the left hand side and x = v1, y = v3 in the right hand side. Note 
+that v2 and v3 are contextually equivalent if the context knows neither v1, f , nor any other values 
+involving the seal k. That is, ({k},{k},{(v2 ,v3)}) .=. Indeed, the context C[] above uses IntSet1 to 
+distinguish IntSet2 and IntSet3. Our de.nition of contextual equivalence as a set of relations (annotated 
+with seal sets) gives a precise account for such subtle variations of contexts knowledge. On the other 
+hand, if we take the Set functor to be generative, then IntSet2 and IntSet3 are contextually equivalent 
+even if the con­text also knows IntSet1, since all the abstract types are incompat­ible with one another. 
+This case can be modeled in .seal by the following function g, which generates a fresh seal for each 
+applica­tion instead of using the same seal k for all instantiations. .lt..z. ({nil}z, fix(.add..(x,{y}z). 
+...), fix(.is elt of..(x,{y}z)....)) Consider the following three applications of g. (0/)g(.(x,y).x <int 
+y) .({k1})w1 ({k1})g(.(x,y).x <int y) .({k1,k2})w2 ({k1})g(.(x,y).x >int y) .({k1,k3})w3 Now w2 and w3 
+are bisimilar even if the context knows w1. That is, there exists a bisimulation X such that ({k1,k2},{k1,k3},R 
+) . X with {(w1,w1),(w2,w3)}. R . It is straightforward to construct this bisimulation in the same manner 
+as Examples 4.4 and 4.5. Example 4.7. Let us show that .x.(3,x) is bisimilar to itself. This example 
+is technically tricker than previous ones, because arbitrary values provided by the context can appear 
+verbatim within results. These results can again be passed as arguments and thus appear within yet larger 
+results, etc. To achieve the required closure condi­tions, we need to reach a limit of this process. 
+This can be accom­plished by de.ning a bisimulation X inductively. We require (0/,0/,0/) . X as the (trivial) 
+base case. The induction ' rule is as follows. Take any (s,s ,R ) . X.Take any w =[ v/ x] e and ' w =[v 
+' /x ]e with (v ,v ') . R and Seals( e)= 0/.Take any t . s and ' t '. s of the forms {k} and {k }. Let 
+S = {(.x.(3,x),.x.(3,x)), ((3,w),(3,w ')), (3,3), (w,w '), ' (k,k )}. We then require that (t,t ' ,T 
+) . X for any T . S. The bisimulation we want is the least X satisfying these conditions. Intuitively, 
+we have de.ned X so that the conditions of bisimulation Condition 7, in particular are immediately satis­.ed. 
+The .nal technical twist T . S is needed because the clo­sure conditions in the de.nition of bisimulation 
+add individual pairs of elements rather than adding their whole deductive closures at once. Example 4.8 
+(Protocol Encoding). As a .nal illustration of the power of our bisimulation technique (and .seal itself), 
+let us con­sider a more challenging example. This example is an encoding of the protocol below, which 
+is based on the key exchange protocol of Needham, Schroeder, and Lowe [14, 20]. 1. B . A: B 2. A . B: 
+{NA,A}kB 3. B . A: {NA,NB,B}kA 4. A . B: {NB}kB 5. B . A: {i}NB  In this protocol, A is a server 
+accepting requests from good B and evil E. It is supposed to work as follows. (1) B sends its own name 
+B to A. (2) A generates a fresh nonce NA, pair it with its own name A, encrypts the pair with B s public 
+key, and sends it to B. (3) B generates a fresh key NB, tuples it with NA and B, encrypts the tuple with 
+A s public key, and sends it to A. (4) A encrypts NB with B s public key and sends it to B. (5) B encrypts 
+some secret integer i with NB and sends it to A.  The idea of the encoding is as follows. We use sealing, 
+unsealing and fresh seal generation as (perfect) encryption, decryption, and fresh key generation. The 
+whole system is expressed as a tuple of (functions representing) keys known to the attacker and terms 
+U and V representing principals B and A. W =(.x.{x}kA ,.x.{x}kB ,kE ,U,V ) Each principal is encoded 
+as a pair of the last value it sent (if any) and a continuation function waiting to receive a next mes­sage. 
+When the message is received, the function returns the next state of the principal. Communication occurs 
+by a context apply­ing these functions in an appropriate order (when the environment is behaving normally) 
+or perhaps in some strange, arbitrary order (when the environment is under the control of a malicious 
+attacker). Thus, contexts play the role of the network, scheduler, and attack­ers. More details about 
+the encoding including a more detailed justi.cation of the claim that it is a reasonable encoding of 
+the protocol above can be found in previous work [30]. We write assert(e1);e2 as syntactic sugar for 
+if e1 then e2 else .. U =(B, .{(x,y)}kB .assert(y =A); .z.({(x,z,B)}kA , .{z0}kB .assert(z0 =z); {i}z)) 
+V = .x.let kx =(if x =B then kB else if x =E then kE else .)in .y.({(y,A)}kx , .{(y0,z,x0)}kA .assert(y0 
+=y); assert(x0 =x); {z}kx )) Now, take any integers i and j. We prove that the system W above ' (where 
+the secret value sent from B to A is i) and the system W below (where the secret is j) are bisimilar, 
+which means that the protocol keeps i and j secret against attackers. ' U =(B, .{(x,y)}k' .assert(y =A); 
+B .z.({(x,z,B)}k' , A .{z0}k' .assert(z0 =z); B {j}z)) ' V = .x.let kx =(if x =B then kB ' else if x 
+=E then kE ' else .)in .y.({(y,A)}kx , .{(y0,z,x0)}k' .assert(y0 =y); A assert(x0 =x); {z}kx )) '' W 
+=(.x.{x}k' ,.x.{x}k' ,kE ' ,U ,V ') AB The construction of the bisimulation X is by induction, following 
+the same basic pattern as Example 4.7. The base case is (0/,0/,0/). ' X. The induction rule is as follows. 
+Take any (s,s ,R ).X. Take any w =[v/x]e and w ' =[v ' /x]e with (v,v ').R and Seals(e)=0/. Take any 
+t .s and t '.s ' of the forms {kA,kB,kE ,kAB,kAE ,kB,k} '' '' ' and {kA' ,kB' ,kE ' ,kAB,kAE ,kB,k }. 
+Then, (t,t ,T ).X for any subset T of the set S given in Figure 3. It is routine to check the conditions 
+of bisimulation for this X. It is well known that the secrecy property does not hold for the original 
+version of this protocol (i.e., without Lowe s .x), in which the third message is {NA,NB}kA instead of 
+{NA,NB,B}kA (i.e., the B is missing). This .aw is mirrored in our setting as well: if we tried to construct 
+a bisimulation for this version in the same way as above, it would fail to be a bisimulation for the 
+following reason. Since we would have ' ' ({(w,kB)}kA ,{(w ,kB)}k' ).S A instead of ' ' ({(w,kB,B)}kA 
+,{(w ,kB,B)}k' ).S A ' along with (kAE ,kAE ) . S, we would have ({(kAE ,kB)}kA , '' ' ' {(kAE ,kB)}k' 
+).S by taking w =kAE and w =kAE in the de.- A nition of X above. Since we would have (.{(y0,z)}kA .assert(y0 
+=kAE );{z}kE , ' .{(y0,z)}k' .assert(y0 =kAE );{z}k' ).S AE as well instead of (.{(y0,z,x0)}kA .assert(y0 
+=kAE );assert(x0 =E);{z}kE , ' .{(y0,z,x0)}k' .assert(y0 =kAE );assert(x0 =E);{z}k' ).S AE ' we should 
+also have ({kB}kE ,{kB}k' ).S by applying these func- E tions to the previous ciphertexts, according 
+the condition of bisim­ulation for functions (Condition 7). Furthermore, since (kE ,kE ' ). ' S, we would 
+need (kB,kB). S as well, according to the condi­tion of bisimulation for sealed values (Condition 6). 
+Then, since ({i}k B ,{j} ' ).S, we should require (i, j).S. This contradicts k B with the condition of 
+bisimulation for constants (Condition 3) if i = j. Observe how the same attack is prevented in the .xed 
+ver­sion of this protocol: the assertion assert(x0 =E)fails since x0 is bound to B.  5 Soundness and 
+Completeness Bisimilarity, written ~, is the largest bisimulation. It exists because the union of two 
+bisimulations is always a bisimulation. We will need several simple lemmas about bisimulation in the 
+development that follows. Lemma 5.1 (Monotonicity). Take any bisimulation X. For any ' (s,s ,R ).X and 
+(t,t ' ,S).X with R .S,if (s)vXR (s ')v ', then ' (t)vXS (t ')v . ' PROOF. Immediate from the de.nitions 
+of (s)vXR (s ')v and ' (t)vXS (t ')v . Lemma 5.2 (Addition of Constants). Take any bisimulation X '' 
+and (s,s ,R ).X. Then, X .{(s, s ,R .{(c, c)})} is a bisimula­tion for any constant c. PROOF. Straightforward 
+by checking the conditions of bisimula­tion. Lemma 5.3 (Addition of Fresh Seals). Take any bisimulation 
+X '' and (s,s ,R ).X. Then, X .{(s {k},s {k '},R {(k, k ')})}' is a bisimulation for any k .s and k '.s 
+. PROOF. Straightforward by checking the conditions of bisimula­tion. We want to show that the bisimilarity 
+~coincides with the contex­tual equivalence =. Since we de.ned ~ by co-induction, the easy direction 
+is showing that contextual equivalence implies bisimilar­ity. Lemma 5.4 (Completeness of Bisimilarity). 
+=.~. PROOF. Since ~is the greatest bisimulation, it suf.ces to check that =is a bisimulation, which is 
+routine using the lemmas about contextual equivalence. Next, we need to prove soundness, i.e., that bisimilarity 
+implies contextual equivalence. For this purpose, we de.ne the following relation. De.nition 5.5 (Bisimilarity 
+in Context). We de.ne ~ =as '' ' {(s,s ,R ,[v / x]e0,[v /x ]e0)|(s)v ~R (s )v '.Seals(e0)=0/} ' '' where 
+(s) v ~R (s )v ' is a shorthand for (s)v1 ~R (s )v1 ..... '' (s)vn ~R (s )vn. ' '' We write (s)e ~(s 
+)e ' for (s,s ,R ,e,e ). ~. The intuition of this de.nition is: ~ =R = =relates bisimilar values v and 
+v ' put in context e0. The two lemmas below are the key properties of our bisimulation. The .rst states 
+that evaluation preserves ~=, the second that ~ =im­plies observational equivalence (i.e., if evaluation 
+of one expression converges, then evaluation of the other expression also converges). Lemma 5.6 (Fundamental 
+Property, Part I). Suppose '' ''' (s0)e ~ (s0)e . If (and (s0)e .(t ')w , then =s0)e .(t)w R0 ' (t)w 
+~ =R (t ')w for some R .R0. PROOF. See the full version [31]. ~ Lemma 5.7 (Fundamental Property, Part 
+II). If (s0)e = R0 '' '' (s0)e , then (s0)e ... (s0)e .. PROOF. See the full version [31]. An immediate 
+consequence of the previous property is that bisimu­lation implies contextual equivalence. Corollary 
+5.8 (Soundness of Bisimilarity). ~.=. PROOF. By the de.nitions of =and ~ =with Lemma 5.7. Combining soundness 
+and completeness, we obtain the main the­orem about our bisimulation: that bisimilarity coincides with 
+con­textual equivalence. Theorem 5.9. ~==. PROOF. By Lemma 5.4 and Corollary 5.8.  6 Extension with 
+Equality for Sealed Values A number of variants of .seal can be considered. For example, the version 
+of .seal in this paper does not allow a context to test two sealed values for equality. This is reasonable 
+if the environ­ment is a safe runtime system (where sealing can be implemented just by tagging) which 
+disallows comparison of sealed values. It is unrealistic, however, to expect such a restriction in an 
+arbitrary (perhaps hostile) environment, where sealing must be implemented by encryption. Fortunately, 
+our technique is extends directly to such a modest change as adding equality for sealed values. For instance, 
+it is straightforward to extend .seal with syntactic equal­ity =1 for .rst-order values (including sealed 
+values) along with '' an additional condition of bisimulation: v1 =1 v2 .. v1 =1 v2 for '' every (v1,v1).R 
+and (v2,v2).R . Then, it is also straightforward to prove the soundness and completeness of bisimilarity 
+under this extension, with an additional lemma that ~1 (which can =respects =be proved by induction on 
+the syntax of values being compared). Of course, the more observations we allow, the more dif.cult it 
+be­comes to establish the equivalence of two given modules. For ex­ample, the two implementations of 
+complex numbers given in the introduction are no longer equivalent (or bisimilar) under the exten­sion 
+above, because there are many polar representations of 0 +0i while there is only one cartesian representation. 
+So, for example, a context like C[] = let x = [].from_re_and_im(0.0, 0.0) in let y = [].from_re_and_im(-1.0, 
+0.0) in x =1 [].multiply x y would distinguish CartesianComplex and PolarComplex. To re­cover the equivalence, 
+the polar representation of 0 +0i must be standarized and checks inserted wherever it can be created: 
+let from_re_and_im = fun (x, y) -> let z = if x = 0.0 &#38;&#38; y = 0.0 then (0.0, 0.0) else (sqrt(x 
+* x+y* y), atan2(y, x)) in <seal z under k> let multiply = fun (z1, z2) -> let (r1, t1) = <unseal 
+z1 under k> in let (r2, t2) = <unseal z2 under k> in let z = if r1 = 0.0 || r2 = 0.0 then (0.0, 0.0) 
+else (r1 * r2, t1 + t2) in <seal z under k>  7 Related Work As discussed in the introduction, sealing 
+was .rst proposed by Mor­ris [18, 19] and has been revisited in more recent work on extending the scope 
+(in both informal and technical senses) of type abstrac­tion in various forms [7, 12, 26, 28]. Bisimulations 
+have been studied extensively in process calculi. In particular, bisimulations for the spi-calculus [1, 
+2, 5, 6] are the most relevant to this work, because the perfect encryption in spi-calculus is very similar 
+to dynamic sealing in our calculus. Our bisimulation is analogous to bisimulations for spi-calculus in 
+that both keep track of the environment s knowledge. However, since processes and terms are different 
+entities in spi-calculus, all the technicalities i.e., de.nitions and proofs must be developed separately 
+for pro­cesses and terms. By contrast, our bisimulation is monolithic and more straightforward. Furthermore, 
+it is possible even to encode and verify some (though not all) security protocols in our frame­work. 
+The encoding naturally models the concurrency among prin­cipals and attackers (including so-called necessarily 
+parallel at­tacks) by means of interleaving. Thanks to higher-order functions, we can also imitate public-key 
+encryption without extending the calculus. See our previous work [30] for further discussion about this 
+encoding of security protocols. Another line of work on bisimulations in process calculi con­cerns techniques 
+for lightening the burden of constructing a bisimulation e.g., Milner and Sangiorgi s bisimulation up 
+to [27]. It remains to be seen whether these techniques would be use­ful in our setting. Note that our 
+operational semantics is built upon big-step evaluation (as opposed to small-step reduction) in the .rst 
+place, which cuts down the intermediate terms and reduces the size of a bisimulation. Abramsky [4] studied 
+applicative bisimulation for the .-calculus. For functions .x.e and .x.e ' to be bisimilar, it requires 
+that (.x.e)d and (.x.e ')d are observationally equivalent for any closed d, and that they evaluate to 
+bisimilar values if the evaluations converge. Thus, it requires the two arguments to be the same, which 
+actually makes the soundness proof harder [9]. We avoided this problem by allowing some difference between 
+the arguments of functions in our bisimulation. Jeffrey and Rathke [10] de.ned bisimulation for .-calculus 
+with name generation, of which our seal generation is an instance. Al­though their theory does distinguish 
+private and public names, it lacks a proper mechanism to keep track of contexts knowledge of name-involving 
+values in general, such as functions containing names inside the bodies. As a result, they had to introduce 
+addi­tional language constructs such as global references [10] or com­munication channels [11] for the 
+bisimulation to be sound. We solved this problem by using a set of relations (rather than a sin­gle relation) 
+between values as a bisimulation, i.e., by considering multiple pairs of values at once. A well-known 
+method of proving the abstraction obtained by type abstraction is logical relations [15, 25]. Although 
+they are tradi­tionally de.ned on denotational models, they have recently been studied in the syntactic 
+setting of term models as well [22, 23]. In previous work [30], we have de.ned syntactic logical relations 
+for perfect encryption and used them to prove secrecy properties of se­curity protocols. Although logical 
+relations are analogous to bisim­ulations in that both relate corresponding values between two dif­ferent 
+programs, logical relations are de.ned by induction on types and cannot be applied in untyped settings. 
+Moreover, logical rela­tions in more sophisticated settings (such as recursive functions and recursive 
+types) than simply typed .-calculus tend to become rather complicated. Indeed, keys encrypting keys (as 
+in security proto­cols) required non-trivial extension in the logical relations above, while they imposed 
+no dif.culty to our bisimulation in this paper. 8 Conclusions We have de.ned a bisimulation for .seal 
+and proved its soundness and completeness with respect to contextual equivalence. There are several directions 
+for future work. One is to apply our bisimulation to more examples, e.g., to prove the full abstraction 
+of our translation of type abstraction into dynamic sealing indeed, this was actually the original motivation 
+for the present work. When the target language is untyped, the translation of source term . M : t can 
+be given as let x =erase(M)in E0/ +(x,t), where E+ is de.ned like Figure 4 along with its dual E- in 
+a type-directed manner. In­tuitively, E+ is a .rewall that protects terms from contexts, where E- is 
+a sandbox that protects contexts from terms. Bisimulation would help proving properties of this translation. 
+We may also be able to use such an interpretation of type abstraction by dynamic sealing as a (both formal 
+and informal) basis for reasoning about type abstraction in broader settings. Another possibility is 
+to de.ne and use bisimulation for other forms of information hiding, such as type abstraction. Our treatment 
+of seals are analogous to the treatment of generative names in general [24, 29], of which abstract types 
+are an instance as soon as they es­cape from their scope (by communication [28], for example). Thus, 
+E. +(x,bool)= x E. +(x,t1 × ...× tn)= let (y1,...,yn)=x in (E. +(y1,t1),...,E. +(yn,tn)) E. +(x,t . 
+s)= .y.let z =xE. -(y,t)in E. +(z,s) E. +(x,.a.t)= .y.let z =x()in E. +(z,t) E. +(x,.a.t)= .z.E.+ ,a(x,t) 
+.z E. +(x,a)= {x}.(a) E. +(x,a)= x if a . Dom(.) E. -(x,bool)= if x then true else false E. -(x,t1 × 
+...× tn)= let (y1,...,yn)=x in (E. -(y1,t1),...,E. -(yn,tn)) E. -(x,t . s)= .y.let z =xE. +(y,t)in E. 
+-(z,s) E. -(x,.a.t)= .y..z.E.- ,a(x,t) .z E. -(x,.a.t)= E. -(x,t) E. -(x,a)= let {y}.(a)=x in y else 
+. E. -(x,a)= x if a . Dom(.) Figure 4. Translation of type abstraction into dynamic sealing it would 
+be possible to de.ne bisimulation for type abstraction in a similar manner to the de.nition of our bisimulation 
+for dynamic sealing. This is interesting because such bisimulation may be com­plete with respect to contextual 
+equivalence as in this work, while it is dif.cult to obtain complete logical relations for type abstraction 
+[22, 23]. Mechanical support for bisimulation proofs is also of natural inter­est. Full automation is 
+hopeless, since general cases subsume the halting problem (i.e., whether the evaluation of a .-expression 
+con­verges or diverges), but many of the conditions of bisimulation are easy to check or satisfy by adding 
+elements to the bisimulation. One challenging point would be the case analysis on function arguments 
+[u/x]d and [u ' /x]d in Condition 7, shown in detail in Example 4.4. Acknowledgements We would like to 
+thank Mart´in Abadi, Andre Scedrov, Naoki Kobayashi, and the members of Programming Language Club at 
+the University of Pennsylvania for suggestions and support throughout the development of this work. 
+9 References <RefA>[1] <SinRef><author>Mart´in Abadi </author>and <author>C´edric Fournet</author>. <title>Mobile values, new names, and secure communication</title>. 
+In <booktitle>Proceedings of the 28th ACM SIGPLAN-SIGACT Symposium on Principles of Program­ming Languages</booktitle>, pages 
+<pages>104 115</pages>, <date>2001</date></SinRef>. [2] <SinRef><author>Mart´in Abadi </author>and <author>Andrew D. Gordon</author>. <title>A bisimulation method for cryptographic protocols</title>. 
+<journal>Nordic Journal of Computing</journal>, <volume>5</volume>:<pages>267 303</pages>, <date>1998</date>. Preliminary version appeared in <booktitle>Program­ming Languages 
+and Systems ESOP 98, 7th European Sym­posium on Programming</booktitle>, Lecture Notes in <booktitle>Computer Science</booktitle>, <publisher>Springer-Verlag</publisher>, 
+vol. <volume>1381</volume>, pages <pages>12 26</pages>, <date>1998</date></SinRef>. [3] <SinRef><author>Mart´in Abadi </author>and <author>Andrew D. Gordon</author>. <title>A calculus for cryp­tographic protocols: 
+The spi calculus. Information and Com­putation</title>, <volume>148(1):</volume><pages>1 70</pages>, <date>1999</date>. Preliminary version appeared in<booktitle> Proceedings 
+of the 4th ACM Conference on Computer and Communications Security</booktitle>, pp. <pages>36 47</pages>, <date>1997</date>. </SinRef>  [4] <SinRef><author>Samson Abramsky</author>. 
+<title>The lazy lambda calculus</title>. In <editor>David A. Turner</editor>, editor, <booktitle>Research Topics in Functional Programming</booktitle>, pages 
+<pages>65 117</pages>. <publisher>Addison Wesley</publisher>, <date>1990</date></SinRef>. [5] <SinRef><author>Michele Boreale</author>, <author>Rocco De Nicola</author>, and <author>Rosario Pugliese</author>. <title>Proof techniques 
+for cryptographic processes. SIAM Jour­nal on Computing</title>, <volume>31(3)</volume>:<pages>947 986</pages>, <date>2002</date>. Preliminary version appeared 
+in <booktitle>14th Annual IEEE Symposium on Logic in Com­puter Science</booktitle>, pp. <pages>157 166</pages>, <date>1999</date>.</SinRef> [6] <SinRef><author>Johannes Borgstr</author>¨<title>om 
+and Uwe Nestmann. On bisimulations for the spi calculus</title>. In <booktitle>9th International Conference on Alge­braic 
+Methodology and Software Technology</booktitle>, volume <volume>2422</volume> of Lecture Notes in Computer Science, pages <pages>287 303</pages>. 
+<publisher>Springer-Verlag</publisher>, <date>2002</date></SinRef>. [7] <SinRef><author>Derek Dreyer</author>, <author>Karl Crary</author>, and <author>Robert Harper</author>. <title>A type sys­tem for higher-order 
+modules</title>. In <booktitle>Proceedings of the 30th ACM SIGPLAN-SIGACT Symposium on Principles of Pro­gramming Languages</booktitle>, 
+pages <pages>236 249</pages>, <date>2003</date></SinRef>. [8] <SinRef><author>Dan Grossman</author>, <author>Greg Morrisett</author>, and <author>Steve Zdancewic</author>. <title>Syn­tactic type abstraction</title>. 
+<journal>ACM Transactions on Programming Languages and Systems</journal>, <volume>22(6)</volume>:<pages>1037 1080</pages>, <date>2000</date></SinRef>. [9] <SinRef><author>Douglas J. </author><title>Howe. Proving 
+congruence of bisimulation in functional programming languages</title>. <journal>Information and Com­putation</journal>, <volume>124(2), </volume>
+<date>1996</date></SinRef>. [10] <SinRef><author>Alan Jeffrey </author>and <author>Julian Rathke</author>. <title>Towards a theory of bisimu­lation for local names</title>. In <booktitle>14th 
+Annual IEEE Symposium on Logic in Computer Science</booktitle>, pages <pages>56 66</pages>, <date>1999</date></SinRef>. [11] <SinRef><author>Alan Jeffrey </author>and <author>Julian Rathke</author>. 
+<title>A theory of bisimulation for a fragment of concurrent ML with local names</title>. <journal>Theoretical Computer Science</journal>, 
+<date>2003</date>. To appear. An extended abstract appeared in <booktitle>15th Annual IEEE Symposium on Logic in Com­puter Science</booktitle>, 
+pp. <pages>311 321</pages>, <date>2000</date></SinRef>. [12] <SinRef><author>James J. Leifer</author>, <author>Gilles Peskine</author>, <author>Peter Sewell</author>, and <author>Keith Wans</author><title>­brough. Global 
+abstraction-safe marshalling with hash types</title>. In <booktitle>Proceedings of the Eighth ACM SIGPLAN International 
+Conference on Functional Programming</booktitle>, pages <pages>87 98</pages>, <date>2003</date></SinRef>. [13] <SinRef><author>Barbara Liskov</author>. <title>A history of CLU</title>. In <booktitle>The 
+Second ACM SIG-PLAN Conference on History of Programming Languages</booktitle>, pages <pages>133 147</pages>, <date>1993</date>.</SinRef> [14] <SinRef><author>Gavin Lowe</author>. 
+<title>An attack on the Needham-Schroeder public­key authentication protocol</title>. <journal>Information Processing Letters</journal>, 
+<volume>56(3):</volume><pages>131 133</pages>, <date>1995</date></SinRef>. [15] <SinRef><author>John C. Mitchell</author>. <title>On the equivalence of data representations</title>. In <booktitle>Arti.cial 
+Intelligence and Mathematical Theory of Compu­tation</booktitle>: Papers in Honor of John McCarthy, pages <pages>305 330</pages>. 
+<publisher>Academic Press</publisher>, <date>1991</date>.</SinRef> [16] <SinRef><author>John C. Mitchell </author>and <author>Gordon D. Plotkin</author>. <title>Abstract types have existential types</title>. 
+<journal>ACM Transactions on Programming Languages and Systems</journal>, <volume>10(3):</volume><pages>470 502</pages>, <date>1988</date>. Preliminary version appeared 
+in Proceedings of the 12th ACM SIGACT-SIGPLAN Symposium on Principles of Programming Lan­guages, pages 
+37 51, 1985</SinRef>. [17] <SinRef><author>James H. </author><author>Morris Jr. </author><title>Lambda-Calculus Models of Program­ming Languages</title>. <note>PhD thesis</note>, <journal>Massachusetts 
+Institute of Tech­nology</journal>, <date>1968</date></SinRef>. [18] <SinRef><author>James H. </author><author>Morris Jr. </author><title>Protection in programming languages. Communications 
+of the ACM</title>, <volume>16(1):</volume><pages>15 21</pages>, <date>1973</date></SinRef>. [19] <SinRef><author>James H</author>. <author>Morris Jr. </author><title>Types are not sets</title>. In <booktitle>Proceedings of the 1st 
+Annual ACM SIGACT-SIGPLAN Symposium on Prin­ciples of Programming Languages,</booktitle> pages <pages>120 124</pages>, <date>1973</date></SinRef>. [20] 
+<SinRef><author>Roger Needham </author>and <author>Michael Schroeder</author>. <title>Using encryption for authentication in large networks of computers</title>. 
+<journal>Communica­tions of the ACM,</journal> <volume>21(12):</volume><pages>993 999</pages>, <date>1978</date></SinRef>. [21]<SinRef> <author>Benjamin Pierce </author>and <author>Eijiro Sumii</author>. <title>Relating cryptography 
+and polymorphism</title>, <date>2000</date>. Manuscript. <url>http://www.yl.is.s. u-tokyo.ac.jp/ sumii/pub/</url>. </SinRef>[22] <SinRef><author>Andrew M. Pitts</author>. 
+<title>Existential types: Logical relations and operational equivalence</title>. In <booktitle>Proceedings of the 25th Inter­national 
+Colloquium on Automata, Languages and Program­ming</booktitle>, volume <volume>1443 </volume>of Lecture Notes in Computer Science, 
+pages <pages>309 326</pages>. <publisher>Springer-Verlag</publisher>, <date>1998</date></SinRef>. [23] <SinRef><author>Andrew M. Pitts</author>. <title>Parametric polymorphism and operational equivalence. 
+Mathematical Structures in Computer Science</title>, <volume>10</volume>:<pages>321 359</pages>, <date>2000</date>. Preliminary version appeared in HOOTS 
+II Second Workshop on Higher-Order Operational Techniques in Semantics, Electronic Notes in Theoretical 
+Computer Sci­ence, vol. 10, 1998</SinRef>. [24] <SinRef><author>Andrew M. </author><title>Pitts and Ian Stark. Observable properties of higher 
+order functions that dynamically create local names, or: what s new?</title> In <booktitle>Mathematical Foundations of Computer 
+Science</booktitle>, volume <volume>711 </volume>of Lecture Notes in Computer Science, pages <pages>122 141</pages>. <publisher>Springer-Verlag</publisher>, <date>1993</date></SinRef>. [25] 
+<SinRef><author>John C. Reynolds</author>. <title>Types, abstraction and parametric poly­morphism</title>. In <booktitle>Information Processing 83, Proceedings 
+of the IFIP 9th World Computer Congres</booktitle>, pages <pages>513 523</pages>, <date>1983</date></SinRef>. [26] <SinRef><author>Andreas Rossberg</author>. <title>Generativity and 
+dynamic opacity for ab­stract types. In Proceedings of the 5th International ACM SIGPLAN Conference on 
+Principles and Practice of Declara­tive Programming</title>, pages <pages>241 252</pages>, <date>2003</date></SinRef>. [27] <SinRef><author>Davide Sangiorgi </author>and <author>Robin 
+Milner</author>.<title> The problem of weak bisimulation up to </title>. In <booktitle>CONCUR 92, Third International Conference on Concurrency 
+Theory</booktitle>, volume <volume>630 </volume>of Lecture Notes in Computer Science, pages <pages>32 46</pages>. <publisher>Springer-Verlag</publisher>, <date>1992</date></SinRef>. [28] <SinRef><author>Peter 
+Sewell</author>. <title>Modules, abstract types, and distributed ver­sioning</title>. In <booktitle>Proceedings of the 28th ACM SIGPLAN-SIGACT 
+Symposium on Principles of Programming Languages</booktitle>, pages <pages>236 247</pages>, <date>2001</date></SinRef>. [29] <SinRef><author>Ian Stark</author>. <title>Names and Higher-Order 
+Functions</title>. <note>PhD thesis</note>, <publisher>University of Cambridge</publisher>, <date>1994</date>. <url>http://www.dcs.ed.ac. uk/home/stark/publications/thesis.html</url>.</SinRef> 
+[30] <SinRef><author>Eijiro Sumii </author>and <author>Benjamin C. Pierce</author>. <title>Logical relations for en­cryption</title>. In <booktitle>14th IEEE Computer Security 
+Foundations Work­shop</booktitle>, pages <pages>256 269</pages>, <date>2001</date>. Long version to appear in the Journal of Computer Security. </SinRef>
+[31] <SinRef><author>Eijiro Sumii </author>and <author>Benjamin C. Pierce</author>. <title>A bisimulation for dynamic sealing</title>. <url>http://www.cis.upenn.edu/ 
+sumii/</url>, <date>2003</date></SinRef>. [32] <SinRef><author>Steve Zdancewic</author>,<author> Dan Grossman</author>, and <author>Greg Morrisett</author>. <title>Prin­cipals in programming languages: 
+A syntactic proof tech­nique</title>. In <booktitle>Proceedings of the Fourth ACM SIGPLAN Interna­tional Conference on Functional 
+Programming</booktitle>, pages <pages>197 207</pages>, <date>1999</date></SinRef>.  </RefA>
+			

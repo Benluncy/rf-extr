@@ -1,0 +1,318 @@
+
+ Adaptive, Multiresolution Visualization of Large Data Sets g using a Distributed Memory Octree Lori 
+A. FreitagRaymond M. Loy Abstract The interactive visualization and exploration of large scienti.c data 
+sets is a challenging and dif.cult task; their size often far exceeds the performance and memory capacity 
+of even the most powerful graphics workstations. To address this problem, we have created a technique 
+that combines hierarchical data re­duction methods with parallel computing to allow interactive exploration 
+of large data sets while retaining full-resolution capability. The user may interactively change the 
+resolution of the reduced data set either globally or by specifying a region of interest. In this way, 
+high resolution can be obtained in local subre­gions without sacri.cing graphics performance. We describe 
+the software architecture of the system, give details pertaining to the use of a distributed memory octree 
+used to create the reduced data set, and present performance results for the visualization of Rayleigh-Taylor 
+instability and x-ray burst simulation data sets. Keywords. Interactive Visualization, Multi-Resolution 
+Visualization, Adaptive Visualization, Parallel Octrees 1 Introduction A critical step in the computational 
+solution of application problems is the interactive exploration and visu­alization of the resulting data 
+sets. However, in today s computational environment, the data sets produced by simulations performed 
+on giga-and tera.op-scale massively parallel processors (MPPs) often exceed the memory and performance 
+capacity of typical graphics workstations. Currently, interactive performance of high-end graphics workstations 
+is limited to data sets that contain roughly r 5 6 logically regular grid points. This is an order of 
+magnitude smaller than many data sets produced by large-scale simulations, and the dis­crepancy between 
+what is easily visualized and what scientists would like to visualize is likely to continue. Thus, the 
+interactive visualization of very large data sets requires either (1) a postprocessing step to reduce 
+the number of data points sent to the visualization environment or (2) sophisticated parallel rendering 
+algorithms that work with the full-resolution data set. Both techniques have been used successfully, 
+and in this paper we present an adaptive, multi-resolution data reduction method that combines both approaches. 
+ The authors were supported by the Mathematical, Information, and Computational Sciences Division subprogram 
+of the Of.ce of Computational and Technology Research, U.S. Department of Energy, under Contract W-31-109-Eng-38. 
+The U.S. Government retains for itself, and others acting on its behalf, a paid-up, nonexclusive, irrevocable 
+worldwide license in said article to reproduce, prepare derivative works, distribute copies to the public, 
+and perform publicly and display publicly, by or on behalf of the Government. Assistant Scientist, Mathematics 
+and Computer Science Division, Argonne National Laboratory, Argonne, IL 60439. fre­itag@mcs.anl.gov. 
+g Postdoctoral Appointee, Mathematics and Computer Science Division, Argonne National Laboratory, Argonne, 
+IL 60439. rloy@mcs.anl.gov. Permission to make digital/hard copy of all or part of this work for personal 
+or classroom use is granted without fee provided that copies are not made or 1 distributed for profit 
+or commercial advantage, the copyright notice, the title of the publication and its date appear, and 
+notice is given that copying is by permission of ACM, Inc. To copy otherwise, to republish, to post on 
+servers or to redistribute to lists, requires prior specific permission and/or a fee. SC 99, Portland, 
+OR (c) 1999 ACM 1-58113-091-8/99/0011 $3.50 To create a reduced data set, researchers commonly build 
+a hierarchical, multiresolution representation of the data or geometric model to be visualized (see [1] 
+for an overview of these methods). In these techniques, a series of coarse representations of the data 
+is constructed using, for example, quadtrees or octrees [2, 3], progressive meshes [4, 5], or wavelets 
+[6]. The level of detail in each region is controlled through a variety of mechanisms, such as error 
+tolerance bounds that control .delity to the original model, or user input, such as .eld of view. These 
+methods are useful for fast navigation through the data set, but maximum resolution is limited by the 
+memory size and speed of the graphics workstation. In contrast, parallel rendering algorithms often work 
+with full-resolution data sets either as the compu­tation proceeds or as a postprocessing step [7, 8, 
+9, 10]. The data is distributed across the processors of the MPP, and derived visualization entities 
+such as isosurfaces or streamlines are computed in parallel and communicated to the graphics workstation 
+for display. The advantage of this technique is that no information is lost in a data reduction process; 
+however, for scientists who run their parallel applications at remote sites, there are two potential 
+drawbacks to using this method for interactive visualization. First, many MPP super­computers are accessed 
+through batch queuing systems, making it dif.cult to predict when the interactive job will run. Second, 
+these techniques are useful for interactive exploration of the data set only if there is suf.cient network 
+bandwidth between the graphics workstation and the parallel computer. To address these problems, we have 
+developed a system that combines data reduction techniques and parallel computing to obtain fast performance 
+on a local graphics workstation while retaining access to the full-resolution data set. Like the parallel 
+rendering algorithms mentioned above, we .rst distribute the data across the processors of a parallel 
+computer, but rather than compute derived visualization entities, we create a hierarchical representation 
+of the data set using a distributed-memory octree data structure. If the user has interactive access 
+to the MPP, the reduced data set is communicated directly to the local graphics environment for visualization 
+and exploration. In this scenario, the derived visualization quantities are computed locally which signi.cantly 
+alleviates the bandwidth requirements of the parallel rendering algorithms mentioned above. As regions 
+of interest are identi.ed, the octree may be easily adapted to re.ect changing resolution requirements. 
+Additional detail is obtained by re.ning the octree, whereas reduced detail is obtained by pruning or 
+truncated traversal. Thus the user can zoom in and obtain more resolution in local subregions without 
+sacri.cing graphics performance by simultaneously coarsening the data outside the region of interest. 
+If the user does not have interactive access to the MPP, the same functionality can be obtained by saving 
+each reduced data set to a .le that is transferred to and visualized on the local graphics workstation. 
+The remainder of this paper is organized as follows. In Section 2, we describe the software architecture 
+of the system, both the envisioned .nal toolkit and its current instantiation. In Section 3, we describe 
+the creation of the reduced data set using the parallel octree infrastructure. In particular, we discuss 
+the parallel implementation of data insertion into the octree and the dynamic load balancing of octants 
+as resolution needs change. In Section 4, we show the use of this system to visualize data from Rayleigh-Taylor 
+instability simulations and an x-ray burst calculation. We provide performance results for the creation 
+of each reduced data set and the corresponding visualization frame rates. We also analyze the .delity 
+of the reduced data sets to the original data as the level of detail is changed. Finally, in Section 
+5 we offer concluding remarks and indicate directions of future work. 2 Software Architecture The interactive 
+data reduction system is comprised of four major components: 1. .eld data input to the parallel octree 
+code either through .le input or through interactive requests to a running application, 2. a parallel 
+octree code to create the reduced data set, 3. the local visualization environment, which can consist 
+of externally developed desktop tools such as vtk [12], the General Mesh Viewer (GMV) [13], and IRIS 
+Explorer [14], or custom tools built for state-of-the-art display devices such as the CAVE virtual reality 
+theater [15], and 4. a portable communication infrastructure that allows the user to make interactive 
+requests for new re­duced data sets from the visualization environment and allows the octree code to 
+obtain new .eld data from the running application.  These four components and their interactions are 
+shown in Figure 1. The arrows between the components indicate the communication necessary for an interactive 
+environment. The width of the arrows indicates the relative size of the messages; small messages are 
+needed to request new reduced data sets or .eld data values; large messages are required to transfer 
+information from the application to the octree code and from the octree code to the visualization environment. 
+Solid boxes and solid arrows indicate components and interactions that currently exist; dashed box outlines 
+and arrows indicate components and interaction models that are planned for future instantiations of the 
+toolkit. The visualization toolkits listed in Roman font are currently supported; near-term support is 
+planned for those in italics. Asterisks indicate extensible toolkits that will support interactivity; 
+the others must be used with .le input and output. We note that because our reduced data set is derived 
+from an adaptive octree data structure, only visualization tools that can support multi-resolution or 
+unstructured data sets are considered. Figure 1: The four primary components of the data reduction toolkit 
+and their interactions In the current instantiation, scalar .eld data is loaded from a .le and distributed 
+across the processors of an MPP. As it is distributed, it is inserted into the parallel octree data structure 
+according to a user-de.ned criterion. The reduced data set is formed by averaging or agglomerating the 
+data associated with each leaf octant, and these values are either stored to a .le for later processing 
+or communicated directly to the graphics workstation for visualization. Details pertaining to the implementation 
+and use of the parallel octree are given in Section 3. We currently support three visualization environments: 
+GMV, a custom desktop toolkit based on vtk classes, and a custom CAVE virtual reality environment. GMV 
+is a freely available software package from Los Alamos that is distributed in binary form. It is lightweight 
+and easy to use but not extensible to support interactive requests to the parallel octree code. To support 
+dynamic, adaptive level-of-detail requests, we developed a visualization tool using the freely available 
+vtk class library. This custom tool allows the user to interactively change the level of detail either 
+globally throughout the computational domain or locally by de.ning a bounding box around a region of 
+interest. Visualization techniques currently supported in this tool include isosurface contouring, cutting 
+planes, and surface/mesh visualization, and we note that this set of functionalities can be easily extended 
+by taking full advantage of the vtk classes. All results presented in this paper were obtained from the 
+vtk environment. The third visualization environment we support is a custom tool developed for the CAVE 
+virtual reality theater. This environment is still in the early stages of development, and we plan use 
+it to test the utility of the hierarchical visualization paradigm in an immersive environment. The .nal 
+component of the software system is a communication infrastructure which meets the following design requirements. 
+ It must be both portable and .exible so that the parallel octree code and the visualization environment 
+can run simultaneously on different, possibly remote, computer architectures. It must allow dynamic 
+linking and decoupling of multiple processes so that (1) the user can periodically monitor a long-running 
+application and (2) multiple scientists can collaborate while visualizing their data. It must help manage 
+synchronization of distributed data sets to ensure that the reduced data set is self-consistent. One 
+communication library that meets all of these requirements is the ALICE Memory Snooper (AMS) [11]. This 
+library was designed to provide a lightweight API and infrastructure that enables computational steering 
+and remote monitoring of application programs. The design is based on a client/server model that allows 
+users to connect to a running application and access or modify the application s published variables 
+at user-de.ned synchronization points. Thus it can be used both for ful.lling interactive requests for 
+new data sets from a long-running simulation and for modifying or steering the simulation. In the current 
+instantiation, the octree code publishes variables relating to the criteria for re.nement and coarsening 
+of the tree and also the reduced data set. The vtk client accesses that information and is able to change 
+the re.nement and coarsening criteria, de.ne a bounding box to specify a region of interest, and access 
+the resulting reduced data set. AMS portability and .exibility are achieved by using a sockets and TCP/IP 
+protocol. 3 Creating Reduced Data Sets Our data reduction technique is based on creating a hierarchical 
+representation of the data using a parallel octree. We .rst describe the criteria used for inserting 
+.eld data into the octree and the error indicators associated with the reduction stored on each octant 
+leaf. We then describe the parallel octree infrastructure, including the data structures and techniques 
+used for parallel creation, coarsening, and traversal of the tree. 3.1 Data Reduction To create the reduced 
+data set, .eld data values are inserted into the appropriate leaf octants using their spatial location. 
+A user-de.ned insertion criterion is used to determine whether the octant should divide to create eight 
+new leaf octants. Currently the user sets a maximum number of points to be inserted into each octant. 
+This technique maintains approximately uniform .delity to the solution data for h adaptive meshes in 
+which the error at each data point is roughly constant. For uniform meshes or p adaptive methods, we 
+plan to use error indicator techniques such as energy norms or gradient bounds to determine when octants 
+should be subdivided. The .eld data values are averaged or otherwise agglomerated after insertion into 
+the octree. To provide an indication of the error associated with the reduced data set, for each leaf 
+octant we compute and store statistical values such as the standard deviation, , and maximum deviation 
+from the mean, e. These values are normalized by the mean to yield ( and e , respectively, which are 
+included as additional scalar .elds to be visualized so that the user has an indication of the .delity 
+of the reduced data set to the original data set. These measures of error also serve to highlight potential 
+regions of interest; the cells with a large deviation from the average value are likely to have .ne-scale 
+structure that was not adequately captured by the reduction process. 3.2 Parallel Octree Infrastructure 
+To effectively manage a large distributed data set, the octree must also be distributed across the processors 
+of the MPP. In Figure 2, we show the parallel octree data structure; the .gure on the left shows an example 
+tree, and the .gure on the right shows the same tree distributed across three processors of a parallel 
+computer. Ef.cient traversal of the parallel octree data structure is enabled by interoctant links, which 
+may be either local or off-processor (shown by solid and dotted lines, respectively). Each processor 
+maintains a local root list of octants whose parents are off-processor. Spatial information associated 
+with each of these local root octants allows the coordinate information of its descendants to be easily 
+inferred without communication. An octree partitioning algorithm using a space-.lling curve [16], together 
+with arbitrary octant migration, is used for load balancing the .eld data and the associated octree. 
+If the data reduction were closely coupled to the parallel application, octant migration could be performed 
+to track the location of the application data. Figure 2: A portion of an octree (left) and the same 
+tree distributed across three processors (right). Dotted links are nonlocal; squares indicate local root 
+spatial information; local root lists are labeled LR. When creating an initial parallel octree from .le 
+input, processor 0 is responsible for reading the .le and distributing the data to the processor that 
+owns the corresponding piece of the domain. Because the data set is too large to .t in a single processor 
+s memory, we read a small portion of the data set, distribute those points to their respective processors, 
+and repeat the process until the entire .le is loaded. To maintain good parallel performance, the octree 
+is periodically rebalanced during this process. After rebalancing, the spatial information and processor 
+association of all local roots are collected to processor 0 which allows processor ownership of any point 
+to be determined easily. If a point is contained in more than one local root, the subtree associated 
+with the smallest of these local roots contains the leaf octant into which this point should be inserted. 
+For example, a point lying in octant D in Figure 2 is contained in the bounds of octant C as well as 
+C s parent, A. In this case, D is the smallest local root and the point is sent to processor 2. Once 
+the parallel octree has been constructed, re.nement and coarsening to comply with new visualiza­tion 
+criteria are performed using the algorithm in Figure 3. The algorithm is performed in parallel for each 
+processor s local roots and no communication is necessary. Leaves are recursively subdivided when they 
+contain more than the prescribed maximum number of points, NeNa v . A set of leaf siblings are pruned 
+when they each contain less than the prescribed minimum number of points, NNNm t, and the total number 
+of points among the siblings is less thanNNNm v . We note that it is not always possible to meet both 
+a maximum and minimum insertion criteria; in our implementation NNNm v takes precedence. The current 
+algorithm declines to coarsen when off-processor links are encountered. Complete coarsening could be 
+accomplished by migrating terminal octants which are local roots to their parent s processor and repeating 
+the tree adjustment. When no local roots are terminal, the process is complete. After the parallel octree 
+has been adapted to meet the insertion criteria, copies of the octants with their av­erage data (but 
+without the much larger original data) are migrated to processor 0. Processor 0 then publishes a unique 
+vertex list, the octree connectivity, and the reduced data set which is accessed by the visualization 
+program.  4 System Performance To test the performance of our system, we selected three data sets of 
+varying size, dimensionality, and mesh type that have arisen in a joint project between Argonne National 
+Laboratory and the University of Chicago. The .rst two data sets are from Rayleigh-Taylor (R-T) simulations 
+in both two and three dimensions. The two-dimensional R-T data set is from the adaptive Piecewise Parabolic 
+Method (PPM) code developed at the University of Chicago that is a descendant of PARAMESH [17] and PROMETHEUS 
+[18]. The three­dimensional R-T data set is from an adaptive tetrahedral mesh code using a Discontinuous 
+Galerkin Euler formulation developed at Rensselear Polytechnic Institute [16]. The third data set is 
+from a three-dimensional simulation of an x-ray burst on a neutron star. This simulation also uses the 
+adaptive PPM code and the data set is particularly challenging to visualize due to the extreme scales 
+in length and variable values (for example, density values range over agr06 spectrum). The problem mesh 
+types, data sizes, and dimensionalities are summarized in Table 1. For each test problem, the data reduction 
+was performed on pprocessors of an SGI Onyx2 (250 MHz MIPS R10000 processors), where pa rand 8for the 
+two-and three-dimensional R-T data sets, and pp =g5 for the x-ray burst data set. The vtk visualization 
+environment was run on a single Onyx2 Reality Monster graphics engine. For the experiments presented 
+here, coarse initial octrees are created using the insertion criteria NNNa 6 x NNNm t o tg50r0and 300 
+for the two-and three-dimensional R-T data sets, respectively, and NNNm v e aNNNm a n 50r0for the x-ray 
+burst data set. The initial data distribution and octree construction are performed as subtree adjust(oct,NNm, 
+NNm i ) if (terminal(oct)) if (npoints(oct) e Nm ( ) recursively re.ne oct until NNmsatis.ed return(NO 
+COARSEN) else if (npoints(oct) a Nm i ) return(npoints(oct)); /* octant is nonterminal */ total=0 for 
+i=0..7 if (child i is on local processor) total+=subtree adjust(child i) if (any child returned NO COARSEN 
+or is nonlocal) return(NO COARSEN); if (total < p NNm) delete children of oct placing their data at oct 
+ if (total e NNm i ) return(total); else return(NO COARSEN);  Figure 3: The algorithm for adjusting 
+the subtree rooted at oct to the new insertion criteria, NeNa tand NNNm v. This operation is performed 
+in parallel for all local roots on all processors. described in Section 3 and required 7.98 seconds for 
+the two-dimensional data set, 376 seconds for the three­dimensional Rayleigh-Taylor data set, and 1735 
+seconds for the x-ray burst problem. We note that signi.cant performance improvements for this aspect 
+of the problem can be achieved by using collective operations and parallel I/O which is the target of 
+near-term work. Once the data is distributed, the leaf octant averages and statistics are computed on 
+each of the processors requiring .0335, 2.24, and .8273 seconds respectively for the three test problems. 
+To test the interactive performance of this system, we change the global insertion criterion and/or also 
+specify a region of interest to be displayed at a higher resolution for each data set. The performance 
+results for these experiments are given in Table 2. For each level of detail, we give the insertion criterion, 
+NNNm v u ( sNNNm t, the number of resulting leaf octants, N, and the percentage of the full data set 
+to which Ncorresponds, P. We report insertion criteria speci.ed for regions of interest as ,, where is 
+the initial global criterion and ,is the criterion used for octree insertion in the speci.ed region. 
+We also report the maximum over all octants, the maximum eover all octants, the average , and the average 
+e(recall that and ewere de.ned in Section 3 to be the normalized standard deviation and the normalized 
+maximum deviation from the mean, respectively). The .rst two values give the worst-case scenario for 
+.delity to the original data set; the latter two values give a measure of the overall .delity of the 
+reduced data set. In addition, we include the time in seconds, gT, to revise the octree from the original 
+   Table 1: Data set characteristics Simulation Dimension Mesh Type Data Location Number of Cells Rayleigh-Taylor 
+Rayleigh-Taylor X-ray burst 2-D 3-D 3-D Block Structured Tetrahedral Block Structured Cell-Center Cell-Center 
+Cell-Center 53,480 373,611 6,718,976 criteria given in the .rst row to the new criteria, and the frame 
+rate, F , for vtk visualization (measured in frames/second) when displaying the wireframe octree representation. 
+The reduced data sets corresponding to the R-T experiments are shown in Figures 5 and 6, respectively. 
+Table 2: Results for two-and three-dimensional Rayleigh-Taylor simulation data sets NNa 6 N P Max. Max. 
+e Avg. Avg. e gT F 2-D Rayleigh-Taylor 100 820 1.6 0.397 1.081 0.134 0.294  175 10 13120 6.2 0.396 0.932 
+0.081 0.154 .888 13 100,2 9073 17.2 0.397 1.081 0.010 0.022 .505 20 3-D Rayleigh-Taylor 300 5296 1.4 
+.114 .259 .0294 .0670  55 40 34984 9.3 .088 .206 .0154 .026 1.27 10 300,20 38336 10.2 .079 .132 .0124 
+.017 1.38 9 3-D X-ray Burst 3500 5614 .08 22.38 50.60 .629 2.56  31 2000 13134 .20 16.01 25.64 .550 
+1.75 5.64 13 1000 16126 .25 16.01 25.64 .542 1.62 13.88 12 The largest errors in both two and three 
+dimensions for the Rayleigh-Taylor instability problems are located along the discontinuity between the 
+two .uids. Because these features are much smaller than the leaf octants, the maximum g(about forty percent 
+in two dimensions and nine percent in three dimensions) only slowly decreases as Nincreases. The average 
+gdecreases more signi.cantly as Nincreases which implies that the reduced Raleigh-Taylor data sets are 
+fairly accurate representations of the original data sets (eight percent error in 2-D; 1.5 percent error 
+in 3-D) are achieved for Pp:sand Pp:t9, respectively. For the x-ray burst problem, the errors associated 
+with the reduced data sets presented are still quite large; is 54 percent for the .nest level of re.nement 
+indicating that further octree re.nement is necessary. For the Rayleigh-Taylor data sets, a region of 
+interest was speci.ed and re.ned starting from the global criterion given in the .rst row. In each case 
+a signi.cant improvement in the average error indicators was obtained; particularly in two dimensions 
+where the criterion was chosen to eliminate all error in the speci.ed region. The time required to adapt 
+the octree, T, was less than a second for the small two-dimensional test problem and approximately 1.3 
+seconds for the three-dimensional R-T problem. The adaptation of the neutron star data set required more 
+time because each leaf octant contains more data points increasing the sorting and reassignment time 
+of the .eld data values during re.nement. To further illustrate the relationship between the error measures 
+and the number of octants associated with global re.nements, we plot average and evalues for both the 
+two-and three-dimensional Rayleigh-Taylor data sets for criterion of NNa vp 5 a a n ( 6g50r r4in two 
+dimensions and NNm vp45 a n a . 6g50r r4in three dimensions in Figure 4. As Nincreases, the corresponding 
+decreases in and eboth approach zero as well as each other. Errors vs. N Two-Dimensional R-T Errors vs. 
+N Three-Dimensional R-T 0.7 0.14 Normalized ErrNormalized Err 0.4 0.08 0.3 0.06 oror 0.2 0.04 0.1 0.02 
+10 100 1000 10000 100000 1000 0 N 0 Figure 4: The relationship between Nand the error measures average 
+g for the Rayleigh-Taylor data sets in both two and three dimensions 10000 100000 N (sigma) and average 
+e 1e+06 (max error)  0.6 0.12 0.5 0.1 In Figures 5 and 6, we show the reduced R-T data sets corresponding 
+the cases discussed in Table 2. In each case we show the reduced data set image, the error plots associated 
+with that level of detail, and the associated leaf octants. The light-colored octant leaves in the middle 
+row of .gures indicate regions in which the error associated with the data reduction is large. These 
+regions correspond to the sharp density interface between the two incompressible .uids. As the user requests 
+.ner detail, more leaf octants are created, the regions of large error reduce in size, and more .ne scale 
+features are visible. In the .nal column, we show the cases corresponding re.nement of only a region 
+of interest as indicated by the bounding box outline in each .gure. 5 Directions of Future Work Ongoing 
+work for this toolkit includes adding new functionalities to improve the .exibility of the octree code, 
+performance tuning and testing, and eventually adding computational steering capabilities to monitor 
+and change ongoing large-scale simulations. To improve the .exibility, we will provide more options for 
+averaging or interpolating the data as it is inserted into the octree and for determining when to subdivide 
+leaf octants including, for example, gradient tests on scalar .elds. We will also provide subroutine 
+stubs that allow users to custom design the data reduction method most appropriate for their simulation 
+data. 9 Figure 5: From left to right, two-dimensional Rayleigh-Taylor images at three different levels 
+of detail. For each level of detail we show density (top), the standard deviation resulting from the 
+data reduction (center), and the corresponding octant leaves (bottom).  Figure 6: From left to right, 
+three-dimensional Rayleigh-Taylor images at three different levels of detail. For each level of detail 
+we show density (top), the standard deviation resulting from the data reduction (center), and the corresponding 
+octant leaves (bottom). In addition, several performance improvements can be obtained in the parallel 
+octree code. In particular, processing the initial data set from a .le can be improved by leveraging 
+ongoing work in collective com­munication within the ROMIO implementation of MPI-IO, and octant migration 
+between processors can be improved by agglomerating messages to destination processors. We also plan 
+to test the performance on wide area networks to tune the infrastructure for remote access to the reduced 
+data set. Initial efforts will examine performance of a local ethernet connection, a 10 Mb/s ethernet 
+WAN between ANL and Chicago, and an ATM WAN between ANL and Chicago. Acknowledgments We acknowledge 
+the FLASH project for providing the motivating application described in this paper. In particular, we 
+thank Mike Singer of the University of Chicago for his assistance in preparing the Rayleigh-Taylor and 
+x-ray burst data sets for testing with our system. We would also like to thank Matt Ahrens and Ibrahima 
+Ba for their help in incorporating the ALICE Memory Snooper into the data reduction software system. 
+Finally, we thank the reviewers for their insightful comments which helped improve the quality of this 
+paper. References <RefA>[1] <SinRef><author>Paul Heckbert </author>and<author> Michael Garland</author>. <title>Multiresolution modeling for fast rendering</title>. 
+In <booktitle>Proceedings of Graphics Interface </booktitle><volume>94</volume>, pages <pages>43 50</pages>, <date>1994</date></SinRef>. [2] <SinRef><author>Peter Lindstrom</author>, <author>David Koller</author>, <author>William 
+Ribarsky</author>, <author>Larry Hodges</author>, <author>Nick Faust</author>, and <author>Gregory Turner</author>. <title>Real-time, continuous level of detail rendering 
+of height .elds</title>. In <booktitle>Computer Graphics Proceedings SIGGRAPH 96</booktitle>, <publisher>Annual Conference Series</publisher>, pages <pages>109 118</pages>. 
+<publisher>ACM</publisher>, <date>1996</date></SinRef>. [3] <SinRef><author>Brian Von Herzen</author> and <author>Alan Barr</author>. <title>Accurate triangulations of deformed, intersecting surfaces</title>. 
+In <booktitle>Com­puter Graphics Proceedings, SIGGRAPH 87</booktitle>, volume <volume>21</volume>, pages <pages>103 110</pages>. <publisher>ACM</publisher>, <date>1987</date></SinRef>. [4] <SinRef><author>Hugues Hoppe</author>. 
+<title>Ef.cient implementation of progressive meshes</title>. <tech>Technical Report MSR-TR-98-02</tech>, <institution>Microsoft Research, Microsoft 
+Corporation</institution>, <date>1998</date></SinRef>. [5] <SinRef><author>Hugues Hoppe</author>. <title>Progressive meshes</title>. In <booktitle>Computer Graphics SIGGRAPH 96 Proceedings</booktitle>, 
+pages <pages>99 108</pages>, <date>1996</date></SinRef>. [6] <SinRef><author>Jos Roerdink </author>and <author>Michel Westenberg</author>. <title>Wavelet-based volume visualization</title>. <tech>Technical 
+Report IWI 98-9-06</tech>, Institute for <institution>Mathematics and Computing Science, University of Groningen</institution>, <date>1998</date></SinRef>. [7] 
+<SinRef><author>T. W. Crockett </author>and <author>T Orloff</author>. <title>A MIMD rendering algorithm for distributed memory architectures</title>. In <booktitle>Proceedings 
+of the Parallel Rendering Symposium</booktitle>, pages <pages>35 42</pages>, <date>1993</date>. </SinRef>[8] <SinRef><author>Thomas Crockett</author>. <title>Beyond the renderer: Software 
+architecture for parallel graphics and visualization</title>. <tech>Technical Report ICASE Report No. 96-75</tech>, Institute 
+for <institution>Computer Applications in Science and Engi­neering</institution>, <date>1996</date></SinRef>. [9] <SinRef><author>Kwan-Lui Ma</author>. <title>Parallel rendering of 3D 
+AMR data on SGI/Cray T3E</title>. In <booktitle>Proceedings of the Frontiers 99 Conference</booktitle>, pages <pages>138 145</pages>, <date>1999</date></SinRef>. [10] <SinRef><author>Robert 
+Haimes</author>. <title>pV3: A distributed system for large-scale unsteady CFD visualization</title>. <tech>AIAA paper, 94-0321</tech>, <date>January 
+1994</date></SinRef>. [11] <SinRef><author>Ibrahima Ba</author>, <author>Christopher Malon</author>, and <author>Barry Smith</author>. <title>Design of the ALICE Memory Snooper</title>, <url>http://www.mcs.anl.gov/ams</url>, 
+<date>1999</date></SinRef>. [12] <SinRef><author>Will Schroeder</author>, <author>Ken Martin</author>, and <author>Bill Lorensen</author>. <title>The Visualization Toolkit, An Object-Oriented 
+Approach to 3D Graphics</title>. <institution>Prentice Hall PTR</institution>, <location>Upper Saddle River, New Jersey</location>, <date>1998</date></SinRef>. [13] <SinRef><title>Frank Ortega. 
+General mesh viewer, user s manual</title>, <date>1999</date>. </SinRef>[14] <SinRef><title>IRIS explorer, release <volume>3.5</volume>, user s guide, Unix version</title>, 
+<date>1993</date></SinRef>. [15] <SinRef><author>C. Cruz-Neira</author>,<author> D. J. Sandin</author>, and <author>T. A. DeFanti</author>. <title>Surround-screen projection-based virtual reality: 
+The design and implementation of the CAVE</title>. In <booktitle>ACM SIGGRAPH 93 Proceedings</booktitle>, pages <pages>135 142</pages>. <publisher>ACM</publisher>, <date>1993</date>. </SinRef>
+[16] <SinRef><author>Joseph E. Flaherty</author>,<author> Raymond M. Loy</author>, <author>Mark S. Shephard</author>, <author>Boleslaw K. Szymanski</author>, <author>James D. Teresco</author>, and 
+<author>Louis H. Ziantz</author>. <title>Adaptive local re.nement with octree load-balancing for the parallel solution of three-dimensional 
+conservation laws</title>. IMA Preprint Series 1483, Institute for <institution>Mathematics and Its Applications, University 
+of Minnesota</institution>, <date>1997</date>. To appear, <publisher>J. Parallel and Dist. Comput</publisher></SinRef>. [17] <SinRef><author>P. MacNeice</author>, <author>K. Olson</author>, <author>M. Mobarry</author>, <author>
+R. de Fainchtein</author>, and <author>C. Packer</author>. <title>A parallel adaptive mesh re.ne­ment community toolkit</title>. Submitted to 
+<journal>Computer Physics Communications</journal>, <date>1999</date></SinRef>. [18] <SinRef><author>B. Fryxell</author>, <author>E. M¨uller</author>, and <author>D. Arnett</author>. <title>Hydrodynamics and 
+nuclear burning</title>. <journal>Max-Planck-Institut f¨ur Astrophysik Report 449</journal>, <date>1989</date></SinRef></RefA>.  
+			

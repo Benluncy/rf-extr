@@ -1,0 +1,343 @@
+
+ Advanced Compiler Optimizations for Sparse Computations* Aart J.C. Bik and Harry A.G. Wijshoff High 
+Performance Computing Division, Department of Computer Science, Leiden University P.O. Box 9512, 2300 
+RA Leiden, the Netherlands aj cbikt3cs. leidenuniv .nl and harryw@cs. leidenuniv. nl Abstract Regular 
+data dependence checking onsparsecodesusu­ally resultsin very conservative estimates of actual de­pendences 
+that will occur at run-time. Clearly, this is caused by the usage of compact data structures that are 
+necessary to exploit sparsity in order to reduce storage requirements and computational time. However, 
+if the compiler is presented with dense code and automati­ cally converts it into code that operates 
+on sparse data structures, then the dependence information obtained by analysis on the original code 
+can be used to exploit po­tential concurrency inthe generated code. In this paper we present synch~onization 
+generating and manipulat­ ing techniques that are based on this concept. 1 Introduction Nowadays compiler 
+support usually fails to optimize sparse codes because compact storage formats are used for sparse matrices 
+in order to exploit sparsity with re­spect to storage requirements and computational time. This exploitation 
+results in complicated code in which, for example, subscripted subscripts are used. Restructuring compilers 
+were formerly used to de­tect parallelism in serial software and to generate code that exploits certain 
+characteristics of the target ma­chine. The advantages of this approach are that not only investments 
+made in existing serial programs are saved, but also the complexity of coding and maintain­ing new parallel 
+programs is reduced. Consequently, the question arises whether it is also possible to let the restructuring 
+compiler convert code that operates on simple data structures into a format that exploits cer­ *Support 
+was provided by the Foundation for Computer Sci­ence ( SION) of the Netherlands Organization for the 
+Advance ment of Pure Research (N WO ) and the EC Esprit Agent y DG XIII under Grant No. APPARC 6634 BRA 
+III. This paper is an extended abstract of technical report 92-24 [4]. tain characteristics of these 
+data structures. In case of sparse matrices this would imply that the computation is defined on the enveloping 
+data structures (i.e. dense matrices) and that the compiler transforms these data structures into sparse 
+data structures. This does not only simplify the task of the programmer and enables the compiler to select 
+a suited sparse data structure, but also has the advantage that the compiler is ini­tially presented 
+with clear code on which regular data dependence checking and standard optimizations can be performed. 
+Elaboration of this idea has resulted in a data structure selection and transformation method, initially 
+proposed in [5] and presented in more detail in [6]. This bottom-up method automatically identifies statements 
+in the dense code that can exploit sparsity to save computational time, and selects a compact data structure 
+for every sparse matrix, based on the access patterns through these matrices. Data structure trans­formations 
+are applied afterwards, i.e. code is gener­ated that operates on the selected data structures. In this 
+paper we discuss how information about data dependence, obtained by analysis on the original dense code, 
+can be used to determine which dependence will actually hold after this code has been converted into 
+sparse code. In section 2, we present some background, and discuss the impact of conversion into sparse 
+code on actual dependence. In section 3, the elimination of dependence is used to reduce generated synchro­nization 
+in candidate concurrent loops. Although more parallelism is expressed afterwards, the resulting code 
+usually contains too much overhead to be practical. Therefore, in section 4 overhead reducing manipula­tions 
+are presented, that possibly decrease potential concurrency. A summary and topics for further re­search 
+are given in section 5.  2 Preliminaries In this section we summarize data dependence theory, and discuss 
+the elimination of dependence by auto­ matic conversion into sparse code. Permission to copy witkut fee 
+all or part of this material is granted, provided that the ccpies are not made or distrhted fcs direci 
+commercial advantage, Ihe ACM copyright ndice and the title of the publication and itsdateappear, and 
+ndice is given that copying is by permission of the 430 Association for Compning Machinery. To copy ctkrwk, 
+or to republish, requires a fee andor s#ic pennissirm. 01993 ACM O-8186-4340W9WO011$1.50 2.1 Data dependence 
+ Statements that appear in a loop body at nesting depth d are called indexed statements of degree d, 
+denoted by S(O, where ~ = (11, . . . . Id). Such statements have different instances, where each instance 
+is obtained by substitution of a corresponding value for every sur­rounding loop index. Statements of 
+degree O only have one instance. The execution order <O holds on statement instances and reflects the 
+order of execution. Clearly, Sl(i) <O S~ (j) holds if i + j [2], or 7 = I and S/ lexically precedes S~ 
+in the program, if only indices of loops that surround both statements are con­sidered and these loops 
+have positive stride. Informa­tion about data dependence [1, 12, 17, 19, 25, 27] is essential for a restructuring 
+compiler to determine which transformations are valid, i.e. do not change the semantics of the original 
+program. We use the following definition of data dependence between in­stances Sl (i) <0 S~ (~~: a flow 
+dependence holds if OUT(SZ (i)) n IN(Sm (j~) # 0, an anti dependence if IN(St(i)) n OUT(Sm(~~) # 0, and 
+an output de­pendence holds if OUT(Sl(l )) n OUT(S~(j)) # 0, where sets IN and OUT contain all variable 
+instances that are respectively read or written by a statement instance. An intermediate write to a variable 
+instance does not hide dependence (cf. memory-based depen­ dence [20]), so that dependence cannot emerge 
+as cer­ tain statement instances are not executed. A static flow, anti or output dependence between 
+source statement Sl and sink statement S~, de­noted by S1bcS~, S1~;Sm, or S1c5$S~, holds if there is 
+such a dependence between at least one pair of their instances. For an arbitrary static dependence, nota­tion 
+S16;S~ is used. The dkection vector V, for Vi 6 {=, <, >, S, 2, #, *}, indicates the direction of the 
+dependence in the iteration space, where * is used for an unknown direction. Cross-iteration (or loop­carried) 
+dependence hold between instances that are executed in different iterations of the same loop. Self­dependences 
+hold between instances of the same in­dexed statement. 2.2 Conversion into sparse code Storage requirements 
+are reduced if only nonzero ele­ments in a sparse matrix A are stored. The indices of explicitly stored 
+elements, referred to as entries, are indicated by set 17A ~ {(i, j) E .fA x JA lai~ # O}, where 1A x 
+JA is the index set of the enveloping dense ma­trix. Central to the reduction of computational time is 
+the observation that statement instances where a zero is assigned to a non-entry or where the left-hand 
+side equals the right-hand side do not have to be executed. 431 Therefore, for each occurrence A(FA(~) 
+of a matrix A that is in fact sparse, where FA : Zd + Z= represents both subscript functions, a guard 
+FA(~ G EA is used in a multiway IF-statement to differentiate between op­erations on entries and zero 
+elements. An abstract data structure A is used as representation for an ac­tual data structure that will 
+be selected. A function uA : EA -ADA maps indices of entries to correspond­ing addresses in A . For example, 
+a reference to an element results in the following code: IF FA (~) EEA THEM x = A [rA(~A(~))] x = A(~A(~)) 
++ ELSEIF F A(~) @ EA THEM x = 0.0 EIIDIF Branches in which sparsity can be exploited are elim­inated, 
+as illustrated below: IF FA(~ c EA THEM x = X + A(FA(~) + X = X + A [uA(FA(~)] E~DIF Guards and uA-lookups 
+reflect the overhead that is inherent to compact data structures. Since usually re­duction in execution 
+time is outweighted by test over­head [10, 18], techniques to eliminate overhead are ap­plied. A basic 
+technique is encapsulant ion of a dom­inating guard (which determines the iterations that must be executed) 
+in the execution set of the surround­ing loop. This is feasible, if the addresses of all entries along 
+the access patterns in that loop can be easily gen­erated, since these are the elements for which the 
+guard holds. A semantically equivalent loop with fewer itera­tions and overhead results. For example, 
+encapsulation of guard (I, J) E EA in the execution set of the J-loop is shown below: DDI =1,19 DO 1=1, 
+E DO J=l, Il DO ADc PAD1 IF (I, J) EEA THEU J=q. .a; (AD)x=X+A [uA(I, J)] * J + X= X+ A [AD]*JEHDIF EMDDDEEDDO 
+EMDDO EIIDDO Set PAD$ contains the addresses of all entries along access pattern {(I, J) 11 ~ J ~ N}, 
+while column in­dices (i.e. ~=. u; 1(AD), where ~i. i? = xi) must be avail­able per entry to restore 
+the value of the loop index. Subsequently, a compact data structure is selected that enables the encapsulation 
+of guards throughout the program, possibly after access patterns have been re­shaped. A suitable storage 
+scheme, for instance, stores entries and xi . u~ 1 values along each access pattern consecutively in 
+two parallel arrays AVAL and AIND. El­ements in arrays ALOU and AHIGH are used to indicate the address 
+interval for each access pattern.  has as additional advantage that boundary conditions are implicitly 
+expressed, if operations on empty sets are not performed. After conversion into sparse code, every instance 
+of S1 is only executed if (I, J) E ~A and, consequently, synchronization is guarded accordingly. This 
+is implic­itly done for wait instances if this statement is kept inside the AD-loop after encapsulation, 
+while the guard explicitly appears in the second parameter of post: * DOACROSS I = 1, M DD AD C F AD1 
+J = mZ . u_#(AD) wait (XSYWC ,J, I) S1: X(I) = X(I) -A [AD] * X(J) EIUDDO S2: IF (1,1) C EA THEH X(I) 
+= X(I) / A [rA(I, I)] ELSEIF (I ,1) @ EA THEM X(I) = X(I) / 0.0 (error) EHDIF post(XSYHC, I,{ I < i ~ 
+Hl(i, I) C EA}) EHDDOACROSS The execution order in case a43 is not stored, is shown in the following 
+diagram for M=4 (for a dense matrix, S2(4) appears on the 10th step):2 m Note that we have ignored S16<< 
+S1, because this de­pendence is covered by synchronization of S26< S1 (see section 4.1). However, if 
+L is lower unit-triangular, statement S2 is not required and only S16< < S1 re­mains, formed by dependence 
+between guarded source and guarded sink statement instances. Consequently, synchronization is brought 
+under control of the guards of all corresponding statement instances. Synchroniza­tion requires three 
+parameters: the first and second indicate the specific instance of the source, while the third$is used 
+to differentiate between dependence to different sink instances of the I-loop: DOACROSSI = i , M DOAD6 
+PAD1 J = T,. a_#(AD) wait(XSVSC, J,{l < ~ < Jl(J, ~) C EA}, I) S1: X(I) = X(I) -A [AD] * X(J) post(XSYllC, 
+I,J, {I < i ~ lil(i, I) C ~A}) EHDDO EHDDOAGBQSS 2More concurrency can sometimes be achieved by reordering 
+iterations of the J-loop (e.g. interchanging iterations 2 and 3 during 1=4 saves one time step if (3,1) 
+@ EA and (3,2) @EA). The guard of every source statement instance is implic­itly present in the post 
+instances after encapsulation and explicitly present in the corresponding wait in­ stances. The opposite 
+holds for the guard of every sink instance. Consequently, dependence on empty itera­tions are also eliminated. 
+Another way to express forward substitution is the outer product form presented below. Synchronization 
+of Sz 6:= Sz, caused by X(J) in the source and sink, and S26~ S1, caused by X(J) and X(I), requires three 
+and two parameters for XUPD and XDIV respectively: DOACROSS= M I 1, wait(XDIV, {l < i < 1},1) sl: X(I) 
+= X(I) / A(I, I) DOJ= 1+1, E wait(XUPD, {l < i < I}, J,I) S2: X(J) = X(J) -A(J, I) * X(I) post(XUPD,I,J,{I 
+< i < J}) post(XDIV, I,J) EMDDO ESDDOACROSS Because I < J holds for instances of S2, underlying de­pendence 
+of S26~ = S2 do not reach all following itera­ tions, i.e. constraint i < J appears in the post on XUPD 
+because J indices of the source and sink are equal. The remaining cross-iteration dependence S26< < S2, 
+caused by X(J) and X(I), is covered (see section 4.1). Conver­ sion into sparse code results in the following 
+fragment: DOACROSS I = 1. H wait(XDIAG, {l ~ i < 1[(1,;) C ~A}, I) s~: IF (1,1) E EA THEH X(I) = X(I) 
+/ A [uA(I, I)] ELSEIF (I ,1) @ EA THEM X(I) = X(I) / 0.0 (error) EMDIF DOADE PAD1 -1? J = ml . UA (AD) 
+(row index) wait(XUPD, {l ~ i < II(J, z) cEA}, J,I) S2: X(J) = X(J) -A [AD] * X(I) Post(XUPD, I,J, {I 
+< s < Jl(J, i) C ~A}) Post (XDIAG, I,J) EHDDO EIIDDOACROSS Clearly, the AD-loop can also be executed 
+concur­rently. The updating sequence of S2 cannot be re­ordered in this caae because it is explicitly 
+synchro­nized. An execution order for li=4 is shown in the fol­lowing diagram in case a43 is not stored. 
+Synchroniza­tion can be done with a single synchronization variable, as explained in sections 4.2 and 
+4.3: I 1 2 3 4 SI(l) Wxl ,2 wX1-2,3 wX1-2,4 t S2(1,2-4) i PX1>2-4 m s1~2) : e Wxl ,3-4 S2(2, 3-4) L PX2,3-4 
+ 3.2 Dynamic nonzero structures So far, values of guards used in synchronization were invariant in 
+one execution of the concurrentized loop. This is true if no assignments to elements of the corre­sponding 
+matrix occur (as in e.g. triangular solve), or if all assignments are performed within a static nonzero 
+structure (as in e.g. LU-decomposition after symbolic factorization [10, 28]). In general, however, the 
+nonzero structure might change during execution of the loop due to insertions and deletions of entries 
+(referred to as creation and cancellation respectively). Generation of an identical guard in two different 
+iterations is only valid if changes in value between both evaluations are correctly accounted for. Although 
+this complicates syn­chronization generation, concurrency can still be found. Consider, for example, 
+conversion into sparse code with concurrent I-loop of the following fragment, if the technique of the 
+previous section for static dependence S16< S3 and S36< S2 is used, i.e. under the assumption that values 
+of the guards are invariant. Function newA returns a new address in At and adapts uA, EA and ADA accordingly 
+as side-effect to account for creation: DDI=2, H-2 Sl: A(I+2,2) = x S2: C(I) = B(I-1) S3: B(I) = B(I) 
++ A(I,2) * C(I) EEDDO J DOACROSSI = 2. H -2 SI: IF (1+2 ,2) 6-~A THEM A [uA(I+ 2,2)] = X ELSEIF (1+2,2) 
+@ EA THEM if [ne~A(I + 2, 2)] = X EMDIF IF (I <E-4) THEIJ IF (1+2,2) 6 ~A post(ASYBIC, I) ENDIF IF (I 
+>2) THEM IF (I-1 ,2) C EA wait(BSYiiC, I-i) EMDIF S2: C(I) = B(I-1) S3 : IF (1,2) C EA THEM wait (ASYJIC, 
+I-2) B(I) = B(I) + A [uA(I,2)] * C(I) Post (BSYHC, I) EEDIF EIIDDOACROSS Incorrect executions are possible. 
+For example, if iteration 2 is delayed and (3, 2) @ ~A holds, so that wait (BSYNC, 3) is not executed, 
+premature evaluation of the guard of wait (ASYNC, 2 ) and S3(4) occurs: I 234 t S( ) i (6, 2) i ;A:PA4 
+If a42 is inserted by S1 (2), S3(4) is not executed and B(4) contains an incorrect value afterwards. 
+On the other hand, if cancellation was possible in S1, deadlock could result for a conditionally executed 
+post. A simi­lar problem arises for creation, if an instance of the sink can alter the value of a guard 
+on which execution of the source instance depends. These problems are solved by application of the following 
+rule: disable generation of a guard in synchronization statements, if the value of this guard can be 
+affected by the corresponding source or sink statement instance (note that other guards may still be 
+generated). However, evaluation of guards that belong to other iterations must also be correctly synchronized. 
+The fol­lowing diagram shows that an incorrect execution can still result if synchronization on ASYNC 
+is performed unconditionally, because iteration 5 evaluates guard (4, 2) G EA before SI(2) has been executed. 
+If a42 is inserted in iteration 2, a premature value of B(4) is stored in C(5) by S2(5): I 2 3 4 5 s~(4) 
+s~(5) t pA4 pA5 i s~(4) (4, 2) c E,4:WB4 m wA2 S2(5) e SI(2) pA2 1 ,92(2) (4, 2) E &#38;s3(4) (2, 2) 
+C EA:.%(2) (4, 2) G EA :pB4 In general, the problem occurs for a particular guard whenever a statement 
+instance (A) might alter the value of this guard on which a preceding or following execution of (D) depends, 
+while synchronization be­ tween (D) and another statement instance (I) is only re­ quired if (D) is executed. 
+The possible basic situations, which can be detected at compile-time, are presented schematically in 
+the following picture: I 15 (1) (2) (3) (4) Synchronization between (A) and (D) (boldfaced arc) is independent 
+of the guard under consideration by ap­plication of the previous rule. An incorrect execution is prevented 
+if the following rules are applied for the gen­eration of that guard for synchronization between (D) 
+and (I) or vice versa. If there are several (A) instances that can affect the value of the guard under 
+considera­tion, a combination of appropriate rules is applied: Case 1 Since evaluation of the guard 
+of wait in (I) must be performed after execution of (A), synchroniza­tion between (A) and (I) is required. 
+Case 2 Irrespective of the relative execution order between (A) and (I), the post of (I) can be executed 
+independently, while the guard is still generated for the wait of (D).3 Case 3 If (A) will be executed 
+after (I), synchroniza­tion bet ween (I) and (A) is required, while generation of the guard for synchronization 
+between (D) and (I) is disabled otherwise. Case 4 Synchronization between (I) and (A) is re­quired to 
+assure that the value of the guard is evaluated before redefined. A conservative decision in all cases 
+is to disable gen­eration of the current guard for synchronization be­tween (D) and (I). In some cases, 
+newly generated synchronization between (A) and (I) can be brought under control of guards of (A) or 
+(I) and one of the previous cases might apply again. At any stage, this process can be terminated by 
+the conservative deci­sion stated above. For example, since case 1 is ap­plicable in the previous problem, 
+a test on the same bit, i.e. wait (AsYNC, I -3 ) , before evaluation of (1 i, 2) c E~ ensures correct 
+execution, which is, however, also achieved by unconditional synchroniza­tion on BSYNC. Another example 
+where the nonzero structure of the matrix changes during execution, is LU-factorization without pivoting: 
+DO 1=1, II-I DO J= 1+1, Ii sl: A(J, I) = A(J, I) / A(I, I) DO K= I+ I,IJ S2: A(J,K) = A(J, K) -A(J, I) 
+* A(I,K) EEDDO EUDDO EllDDO Since all cross-iteration dependence are carried by the outermost loop, 
+concurrentization of the J-loop is a common optimization. However, if the code is con­verted into sparse 
+code, the amount of concurrency can drastically decrease because many iterations of the J­loop get disabled, 
+since only so-called target rows are considered [28]. Therefore, concurrentization of an out­ermost loop 
+might be useful, which also introduce less startup overhead [17, 25, 27]. Loop interchanging yields the 
+JIK-version, in which S26<<S1 and S26<<= S2 hold. The first dependence is caused by A ( J, K) and A ( 
+1, I ). Consequently, the value of I in a sink statement instance of this dependence SNote that in the 
+bit-array implementation it is allowed that certain post-signals are not consumed. is equal to the values 
+of J and K in the correspond­ing source of a previous iteration. Therefore, in terms of the sink, all 
+instances S2 (I, i, I) where 1 ~ i < I are sources. Synchronization of-this dependence re­quires three 
+parameters to indicate source instances, and one parameter to identify the different sink in­stances 
+per source. Synchronization of the second de­pendence, caused by A( J, K) and A( 1, K), haa a similar 
+structure. Values of I and K in a sink are equal to the values of J and K in the corresponding preceding 
+source. Because I < K holds in the sink, instances of S2 are only a source if J < K holds for this instance. 
+If variables ADIAG and AROWare used for synchronization, the following code results: DOACROSS J = 2, 
+M DO 1=1, J-1 wait(ADIAG, I,{l ~ i < I}, I,J) SI: A(J, I) = A(J, I) / A(I, I) DO K= 1+1, Ii wait(AROU, 
+I,{l < i < I}, K,J) S2: A(J, K) = A(J, K) -A(J, I) * A(I,K) IF (J = K) post(ADIAG, J, I, K,{J< j < E}) 
+IF (J c K) Post(AROW, J, I,K,{J < j < N}) EUDDO EIJDDO EUDDOACROSS Consider conversion into sparse code 
+if the need for new synchronization is prevented, i.e. a guard is only generated in case 2. Clearly, 
+guard (J, I) c 13A and (J, I) c EA A (I, K) G EA result for SI and S2 re­spectively. Since for S26< < 
+S1, the guard (J, I) E EA of the sink can only be altered by preceding state­ment instances in the same 
+iteration of J (S26=< S1, caused by A ( J, K) and A ( J, I ) hols, while no anti or out­put dependence 
+caused by A (J, I ) have S1 as source) case 2 applies and the guard is generated for the wait. Because 
+case 1 applies for the guards of the source (((I, K) EEA with S26<<=S2, caused by A(I,K) in the sink, 
+and guard (J, I) E EA with S26=< < S2, caused by A( J, I ) ), generation of these guards is disabled. 
+Note that S16== S2 is harmless, because S1 cannot cause cre­ation. Dependence S26< < = S2 self disables 
+generation of guard (I, K) c EA belonging to its sink, while gen­eration of guards belonging to the source 
+is again dis­abled. Because case 2 applies for (J, I) c EA of the sink, this guard appears in the wait. 
+The resulting code is shown below. Guard (J, I) E EA has been hoisted out the innermost loop, is col­lapsed 
+with the identical guard of S1, and is encap­sulated in the I-loop (insertions in the corresponding row 
+complicates code generation [6]). Encapsulation of (I, K) E EA h the K-loop is prohibited by the presence 
+of unguarded synchronization: DDACRDSS J = 2, B DO ADE PADJ I = XZ. U; (AD) wait(ADIAG, I,{l ~ i < I}, 
+I,J) S1 : IF (1,1) c J??A THEM A [AD] = A [AD] / A [uA(I, I)] ELSEIF (I ,1) @ ~A THEE A [AD] = A [AD] 
+/ 0.0 (error) EEDIF DOK= 1+1, lA wait(AROW, I,{l ~ i < I}, K,J) S2: IF (J, K) E IJA A (I, K) EEA THEM 
+A [uA(J, K)] = A [uA(J, K)] -A [AD] * A [uA(I, K)] ELSEIF (J, K) @ EA A (I, K) c EA THEM ii [7WWA (J, 
+K)] = -A [AD] * A [aA(I, K)] EHDIF IF (J = K) post(ADIAG, J, I,K, {J < j < Ii}) IF (J < K) post(AROU,J, 
+I,K, {J < j ~ E}) EiiDDO EUDDO EMDDOACKOSS   4 Implementation issues Although, the methods considered 
+so far may reveal all potential parallelism if concurrency at statement in­stance level is expressed 
+in a complete data-flow like manner, it suffers from many disadvantages. The gen­erated guards, for instance, 
+introduce substantial run­time overhead. Synchronization also might increase run-time overhead and the 
+demand for memory or spe­cial hardware resources, depending on the implemen­tation of the wait-and post-primitives. 
+A complete data-flow like execution is only achieved if sufficient processors are available and scheduling 
+is done without intrusive overhead. Since usually the number of it er­ations exceeds the number of processors, 
+concurrency might be lost because the scheduling of iterations of DOACROSS-loops [19] must account for 
+all possible forward dependence, so that the execution set cannot be reordered arbitrarily. In this section, 
+methods to make the derived code more feasible are discussed. 4.1 Synchronization elimination Redundant 
+synchronization elimination [13, 14] consists of the detection and elimination of so-called covered dependence, 
+which are dependence that are implic­itly enforced by synchronization of other dependence or by execution 
+order constraints that are imposed by the architecture, such as serial execution within every iteration. 
+These techniques can also be used for synchronization of guarded statements, with the additional constraint 
+that a dependence can only be covered by synchronization of another dependence if guard~over~d 3 guardCOUering 
+holds. For example, S16<<S1 in the sparse version of inner product forward substitution is covered by 
+synchronization of S26< S1, because identical subscripts are used, the source and sink of the latter 
+follows and precedes respectively the source and the sink of the former [13], and (il, jl ) c EA A (i2, 
+il) G EA ~ (iz, il) ~ EA holds. 4.2 Memory requirements reduction Reduction in memory demands is achieved 
+if the dis­tinction between dependence that emerge from a single source instance to several sink instances 
+is eliminated, by dropping the corresponding parameters, so that the same bit is tested in all corresponding 
+wait instances. The following lemma can be used to move synchro­nization statement instances (cf. [27]), 
+which can assist in reducing memory requirements: Lemma Execution of synchronization statement in­stances 
+can be arbitrarily interchanged with the execu­tion of following or preceding statement instances in 
+one iteration of the concurrentized loop, for instances of post and wait respectively, without affecting 
+the original semantics (proof in [4]). Consider the following example, where synchroniza­tion ofS16< 
+S2 initially requires three parameters: DOACROSS I = 3, L DO1=3, L DOJ=l, M DO J=I, H A(I) = ... SI : 
+A(I) = ... Post(ASYHC, I,J, {l ~ k ~ E}) ENDDO EMDDO + DOK=l, H DOK =1, n s~: . . . = A(I-2) wait(ASYIW, 
+I-2, {1 ~ j < M}, K) EEDDO . . . = A(I-2) EMDDO EHDDO EMDDOACROSS As stated above, the third parameter 
+can be dropped. By application of the lemma on the unrolled K-loop, all wait instances can be hoisted 
+before this loop. Since this yields N identical consecutive wait state­ments, these statements are replaced 
+by one statement. Similarly, all post instances can be hoisted after the J-loop. However, replacing the 
+resulting statements by one post statement requires collection of all dif­ferent used parameter values, 
+referred to as aggre­gation, which yields post (ASYNC, 1, {1 s j < M}) . Clearly, parameters of which 
+the whole range is used in all statements can also be dropped. Consequently, post (ASYNC, I ) and wait 
+(ASYNC, I-2) between the two loops suffices. Effectively, the post of a source is placed after the last 
+read or write, while the wait of a sink is placed before the first read or write (cf. [13]). Guards that 
+were present in sets that are dropped by application of the previous two optimizations appear as disjunctions 
+in the resulting code, as shown below for forward substitution for unit-triangular L. The result­ing 
+conditions reflect the fact that synchronization is required if at least one source instance and at least 
+one sink instance is executed: DOACROSSI = i , M DOAD c PAD1 J = 7rz.u~ (AD) IF v~~~ (J, j) G J!?A wait 
+(XSYliC, J) X(I) = X(I) -A [AD] . X(J) EXDDO IF (V;=I+l (i)I) C ~A) A (V;j; (I, j) . ~A) pOst(xsy~csI) 
+EHDDOACROSS Finally, consecutive identical post statements on dif­ferent synchronization variables, 
+can be replaced by one post statement, if the remaining variable is used in all corresponding wait statements, 
+which reduces the number of synchronization variables required. 4.3 Guard elimination In all cases, 
+the guards of both the post and wait can be eliminated, at the potential loss of concurrency. Characteristics 
+of the nonzero structure might help to determine which conditions are very likely to hold. It is also 
+possible to eliminate the guard of the post only. For example, in the outer product code, dropping one 
+parameter yields V~~ll ~ (J, i) E EA M condition of the post on XUPD. If t~is disjunction is ignored, 
+all synchronization can be done on XDIAG, since the post statements become identical. 4.4 Application 
+of aggregation No potential concurrency was lost in the previous ex­ ample of aggregation, because all 
+instances were in­ volved in the dependence. In general however, overlap might decrease by synchronization 
+movement, because the granularity of concurrency becomes more coarse. The advantage are that in some 
+cases fewer parameters are required as shown above, or operations on subsets can be replaced by barriers 
+[25, 27] as explained below. Consider, for example, the inner product forward substitution where the 
+second parameter of XSYNC is dropped. Hoisting all instances of wait (XSYNC, J) be­ fore the AD-loop 
+followed by aggregation results in the following code, where W1 = {1 ~ j < 11(1, j) &#38; EA} and all 
+guards of the post are eliminated: DOACROSSI = 1, E wait (XSYEC, W1) ... Post (XSYMC,I) EHDDOACROSS ClearlY, 
+since wait (XSYNC, 0 ) is non-blocking, itera­tions in 11 = {1 ~ i < Nl(Wi = 0)} are indepen­dent of 
+other iterations. Consequently, these iterations can be moved into a DOALL-construct, after which all 
+associated post instances are aggregated. Repet­itive application results in the following code, where 
+aggregated synchronization operations are replaced by implicit barriers at the end of each DOALL-1OOP, 
+for IL ={i E{l... M}\u:::I~]w~ g u::;l~} DOL = 1, min{l GNl(It= O)} -1 DOALL I CIL ... EMDDOALL EUDDO 
+Pr~evaluation code that determines IL by leveliza­tion of the iteration dependence graph can be generated 
+by the compiler. The gain of pre evaluation is more substantial if the results can be used several times 
+or if compile-time evaluation is possible. Similar manipulations can be performed on loops in which the 
+nonzero structure changes, although guarded synchronization instances cannot be interchanged with instances 
+that might alter the values of any guard in­volved. For example, the following version of the con­currentized 
+JIK-version of LU-factorization can be de­rived. The wait instance cannot be hoisted before the AD-loop, 
+since the value of the (implicit) guard (J, I) E EA , and thus the dependence pattern, might be altered 
+by preceding statement instances: DOACROSS J = 2, K DOADc PADJ I = m,. cr_#(AD) wait (ASYIiC, I ) ... 
+EBDDO post (ASYMC , J) EMDDO Other work has addressed the possibility to deal with dependence patterns 
+determined by loop invariant val­ues of arrays used in subscripts by run-time depen­dence checking, based 
+on the conservative results of dependence analysis. In subscript blocking [19], pre­evaluation determines 
+maximum subsets of successive independent iterations, without reordering of the ex­ecution set. In [14, 
+16, 26] maximum subsets of arbi­trary independent iterations are determined. Overhead is introduced because 
+iterations are masked at run-time with a mask that is re-computed between the execu­tion of successive 
+subsets. Finally, in [22, 23] the it­erations of a particular loop-structure are partitioned and reordered 
+by pre evaluation code, and executed in a DOACROSS-like construct or as a sequence of DOALL-loops on 
+so-called wavefronts, corresponding [10] to the sequence of DOALL-loops found in this section. Repeated 
+startup overhead is eliminated, if each pro­ [11] cessor fetches iterations of IL if available, and executes 
+a barrier statement before shifting to IL+ 1. [12]  Summary [13] In this paper, we have explored the 
+automatic exploita­tion of concurrency in sparse codes. The techniques [14] described rely on the explicit 
+introduction of random synchronization in the original dense code. Thereupon, this code in converted 
+into sparse code, while sparsity [15] is used to reduce synchronization. At this moment, the techniques 
+in this paper are being implemented into the MT1 compiler [3]. Research needs to be done into the [16] 
+exploitation of specific nonzero structures, as well a8 a more effective implementation of these ideas. 
+Other issues, such as data structure interference in dynamic [17] data structures (cf. [28]), that complicate 
+concurrenti­zation must also be dealt with. [18] References <RefA>[19] [1] U. Banerjee. Dependence Analysis 
+for .%percomputing. Kluwer Academic Publishem, Boston, 1988. [20] [2] U. Banerjee. Loop Transformations 
+for Restructuring Com­pilers: The Foundations. Kluwer Academic Publishers, Boston, 1993.  [3] Aart J.C. 
+Bik. A prototype restructuring compiler. Master s [21] thesis, Utrecht University, 1992. INF/SCR-92-11. 
+[4] Aart J.C. Bik and Harry A.G. Wijshoff. Advanced compiler [22] optimization for sparse computations. 
+Technical Report no. 92-24, Dept. of Computer Science, Leiden University, 1992. [23] [5] Aart J.C. Bik 
+and Harry A.G. Wijshoff. Compilation tech­niques for sparse matrix computations. In Proceedings of the 
+International Conference on SupeTcomputing, pages 416 424, 1993. [24] [6] Aart J.C. Bik and Harry A.G. 
+Wijshoff. On automatic data structure selection and code generation for sparse compu­tations. In Proceedings 
+of the Sixth Annual on Languages [25]and Compilers for Parallelism Workshop, 1993. [7] Ron G. Cytron. 
+Doacross, beyond vectorization for multi­[26] processors. In Proceedings of the 1986 International Con­ference 
+on Parallel Processing, pages 836-844,1986. [8] Ron G. Cytron. Lknited processor scheduling of doacross 
+loops. In Proceedings of the f 987 International (?onjeTence [27] on Parallel Processing, pages 226 234, 
+1987. [9] E.W. Dijkstra. Cooperating sequential processes. In [28] F. Genuys, editor, Programming Languages. 
+Acadetic Press, New York, 1968. 1.S. Duff, A.M. Erisman, and J.K. Reid. DiTect Methods foT Sparse Matrices. 
+Oxford Science Publications, 1990. Alan George and Joseph W. Liu. Computer Solution of LaTge Spame Positive 
+Definite Systems. Prentice-Hall Inc., 1981. David J. Kuck. The Structure of ComputeTs and Compu­tations. 
+John Wiley and Sons, New York, 1978. Volume 1. Zhiyuan Li and Walid Abu-Sufah. On reducing data syn­chronization 
+in multiprocessed loops. IEEE Transactions on Computcm, pages 105 109, 1987. Samuel P. Midkiff. The Dependence 
+Analysis and Synchro­nization of PaTallel Programs. PhD thesis, C. S. R. D., 1993. Samuel P. Midkiff 
+and David A. Padua. Compiler generated synchronization for do loops. In proceedings o.f the 1986 In­ternational 
+Conference on PaTallel Processing, pages 544 551, 1986. Samuel P. Midkiff and David A. Padua. Compiler 
+algo­rithms for synchronization. IEEE Transactions on Com­puteTs, pages 1485 1495, 1987. David A. Padua 
+and Michael J. Wolfe. Advanced compiler optimization for supercomputers. Communications of th e A CM, 
+pages 1184 1201, 1986. Sergio Pissanetsky. Spane Mat riz Technology. Academic Press, London, 1984. C.D. 
+Polychronoupolos. Parallel Programming and Com­pilen. Kluwer Academic Publishers, Boston, 1988. William 
+Pugh and David Wonnacott. An evaluation of ex­act methods for analysis of value-based array data depen­dence. 
+In Proceedings of the Sixth Annual Workshop on Languages and Compilers foT PaTallel Computing, 1993. 
+Michael J. Quinn. Designing E@cient Algorithms for Par­ allel Computem. McGraw-Hill, 1987. Joel H. Saltz, 
+Ravi Mirchandaney, and Kathleen Crowley. The doconsider loop. In A CM Conference %oceedings, 3th Intevaationa[ 
+Conference of Supe rcomputing, pages 29 40, 1989. Joel H. Saltz, Ravi Mirchandrmey, and Kathleen Crowley. 
+Run-time pamllelization and scheduling of loops. IEEE Transactions on Computers, pages 603 612, 1991. 
+Gerard Tel. Introduction to distributed algorithms, vol­ ume 1. Course Notes INF/DOC 92-5, Utrecht University, 
+1992. Michael J. Wolfe. Optimizing SupeTcompilers for SupeT­ computem. Pitman, London, 1989. Chuan-Qi 
+Zhu and Pen-Chuug Yew. A scheme to enforce data dependence on large multiprocessor systems. IEEE Transactions 
+on Softwa re Engineering, Vohune SE-13:726­ 739, 1987. H. Zima. Supercompilen for Parallel and Vector 
+Comput­ers. ACM Press, New York, 1990. Zahari Zlatev. Computational Methods for GeneTa[ Sparse Matrices. 
+Kluwer Academic Publishers, 1991.</RefA> 
+			
