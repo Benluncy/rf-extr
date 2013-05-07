@@ -36,8 +36,8 @@ int main(int argc,char *argv[])
 	FILE *fpPredictfile = fopen("svm_predictions","r");
 	FILE *fpResultfile = fopen("diff.log","w");
 	FILE *fpTipfile = fopen("tips.log","w");
-	const char *btu="/home/yu/Workspace/cc/features/svm/GetContext/main ";
-	//const char *path="/home/yu/Workspace/cc/features/GetContext/";
+	const char *btu="/home/yu/Workspace/cc/gd/common/GetContext/main ";
+	//const char *path="/home/yu/Workspace/cc/gd/common/GetContext/";
 	fprintf(fpTipfile,"check tips\n===================================================================\n");	
 	
 	char command[1024];

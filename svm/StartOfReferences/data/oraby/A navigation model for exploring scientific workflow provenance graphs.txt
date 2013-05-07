@@ -1,0 +1,521 @@
+
+ A Navigation Model for Exploring Scienti.c Work.ow Provenance Graphs Manish Kumar Anand1, Shawn Bowers2, 
+Bertram Ludäscher1,3 1Dept. of Computer Science, University of California, Davis 2Dept. of Computer Science, 
+Gonzaga University 3Genome Center, University of California, Davis {maanand, ludaesch}@ucdavis.edu, bowers@gonzaga.edu 
+ ABSTRACT Many scienti.c work.ow systems record provenance information in the form of data and process 
+dependencies as part of work­.ow execution. Users often wish to explore these dependencies to reproduce, 
+validate, and explain work.ow results, e.g., by ex­amining the data and processes that were used to produce 
+partic­ular work.ow outputs. A natural interface for determining rele­vant provenance information, which 
+is adopted by many systems, is to display the complete provenance dependency graph. How­ever, for many 
+work.ows, provenance graphs can be large, with thousands or more nodes and edges. Displaying an entire 
+prove­nance graph for such work.ows can result in provenance over­load, where the large amount of provenance 
+information available makes it dif.cult for users to .nd relevant information and explore data and process 
+dependencies. In this paper, we address the chal­lenges of provenance overload through a novel navigation 
+model that provides operations for creating different views of provenance graphs along with approaches 
+for easily navigating between dif­ferent views. Further, our proposed navigation model provides an integrated 
+approach for exploring, summarizing, and querying por­tions of provenance graphs. We also discuss different 
+architectures for ef.ciently navigating large provenance graphs against an under­lying provenance database. 
+ 1. INTRODUCTION Most scienti.c work.ow systems provide mechanisms for record­ing work.ow provenance, 
+i.e., the details of a work.ow run includ­ing data and process dependencies [12, 21, 26]. This provenance 
+information is often displayed to users visually as one or more de­pendency graphs [17, 6], e.g., where 
+nodes denote data items or processes, and edges denote causal relationships between nodes. Displaying 
+such graphs is especially useful for small work.ows, in­volving only a few data sets and processes, since 
+users can quickly see every data product, process, and dependency associated with a run. However, for 
+many real-world scienti.c work.ows prove­nance graphs may be large (e.g., thousands of nodes and edges) 
+Permission to make digital or hard copies of all or part of this work for personal or classroom use is 
+granted without fee provided that copies are not made or distributed for pro.t or commercial advantage 
+and that copies bear this notice and the full citation on the .rst page. To copy otherwise, or republish, 
+to post on servers or to redistribute to lists, requires prior speci.c permission and/or a fee. WORKS 
+09, November 15, 2009, Portland Oregon, USA. Copyright 2009 ACM 978-1-60558-717-2/09/11 ...$10.00 due 
+to the complexity of the work.ow, the size of input data sets, and the number of intermediate data sets 
+produced [10, 1, 12]. For large provenance graphs, understanding and exploring provenance information 
+becomes a signi.cant challenge for users. For example, Fig. 1 shows two different provenance graphs gen­erated 
+from real-world work.ows: Fig. 1a shows a run of the fMRI analysis from the .rst provenance challenge 
+[21], and Fig. 1b shows a run of a standard phylogenetic tree inference work.ow [6]. While the provenance 
+graph of Fig. 1a can be quickly understood (since it contains only a few nodes and dependencies), the 
+graph of Fig. 1b is much larger and requires considerable effort to fully understand the associated provenance 
+information. The goal of the work described here is to allow users to spec­ify and navigate between different 
+abstractions (or views) of prove­nance graphs such that by displaying these views, users can obtain the 
+same bene.ts of quickly understanding and exploring prove­nance information as for complete (but small) 
+provenance graphs. Speci.cally, we present a navigation model for scienti.c work­.ow provenance that 
+consists of operations for creating, re.ning, and switching (or navigating) between different views of 
+work.ow provenance. We consider three main levels of granularity. An ac­tor dependency graph consists 
+of the types of processes (or actors) used in a work.ow run and the .ow of data between them. An in­vocation 
+dependency graph consists of individual processes (or in­vocations) of the work.ow run and the corresponding 
+.ow of data. And a .ow dependency graph consists of the detailed data items input to and produced by 
+the work.ow run and their causal depen­dencies. In addition, the model supports operations that allow 
+all or a portion of each provenance view to be expanded or collapsed, grouped into composite structures, 
+and .ltered or exposed using a high-level provenance query language. The navigation model is also based 
+on a generic model of provenance that subsumes con­ventional approaches for representing work.ow provenance 
+while supporting more advanced work.ow computation models that per­mit structured data and update semantics 
+[1]. This paper is organized as follows. We describe the provenance representation scheme and the associated 
+high-level provenance query language used by our navigation model in Section 2. Based on the provenance 
+model, we describe the views and operations supported by the navigation model in Section 3. We also present 
+in Section 3 different architectures for ef.ciently navigating large provenance graphs against an underlying 
+provenance database. Fi­nally, we describe the relationship betwen our work and existing work on representing, 
+querying, and visualizing provenance graphs in Section 4, and summarize our contributions in Section 
+5.  Figure 1: Two different provenance graphs displayed using the provenance browser of [6]: (a) shows 
+a provenance graph for a relatively small trace, whereas (b) shows a provenance graph for a much larger 
+trace. 2. PROVENANCE MODEL Consider the work.ow in Fig. 2a denoting a straightforward XML­based implementation 
+of the fMRI image processing pipeline used in the .rst provenance challenge [17]. We refer to steps in 
+the work­.ow as actors that are invoked over input data supplied by previous steps. This work.ow takes 
+a set of anatomy images representing 3D brain scans and a reference image, and applies the actors in 
+Fig. 2a as follows. 1. AlignWarp is invoked over each anatomy image to produce a set of warping parameters; 
+ 2. Reslice is invoked over each set of warping parameters to transform the associated anatomy image; 
+ 3. Softmean averages transformed images into an atlas image; 4. Slicer produces three different 2D 
+slices of the atlas; and 5. Convert creates a graphical image for each 2D slice.  In this implementation 
+of the work.ow, each invocation of an actor receives an XML structure, performs an update on a portion 
+of that structure, and then sends the updated version of the structure to downstream actors (see Fig. 
+2b). Here we assume that each XML structure denotes an unranked, labeled ordered tree representing work.ow 
+data products, each tree node has a unique identi.er, and tree nodes represent either collection tokens 
+or data tokens (which wrap complex objects or reference external data, e.g., stored within a .le). A 
+collection token may be an internal node (for non-empty collections) or a leaf node (for empty collections), 
+whereas data tokens are leaf nodes only. Representing Provenance with Flow Graphs. Fig. 2b shows the 
+.rst invocation of each actor for a typical run of the work.ow using our provenance model [1]. The invocation 
+of the AlignWarp actor (shown as AlignWarp:1) modi.es the .rst AnatomyImage collec­tion (node 2), and 
+replaces its contents with a WarpParamSet data token (node 11). Similarly, the invocation of the Reslice 
+actor uses this WarpParamSet to generate a new Image and Header data to­ken (nodes 13 and 14, respectively). 
+Since only a portion of an input data structure D is typically modi.ed by an invocation, we also represent 
+explicit (i.e., .ne-grained or node-level) data de­pendencies as part of the provenance of a run. For 
+example, the arrow from node 2 to node 11 in Fig. 2b states that the WarpPa­ramSet was created from the 
+AnatomyImage collection by the .rst invocation of AlignWarp. Note that implicitly, node 11 depends on 
+each of the descendents of node 2 (which includes nodes 6-10 in the .gure). Similarly, each descendent 
+of a collection implicitly inherits the dependencies of its ancestors. In our example, node 13 is a descendent 
+of node 12 (a ReslicedImage collection), and thus implicitly depends on node 11. Taken together, Fig. 
+2b denotes a portion of the .ow graph for a run of Fig. 2a; in particular, this .ow graph shows only 
+the information associated with the .rst invoca­tion of each work.ow actor. Flow graphs can be used to 
+derive standard process (or invoca­tion) and data dependency graphs. For instance, Fig. 3a shows an invocation 
+dependency graph for the .ow graph shown of Fig. 2b, where nodes represent invocations of actors and 
+edges represent dependency relationships between invocations. Fig. 3b shows a corresponding data dependency 
+graph, where nodes denote data items and edges denote dependency relations between data items. In general, 
+edges within data dependency graphs are not labeled. In Fig. 3b, we explicitly label dependency edges 
+with the invocation that created the item at the end of the arrow. For example, a depen­ dency x .iy 
+states that the data item y was produced by invocation i from the data item x. Note that while the .ow 
+graph can be used to infer data and invocation dependency graphs, the .ow graph cannot be reconstructed 
+from these two graphs alone. Querying Provenance with QLP. Our provenance model supports a high-level 
+query language for provenance (QLP) [2], that allows users to easily express complex provenance queries. 
+QLP queries can be posed against .ow graphs through a number of different QLP constructs, some of which 
+are described below. These con­structs are used to query distinct dimensions of the .ow graph rep­resenting: 
+(i) dependency paths over nodes and invocations; (ii) .ow relations among input and output structures 
+of invocations; and (iii) structural relations among nodes within and across data structures.  Figure 
+2: (a) Example XML-based work.ow implementing the fMRI image analysis of the .rst provenance challenge; 
+(b) The .ow graph showing the .rst invocations of each actor for a typical run. Figure 3: (a) The implied 
+invocation dependency graph for the run, with the .rst invocations of each actor shown in red; and (b) 
+The implied .ne-grain data dependency graph for the data items in Fig. 2 (b). A QLP path query acts as 
+a .lter over the paths of a dependency graph to return a corresponding subgraph. For example, the follow­ing 
+QLP dependency queries * derived 19 (1) 6 derived * (2) #Softmean through #Convert derived * (3) return 
+(1) dependencies denoting the set of paths starting from any node and ending at node 19, (2) dependencies 
+denoting the set of paths starting at node 6 and ending at any node, and (3) dependen­cies denoting the 
+set of paths starting at invocations of Softmean and go through invocations of Convert. A QLP .ow-relation 
+query is a type of path query that addition­ally .lters dependency graphs based on .ow relations. In 
+particular, these queries select speci.c versions of nodes within a .ow graph based on whether the nodes 
+were used as inputs or outputs of spe­ci.c invocations. For example, the following QLP queries * @in 
+derived 19 (4) 18 @out Slicer:1 derived * (5) return (4) dependencies denoting paths that start at a 
+node in the input data structure of the work.ow run and end at node 19, and (5) dependencies denoting 
+paths that start at node 18 positioned in the output of the .rst invocation of Slicer. A QLP structural 
+query is a type of path query that additionally .lters dependency graphs based on data types and structural 
+rela­tionships. In particular, these queries select nodes within a .ow graph based on whether they satisfy 
+XPath expressions. For example, the following query * derived //AtlasXGraphic (6) returns (6) lineage 
+relations denoting paths that end at AtlasX-Graphic nodes. Finally, QLP queries can combine simple path, 
+.ow-relation, and structural .lters to query all dimensions of .ow-graph simultane­ously. For example, 
+the following query returns the set of depen­dencies denoting paths that end at a descendent node of 
+an AtlasIm­age collection output by a Slicer invocation. * derived //AtlasImage//* @out Slicer (7) Combined 
+queries such as (7) can be (naively) evaluated by (i) ob­taining the structures resulting from @in and 
+@out version oper­ators, (ii) applying XPath expressions to these structures, and (iii) applying lineage 
+queries to the resulting nodes. For example, when applied to the portion of the .ow graph shown in Fig. 
+2b, query (7) is evaluated by: (i) obtaining the output structure of the Slicer in­vocation; (ii) executing 
+the XPath query //AtlasImage//* over the structure obtained in (i), returning nodes 16 19; and (iii) 
+issuing a separate lineage query for each node, i.e., * derived 16 , * derived 17 , * derived 18 , and 
+* derived 19 , where the answer contains the unique set of resulting lineage relations.  3. NAVIGATION 
+MODEL While provenance query languages such as QLP can help users manage the complexity of large provenance 
+graphs, they require knowledge of the provenance graph before queries can be issued. These languages 
+also provide limitted support for navigating prove­nance graphs (namely, by repeatedly issuing different 
+queries). Thus, additional techniques are required to help users explore large provenance graphs who 
+a priori do not know which portions are relevant, who want to display the graph in an aggregated or sum­marized 
+form, or who wish to quickly navigate between different provenance views. This section describes a provenance 
+navigation model that is designed to help address these issues. The navigation model provides an integrated 
+approach for ex­ploring, summarizing, and querying all or select portions of prove­nance graphs through 
+a set of navigation operators (see Fig. 4). These operators allow users to: (i) explore and navigate 
+various Operator Versions Effect on Current Provenance View expand expand : T × A . Set(I) expand : 
+T × I . Set(D) Replace an actor with its invocations, and an invocation with its dependencies collapse 
+collapse : T × Set(I) . A collapse : T × Set(D) . I Replace invocations with their actor, and dependencies 
+with their invocation group group : T × Set(A) . GA group : T × Set(I) . GI Replace actors with a composite 
+actor, and invocations with a composite invocation ungroup ungroup : T × GA . Set(A) ungroup : T × GI 
+. Set(I) Replace a composite actor with its actors, and a composite invocation with its invocations .lter 
+.lter : T × Q . Set(D) Filter .ow graph according to a given query Q navigate navigate : T ×V × Set(Op) 
+. V Apply a set of operations to the current provenance view standard views ADG : T ×V . V IDG : T ×V 
+. V FDG : T ×V . V Replace current view with actor, invocation, or .ow graph view, respectively .ow-graph 
+views EDEP : T ×V . V CDEP : T ×V . V DDEP : T ×V . V Replace current view with expanded, collapsed, 
+or data .ow dependency view, respectively Figure 4: Navigation model operators, where T , A, I, D, GA, 
+GI , Op, Q, and V are the set of traces (.ow graphs), actors, invocations, dependencies, grouped actors, 
+grouped invocations, navigation operations, QLP queries, and views, respectively. provenance views at 
+different levels of granularity; (ii) summarize (or abstract) portions of views through grouping; and 
+(iii) .lter (or query) provenance views using QLP. We .rst describe the different views (i.e., levels 
+of granularity) of .ow graphs supported by the navigation model, we then describe the navigation approach 
+and operators supported by the model, and end this section by describ­ing architectural issues associated 
+with implementing the model. 3.1 Provenance Views A work.ow speci.cation is composed of actors together 
+with inter-actor connections. These connections specify the desired .ow of data between actors. During 
+work.ow execution, actors are ex­ecuted such that data .ow is constrained by the given actor con­nections. 
+Each actor may be invoked multiple times during work­.ow execution, where each invocation receives speci.c 
+data items and produces new data items that are dependent on some or all of the given input data. Thus, 
+we consider three separate levels of granularity for viewing .ow graphs in the navigation model, corre­sponding 
+(from highest to lowest granularity) to the actor level, the invocation level, and the data-dependency 
+level. Speci.cally, an actor dependency graph (ADG) is a high-level view of a .ow graph that consists 
+of actors and their data.ow con­nections. An ADG consists of only those actors (and corresponding connections) 
+that were used during work.ow execution. Fig. 5a shows an example ADG in which nodes a and b are actors, 
+and edges represent the .ow of data of the work.ow run. An invoca­tion dependency graph (IDG) is the 
+next lower-level view of a .ow graph that consists of invocations and their data.ow connections. Fig. 
+5b shows an example IDG in which a:1, a:2, b:1, and b:2 de­note invocations of actors a and b, respectively. 
+The lowest level of granularity is a .ow dependency graph (FDG), which is a view of a .ow graph that 
+contains node-level data dependencies between input and output structures received and produced by invocations. 
+Fig. 5c shows an example FDG containing different versions of the tree structure rooted at node 1 together 
+with the corresponding de­pendencies (labeled with invocations). Note that an IDG is similar to the invocation-dependency 
+graph of Fig. 3a, whereas an FDG is similar to the data-dependency graph of Fig. 3b. In addition, we 
+also consider three distinct representations of an FDG (see Fig. 6) that can further simplify the display 
+of dependen­cies of a .ow graph. An expanded .ow dependency view (EDEP) shows only those nodes in an 
+FDG that participate in a dependency relationship together with the descendents of these nodes (for de­pendency 
+nodes that are collections). A collapsed .ow dependency view (CDEP) is similar to an EDEP, but does not 
+show the corre-sponding descendent nodes of collections. A data .ow dependency view (DDEP) shows only 
+dependencies of data nodes. Fig. 6 shows each of these three views for the FDG of Fig. 5c. We note that 
+the DDEP view can be used to construct a standard data-dependency graph as in Fig. 3b. In general, the 
+CDEP view (collapsed at the collection level) will produce the smallest .ow-dependency graph and the 
+EDEP will produce the largest .ow-dependency graph of the three sub-views (CDEP, EDEP, and DDEP). Each 
+of these, how­ever, will be smaller than the FDG, which displays all nodes input to and output by each 
+invocation and not just those that were used to derive new data items.  Within the navigation model, 
+a user can switch to any of these provenance views and sub-views (ADG, IDG, FDG, EDEP, CDEP, and DDEP) 
+from their current provenance view. That is, each view can be used as a simple form of a navigation operator 
+(see Fig. 4) that replaces the current view with the corresponding view. This allows users to bring all 
+elements in the provenance view to the same level of granularity. Although not shown in Fig. 4, the navigation 
+model also supports a select operator that allows users to pick items within a view to display various 
+details of the item. Selecting an item, however, does not modify the current provenance view. For example, 
+by selecting an invocation, a user can determine the parameter values passed to the invocation, the duration 
+of the invocation, and so on. Similarly, by selecting a connection between two invocations, a user can 
+see the details of the data structure passed between them. For example, in Fig. 5b, if a user selects 
+the edge between invocation a:1 and b:1, (shown as a QLP expression), a new pop-up window would open 
+in a browser and display the structure produced by invocation a:1. Selecting an edge in an actor dependency 
+graph would similarly display the structures of the data passed between the invocations of each of the 
+two actors. For example, in Fig. 5a, if a user selects the output edge of actor a (shown as a QLP expression), 
+then all outputs of invocations of a that were provided to invocations of actor b are displayed (referred 
+to as a combined view of the data structure). 3.2 Navigating Provenance Views Besides navigating to 
+speci.c, pre-de.ned provenance views, the navigation model also provides the collapse, expand, group, 
+un­group, and .lter operators for constructing new views (see Fig. 4). Given a set of these navigation 
+operators, a new view is constructed using the navigate operation. If vi is the current provenance view 
+(i.e., a provenance graph), t is the trace, and {op1,op2,...} is a set of operators, navigate(t,vi, {op1,op2,...})= 
+vi+1 returns the new provenance view vi+1 that results from applying the navigation operators to vi over 
+trace t. We describe each of the navigation operators below. We assume that w is a work.ow consisting 
+of actors A, and that t is a trace (i.e., a .ow graph) of a run of w that contains invocations I, dependencies 
+D, and data structures S. Note that a dependency (n1,i,n2). D states that node n1 was used by invocation 
+i to produce node n2 where n1 and n2 are each part of structures s1 and s2 input to and output by i, 
+respectively. 3.2.1 Expand and Collapse Instead of displaying the entire provenance graph at the same 
+level of granularity, the expand and collapse operators allow users to explore separate portions of the 
+graph at different levels of detail. We consider two versions of the expand operator. Given an actor 
+ Figure 7: Applying expand and collapse operators to only a portion of provenance views. a . A of trace 
+t, expand(t,a)= {i1,i2,...} returns the set of invocations i1, i2, ··· . I of a in t. Alternatively, 
+given an invocation i . I of trace t, expand(t,i)= {d1, d2,...} returns the set of dependencies d1,d2,··· 
+. D introduced by i in t, where d = (x,i,y) for nodes x and y. The collapse operator acts as the inverse 
+of expand. Namely, given a set of of dependencies {d1,d2,...}. Set(D) generated by an invocation i, where 
+Set(D) denotes the powerset of D, collapse(t,{d1,d2,...})= i returns invocation i. Note that a user will 
+typically select a single dependency to collapse, which will result in all such dependencies of the same 
+invocation to also collapse. Similarly, given a set of invocations {i1,i2,...}. Set(I) of an actor a, 
+collapse(t,{i1,i2,...})= a returns actor a. Note that when a user selects only a single invoca­tion to 
+collapse, this operation will result in all such invocations of the same actor to also collapse. To illustrate, 
+Fig. 5 shows the result of applying the expand op­erator to the actor dependency graph in Fig. 5a, resulting 
+in the new graph view shown in Fig. 5b. In this example, all actors are expanded using the operator expression 
+expand(*). Here we use the wildcard symbol * to denote the set of all actors in the view. When expand 
+is applied to each invocation of Fig. 5b the view in Fig. 5c is returned. Alternatively, Fig. 7 shows 
+the result of ap­plying the expand operator to only a portion of the correspond­ing dependency graph. 
+As shown, only actor a is expanded in the actor dependency graph of Fig. 7a, which results in the (mixed) 
+view of Fig. 7b. Expanding invocation a:1 in Fig. 7b results in the Figure 8: Actors and invocations 
+combined into composite structures: (a) groups of invocations of the same actors (a : 1, a :2) and (b 
+:1, b :2); (b) groups of invocations with the same invocation numbers (a :1, b :1) and (a :2, b :2); 
+and (c) grouping of actors a and b followed by the expansion of the composite actor into composite invocations. 
+provenance view shown in Fig. 7c, which contains each level of granularity actors, invocations, and .ow 
+dependencies within a single graph. 3.2.2 Group and Ungroup The group and ungroup navigation operators 
+allow actors and invocations to be combined into composite structures. Unlike other approaches [12] that 
+infer groups based on a user s selection of relevant actors, the navigation model explicitly allows users 
+to control which items should be grouped and supports both actor and invocation granularity. We consider 
+two versions of the group and ungroup operators. Given a set of actors {a1,a2,...}, group(t,{a1,a2,...})= 
+g{a1,a2,...} returns a composite actor g{a1,a2,...} over the given set of actors. Similarly, given a 
+composite actor g{a1,a2,... }, ungroup(t,g{a1,a2,... })= {a1,a2,... } returns the set of actors corresponding 
+to the group (i.e., ungroup is the inverse of group). Similarly, for a set of invocations {i1,i2,...}, 
+group(t,{i1,i2,...})= g{i1,i2,... } returns a composite invocation g{i1 ,i2,... }; and given a composite 
+invocation g{i1,i2 ,...}, ungroup(t,g{i1,i2,...})= {i1,i2,...} returns the set of invocations that comprise 
+the group. Fig. 8 shows three examples of using the group operator. In Fig. 8a, invocations of the same 
+actor are grouped, i.e., a:1 and a:2 form one group and invocations b:1 and b:2 form a different group. 
+Here we use the shorthand notation *:1 and *:2 to construct these groups. In Fig. 8b, invocations with 
+the same invocation number are grouped, i.e., a:1 and b:1 form one group and invocations a:2 Figure 
+9: An example of an invalid grouping of invocations causing a cycle in the resulting invocation dependency 
+graph. and b:2 form a different group. Similar to Fig. 8a, we use the short­hand notation a:* and b:* 
+to form the groups in Fig. 8b. In Fig. 8c, actors a and b are grouped, resulting in a composite actor 
+with two distinct invocations. Unlike in Fig. 8b, these invocations are of the same actor group and have 
+different invocation numbers, whereas in Fig. 8b two distinct groups are created. In general, forming 
+in­vocation groups explicitly, as opposed to .rst forming actor groups and then expanding actor groups, 
+supports grouping at a .ner-level of granularity by allowing various patterns of composite invoca­tions 
+that are not possible to express at the actor level. As shown in Fig. 8, composites created by the group 
+operator are assigned new identi.ers. In addition, the inputs, outputs, and dependencies associated with 
+grouped items are inferred from the underlying inputs, outputs, and dependencies of the invocations of 
+the groups. For dependencies in particular, this often requires com­puting the transitive closure of 
+dependencies associated with invo­cations of the group, e.g., as in Fig. 8b-c. When a group is created 
+at the actor level, expanding the group results in a correspondingly grouped set of invocations, e.g., 
+as shown in Fig. 8c. These invocations are constructed based on the invocation dependency graph. In particular, 
+each invocation group of the actor group contains a set of connected invocations, and no invocation within 
+an invocation group is connected to any other invocation in a different invocation group. Thus, the portion 
+of the invocation graph associated with the actor group is partitioned into connected subgraphs, and 
+each such subgraph forms a distinct invocation group of the actor group. Similarly, when an invoca­tion 
+group is expanded, this composite invocation is used in the .ow dependency graph, resulting in a provenance 
+view where de­pendencies are established between output and input data, without intermediate data in 
+between. This approach allows scientists to continue to explore dependencies for grouped invocations 
+(since the dependencies are maintained through groups). We limit the use of the group operator such that 
+the resulting actor and invocation dependency graphs with composites remain cycle free. Thus, grouping 
+a set of invocations or actors should not introduce cycles in the ADG or IDG. For example, Fig. 9 shows 
+invocations a:1 and b:2 grouped as G1:1 and a:2 and b:1 grouped as G2:1. The invocation dependency graph 
+that results has the out­put of G1:1 connected to the input of G2:1 and vice-versa, thereby resulting 
+in a cycle between G1:1 and G2:1. The navigate opera­tor checks to ensure that a given group operation 
+will not result in cyclic dependency graphs. 3.2.3 Filter Besides grouping and expanding provenance 
+views, the naviga­tion model also allows provenance views to be queried using QLP. Issuing a query results 
+in the portion of the provenance view to be displayed that corresponds to query answer. A provenance 
+graph is re.ned in this way using the .lter operation of Fig. 4. Given a QLP query q, .lter(t, q)= {d1,d2,...} 
+returns the set of dependencies that result from applying the query to the .ow graph. The navigate operation 
+uses these dependencies to either remove or add items to the current view. Items are added to a view 
+if the current view is based on a more selective query.  3.2.4 Combining Operators Here we describe 
+a simple example that illustrates how the in­tegrated environment provided by the navigation model enables 
+users to explore provenance information by visualizing, summariz­ing, and .ltering relevant sections 
+of provenance views. Consider a user who is interested in exploring the provenance of an execution of 
+the fMRI work.ow of Section 2. Using the navigation model, the user begins by displaying the provenance 
+of the run at the high­est level of granularity, i.e., by visualizing the actor dependency graph (ADG) 
+as shown in Fig. 10a. Assume that the user .rst decides to view the outputs generated by the work.ow, 
+which is performed by issuing the select opera­tion over the outgoing edge of the actor Convert in Fig. 
+10a. After examining the output structure, assume that the user notices that one of the data products 
+namely, the AtlasXGraphic is not the expected output, i.e., the data product seems to be incorrect. To 
+check whether the product was generated correctly, the user decides to display the lineage of the AtlasXGraphic 
+in more detail by navigating from the current actor dependency view to the invo­cation dependency view 
+for this data item. The user creates this view by con.guring a .lter operator using the QLP query * derived 
+//AtlasXGraphic, which selects only those items that share dependency relationships with the data item 
+AtlasXGraphic. The user also applies the opera­tor expand(*) to display the invocation dependency graph 
+(relative to the .lter). After specifying these operators, the user applies the navigate function to 
+generate and display the new provenance view, which is shown in Fig. 10b. While analyzing this new provenance 
+view, the user suspects that the .rst invocation of each displayed actor (*:1) might have led to the 
+incorrect AtlasXGraphic output (e.g., based on inspecting the parameters or intermediate products produced 
+by one or more of the invocations). To explore whether the problem is due to these invocations, the user 
+further re.nes the provenance view by dis­playing only the .rst invocation of actors that share a dependency 
+relationship with the AtlasXGraphic data product by issuing the .l­ter operator using the QLP query AlignWarp:1 
+through //AtlasXGraphic, which selects the lineage items that start from AlignWarp:1 and end in AtlasXGraphic. 
+After applying the navigate function, the resulting provenance view is shown in Fig. 10c. Before looking 
+at the detailed data items and dependency rela­tionships, the user decides to further simplify the invocation 
+depen­dency graph by grouping the Reslice, Softmean, and Slicer invoca­tions into a single composite 
+invocation. In particular, this group restricts the data items in the view to the output of AlignWarp 
+and the input to Convert. The summarization operation is performed by specifying a group over the three 
+invocations, resulting in the provenance view of Fig. 10d. The user is now ready to analyze the .ne-grained 
+data dependen­cies among the relevant portions of the provenance graph. The user .rst expands the resulting 
+invocations (producing a .ow depen­dency graph), and then applies the DDEP view operator, as shown in 
+Fig. 10e. The user can now analyze the dependency relationships to verify that the relevant intermediate 
+data products are correct and that they were correctly derived based on the dependencies (e.g., to check 
+wether the correct warping parameters were used and that the slice was correctly generated). Note that 
+the dashed edge be­tween node 11 and 18 denotes that the dependency is the result of a composite invocation. 
+If the user wishes to further explore the de­pendencies represented by the composite invocation, the 
+edge can be ungrouped by operator ungroup(G1:1) to expose the detailed de­pendency information, which 
+in this case would result in the data dependency graph of Fig. 3b. This example demonstrates how the 
+operations of the navigation model can provide a .exibile approach for summarizing, re.ning, and navigating 
+different provenance views, which is essential for users needing to explore and manage large provenance 
+graphs.  3.3 System Architecture The navigation model allows users to navigate from the current provenance 
+view vi to another provenance view vi+1 by applying a set of navigation operators Opi+1. Once a user 
+issues a set of navi­gation operators Opi+1, the navigation system must compute a new provenance view 
+vi+1, which then replaces the display of the cur­rent view vi. While exploring large provenance graphs, 
+we expect users to repeatedly issue navigation operations, which would result in frequent changes to 
+the current provenance view. Especially for large provenance graphs, it is important to ensure fast response 
+time so that new views can be computed and displayed quickly. Here we compare different architectures 
+and approaches for implement­ing the navigation model over large provenance graphs, as shown in Fig. 
+11. Each of the alternative architectures of Fig. 11 have the following common components: a server-side 
+Provenance Store that acts as a database repository for provenance traces; a current provenance view 
+vi that is displayed by the Current View component; and a Navigation Engine that stores the current view, 
+receives a new set of navigation operations Opi+1 from the user, computes the new provenance view vi+1 
+from user operations, and updates the current view vi with the new computed view vi+1 via the Current 
+View component. In the architecture of Fig. 11a, the Navigation Engine is located at the client. To compute 
+the initial provenance view v1 for a work­.ow run, all related provenance information stored in the Prove­nance 
+Store is initially loaded into a client-side Trace Information component. The Navigation Engine uses 
+the trace stored at the Trace Information component to compute the initial view v1 (i.e., the actor dependency 
+graph), and this view is displayed by the Cur­rent View component. When a user issues a new set of navigation 
+operations Opi+1 against the current view vi, the Navigation En­gine computes a new view vi+1 by applying 
+the set of operators Opi+1 to the recently stored view vi, and then updates the current view vi with 
+new computed view vi+1. This approach is largely an in-memory-based approach, i.e., the related provenance 
+informa­tion is .rst loaded from the server (via the Provenance Store) to the client (via the Trace Information 
+component). This in-memeory ap­proach can speed up view computation, as the required provenance information 
+is temporarily stored at the client. However, depend­ing on the size of the trace, this approach may 
+require signi.cant CPU and memory resources [1] for answering queries and for stor­ing the initial trace, 
+data products, query results, and views. This cost also includes the time required to transfer the trace 
+information from the Provenance Store to the client-side application, which for larger traces can take 
+a considerable amount of time.  Fig. 11b suggests a different architecture in which the Naviga­tion 
+Engine is split between the client and server. In particular, when the client-side Navigation Engine 
+receives a new set of nav­igation operators Opi+1 from the user, these operations are sent to the server-side 
+Navigation Engine (which includes the Provenance Store). The server-side Navigation Engine computes and 
+stores the new view vi+1 on the server and then sends the new view to the client. Thus, the architecture 
+of Fig. 11b differs from Fig. 11a by storing the trace and computing and storing new views on the server, 
+thus avoiding the storage and computation costs needed for the client in Fig. 11a. We can extend the 
+approach of Fig. 11b in Fig. 11c by addition­ally minimizing the amount of information sent to construct 
+a new view, thus (for many cases) reducing the communication costs be­tween the client and server. In 
+particular, in addition to computing the new view vi+1 on the server, we also compute a set of changes 
+(or diffs ) . : V . V between the current view vi and the new view vi+1 such that .(vi)= vi+1. In the 
+normal way, each . con­sists of a set of nodes and edges that should be added to and re­moved from vi 
+to generate vi+1. Instead of returning vi+1 (which will typically overlap with vi), we only return the 
+set of changes ., which are used by the Current View component to display the new view. Both of the approaches 
+in Fig. 11b and Fig. 11c can help to reduce the storage and processing costs of the client application 
+in terms of computing new views for large-sized provenance graphs, since these approaches push view processing 
+and provenance stor­age to the server. Also, computing and sending only the changes between views (for 
+the cases when changes to views are small) as in Fig. 11c can further speed up navigation response time 
+compared to sending the entire view as in Fig. 11b. This can be seen in even the small exampe of Fig. 
+10, where each navigation step generally only makes small changes to the previous view. We can also further 
+extend Fig. 11c by sending the smaller of (i) the changes . between views and (ii) the new view. In particular, 
+if the new view is smaller than the corresponding ., then the server-side Navigation Engine would return 
+the new view, whereas if the size of the changes . is smaller, then the set of changes are sent. In our 
+prior work [6] we describe an interactive tool for brows­ing provenance that can display different provenance 
+views for sci­enti.c work.ow traces. The provenance browser has been inte­grated with the Kepler Scienti.c 
+Work.ow System [18], and can also be run as a standalone application. Using the provenance browser, a 
+user can connect to a provenance store to display various provenance views of the execution trace: the 
+dependency history view (Fig. 1) combines data dependency and process invocation graphs (where data nodes 
+are denoted as cirlces and invocations as squares); the collection history view shows the data structures 
+in­put and output by invocations; and the invocation graph view shows process dependencies. Each of these 
+views are synchronized, e.g., selection of a data item in the dependency history view also selects the 
+corresponding item in the collection history view. In a view, users can also step forward and backward 
+( VCR-style ) through the execution history to display corresponding portions of the XML structures and 
+data dependencies. As future work, we intend to leverage the provenance browser to support the proposed 
+archi­tecture of Fig. 11c. Our goal is to extend the provenance browser to support the navigation model 
+described here, thereby providing users with an integrated environment to .exibly visualize, summa­rize, 
+query, and navigate large provenance graphs.  4. RELATED WORK Automatically recording provenance information 
+during work­.ow execution is one of the important added values of scienti.c work.ow systems over more 
+conventional script-based approaches [19, 25]. However, providing techniques for effectively represent­ing, 
+managing, and accessing the large amounts of provenance in­formation generated by work.ow systems presents 
+a number of technical challenges [12, 25]. The navigation model presented here helps to address a number 
+of these challenges by providing users with an approach for exploring and viewing relevant portions of 
+provenance information using intuitive and natural graph-based provenance representations. Our navigation 
+model is based on a generic provenance representation scheme [1] that extends con­ventional approaches 
+to support a wide range of work.ow sys­tems. Our model also combines approaches for querying (i.e., us­ing 
+QLP [2]) and summarizing work.ow graphs (based on com­posites), while offering additional abstract views 
+of provenance in­formation (actor, invocation, and .ow dependency graphs) and the ability to navigate 
+between views (e.g., using expand and collapse). The remainder of this section describes related work 
+and compares our work to existing approaches. Scienti.c work.ow systems are being used in many scienti.c 
+domains, and many approaches have been proposed recently for representing work.ow provenance (e.g., [26, 
+21, 12, 25, 7, 17]). Most existing approaches for representing provenance do not con­sider work.ow computation 
+models that work over structured data, including XML. Standard provenance representation schemes (e.g., 
+[17, 15, 3, 5] among others) largely assume that work.ow mod­els are based on transformation semantics 
+in which each work­.ow step consumes all input data and produces entirely new output data. Alternatively, 
+work.ow models that work over structured data (e.g., [6, 27, 20, 28]) often employ update semantics, 
+where only a portion of an incoming XML stream is modi.ed by each work­.ow step. Our navigation model 
+is based on a generic model of provenance that subsumes conventional approaches for represent­ing work.ow 
+provenance while supporting more advanced work­.ow computation models permitting multiple invocations 
+of pro­cesses (e.g., for pipelining and loops), structured data, and update semantics [1]. Current approaches 
+for exploring work.ow provenance are based on visualizing entire provenance graphs or speci.c views of 
+these graphs, such as data and invocation dependency graphs [6, 25, 16, 17, 21]. In these approaches, 
+provenance graphs are typically displayed at the lowest level of granularity. Some systems further divide 
+provenance information into distinct layers. For example, myGrid [29] divides provenance into data, process, 
+organisational, and knowledge levels; VisTrails [8, 25, 4] divides provenance in­formation into work.ow 
+evolution, work.ow, and execution layers; Redux [3] divides provenance into runtime execution, data instan­tiation, 
+abstract service, and service instantiation layers; and the Provenance Aware Storage System (PASS) [22] 
+divides provenance into data and process layers. In all of these aproaches, however, these levels are 
+largely either orthogonal or hierarchical, whereas the provenance views supported by our navigation model 
+(i) com­bine both hierarchical abstractions (i.e., ADGs, IDGs, and FDGs) with (ii) the ability to seamlessly 
+navigate between these differ­ent levels of granularity, while (iii) allowing users to summarize, group, 
+and .lter portions of these views to create new views for further exploration of relevant provenance 
+information. Unlike standard provenance approaches, the Zoom*UserViews system [11, 5] provides a mechanism 
+for de.ning composite actors to abstract away non-relevant provenance information. The basic approach 
+is to allow users to select one or more relevant actors from a work.ow speci.cation graph, and based 
+on these selections, the system creates associated composite actors that contain at most one relevant 
+actor. The composite actors are constructed in such a way as to maintain certain data.ow connections, 
+thereby gen­erating a work.ow over the composites that is similar (in terms of data.ow) to the original. 
+However, unlike in our approach, users of the Zoom*UserViews system cannot explicitly de.ne their own 
+composites, and composition is de.ned only at the actor level (where each actor is assumed to have at 
+most one invocation). Our approach also maintains grouping across views (including the ability to ungroup 
+composites within these views), maintains the original data dependencies (i.e., dependencies within composites 
+are maintained, unlike in general within the Zoom*UserViews ap­proach), and we support a more general 
+provenance model that ex­plicitly handles structured data. Our navigation approach is inspired by and 
+has similarities to those proposed previously for exploring object-oriented and XML databases, where 
+graphical environments were developed that al­low users to drill-down from schema to instances and navigate 
+relationships among data. For example, PESTO [9] provides an in­tegrated browsing and querying environment 
+that allows users to employ a query-in-place paradigm for exploring the contents of object databases. 
+In particular, PESTO allows users to mix navi­gation and query in which queries can be issued relative 
+to a po­sition in the database reached through navigating object relation­ships. Similarly, in Blended 
+Browsing and Querying (BBQ) [23], a graphical user interface is provided that supports both browsing 
+and querying of XML data. Like PESTO, querying in BBQ is schema driven, requiring users to know the details 
+of the (Object-Oriented or XML) schema prior to issuing queries. Also, a standard XML­based web-based 
+navigation and visualization approach tailored to clinical provenance information is proposed in [13]. 
+In contrast, provenance information is largely schema-free, i.e., the informa­tion contained within an 
+ADG, IDG, and FDG is not constrained by an explicit schema, and queries in our model are posed directly 
+against the items contained within these views (or generally the .ow graph). In addition, our provenance 
+model is considerably more specialized than the more generic data models supported by PESTO and BBQ, 
+resulting in navigation operators (such as expand and group) that are tailored speci.cally to provenance 
+information. Finally, our navigation model is the .rst approach that we are aware of that combines navigation, 
+abstraction (through composi­tion), and query capabilities. A number of systems allow users to query 
+provenance information, however, these approaches largely rely on physical representations of provenance 
+information [12] (e.g., relational, XML, or RDF schemas), where users express provenance queries against 
+these schemas using corresponding query languages (i.e., SQL, XQuery, or SPARQL). Provenance queries, 
+however, often require computing transitive closures over dependency relations, and expressing such queries 
+using standard approaches is typically done using recursion or stored procedures [14, 10, 1]. Expressing 
+such queries is both cumbersome and error­prone, and requires considerable user expertise. Instead, high-level 
+languages such as QLP provide a separation between the logi­cal provenance model and its underlying physical 
+representation, which allows for the use of different representation schemes and additional optimization 
+techniques. Our approach, in particular, au­tomatically translates QLP queries to equivalent relational 
+queries expressed against the provenance storage schemes described in [1]. Standard approaches for querying 
+provenance information (e.g., [24, 15, 30, 5]) return sets of nodes (either sets of data items or process 
+invocations) as the query result. This approach requires ad­ditional steps (queries) to reconstruct causal 
+relations among nodes within a query answer. Instead, QLP is closed under lineage re­lations, where answers 
+to lineage queries are sets of lineage de­pendencies (edges) forming provenance subgraphs, and thus query 
+results are provenance preserving . This approach has a number of advantages, e.g., for supporting provenance 
+views, incremental querying, and for supporting visualization [12, 6]. 5. CONCLUSION We propose an approach 
+to address a number of open issues in effectively exploring large provenance information generated from 
+complex scienti.c work.ows. Speci.cally, we de.ne a novel nav­igation model for scienti.c work.ow provenance 
+that consists of operations for creating, re.ning, and switching between different provenance views. 
+The navigation model provides an integrated approach to: (i) create abstract views of provenance information 
+(actor, invocation, and .ow dependency graphs); (ii) seamlessly navigate between these views; (iii) summarize 
+portions of views through grouping actors or invocations; and (iv) .lter (or query) provenance views 
+using QLP, a high-level provenance query lan­guage. We also present different architectures for ef.ciently 
+nav­igating large provenance graphs against an underlying provenance database. Our navigation model is 
+the .rst approach that we are aware of that provides capabilities of visualizing, navigating, sum­marizing, 
+and querying provenance views in an integrated environ­ment. The approaches described here extend our 
+prior work on browsing and query provenance information by providing explicit navigation operations and 
+views for abstracting and summarizing provenance graphs. Combined with the provenance browser, these 
+approaches can provide a powerful environment for scientists to explore and validate the results of scienti.c 
+work.ows, especially those that involve large and complex data sets and large numbers of interconnected 
+processes. Acknowledgments. This work supported in part by NSF grants IIS-0630033, OCI-0722079, IIS-0612326, 
+ATM-0619139, and DOE grant DE-FC02-07ER25811. 6. REFERENCES <RefA>[1] M. K. Anand, S. Bowers, T. M. McPhillips, 
+and B. Ludäscher. Ef.cient provenance storage over nested data collections. In EDBT, 2009. [2] M. K. 
+Anand, S. Bowers, T. M. McPhillips, and B. Ludäscher. Exploring scienti.c work.ow provenance using hybrid 
+queries over nested data and lineage graphs. In SSDBM, 2009. [3] R. S. Barga and L. A. Digiampietri. 
+Automatic capture and ef.cient storage of e-science experiment provenance. Concurr. Comput. : Pract. 
+Exper., 20(5), 2008. [4] L. Bavoil, S. P. Callahan, C. E. Scheidegger, H. T. Vo, P. Crossno, C. T. Silva, 
+and J. Freire. Vistrails: Enabling interactive multiple-view visualizations. In IEEE Visualization, 2005. 
+[5] O. Biton, S. C. Boulakia, S. B. Davidson, and C. S. Hara. Querying and managing provenance through 
+user views in scienti.c work.ows. In ICDE, 2008. [6] S. Bowers, T. McPhillips, S. Riddle, M. Anand, 
+and B. Ludäscher. Kepler/pPOD: Scienti.c work.ow and provenance support for assembling the tree of life. 
+In IPAW, 2008. [7] S. Bowers, T. M. McPhillips, B. Ludäscher, S. Cohen, and S. B. Davidson. A model for 
+user-oriented data provenance in pipelined scienti.c work.ows. In IPAW, 2006. [8] S. Callahan, J. Freire, 
+E. Santos, C. Scheidegger, C. Silva, and H. Vo. VisTrails: Visualization meets data management. In SIGMOD, 
+2006. [9] M. J. Carey, L. M. Haas, V. Maganty, and J. H. Williams. Pesto: An integrated query/browser 
+for object databases. In VLDB, 1996. [10] A. Chapman, H. V. Jagadish, and P. Ramanan. Ef.cient provenance 
+storage. In SIGMOD, 2008. [11] S. Cohen, S. C. Boulakia, and S. B. Davidson. Towards a model of provenance 
+and user views in scienti.c work.ows. In DILS, 2006. [12] S. B. Davidson and J. Freire. Provenance and 
+scienti.c work.ows: challenges and opportunities. In SIGMOD, 2008. [13] V. Deora, A. Contes, O. F. Rana, 
+S. Rajbhandari, I. Wootten, K. Tamas, and L. Z. Varga. Navigating provenance information for distributed 
+healthcare management. In WI, 2006. [14] T. Heinis and G. Alonso. Ef.cient lineage tracking for scienti.c 
+work.ows. In SIGMOD, pages 1007 1018, 2008. [15] D. Holland, U. Braun, D. Maclean, K.-K. Muniswamy-Reddy, 
+and M. Seltzer. A data model and query language suitable for provenance. In IPAW, 2008. [16] J. Hunter 
+and K. Cheung. Provenance explorer-a graphical interface for constructing scienti.c publication packages 
+from provenance trails. Int. J. Digit. Libr., 7(1), 2007. [17] L. Moreau, et al. The open provenance 
+model. Technical Report 14979, ECS, Univ. of Southampton, 2007. [18] B. Ludäscher, I. Altintas, C. Berkley, 
+D. Higgins, E. Jaeger, M. Jones, E. A. Lee, J. Tao, and Y. Zhao. Scienti.c work.ow management and the 
+Kepler system. Concurr. Comput. : Pract. Exper., 18(10), 2006. [19] T. McPhillips, S. Bowers, D. Zinn, 
+and B. Ludäscher. Scienti.c work.ow design for mere mortals. Future Generation Computer Systems, 25(5), 
+2009. [20] P. Missier, K. Belhajjame, J. Zhao, and C. Goble. Data lineage model for taverna work.ows 
+with lightweight annotation requirements. In IPAW, 2008. [21] L. Moreau, et al. The .rst provenance challenge. 
+Concurr. Comput. : Pract. Exper., 20(5), 2008. [22] K.-K. Muniswamy-Reddy, U. Braun, D. A. Holland, P. 
+Macko, D. Maclean, D. Margo, M. Seltzer, and R. Smogor. Layering in provenance systems. In USENIX, 2009. 
+[23] K. D. Munroe and Y. Papakonstantinou. Bbq: A visual interface for integrated browsing and querying 
+of xml. In VDB 5, 2000. [24] C. Scheidegger, D. Koop, E. Santos, H. Vo, S. Callahan, J. Freire, and C. 
+Silva. Tackling the provenance challenge one layer at a time. Concurr. Comput. : Pract. Exper., 20(5), 
+2008. [25] C. Silva, J. Freire, and S. P. Callahan. Provenance for visualizations: Reproducibility and 
+beyond. Computing in Science &#38; Engineering, 9(5), 2007. [26] Y. L. Simmhan, B. Plale, and D. Gannon. 
+A survey of data provenance in e-science. SIGMOD, 34(3), 2005. [27] A. Slominski. Adapting bpel to scienti.c 
+work.ows. In Work.ows for e-Science Scienti.c Work.ows for Grids. 2007. [28] Tom Oinn, et al. Taverna: 
+lessons in creating a work.ow environment for the life sciences. Concurr. Comput. : Pract. Exper., 18(10), 
+2006. [29] J. Zhao, C. Goble, R. Stevens, and D. Turi. Mining taverna s semantic web of provenance. Concurrency 
+and Computation: Practice and Experience, 20(5), 2008. [30] Y. Zhao and S. Lu. Logic programming approach 
+to scienti.c work.ow provenance querying. In IPAW, 2008.</RefA>   
+			

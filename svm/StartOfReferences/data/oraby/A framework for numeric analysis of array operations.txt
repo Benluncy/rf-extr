@@ -1,0 +1,679 @@
+
+ A Framework for Numeric Analysis of Array Operations* § Denis Gopan Thomas Reps Mooly SagivUniversity 
+of Wisconsin University of Wisconsin Tel-Aviv University gopan@cs.wisc.edu reps@cs.wisc.edu msagiv@post.tau.ac.il 
+ABSTRACT Automatic discovery of relationships among values of array elements is a challenging problem 
+due to the unbounded na­ture of arrays. We present a framework for analyzing array operations that is 
+capable of capturing numeric properties of array elements. In particular, the analysis is able to es­tablish 
+that all array elements are initialized by an array­initialization loop, as well as to discover numeric 
+constraints on the values of initialized elements. The analysis is based on the combination of canonical 
+ab­straction and summarizing numeric domains. We describe a prototype implementation of the analysis 
+and discuss our experience with applying the prototype to several examples, including the veri.cation 
+of correctness of an insertion-sort procedure. Categories and Subject Descriptors D.3.1 [Formal De.nitions 
+and Theory]: Semantics; F.3.2 [Semantics of Programming Languages]: Program anal­ysis General Terms 
+Languages, Veri.cation  Keywords Program analysis, array analysis, abstract numeric domains, canonical 
+abstraction, summarization * Supported in part by ONR under contract N00014-01-1-0796. Supported in 
+part by a Cisco Systems Wisconsin Distinguished Graduate Fellowship. Supported in part by NSF under 
+grant CCR-9986308, by ONR under contract N00014-01-1-0708, and by the Alexander von Humboldt Foundation. 
+§ Supported in part by a grant from the Israeli Academy of Science and by the Alexander von Humboldt 
+Foundation. Permission to make digital or hard copies of all or part of this work for personal or classroom 
+use is granted without fee provided that copies are not made or distributed for pro.t or commercial advantage 
+and that copies bear this notice and the full citation on the .rst page. To copy otherwise, to republish, 
+to post on servers or to redistribute to lists, requires prior speci.c permission and/or a fee. POPL 
+05, January 12 14, 2005, Long Beach, California, USA. Copyright 2005 ACM 1-58113-830-X/05/0001 ...$5.00. 
+1. INTRODUCTION An array is a simple and e.cient data structure that is heavily used. In many cases, 
+to verify the correctness of programs that use arrays an analysis needs to be able to discover relationships 
+among values of array elements, as well as their relationships to scalar variables and constants. For 
+example, in scienti.c programing, a sparse matrix is rep­resented with several arrays, and indirect indexing 
+is used to access matrix elements. In this case, to verify that all array accesses are in bounds, an 
+analysis has to discover up­per and lower bounds on the elements stored in the index arrays. Mutual-exclusion 
+protocols, such as the Bakery and Peterson algorithms [10, 16], use certain relationships among the values 
+stored in a shared integer array to decide which processes may enter their critical section. To verify 
+the cor­rectness of these protocols, an analysis must be capable of capturing these relationships. Static 
+reasoning about array elements is problematic be­cause of the unbounded nature of arrays. Array operations 
+tend to be implemented without having a particular .xed array size in mind. Rather, the code is parametrized 
+by scalar variables that have certain numeric relationships to the actual size of the array. The proper 
+veri.cation of such code requires establishing the desired property for any val­ues of those parameters 
+with which the code may be invoked. These symbolic constraints on the size of the array preclude the 
+analysis from modeling each array element as an inde­pendent scalar variable and using standard numeric 
+analysis techniques to verify the property. Alternatively, an entire array may be treated as a single 
+summary numeric quantity. In this case, numeric properties established for the summary quantity that 
+represents an ar­ray must be shared by all array elements. This approach, known as array smashing [2], 
+resolves the unboundedness issue. However, the problem with this approach, as with any approach that 
+uses such aggregation, is the inability to perform strong updates when assigning to individual array 
+elements;1 this can lead to signi.cant precision loss. In this paper, we present a static-analysis framework 
+that combines canonical abstraction [19, 11] and summarizing nu­meric domains [7], and is more precise 
+than array smashing. The analysis uses canonical abstraction to partition an un­bounded set of array 
+elements into a bounded number of 1A strong update corresponds to a kill of a scalar variable; it represents 
+a de.nite change in value to all concrete objects that the abstract object represents. Strong updates 
+cannot generally be performed on summary objects because a (concrete) update only a.ects one of the summarized 
+concrete objects. groups. Partitioning is done based on certain properties of array elements, in particular, 
+on numeric relationships be­tween their indices and values of scalar variables. The ele­ments that have 
+the same properties are grouped together. Each group is represented by an abstract array element. The 
+abstraction is storeless in the sense that there is no static connection between a concrete array element 
+and an ab­stract array element that represents it: after the properties of a concrete array element change, 
+it may be represented by a di.erent abstract element. The analysis uses summarizing numeric domains to 
+keep track of the values and indices of array elements. Indices of array elements are modeled explicitly; 
+that is, two numeric quantities are associated with each array element: the actual value of the element 
+and its index. Intuitively, the analysis attempts to partition array ele­ments into groups about which 
+stronger assertions can be established and maintained. For example, if an array ele­ment is assigned 
+to, the analysis tries to isolate that ele­ment in a separate group, so that a strong update may be performed. 
+When analyzing array-initialization code, the analysis attempts to keep array elements that were already 
+initialized in a separate group from the uninitialized ones. For the veri.cation of sorting routines, 
+the analysis tries to separate portions of arrays that have been sorted from the unsorted portions, and 
+so on. Given a program that uses multiple arrays and non-array variables, an important question is how 
+to partition each array to verify the desired property. We found that a simple heuristic of partitioning 
+arrays with respect to variables that are used to access them is very e.ective in practice. The ar­ray 
+elements that are indexed by scalar variables are placed by themselves into individual groups, which 
+are represented by non-summary abstract elements. Array segments in be­tween the indexed elements are 
+also placed into individual groups, but these groups are represented by summary ab­stract elements. Such 
+a partitioning heuristic allows the analysis to discover constraints on the values of array ele­ments 
+after simple initialization loops; this can be done fully automatically. More complex properties, such 
+as verifying comparison­based sorting algorithms, require extra care. To this end, in Sect. 4.3, we introduce 
+auxiliary predicates that are attached to each abstract partition element and encompass numeric properties 
+that are beyond the capabilities of summarizing numeric domains. Throughout the paper, we give several 
+examples of such auxiliary predicates and illustrate how they can be used to establish the desired properties 
+for several challenging examples.2 The goal of the analysis is to collect an overapproximation of the 
+set of reachable states at each program point. We use the abstract-interpretation framework [3] to formalize 
+the analysis. The abstract states that are obtained for each program point are a set of triples; each 
+triple consists of an array partition, an element of a summarizing abstract numeric domain, and a valuation 
+of auxiliary predicates. To implement a prototype of the analysis, we extended the TVLA tool [11] to 
+provide it with the capability to reason about numeric quantities. TVLA uses three-valued logical 2The 
+process of identifying auxiliary predicates and their abstract transformers is not, at present, performed 
+automatically. Sect. 6.2 discuses some possibilities for carrying out these steps automati­cally. structures 
+to describe states of a program. We had to as­sociate an element of a summarizing numeric domain with 
+each three-valued structure, to extend TVLA s internal ma­chinery to maintain numeric states correctly, 
+and to extend the speci.cation language to incorporate predicates that in­clude numeric comparisons. 
+The summarizing numeric do­main was implemented by wrapping the Parma library for polyhedral analysis 
+[1] in the manner described in [7]. We then de.ned a set of predicates necessary for describing and partitioning 
+arrays. With this prototype implementation, we were able to analyze successfully several kernel exam­ples, 
+including verifying the correctness of an insertion-sort implementation. The contributions we make in 
+this paper are: We introduce an abstract domain suitable for analyz­ing properties of complex array 
+operations.  More generally, we show how two previously described techniques, canonical abstraction 
+and summarizing nu­meric domains, can be combined to work together.  We describe a working prototype 
+of the analysis, and illustrate it with several non-trivial examples.  1.1 Related work The problem 
+of reasoning about values stored in arrays has been addressed in previous research. Here we review some 
+of the related approaches that we are aware of. Masdupuy, in his dissertation [13], uses numeric domains 
+to capture relationships among values and index positions of elements of statically initialized arrays. 
+In contrast, our framework allows to discover such relationships for dynam­ically initialized arrays. 
+In particular, canonical abstraction lets our approach retain precision by handling assignments to array 
+elements using strong updates. Blanchet et al., while building a special-purpose static pro­gram analyzer 
+[2], recognized the need for handling values of array elements. They proposed two practical approaches: 
+(i) array expansion, i.e., introducing an abstract element for each index in the array; and (ii) array 
+smashing, i.e., using a single abstract element to represent all array elements. Array expansion is precise, 
+but in practice can only be used for arrays of small size, and is not able to handle unbounded arrays. 
+Array smashing allows handling arbitrary arrays ef­.ciently, but su.ers precision losses due to the need 
+to per­form weak updates. Our approach combines the bene.ts of both array expansion and array smashing 
+by dynamically expanding the elements that are read or written to so as to avoid weak updates, and smashing 
+together the remaining elements. Flanagan and Qadeer used predicate abstraction to in­fer universally-quanti.ed 
+loop invariants [6]. To handle un­bounded arrays, they used predicates over Skolem constants, which are 
+synthetically introduced variables with uncon­strained values. These variables are then quanti.ed out 
+from the inferred invariants. Our approach is di.erent in that we model the values of all array elements 
+directly and use summarization to handle unbounded arrays. Also, our approach uses abstract numeric domains 
+to maintain the nu­meric state of the program, which obviates the need for calls to a theorem prover. 
+. Cern´y introduced the technique of parametric predicate abstraction [20], in which special-purpose 
+abstract domains void array copy(int a[], int b[], int n) { i . 0; (.) while(i < n) { b[i] . a[i]; i 
+. i+1; } Figure 1: Array-copy function. are designed to reason about properties of array elements. The 
+domains are parametrized with numeric quantities that designate the portion of an array for which the 
+desired prop­erty holds. The abstract transformers are manually de.ned for each domain. The analysis 
+instantiates the domains by explicitly modeling their parameters in the numeric state. Our approach di.ers 
+in two respects. First, in our approach numeric states directly model array elements; which allows the 
+analysis to automatically synthesize certain invariants that involve values of array elements. Second, 
+our approach separates the task of array partitioning from the task of es­tablishing the properties of 
+array elements. This separation allows the user to concentrate directly on formulating aux­iliary predicates 
+that capture the properties of interest. Canonical abstraction [19, 11] was .rst introduced for the purpose 
+of determining shape invariants for programs that perform destructive updating on dynamically allocated 
+storage. However, it lacked the ability to explicitly repre­sent numeric quantities. Also, [7] introduced 
+a method for extending existing numeric domains with the capability of reasoning about unbounded collections 
+of numeric quanti­ties. However, static partitioning of numeric quantities was assumed. Our work combines 
+these techniques and shows how their combination can be used for verifying properties of array operations. 
+ 1.2 Paper organization The paper is structured as follows: Sect. 2 gives an overview of the analysis. 
+Sect. 3 discusses concrete semantics. Sect. 4 introduces the abstraction. Sect. 5 details the analysis 
+of the running example. Sect. 6 outlines a prototype analysis implementation. Sect. 7 describes our experiences 
+with the analysis prototype. Sect. 8 concludes the presentation.  2. RUNNING EXAMPLE In this section, 
+we illustrate our technique using a simple example. The procedure in Fig. 1 copies the contents of array 
+a into array b. Both arrays are of size n,which is speci.ed as a parameter to the procedure. Let us assume 
+that the analysis has already determined some facts about values stored in array a. For instance, assume 
+that the values of elements in array a range from -5to 5. At the exit of the procedure, we would like 
+to establish that the values stored in array b also range from -5to5. Furthermore,wewould like to establish 
+this property for any reasonable array size, i.e., for all values of n greater than or equal to one. 
+Our technique operates by partitioning the unbounded number of concrete array elements into a bounded 
+number of groups. Each group is represented by an abstract array element. The partitioning is done by 
+introducing relations between the indices of array elements and the value of loop variable i. In particular, 
+for the example in Fig. 1, our technique will group the elements of the two arrays with in­diceslessthan 
+i into two summary array elements (denoted by a<i and b<i, respectively). Array elements with indices 
+greater than i are grouped into two other summary array elements (a>i and b>i). Array elements a[i] and 
+b[i] are not grouped with any other array elements, and are represented by non-summary abstract array 
+elements ai and bi. Such partitioning allows the analysis toperform astrongupdatewhenit processes the 
+assignment statement in the body of the loop. Fig. 2(a) shows how the elements of both arrays are par­titioned 
+during the .rst iteration of the loop. Each of the abstract array elements ai and bi represents a single 
+con­crete array element of the corresponding array. This allows the analysis to conclude that the value 
+of the concrete array element b[0] that is represented by bi ranges from -5to5 after the assignment b[i] 
+. a[i]. As variable i gets incremented, the grouping of concrete array elements changes. The element 
+b[0], represented by bi, moves into the group of the concrete array elements that are represented by 
+b<i. The abstract element bi represents the array element b[1] that is extracted from the group of concrete 
+array elements that is represented by b>i.The elements of array a are treated similarly. Fig. 2(b) shows 
+how the arrays a and b are partitioned during the second iteration. The analysis re.ects the change in 
+grouping of array ele­ments by combining the numeric properties associated with bi with the numeric properties 
+associated with b<i. The new numeric properties for the abstract element bi are obtained by duplicating 
+the numeric properties associated with b>i. As a result, at the beginning of the second iteration, the 
+analysis establishes that the value of the concrete array el­ement represented by b<i ranges from -5to5. 
+Numeric properties associated with abstract elements of array a are treated similarly. As the value of 
+i increases with each iteration, more and more of the concrete array elements of both arrays move from 
+the two groups subscripted by >i , to the two groups subscripted by i , and .nally, to the two groups 
+subscripted by <i . Fig. 2(c) shows how the arrays are partitioned on the k-th iteration. The concrete 
+array elements that are rep­resented by b<i are the elements that have been initialized. Suppose that 
+the analysis has established that the values of the elements represented by b<i at the beginning of the 
+k-th iteration range from -5 to 5. After interpreting the assign­ment in the body of the loop, the analysis 
+establishes that the value of the element b[k], represented by bi, also ranges from -5 to 5. After the 
+increment of variable i,the numeric properties associated with bi are combined with the proper­ties associated 
+with b<i. As a result, the analysis establishes that the values of the concrete elements represented 
+by b<i at the beginning of the k+ 1-st iteration range from -5to 5. An important thing to observe is 
+that, even though the partitions shown in Fig. 2 (b) and (c) describe di.erent groupings of concrete 
+array elements, both partitions have the same sets of abstract array elements. Therefore, from the point 
+of view of the analysis these partitions are the same. To establish which concrete array elements are 
+repre­sented by a particular abstract element, the analysis directly models the values of indices of 
+array elements in the numeric state associated with each partition. Fig. 2(e) shows how the array elements 
+are partitioned an-1 ai  b ...bb 0n-2 n-1 b<i bi (a) (d) ...a a0 a1 a2...a a0 a1 n-1 n-1 a<i ai 
+a>i a<i b b b ...b b0b1...bn-1 012n-1 bbb b<i <ii >i (b) (e) ... ...  a0 ak-1 ak ak+1 an-1 a<i ai 
+a>i b ... b b ...b 0bk-1 kk+1n-1 b<i bi b>i (c) Figure 2: Partitionings of array elements at di.erent 
+points in the execution of the array-copy function: (a)on the 1-st loop iteration; (b)on the 2-nd it­eration; 
+(c)on the k-th iteration; (d)on the last iteration; (e)after exiting the loop. after exiting from the 
+loop. We have just shown that, on each iteration, the analysis established that the values of the concrete 
+array elements that are represented by b<i range from -5 to 5. After the loop, as shown in Fig. 2(e), 
+b<i represents all of the concrete elements of array b. Therefore, the analysis is able to conclude that 
+all the values stored in b range from -5to 5. The analysis is also able to establish a more general prop­erty, 
+namely, that the value of each element of array b is equal to the value of the element of array a with 
+the same index. Unfortunately, the numeric domains that are used by the analysis are not capable of maintaining 
+the numeric relationships of this kind for the concrete array elements that have been summarized together. 
+To capture such rela­tionships, we augment each abstract array element of array b with an extra value 
+that indicates whether the property holds for (i) all, (ii) some, or (iii) none of the concrete array 
+elements represented by that abstract element. This is done by introducing an auxiliary three-valued 
+unary logic predi­cate d, which evaluates to the values 1, 1/2, and 0 on the abstract elements of array 
+b to represent cases (i), (ii), and (iii), respectively. Theanalysisproceedsasfollows: elementsofarray 
+b start with d evaluating to 1/2, which indicates that the analysis has no knowledge about the values 
+stored in array b.On each iteration, the property is established for the array ele­ment bi, i.e., d(bi) 
+is set to 1. At the end of the iteration, the concrete array element represented by bi is merged into 
+the group of elements represented by b<i. On the .rst iteration, no b<i exists, so the properties of 
+bi are directly transfered to b<i, i.e., d(b<i) = 1. On the following iterations, the new value for d(b<i) 
+is determined by joining its current value, expr ::= c stmt ::= v .expr |v |a[v] .expr |a[v] |if(cond) 
+stmt else stmt |expr 8expr |while(cond) stmt cond ::= expr w expr |stmt; stmt c .V,v .Scalar, a .Array 
+8.{+, -, ×},w .{<, =, =, =,>} Figure 3: An array-manipulation language. which is 1, with the value d(bi), 
+which also equals to 1. As a result, the analysis establishes that d(b<i) = 1 after each iteration, which 
+indicates that the property of interest holds for all initialized array elements.  3. CONCRETE SEMANTICS 
+Our goal is to analyze programs that operate on a .xed, .nite set of scalar variables and arrays. A concrete 
+program state stores a corresponding value for each scalar variable and each array element. We denote 
+the set of all possible concrete program states by Sigma. We denote the set of scalar variables and the 
+set of arrays used in the program by Scalar = {v1, ..., vn} and Array = {A1, ..., Ak}, respectively. 
+These sets are the same across all concrete states that may arise as a result of program execution. Be­cause 
+we would like to reason about arrays of arbitrary size, the set of elements of a particular array may 
+di.er from state to state. We use the notation AS to denote the set of elements of array A .Array in 
+state S. To ensure proper sequencing of array elements, we assume that a concrete state explicitly assigns 
+to each array element its proper in­dex position in the corresponding array. Let V denote a set of possible 
+numeric values (such as Z, Q,or R). We encode a concrete state S with the help of the following four 
+functions: ValueS : Scalar .V maps each scalar variable to its corresponding value,  SizeS : Array 
+.N maps each array to its size,  ValueS : AS .V maps an element of an array A .  A Array to its corresponding 
+value, IndexS : AS .N maps an element of an array A . A Array to its index position in the array. Example 
+1. Let program P operate on two scalar vari­ables, i and j, and an array B of size 10. Suppose that at 
+some point in the execution of the program, the values of variables i and j are 4 and 7, respectively, 
+and the values that are stored in array B are {1, 3, 8, 12, 5, 7, 4, -2, 15, 6}. We encode the concrete 
+state S of the program as follows: Scalar = {i, j}, Array = {B},BS = {b0,...,b9} ValueS =[i.4,j.7] ,SizeS 
+=[B .10] Notation: c .V,v .Scalar, A .Array, S .S,D .S 8.{+, -, ×},w .{<, =, =, =,>} .¯ elem(S, A, v)= 
+u .A : IndexS A(u)= ValueS(v) Expressions: [[c]](S)= c, [[v]](S)= ValueS(v) . ValueS u .elem(S, A, v) 
+A(u)if .[[A[v]]](S)= . otherwise [[expr1 8expr2]](S)= [ expr1]](S) 8[[expr2]](S) Conditions: [[expr1 
+w expr2]](S)= [ expr1]](S) w [[expr2]](S) Assignments: [[v .expr]](S)= S [v .[[expr]](S)] . [[a[v] .expr]](S)= 
+S [u .[[expr]](S)] . if .u .elem(S, A, v) otherwise Errors: [[.]](.)= . Set transformers: [[v .expr]](D)= 
+{[[v .expr]](S): S .D} (Assigns) [[a[v] .expr]](D)= {[[a[v] .expr]](S): S .D} (Assigna) [[cond]](D)= 
+{S : S .D and [ cond]](S)= true} (Cond) D1 D2 = D1 .D2 (Join) Figure 4: Concrete collecting semantics 
+for the lan­guage shown in Fig. 3. S ValueB =[b0 .1,b1 .3,b2 .8,...,b9 .6] IndexS B =[b0 .0,b1 .1,b2 
+.2,...,b9 .9] In Fig. 3, we de.ne a simple language suitable for express­ing array operations. The language 
+consists of assignment statements, conditional statements, and while loops. Values can be assigned to 
+both scalar variables and array elements. However, the language does not allow to use arbitrary ex­pressions 
+explicitly to access array elements. Only scalar variables are allowed to index into arrays. We de.ne 
+the program s concrete collecting semantics as follows. To each program point we attach a set of concrete 
+states, D. The set transformers shown in Fig. 4 are used to propagate the sets of concrete states through 
+the program. Set transformers are de.ned for assigning to scalar vari­ables (Assigns) and array elements 
+(Assigna), interpreting numeric conditionals of if-statements and while-statements (Cond), and joining 
+sets of concrete states at control merge points (Join). The goal of the analysis is to collect the set 
+of reachable program states at each program point. Determining the exact sets of concrete states is, 
+in general, undecidable. We use the framework of abstract interpretation [3] to collect at each program 
+point an overapproximation of the set of states that may arise there.  4. ABSTRACT DOMAIN In this section, 
+we de.ne the family of abstract domains that is the main contribution of this paper. The elements of 
+the abstract domains are sets of abstract memory con.gu­rations. Each abstract memory con.guration S# 
+is a triple .¸ P # , .# , .#,inwhich P # speci.es how arrays are par­titioned, .# represents the corresponding 
+abstract numeric state, and .# stores the values of auxiliary predicates. We denote the set of all possible 
+abstract partitions by S# . 4.1 Array partitioning The goals of array partitioning are twofold. First, 
+we would like to isolate in separate groups the array elements that are assigned to. This allows the 
+analysis to perform strong updates when assigning to these elements. Second, we would like to group elements 
+with similar properties to­gether to minimize the precision loss due to summarization. In this paper, 
+we explore an array-partitioning scheme based on numeric relationships among indices of array ele­ments 
+and values of scalar variables. In particular, given a set of scalar variables, we partition an array 
+so that each element whose index is equal to the value of any of the vari­ables in the set is placed 
+in a group by itself. Such groups are represented by non-summary abstract array elements. The consecutive 
+array segments in between the indexed el­ements are grouped together. Such groups are represented by 
+summary abstract array elements. We de.ne array partitions by using a .xed set of partition­ing functions, 
+denoted by .. Each function is parametrized by an array and a single scalar variable. Let A . Array and 
+v . Scalar.In a concrete state S, a function pA,v is interpreted as: pA,v : AS .{-1, 0, 1}, and is evaluated 
+as follows: 8 < -1if IndexS A(u) <ValueS (v) pA,v(u)= 0 A(u)= ValueS (v) if IndexS : 1 if IndexS A(u) 
+>ValueS (v) The choice of values is completely arbitrary as long as the function evaluates to a di.erent 
+value for each of the three cases. We denote the set of partitioning functions parame­terized with array 
+A by .A. In a given concrete state, we partition each array A . Array by grouping together elements of 
+A for which all partitioning functions in .A evaluate to the same values. Each group is represented by 
+an abstract array element: a non-summary element if at least one partitioning function evaluates to 0 
+for the array elements in the group; a sum­mary element otherwise. If the set .A is empty, all of the 
+elements of array A are grouped together into a single sum­mary element. The values to which partitioning 
+functions evaluate on the array elements in a group uniquely determine the abstract element that is used 
+to represent that group. We continue using the intuitive abstract-element naming introduced in Sect. 
+2, e.g., b>i,<j denotes the group of array elements whose indices are greater than the value of i, but 
+less than the value of j. Formally, array partition P # maps each array in Array to a corresponding set 
+of abstract array elements. We say that two array partitions are equal if they map all arrays in Array 
+to the same sets: hi ## ## P = P .. .A .Array P (A)= P (A) 12 12 The following example illustrates array 
+partitioning. Example 2. Assume the same situation as in Ex. 1. Let the set of partitioning functions 
+. be (pB,i,pB,j ).The el­ements of array B are partitioned into .ve groups, each of which is represented 
+by an abstract array element: (i) {b0,b1,b2,b3}, represented by b<i,<j ; (ii) {b4}, represented by bi,<j 
+;  (iii) {b5,b6},represented b>i,<j ; (iv) {b7}, represented by b>i,j; (v) {b8,b9}, represented by 
+b>i,>j. The abstract array elements bi,<j and b>i,j are non-summary, while b<i,<j , b>i,<j,and b>i,>j 
+are summary. Thus,  # P =[B .{b<i,<j,bi,<j ,b>i,<j,b>i,j,b>i,>j }] Note, that since each abstract element 
+of array A corre­sponds to a valuation of partitioning functions in .A,there canbeatmost3|.A| abstract 
+array elements of A.Thus, the number of ways to partition array A (i.e., the number of sets of abstract 
+array elements that consistently represent the corresponding array) is .nite, although combinatorially 
+large. However, our observations show that only a small fraction of these partitions actually occur in 
+practice. The approach that is presented in this section illustrates only one of the possibilities for 
+partitioning an array. We found this partitioning to be useful when consecutive ar­ray elements share 
+similar properties, e.g., when analyzing simple array-initialization loops and simple array-sorting al­gorithms, 
+which constitutes a large portion of actual uses of arrays. However, in more complicated examples, e.g., 
+when using double indexing to initialize an array and using an ar­ray to store a complex data structure 
+(such as a tree), the above array partitioning is not likely to succeed. We plan to address the issue 
+of improving array partitioning in future work. 4.2 Numeric states To keep track of the numeric information 
+associated with an array partition, we attach to each partition an element of a summarizing numeric domain 
+[7]. Summarizing nu­meric domains are capable of modeling values associated with summary objects and 
+are automatically constructed by extending standard relational numeric domains, such as octagons [14] 
+and polyhedra [5, 8]. Each quantity associ­ated with an abstract object is modeled by a dimension in 
+the domain. Dimensions can be summary or non-summary depending on the type of the corresponding object. 
+In array analysis, we use non-summary dimensions to rep­resent the values of scalar variables, array 
+sizes, and the values and indices of non-summary abstract array elements. Summary dimensions are used 
+to model values and indices of summary abstract array elements. Note that each ab­stract array element 
+has two dimensions associated with it: one for the value, and one for its index position in the array. 
+We use the following notation to refer to the dimensions of summarizing numeric domain: v denotes the 
+dimension that represents the values of scalar variable v; A.size de­notes the dimension that represents 
+the size of an array A.Let u . P #(A) denote an arbitrary abstract element of array A. Then, u.value 
+denotes the dimension that rep­resents the value of u,and u.index denotes the dimension that represents 
+its index. For simplicity, we assume that the summarizing numeric domain used in the analysis was constructed 
+by extending polyhedral numeric domain; thus, we present numeric states as sets of linear constraints. 
+A constraint on a quantity associated with a summary object is interpreted to hold for the quantities 
+associated with all concrete objects represented by that abstract object. Example 3. Assume the same 
+situation as in Ex. 2. The numeric state associated with P # is described by the follow­ing set of linear 
+constraints: i =4,j =7,B.size =10 0 =b<i,<j.index =31 =b<i,<j .value =12 bi,<j .index =4 bi,<j .value 
+=5 5 =b>i,<j.index =64 =b>i,<j .value =7 b>i,j .index =7 b>i,j .value = -2 8 =b>i,>j.index =96 =b>i,>j 
+.value =15 The de.nitions of a partial-order relation and of a join op­eration for a summarizing domain 
+depend on the underlying numeric domain. For example, in a polyhedral domain, the result of a join operation 
+is computed by taking the convex hull of the union of the arguments. Only numeric states that have the 
+same set of dimensions can be compared and joined together. The set of dimensions is determined by the 
+array partition. Thus, only numeric states that are asso­ciated with similar array partitions can be 
+compared and joined.  4.3 Beyond summarizing domains Summarizing numeric domains can be used to reason 
+about collective numeric properties of summarized array elements. However, the relationships among quantities 
+that are sum­marized together are lost. This precludes summarizing nu­meric domains from being able to 
+express certain properties of interest, e.g., it is impossible to express the fact that a set of array 
+elements that are summarized together are in sorted order. In Ex. 3, the numeric state S# is only able 
+to capture the property that the values of the concrete array elements represented by b(<i,<j) range 
+from 1 to 12, but not that those elements are sorted in ascending order. To capture properties that are 
+beyond the capabilities of summarizing numeric domains, we introduce a set of aux­iliary predicates, 
+denoted by .. In a concrete state S,a predicate in dA . . maps each element of array A to a boolean value: 
+to 1 if the property of interest holds for that element, and to 0 otherwise: dA : AS .{0, 1}. We specify 
+the semantics of auxiliary predicates by supply­ing a formula that is evaluated in concrete states. When 
+the elements of array A are summarized, we join the corresponding values of dA in a 3-valued logic lattice 
+[19]. In 3-valued logic, an extra value, denoted by 1/2, is added to the set of Boolean values {0, 1}. 
+The order is de.ned as follows: l1 .l2 i. l1 = l2 or l2 =1/2 Thus, 1/2 0=1/2 1=0 1=1/2. The resulting 
+value is attached to the corresponding abstract array element. In an abstract memory con.guration, we 
+use an abstract # counterpart of the predicate, denoted by dA , to map abstract array elements to corresponding 
+values: d# : P #(A) .{0, 1, 1/2} A Let u .P #(A) be an arbitrary abstract array element. The value of 
+d#(u) is interpreted as follows: the value of 1 indi- A cates that the property holds for all of the 
+array elements represented by u; the value of 0 indicates that the property does not hold for any of 
+the array elements represented by u; and the value of 1/2 indicates that property may hold for some of 
+the array elements represented by u, but may not hold for the rest of the elements. Example 4. Assume 
+the same situation as in Ex. 3. We introduce a predicate dB that evaluates to 1 for array ele­ments that 
+are in ascending order, and to 0 for the elements that are not: n =1,i =0, ai.index =0 - 5 = ai.value 
+= 5 bi.index =0  b>i n = 2,i =0, ai.index = bi.index =0 1 = a>i.index = n - 1 - 5 = ai.value = 5 - 
+5 = a>i.value = 5 1 = b>i.index = n - 1 ## =[bi . 1/2] =[bi . 1/2,b>i . 1/2] dd b b dB (u)=. t . B SS 
+B(t) <IndexB(u) . Index SS ValueB(t) = ValueB(u) In the concrete state shown in Ex. 1, dB evaluates to 
+1 for the elements b0, b1, b2, b3,and b8;and to 0 for the remain­ing elements. The values associated 
+with the abstract array elements are constructed as follows: #0 ,1 ,2 Figure 5: The abstract state at 
+the entrance of the loop (program point (.))in Fig. 1. The abstract state contains two abstract memory 
+con.gurations: #0 one represents arrays of length 1; the other repre­sents arrays of length 2 and greater. 
+SS # (b<i,<j )= F3 i=0 dB (bi)=1 1 1 1=1 d B # d (bi,<j )= dB (b4)=0 Given a set of abstract memory con.gurations 
+SS# B ,we # B (b>i,<j )= dB (b5) dB (b6)=0 0=0 d say that C# is a partition congruence class i. it is 
+a maximal­ # B sized subset of SS# d (b>i,j )= dB (b7)=0 , all of whose members partition arrays # # 
+similarly (i.e., there exists P # . C# (b>i,>j )= dB (b8) dB (b9)=1 0=1/2 d such that for all S, B i 
+# P #P ). We de.ne the abstraction function for a set of = i The part of an abstract memory con.guration 
+that stores concrete states D . S as follows: the interpretation of auxiliary predicates is denoted by 
+.# . . C# .{ ß(S): S . D} G and is de.ned as: a(D)= C # : (u) is a partition congruence class Thus, 
+an abstract state D# is a set of abstract memory con­ ## . (dA,u)= d A It only makes sense to compare 
+and join the interpretations .gurations with distinct array partitions. The concretiza­ that are de.ned 
+for the same set of abstract array elements, tion function is de.ned as follows: i.e., the interpretations 
+that are associated with the same no #### array partition P # . We de.ne a partial order relation for 
+)= S : . S. D s.t. ß(S) . S .(D. interpretations of auxiliary predicates as follows: We de.ne a partial-order 
+and a join operation for abstract . #1 . . #2 states as follows. Let D #1 ,D #2 . S# denote two abstract 
+.. states. The partial-order relation is de.ned by: hi #(A) . #1 (dA,u) . . #2 (dA,u) . . dA . . . u 
+. P hi D #1 . D #2 .. . S #1 . D #1 . S #2 . D #2 S #1 . S #2 The join operation for interpretations 
+of auxiliary predicates #1 . #2 =.#,where for is de.ned as follows: we say that .The join of two abstract 
+states is performed by comput­all dA . .and forall u . P #(A) ing a union of the corresponding sets of 
+abstract memory con.gurations. The con.gurations that have similar array partitions are joined together. 
+This is similar in spirit to the . # (dA,u)=. #1 (dA,u) . #2 (dA,u). partially disjunctive heap abstraction 
+described in [12].  4.4 Abstract states Examples 2, 3, and 4 illustrate the construction of an abstract 
+memory con.guration that represents an arbitrary 5. RUNNING EXAMPLE REVISITED concrete state. We use 
+a function ß :S . S# to refer to In this section, we .esh out the schematic illustration of this process 
+of abstracting a single concrete state. the analysis that was given in Sect. 2. The analysis is applied 
+DEDE Let S #1 = P , ., . and S #2 = P, ., . de­to the code shown in Fig. 1. We depict the abstract 
+mem­ ory con.gurations that arise in the course of the analysis as note two abstract memory con.gurations. 
+We de.ne a partial­ follows. The partition of the arrays is shown graphically: order relation for the 
+abstract memory con.gurations as fol­ solid boxes represent non-summary abstract array elements; lows: 
+dashed boxes represent summary abstract array elements. S #1 . S #2 .. P #1 = P #2 . . #1 . . #2 
+. . #1 . . #2 Numeric states are shown as sets of linear constraints. Aux­ iliary predicates are shown 
+as maps from sets of abstract The join operation is only de.ned for the abstract memory array elements 
+to corresponding values in { 0, 1, 1/2} . #1 Consider the program in Fig. 1. The set of scalar variables 
+. The resulting abstract partition is de.ned by and the set of arrays are de.ned as follows: Scalar = 
+{ i, n} #2 = P # and Array = { a, b} . The analysis uses the set of partitioning functions . = { pa,i,pb,i} 
+. It is beyond the capabilities of DE # = S #1 S #2 = P # #1 . #2 , . #1 . #2 ai bi ai a>i bi 
+b>i ai b<i a<i bi ai a>i b>ibib<i a<i 1-st iteration i =0,n =1, ai.index =0 -5 = ai.value = 5 bi.index 
+=0 d# b =[bi . 1/2] S# 1,1 i =0,n = 2, ai.index = bi.index =0 1 = a>i.index = n - 1 -5 = ai.value = 5 
+-5 = a>i.value = 5 1 = b>i.index = n - 1 d# b =[bi . 1/2,b>i . 1/2] S# 1,2 (not present) (not present) 
+2-nd iteration (same as above) (same as above) i =1,n =2, ai.index = bi.index =1 a<i.index =0 -5 = ai.value 
+= 5 -5 = a<i.value = 5 b<i.index =0 b<i.value = a<i.value d# b =[b<i . 1,bi . 1/2] S# 2,3 i =1,n = 3, 
+ai.index = bi.index =1 2 = a>i.index = n - 1 a<i.index =0 -5 = ai.value = 5 -5 = a>i.value = 5 -5 = a<i.value 
+= 5 2 = b>i.index = n - 1 b<i.value = a<i.value d# b =[b<i . 1,bi . 1/2,b>i . 1/2] S# 2,4 3-rd iteration 
+(same as above) (same as above) i =2,n =3 ai.index = bi.index =2 0 = a<i.index = 1 -5 = ai.value = 5 
+-5 = a<i.value = 5 0 = b<i.index = 1 -5 = b<i.value = 5 d# b =[b<i . 1,bi . 1/2] S# 3,3 i =2,n = 4 ai.index 
+= bi.index =2 0 = a<i.index = 1 3 = a>i.index = n - 1 -5 = ai.value = 5 -5 = a>i.value = 5 -5 = a<i.value 
+= 5 0 = b<i.index = 1 3 = b>i.index = n - 1 -5 = b<i.value = 5 d# b =[b<i . 1,bi . 1/2,b>i . 1/2] S# 
+3,4 3-rd iteration (after join) (same as above) (same as above) 1 = i = 2 n = i +1 ai.index = i 0 = a<i.index 
+= i - 1 -5 = ai.value = 5 -5 = a<i.value = 5 bi.index = i 0 = b<i.index = i - 1 -5 = b<i.value = 5 d# 
+b =[b<i . 1,bi . 1/2] S# J,3 1 = i = 2 i = ai.index = bi.index 0 = a<i.index = i - 1 i +1 = a>i.index 
+= n - 1 -5 = ai.value = 5 -5 = a>i.value = 5 -5 = a<i.value = 5 0 = b<i.index = i - 1 i +1 = b>i.index 
+= n - 1 -5 = b<i.value = 5 d# b =[b<i . 1,bi . 1/2,b>i . 1/2] S# J,4 3-rd iteration (after widening) 
+(same as above) (same as above) 1 = i n = i +1 ai.index = i 0 = a<i.index = i - 1 -5 = ai.value = 5 -5 
+= a<i.value = 5 bi.index = i 0 = b<i.index = i - 1 -5 = b<i.value = 5 d# b =[b<i . 1,bi . 1/2] S# W,3 
+1 = i i = ai.index = bi.index 0 = a<i.index = i - 1 i +1 = a>i.index = n - 1 -5 = ai.value = 5 -5 = a>i.value 
+= 5 -5 = a<i.value = 5 0 = b<i.index = i - 1 i +1 = b>i.index = n - 1 -5 = b<i.value = 5 d# b =[b<i . 
+1,bi . 1/2,b>i . 1/2] S# W,4 Figure 6: Abstract memory con.gurations at the begining of the 1-st, 2-nd 
+and 3-d iterations of the loop in Fig. 1. The sets of abstract memory con.gurations in each row form 
+corresponding abstract states. Last two rows show the transformation of the abstract state on the third 
+iteration, as is is joined and widened with respect to the abstract state obtained on the second iteration. 
+after 1-st iteration after 2-nd iteration after 3-rd iteration .nal state n =1,i = n, n =2,i = n, n = 
+2,i = n n = 1,i = n b<i a<i a<i.index =0 -5 = a<i.value = 5 b<i.index =0 b<i.value = a<i.value 0 = a<i.index 
+= n - 1 -5 = a<i.value = 5 0 = b<i.index = n - 1 -5 = b<i.value = 5 0 = a<i.index = n - 1 -5 = a<i.value 
+= 5 0 = b<i.index = n - 1 -5 = b<i.value = 5 0 = a<i.index = n - 1 -5 = a<i.value = 5 0 = b<i.index = 
+n - 1 -5 = b<i.value = 5 d# b =[b<i . 1] d# b =[b<i . 1] d# b =[b<i . 1] d# b =[b<i . 1] S# 1,5 S# 2,5 
+S# 3,5 S# E,5 Figure 7: The abstract state (consisting of a single abstract memory con.guration)that 
+reaches program point (..) after the 1-st, 2-nd, and 3-d iterations of the loop in Fig. 1. The last column 
+shows the stabilized abstract state at (..). summarizing numeric domains alone to express the property 
+for every index k,the valueof b[k] is equal to the value of a[k] . To capture this property, we introduce 
+an auxiliary predicate db, whose semantics in a concrete state S is de.ned by SS S db(u)= .t . a Indexb 
+(u)= Indexa (t) . ValueSb (u)= ValueSa (t) . Fig. 5 shows the abstract state at program point (.). The 
+abstract state contains two abstract memory con.gurations: S# 0,1 and S0# ,2. Con.guration S0# ,1 represents 
+the degenerate case of each array containing only one element. Thus, each array is represented by a single 
+abstract array element, ai and bi, respectively. The indices of both ai and bi are equal to zero, and 
+the value of ai ranges from -5to5. Abstract memory con.guration S0# ,2 represents the con­crete states 
+in which both arrays are of length greater than or equal to two. In these situations, each array is represented 
+two abstract elements: ai and bi represent the .rst elements of the corresponding arrays, while a>i and 
+b>i represent the remaining elements. The numeric state associated with this partition indicates that 
+the indices of the concrete array ele­ments represented by ai and bi are equal to zero, the indices of 
+the concrete array elements represented by a>i and b>i range from 1 to n-1, and the values of all concrete 
+elements of array a range from -5to5. The auxiliary predicate db # evaluates to 1/2 for all array # elements 
+in the abstract memory con.gurations Sand 0,1 S# This means that, in the concrete states represented 
+by 0,2. S# and S# , the values of the concrete elements of array 0,10,2 b may either be equal to the 
+values of the corresponding elements of array a or not. Fig. 6 shows the abstract states that the analysis 
+encoun­ters at the beginning of each iteration. Each entry in the table represents an abstract memory 
+con.guration. The ab­stract state at a particular iteration is the set of abstract memory con.gurations 
+shown in the corresponding row of the table. Table columns correspond to distinct array par­titions that 
+arise during the analysis. Fig. 7 shows the evo­lution, on successive iterations of the analysis, of 
+the single abstract memory con.guration that reaches the exit of the loop. The analysis proceeds as follows. 
+Both S0# ,1 and S0# ,2 sat­isfy the loop condition and are propagated into the body of the loop. The 
+abstract state at the beginning of the .rst # iteration contains abstract memory con.gurations Sand 1,1 
+# ## S1,2, which are similar to Sand Srespectively. Af­ 0,10,2, ter the assignment b[i] . a[i] , two 
+changes happen to both abstract memory con.gurations: (i) the constraint ai.value = bi.value is added 
+to their numeric states, and (ii) the value of auxiliary predicate db #(bi) is changed to 1. At the end 
+of the .rst iteration, as variable i is incre­ # mented, abstract memory con.guration Sis transformed 
+1,1 into con.guration S1# ,5. The loop condition does not hold in S1# ,5, thus, this memory con.guration 
+is propagated to the program point after the exit of the loop. Abstract mem­ory con.guration S1# ,2 is 
+transformed into two new abstract memory con.gurations: S2# ,3 and S2# ,4. These memory con­.gurations, 
+along with S# and S# , form the abstract state 1,11,2 at the beginning of the second iteration. At the 
+end of the second iteration, the abstract mem­ory con.guration S# is transformed into con.guration S# 
+2,32,5, which violates the loop condition, and is, thus, propagated to program point (..). The abstract 
+memory con.gura­tion S2# ,4 is transformed into two new abstract memory con­.gurations, S# and S# in 
+which loop condition holds. 3,33,4, Because the abstract state accumulated at the head of the loop already 
+contains memory con.gurations with similar array partitions, the numeric states and the values of aux­iliary 
+predicates for these abstract memory con.gurations are joined. In particular, abstract memory con.guration 
+S# is joined with S# to produce S# Similarly, S# is 2,33,3 J,3. 2,4 joined with S# , resulting in S# 
+Furthermore, widening 3,4J,4. is applied: S# is widened with respect to S# , producing J,32,3abstract 
+memory con.guration S# ;and S# is widened W,3J,4 with respect to S# , resulting in S# 2,4W,4. On the 
+third iteration, abstract memory con.guration S# is transformed into S# , which is propagated to pro­ 
+W,33,5gram point (..). Abstract memory con.guration S# ,is W,4transformed into memory con.gurations S# 
+and S# ,which W,3 W,4 were previously encountered by the analysis. At this stage, the abstract state 
+at the head of the loop stabilizes and the analysis terminates. All of the abstract memory con.gurations 
+that reach pro­gram point (..) partition arrays similarly. The analysis joins these memory con.gurations 
+to produce the abstract state that contains a single abstract memory con.guration S# E,5 shown in the 
+last column of Fig. 7. It is easy to see that this con.guration represents only the concrete states in 
+which (i) the values stored in the array b range from -5 to 5 (follows from -5 = b<i = 5 constraint in 
+the numeric state); and (ii) the value of each element of array b is equal to the value of the element 
+of array a with the same index (follows from the fact that db #(b<i) evaluates to de.nite value 1). 
+ 6. ABSTRACT SEMANTICS To make the abstraction described in previous sections usable, we have to de.ne 
+the abstract counterparts for the concrete state transformers shown in Fig. 4. In [4], it is shown that 
+for a Galois connection de.ned by abstraction function a and concretization function .,the best abstract 
+transformer for a concrete transformer t ,de­noted by t , can be expressed as: t . = a.t ... This de.nes 
+the limit of precision obtainable using a given abstract do­main; however, it is a non-constructive de.nition: 
+it does not provide an algorithm for .nding or applying t . . We implemented a prototype of our analysis 
+using the TVLA tool [11], and de.ned overapproximations for the best abstract state transformers by using 
+TVLA mechanisms. Space considerations preclude us from giving a full account of the modi.cations that 
+needed to be applied to TVLA, and the exact de.nitions of the predicates needed to support ar­ray operations. 
+In the rest of this section, we give a brief overview of TVLA, and sketch the techniques for modeling 
+arrays and de.ning abstract transformers. 6.1 An extension of TVLA TVLA models concrete states by .rst-order 
+logical struc­tures. The elements of a structure s universe represent the concrete objects. Predicates 
+encode relationships among the concrete objects. The abstract states are represented by three-valued 
+logical structures, which are constructed by ap­plying canonical abstraction to the sets of concrete 
+states. The abstraction is performed by identifying a set of ab­straction predicates and representing 
+the concrete objects for which these abstraction predicates evaluate to the same values by a single element 
+in the universe of a three-valued structure. In the rest of the paper, we refer to these abstract elements 
+as nodes. A node that represents a single concrete object is called non-summary node, and a node that 
+repre­sent multiple concrete objects is called summary node. TVLA distinguishes between two types of 
+predicates: core predicates and instrumentation predicates. Core predicates are the predicates that are 
+necessary to model the concrete states. Instrumentation predicates, which are de.ned in terms of core 
+predicates, are introduced to capture prop­erties that would otherwise be lost due to abstraction. An 
+abstract state transformer is de.ned in TVLA as a sequence of (optional) steps: A focus step replaces 
+a three-valued structure by a set of more precise three-valued structures that rep­resent the same set 
+of concrete states as the original structure. Usually, focus is used to materialize a non-summary node 
+from a summary node. The struc­tures resulting from a focus are not necessarily images of canonical abstraction, 
+in the sense that they may have multiple nodes for which the abstraction predi­cates evaluate to the 
+same values.  A precondition step .lters out the structures for which a speci.ed property does not hold 
+from the set of struc­tures produced by focus. Generally, preconditions are used to model conditional 
+statements.  An update step transforms the structures that satisfy the precondition, to re.ect the 
+e.ect of an assignment statement. This is done by changing the interpretation of core and instrumentation 
+predicates in each struc­ture.  A coerce step is a cleanup operation that sharpens updated three-valued 
+structures by making them com­ply with a set of globally de.ned integrity constraints.  A blur step 
+restores the canonicity of coerced three­valued structures by applying canonical abstraction to them, 
+i.e., merging together the nodes for which the abstraction predicates evaluate to the same values.  
+We extended TVLA with the capability to explicitly model numeric quantities. In particular, we added 
+the facilities to associate a set of numeric quantities with each concrete ob­ject, and equipped each 
+three-valued logical structure with an element of a summarizing numeric domain to represent the values 
+of these quantities in abstract states. Each node in a three-valued structure is associated with a dimension 
+of a summarizing numeric domain. TVLA speci.cation lan­guage was extended to permit using numeric comparisons 
+in logical formulas, and to specify numeric updates. The operations that a.ect numeric states, such as 
+per­forming numeric updates and evaluating numeric compar­isons, as well as creating, removing, merging, 
+and duplicat­ing nodes in the structure are handled by the correspond­ing abstract transformers of a 
+summarizing numeric domain. The focus and coerce operations use the assume operation, provided by the 
+domain, to augment a numeric state with extra constraints. 6.2 Modeling arrays We encode concrete states 
+of a program as follows. Each scalar variable and each array element corresponds to an el­ement in the 
+universe of the .rst-order logical structure. We de.ne a core unary predicate for each scalar variable 
+and for each array. These predicates evaluate to 1 on the elements of the .rst-order structure that represent 
+the corresponding scalar variable or the element of corresponding array, and to 0 for the rest of the 
+elements. Each element in the uni­verse is associated with a numeric quantity that represents its value. 
+Each array element is associated with an extra numeric quantity that represents its index position in 
+the array. To model the array structure in TVLA correctly, extra predicates are required. We model the 
+adjacency relation among array elements by introducing a binary instrumen­tation predicate for each array. 
+This predicate evaluates to 1 when evaluated on two adjacent elements of an array. To model the property 
+that indices of array elements are contiguous and do not repeat, we introduce a unary instru­mentation 
+predicate for each array that encodes transitive closure of the adjacency relation. Partitioning functions 
+are de.ned by unary instrumenta­tion predicates. Since a partitioning function may evaluate to three 
+di.erent values, whereas a predicate can only eval­uate to0or1, weuse twopredicatestoencodeeach par­titioning 
+function. Auxiliary predicates directly correspond to unary instrumentation predicates. To perform the 
+abstraction, we select a set of abstrac­tion predicates that contains the predicates corresponding to 
+scalar variables and arrays, the predicates that encode the transitive closure of adjacency relations 
+for each array, and the predicates that implement the partitioning func­tions. The auxiliary predicates 
+are non-abstraction predi­cates. The resulting three-valued structures directly corre­spond to the abstract 
+memory con.gurations we de.ned in Sect. 4. The transformers for the statements that do not require array 
+repartitioning, e.g., conditional statements, and as­signments to array elements and to scalar variables 
+that are not used to index array elements, are modeled trivially. The transformers for the statements 
+that cause a change in ar­ray partitioning, e.g., updates of scalar variables that are used to index 
+array elements, are de.ned as follows: focus is applied to the structure to materialize the array element 
+that will be indexed by the variable after the update; then, the value of the scalar variable, and the 
+interpretation of the partitioning predicates are updated; .nally, blur is used to merge the array element 
+that was indexed by the variable previously, into the appropriate summary node. To update the interpretation 
+of auxiliary predicates, the programmer must supply predicate-maintenance formulas for each statement 
+that may change the values of those pred­icates. Also, to re.ect the numeric properties, encoded by the 
+auxiliary predicates, in the numeric state as the group­ing of the concrete array elements changes, a 
+set of integrity constraints implied by the auxiliary predicates must be sup­plied. Aside from the integrity 
+constraints and update formu­las for the auxiliary predicates, the conversion of an arbi­trary program 
+into a TVLA speci.cation can be performed fully automatically. In the future, we plan to extend the technique 
+for di.erencing logical formulas, described in [17], with the capability to handle numeric formulas. 
+Such an ex­tension will allow us to automatically compute safe abstract transformers for the auxiliary 
+predicates. Another technique that may help to fully automate the analysis involves the use of decision 
+procedures to symbolically compute best abstract transformers [18, 21].  7. EXPERIMENTS In this section, 
+we describe the application of the anal­ysis prototype to four simple examples. We used a simple heuristic 
+to obtain the set of partitioning functions for each array in the analyzed examples. In particular, for 
+each ar­ray access a[i] in the program we added a partitioning function pa,i to the set .. This approach 
+worked well for all of the examples, except for the insertion-sort implemen­tation, which required the 
+addition of an extra partitioning function. 7.1 Array initialization Fig. 8 shows a piece of code that 
+initializes array a of size n. Each array element is assigned a value equal to twice its index position 
+in the array plus 3. The purpose of this example is to illustrate that the analysis is able to automat­ically 
+discover numeric constraints on the values of array elements. The array-partitioning heuristic produces 
+a single parti­tioning function pa,i for this example. The analysis estab­lishes that after the code 
+is executed the values stored in the array range from 3 to 2 × n+ 1. No human intervention in the form 
+of introducing auxiliary predicates is required. int a[n], i, n; i . 0; while(i < n) { a[i] . 2 × i+ 
+3; i . i+ 1; } Figure 8: Array-initialization loop. int a[n], b[n], c[n], i, j, n; i . 0; j . 0; while(i 
+< n) { if(a[i] == b[i]) { c[j] . i; j . j+ 1; } i . i+ 1; } Figure 9: Partial array initialization. In 
+contrast, other approaches that are capable of handling this example [6, 20] require that the predicate 
+that speci­.es the expected bounds for the values of array elements is supplied explicitly, either by 
+the user or by an automatic abstraction-re.nement technique [9]. 7.2 Partial array initialization Fig. 
+9 contains a more complex array-initialization exam­ple. The code repeatedly compares elements of arrays 
+a and b and, in case they are equal, writes their index position into the array c. The portion of array 
+c that is initialized depends on the values stored in the arrays a and b.Three scenarios are possible: 
+(i) none of the elements of c are ini­tialized; (ii) an initial segment of c is initialized; (iii) all 
+of c is initialized. The purpose of this example is to illus­trate the handling of multiple arrays as 
+well as partial array initialization. The array-partitioning heuristic derives a set of three par­titioning 
+functions for this example, one for each array: .= {pa,i,pb,i,pc,j}. The analysis establishes that, after 
+the loop, the elements of array c with indices between 0 and j- 1 were initialized to values ranging 
+from 0 to n- 1. Again, no auxiliary predicates are necessary. The abstract state that reaches the exit 
+of the loop con­tains four abstract memory con.gurations. The .rst con.g­uration represents concrete 
+states in which none of the array elements are initialized. The value of j, in this domain el­ement, 
+is equal to zero, and, thus, the array partition does not contain the abstract element c<j . The second 
+and the third memory con.gurations repre­sent the concrete states in which only an initial segment of 
+array c is initialized. Two di.erent memory con.gurations are required to represent this case because 
+the analysis dis­tinguishes the case of variable j indexing an element in the middle of the array from 
+the case of j indexing the last ele­ment of the array. The last abstract memory con.guration represents 
+the concrete states in which all elements of array c are initial­ized. In the concrete states represented 
+by this memory con.guration, the value of variable j is equal to the value of variable n,and allelements 
+ofarray c are represented by the abstract array element c<j . void sort(int a[], int n) { int i,j, k, 
+t; i . 1; while(i < n) { j . i; while(j > 0) { k . j-1; if(a[j] = a[k]) break; t . a[j]; a[j] . a[k]; 
+a[k] . t; j . j-1; } i . i+1; }} Figure 10: Insertion-sort procedure. The initialized array elements 
+are represented by the ab­stract array element c<j . The array partition of the .rst memory con.guration 
+does not contain element c<j ,which indicates that no elements were initialized. The numeric states associated 
+with the other abstract memory con.gu­rations capture the property that the values of initialized array 
+elements range between 0 and n - 1. 7.3 Insertion sort Fig. 10 shows a procedure that sorts an array 
+using an in­sertion sort. Parameter n speci.es the size of array a.The invariant for the outer loop is 
+that the array is sorted up to the i-th element. The inner loop inserts the i-th element into the sorted 
+portion of the array. An interesting detail about this implementation is that elements are inserted into 
+the sorted portion of the array in reverse order. The pur­pose of this example is to demonstrate the 
+application of the analysis to a more challenging problem. The application of the array-partitioning 
+heuristic yields .= {pa,j}. Unfortunately, this partitioning is not su.­cient. We also need to use variable 
+i to partition the array so that the sorted segment of the array is separate from the unsorted segment. 
+However, since i is never explicitly used to index array elements, our array-partitioning heuris­tic 
+fails to add pa,i to the set of partitioning functions. To successfully analyze this example, we have 
+to manually add pa,i to .. Summarizing numeric domains are not able to preserve the order of summarized 
+array elements. An auxiliary pred­icate, de.ned similarly to the predicate dB in Ex. 4, needs to be introduced. 
+Our prototype implementation requires user involvement to specify the explicit update formulas for this 
+predicate for each of the program statements. Fortunately, the majority of the program statements do 
+not a.ect this predicate. Thus, the corresponding update formula for such statements is the identity 
+function. The only non-trivial case is the assignment to an array element. The human involvement necessitated 
+by the analysis is (i) minor, and (ii) problem-speci.c. In particular, only one aux­iliary predicate 
+needs to be introduced, Furthermore, this predicate is not speci.c to a given implementation of a sort­ing 
+algorithm. Rather, it can be reused in the analysis of other implementations, and even in the analysis 
+of other sorting algorithms. Also, this example identi.es some directions for future research: (i) designing 
+better techniques for the automatic array partitioning, and (ii) automatically discovering and maintaining 
+auxiliary predicates. 7.4 Results We ran the analysis prototype on an Intel-based Linux machine equipped 
+with a 2.4 GHz Pentium 4 processor and 512Mb of memory. Fig. 11 shows the measurements we col­lected 
+while analyzing the examples discussed above. The measurements are severely a.ected by our decision to 
+implement the analysis prototype in TVLA. Because TVLA is a general framework, the structure of an array 
+has to be modeled explicitly by introducing a number of instrumen­tation predicates and integrity constraints. 
+Consequently, the majority of the analysis time is spent executing focus and coerce operations to ensure 
+that the array structure is preserved. The measurements in Fig. 11 indicate that, on average, focus and 
+coerce account for about 80% of the overall analysis time. Building a dedicated analysis imple­mentation, 
+in which the knowledge of the linear structure of arrays is built into the abstract state transformers, 
+would recover the majority of that time. Another shortcoming of the analysis prototype is that the number 
+of nodes it uses to represent an array in TVLA is larger than the number of abstract objects created 
+by array partitioning described in Sect. 4.1. For example, extra non­summary nodes are used to represent 
+the .rst and the last elements of each array. As a result, the reported number of abstract objects in 
+each abstract memory con.guration as well as the number of memory con.gurations in an abstract state 
+is greater than a dedicated analyzer would encounter. Another factor that slows down the analysis is 
+our use of the polyhedral numeric domain. While o.ering a superior precision, the polyhedral numeric 
+domain does not scale well as the number of dimensions grow. This property is partic­ularly apparent 
+when a polyhedron that represents the ab­stract state is a multidimensional hypercube. In the array copy 
+example, the constraints on the values of elements of both arrays form a 10-dimensional hypercube, which 
+pro­vides an explanation of why the analysis takes over 6 min­utes. If the constraints on the values 
+of array a are excluded from the initial abstract state, the analysis takes merely 8 seconds. Observation 
+of the numeric constraints that arise in the course of the analysis led us to believe that using less 
+pre­cise, but more e.cient weakly-relational domains [15], may speed up the analysis of the above examples 
+without sacri­.cing precision. We reran the analysis of the array copy ex­ample, using a summarizing 
+extension of a weakly-relational domain. The analysis was able to verify the desired proper­ties in 40 
+seconds, which is a signi.cant improvement over the time it takes to perform the analysis with a polyhedral 
+domain.  8. CONCLUSIONS Canonical abstraction is a powerful technique that allows static analysis to 
+represent a (potentially unbounded) set of concrete objects with a bounded number of abstract objects. 
+The partitioning imposed on the set of the concrete objects is dynamic in a sense that the same abstract 
+object may represent di.erent groups of the concrete objects within the same abstract state. The net 
+result is an ability to avoid per­ Example Abstract Memory Con.gurations (AMCs) Time for Coerce &#38; 
+Focus (%) Time (sec) Max AMCs per state Max nodes per AMC Array initialization Partial initialization 
+Array copy Insertion sort 7 35 7 38 8 20 13 14 68.3 86.3 94.2 85.5 1.7 194.0 338.1 48.5 Figure 11: Analysis 
+measurements: maximal number of abstract memory con.gurations in an abstract state, maximal number of 
+abstract objects in an abstract memory con.guration, percentage of the overall analysis time spent on 
+focus and coerce operations, and the overall analysis time. forming weak updates, which greatly improves 
+the precision of the analysis. In this paper, we explore the possibilities for combining canonical abstraction 
+with existing numeric analyses and applications of the combined analysis to the problem of analyzing 
+array operations. The analysis we de.ne in this paper is capable of automat­ically establishing interesting 
+array properties; in particular, we show how it is able to capture numeric constraints on the values 
+of array elements after an array-initialization loop. More sophisticated properties, such as verifying 
+the imple­mentation of comparison-based sorting algorithms, require some human intervention to de.ne 
+necessary auxiliary pred­icates along with their abstract transformers. The auxiliary predicates that 
+are introduced are problem-speci.c,rather then program-speci.c, which allows them to be reused for the 
+analysis of other programs. The prototype implementation of the analysis, although not very e.cient, 
+can be used to analyze interesting array operations in reasonable times.  9. REFERENCES <RefA>[1] R. Bagnara, 
+E. Ricci, E. Za.anella, and P. M. Hill. Possibly not closed convex polyhedra and the parma polyhedra 
+library. In Static Analysis Symp.,volume 2477, pages 213 229, 2002. [2] B. Blanchet, P. Cousot, R. Cousot, 
+J. Feret, L. Mauborgne, A. Min´e, D. Monniaux, and X. Rival. Design and implementation of a special-purpose 
+static program analyzer for safety-critical real-time embedded software. In The Essence of Computation: 
+Complexity, Analysis, Transformation., pages 85 108. Springer-Verlag, 2002. [3] P. Cousot and R. Cousot. 
+Abstract interpretation: A uni.ed lattice model for static analysis of programs by construction of approximation 
+of .xed points. In Symp. on Princ. of Prog. Lang., pages 238 252, New York, NY, 1977. ACM Press. [4] 
+P. Cousot and R. Cousot. Systematic design of program analysis frameworks. In Symp. on Princ. of Prog. 
+Lang., pages 269 282, New York, NY, 1979. ACM Press. [5] P. Cousot and N. Halbwachs. Automatic discovery 
+of linear constraints among variables of a program. In Symp. on Princ. of Prog. Lang., 1978. [6] C. Flanagan 
+and S. Qadeer. Predicate abstraction for software veri.cation. In Symp.on Princ.ofProg. Lang., pages 
+191 202, 2002. [7] D. Gopan, F. DiMaio, N. Dor, T. Reps, and M. Sagiv. Tools and Algorithms for the Construction 
+and Analysis of Systems, pages 512 529, 2004. [8] N. Halbwachs, Y.-E. Proy, and P. Roumano.. Veri.cation 
+of real-time systems using linear relation analysis. Formal Methods in System Design, 11(2):157 185, 
+1997. [9] S. K. Lahiri and R. E. Bryant. Indexed predicate discovery for unbounded system veri.cation. 
+In Int. Conf. on Computer Aided Veri.cation, pages 135 147, 2004. [10] L. Lamport. A new approach to 
+proving the correctness of multiprocess programs. Trans. on Prog. Lang. and Syst., 1(1):84 97, July 1979. 
+[11] T. Lev-Ami and M. Sagiv. TVLA: A system for implementing static analyses. In Static Analysis Symp., 
+pages 280 301, 2000. [12] R. Manevich, M. Sagiv, G. Ramalingam, and J. Field. Partially disjunctive heap 
+abstraction. In Static Analysis Symp., pages 265 279, 2004. [13] F. Masdupuy. Array Indices Relational 
+Semantic Analysis using Rational Cosets and Trapezoids.PhD thesis, Ecole Polytechnique, 1993. [14] A. 
+Mine. The octagon abstract domain. In Proc. Eighth Working Conf. on Rev. Eng., pages 310 322, 2001. [15] 
+A. Mine. A few graph-based relational numerical abstract domains. In Static Analysis Symp., pages 117 
+132, 2002. [16] G. Peterson. Myths about the mutual exclusion problem. Information Processing Letters, 
+12(3):115 116, June 1981. [17] T. Reps, M. Sagiv, and A. Loginov. Finite di.erencing of logical formulas 
+for static analysis. In European Symp. on Programming, pages 380 398, 2003. [18] T. Reps, M. Sagiv, and 
+G. Yorsh. Symbolic implementation of the best transformer. In Veri.cation, Model Checking, and Abstract 
+Interpretation, pages 252 266, 2004. [19] M. Sagiv, T. Reps, and R. Wilhelm. Parametric shape analysis 
+via 3-valued logic. Trans. on Prog. Lang. and Syst., 24(3):217 298, 2002. [20] P. .y. V´etation abstraite 
+de Cern´eri.cation par interpr´pr´edicats param´etriques. D.E.A. Report, Univ. Paris ´ VII &#38; Ecole 
+normale sup´erieure, September 2003. [21] G. Yorsh, T. Reps, and M. Sagiv. Symbolically computing most-precise 
+abstract operations for shape analysis. In Tools and Algorithms for the Construction and Analysis of 
+Systems, pages 530 545, 2004. </RefA> 
+			

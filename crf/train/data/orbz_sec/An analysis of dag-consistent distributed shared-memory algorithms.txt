@@ -1,0 +1,829 @@
+
+ An Analysis of Dag-Consistent Distributed Shared-Memory Algorithms Robert D. Blumofe Matteo Frigot Christopher 
+F. Joergt Charles E, Leisersont Keith H. Randall? *Department of Computer Sciences tMIT Laboratory for 
+Computer Science The University of Texas at Austin 545 Technology Square Austin, Texas 78712 Cambridge, 
+Massachusetts 02139 rdb(!cs. utexas. edu {athena, cf j, cel ,randall}(!lcs .mit. edu Abstract In this 
+paper, we analyze the performance of parallel mttlti­threaded algorithms that use dag-consistent distributed 
+shared mem­ory. Specifically, we analyze execution time, page faults, and space requirements for multithreaded 
+algorithms executed by a work­stealing thread scheduler and the BACKER coherence algorithm for maintaining 
+dag consistency. We prove that if the accesses to the backing store are random and independent (the BACKER 
+algorithm actually uses hashing), then the expected execution time of a fully strict multithreaded computation 
+on P processors, each with an LRU cache of C pages, is O(T1 (C)/P+ ntC7 ), where T1(C) is the total work 
+of the computation including page faults, L is its critical­path length excluding page faults, and m 
+is the minimum page trans­fer time. As a corollary to this theorem, we show that the expected number 
+of page faults incurred by a computation executed on P pro­cessors, each with an LRU cache of C pages, 
+is F] (C) + O(CPT~), where Fl (C) is the number of serial page faults. Finally, we give simple bounds 
+on the number of page faults and the space require­ ments for regular divide-and-conquer algorithms. 
+We use these bounds to analyze parallel multithreaded algorithms for matrix mul­ tiplication and LU-decomposition. 
+ introduction In recent work [8, 17], we have proposed dag-consistent dis­tributed shared memory as 
+a virtual-memory model for multi­threaded parallel-programming systems such as CiLk, a C-based mtrltithreaded 
+language and rtmtime system [7, 9, 17]. A multi­threaded program defines a partial execution order on 
+its instntc­tions, and we view this partial order as a directed acyclic graph or dug. Informally, in 
+the dag-consistency model, a read instruction can see a write instruction only if there is some serial 
+execution order of the dag in which the read sees that write. Moreover, dag consistency allows different 
+reads to return values that are based on different serial orders, as long as the values returned are 
+consistent This research was supported in part by the Advanced Research Projects Agency (ARPA) under 
+Grants NOO014-94-1-0985 nnd NOOO14-92-J-131O. Robert Blrrmofe was supported in part by an ARPA High-Perfommnce 
+Computing Graduate Fellowship. Chris Joerg IS now at Digital Equipment Corporations s Cambridge Research 
+Labora­ tory. Charles Leiserson is currently Shaw Vkiung Professor at the National Universny of Singapore. 
+Keith Randall was supported in part by a Department of Defense NDSEG Fellowship. Permission to make dlgitdhard 
+copies of all or part of this material for personal or classroom use is granted without fee provided 
+tftat the copies am not made or distributed for profit or commercial advantage, the copy­rtght notice, 
+the title of the publication and ita date appear, and notice is given that copyright is by permission 
+of Ute ACM, Inc. To copy otherwise, to republish, to post on servers or to rdstribute to lista, requirea 
+specific permission andfor fee. SPAA 96, Padua, Italy @ 1996 ACM 0_89791.809_6\96\06 ..$3.50 with the 
+dependencies given by the dag. Our previous work pro­vides a description of the model, coherence algorithms 
+for main­taining dag consistency, and empirical evidence for their efficiency, In this paper, we analyze 
+the execution time, page faults, and space requirements of multithreaded algorithms written with this 
+consis­tency model when the execution is scheduled by the randomized work-stealing scheduler from [7, 
+10] and dag consistency is main­tained by the BACKER coherence algorithm from [8]. A multithreaded algorithm 
+is a collection of thread definitions. Analogous to a procedure definition, a thread definition is a 
+block of serial code, possibly with conditional and looping constructions. Unlike a procedure, however, 
+a thread definition may contain vari­ous types of spawn and synchronization statements that allow the 
+algorithm to exhibit concurrency as follows. To specify paral­lelism, a thread may spawn child threads. 
+A spawn is the parallel analogue of a procedure call, but in the case of a spawn, the parent and child 
+may execute concurrently. From the time that a thread is spawned until the time that the thread returns, 
+we say the thread is living or alive. In addition a thread may synchronize with some or all of its spawned 
+children by suspending its execution until the speci­fied children return. When the last of the specified 
+children returns, it enables its parent to resume execution. A thread that is suspended waiting for children 
+to return is said to be stalled, and otherwise, a thread is said to be ready. In general, a thread may 
+synchronize with other threads that are not its children, but in our analysis, we shall focus on the 
+class of filly strict multithreaded algorithms in which threads synchronize only with their children, 
+as just described. No­tice that a multithreaded algorithm does not specify at what time or on what processor 
+any given instruction is executed. The resource requirements that a multithreaded algorithm em­ploys 
+to solve a given input problem are modeled, in graph-theoretic terms, by a multifhreaded computation 
+[7]. A mtdtithreaded com­putation is composed of two structures: a spawn tree of threads and a dag of 
+instructions. The spawn tree of threads is the paral­lel analogue of a call tree of procedures. The spawn 
+tree is rooted at the main thread where algorithm execution begins, and in gen­eral, each spawned thread 
+is a node in the spawn tree with the parent­child relationships defined by the spawn operations. The 
+dag of in­structions is the parallel analogue of a serial instruction stream. We think of the dag of 
+instructions as being embedded in the spawn tree, since each executed instruction is part of a spawned 
+thread. As illustrated in Figure 1, this embedding has the following prop­erties. All of the instructions 
+in any given thread are totally ordered by dag edges that we call continue edges. For each thread, except 
+the root thread, its first instruction has exactly one incoming edge that we call a spawn edge, and this 
+edge comes from an instruc­tion (the spawning instruction) in the parent thread. For each thread, except 
+the root thread, its last instruction has exactly one outgoing Figure 1: A fully strict mrdtithreaded 
+computation. Each node is an instmc­tion, and each shaded reg]on is a thread. The continue edges are 
+horizontal, thespawnedgesareshadedanddownward pointing, andthereturnedgesare curved and upward pointing. 
+edge that we call a rerurn edge, and this edge goes to an instrttc­tion (the synchronizing instruction) 
+in the parent thread. In the case of a fully strict multithreaded algorithm, for any input problem, the 
+resulting ji.dly strict multithreaded computation contains only con­tinue, spawn, and return edges as 
+just described. Before discussing how the BACKER coherence algorithm affects the performance of fully 
+strict mtrkithreaded algorithms that use dag consistent shared memory, a major focus of this paper, let 
+us first re­wew some of the theory of multithreaded algorithms that do not use shared memory. Any multithreaded 
+computation can be measured m terms of its work and critical-path length [5, 9, 10, 20]. Con­sider the 
+multithreaded computation that results when a given multi­threaded algorithm is used to solve a given 
+input problem. The work of the computation, denoted T], is the number of instructions in the dag, which 
+corresponds to the amount of time required by a one­processor execution. 1 The critical-path length of 
+the computation, denoted L, is the maximum number of instructions on any directed path in the dag, which 
+corresponds to the amount of time required by an infinite-processor execution, With any number P of (homoge­neous) 
+processors, the time to solve a problem cannot be less than T] /P or less than L. When we consider the 
+computations that arise from a mtrkithreaded algorithm whose inputs are parameterized by an input size 
+n. we shall sometimes prowde the parameter n in our notations, as in TI (n) and Z,(n). The randomized 
+work-stealing scheduler achieves performance close to these lower bounds for the case of fully strict 
+multithreaded algorithms that do not use shared memory. Specifically, for any such algorithm and any 
+number F of processors, the randomized work-stealing scheduler executes the algorithm in expected time 
+O(T1 /P+ T-) [7, 10]. The randomized work-stealing scheduler op­erates as follows. Each processor maintains 
+a ready deque (doubly ­ended queue) of threads from which work is obtained. When a thread is spawned, 
+the parent thread is suspended and put on the bot­tom of the deque and execution commences on the spawned 
+child thread. When a thread returns, execution of the parent resumes by removing it from the bottom of 
+the deque. On one processor, this execution order is the standard, depth-first serial execution order. 
+A processor that finds its deque empty becomes a thief and sends a steal request to a randomly chosen 
+victim processor. If the vic­tim has a thread in its deque, it sends the topmost thread to the thief 
+to execute. Otherwise, the victim has no threads and the thief tries again with a new random victim. 
+Finally, when a thread executing on a processor enables a thread that was stalled on another proces­sor, 
+the newly enabled thread is sent to the enabling processor to be resumed. All of the threads of a multithreaded 
+algorithm should have ac­cess to a single, shared virtual address space, and in order to support such 
+a shared-memory abstraction on a computer with physically tFornondeterministicalgorithmswhosecomputationdagdependsonthescheduler, 
+wedefine T, to be the number of ]nstrucuons that actually occur m the computation dag, and we define 
+other measures similarly distributed memory, the runtime scheduler must be coupled with a coherence algorithm. 
+For our BACKER coherence algorithm, we as­sume that each processor s memory is divided into two regions. 
+each containing pages of shared-memory objects. One region is a page cache of C pages of objects that 
+have been recently accessed by that processor. The rest of each processors memory is maintained as a 
+backing store of pages that have been allocated in the virtual ad­dress space. Each allocated page is 
+assigned to the backing store of a processor chosen by hashing the page s virtual address. In order for 
+a processor to operate on an object, the object must be resident in the processor s page cache; otherwise, 
+a page fault occurs, and BACKER must fetch the object s page from backing store into the page cache, 
+We assume that when a page fault occurs, no progress can be made on the computation during the time it 
+takes to service the fault, and the fault time may vary due to congestion of concurrent accesses to the 
+backing store. We shall further assume that pages in the cache are maintained using the popular LRU (least-recently­used) 
+[19] heuristic. In addition to servicing page faults, BACKER must reconcile pages between the processor 
+page caches and the backing store so that the semantics of the execution obey the as­sumptions of dag 
+consistency. The BACKER coherence algorithm and the work-stealing scheduler have been implemented in 
+the Cilk runtime system with encouraging empirical results [8]. In order to model performance for multithreaded 
+algorithms that use dag-consistent shared memory, we observe that running times will vary as a function 
+of the cache size C, so we must irt~roduce measures that account for this dependence. Consider again 
+the mul­tithreaded computation that results when a given multithreaded al­gorithm is used to solve a 
+given input problem. We shall define a new work measure, the total work, that accounts for the cost of 
+page faults in the serial execution, as follows. Let m be the time to service a page fault in the serial 
+execution. We now weight the in­structions of the dag. Each instruction that generates a page fault in 
+the one-processor execution with the standard, depth-first serial execution order and with a cache of 
+size C bas weight m + 1, and all other instructions have weight 1. The total work, denoted T1 (C), is 
+the total weight of all instructions in the dag, which corresponds to the serial execution time lf page 
+faults take m units of time to be serviced. We shall continue to let T] denote the number of instruc­tions 
+in the dag, but for clarity, we shall refer to TI as the compu­tational work. (The computational work 
+T1 corresponds to the se­rial execution time if all page faults take zero time to be serviced.) To relate 
+these measures, we define the serial page faults, denoted F] (C), to be the number of page faults taken 
+in the serial execution (that 1s, the number of instrttctlons with weight m + 1). Thus, we have T1(C) 
+= 7j +rnFl (C). The quantity T} (C) is an unusual measure. Unlike 2 1,it depends on the serial execution 
+order of the computation. The quantity T1(C) further differs from T] in that TI (C) /P is not a lower 
+bound on the execution time for P processors. It is possible to construct a compu­tation containing P 
+subcomputations that run on P separate proces­sors in which each processor repeatedly accesses C different 
+pages in sequence. Consequently, with caches of size C, no processor ever fauhs, except to warm up the 
+cache at the start of the computation. If we run the same computation serially with a cache of size C 
+(or any size less than CP), however, the necessary multiplexing among tasks can cause numerous page faults. 
+Consequently, for this com­putation, the execution time with P processors is much less than TI (C)/P. 
+In this paper, we shall forgo the possibility of obtaining such superlinear speedup on computations. 
+Instead, we shall sim­ply attempt to obtain linear speedup. Critical-path length can likewise be split 
+into two notions. We define the total critical-path length, denoted T~ (C), to be the max­imum over all 
+directed paths in the computational dag, of the time, including page faults, to execute along the path 
+by a single proces­ sor with cache size C. The computational critical-path length T-is the same, but 
+where faults cost zero time, Both T-and T~(C) are lower bounds on execution time. Although T_(C) is the 
+stronger lower bound, it appears difficult to compute and analyze, and our upper-bound results will be 
+characterized in terms of T-, which we shall continue to refer to simply as the critical-path length. 
+ In this paper, we analyze the execution time of fully strict multi­threaded algorithms that use dag 
+consistent shared memory. The al­gorithm is executed on a parallel computer with P processors, each with 
+a cache of size C, and a page fault that encounters no con­gestion is serviced in m units of time. The 
+execution is scheduled by the work-stealing scheduler and dag consistency is maintained by the BACKER 
+coherence algorithm. In addition, we assume that accesses to shared memory are distributed uniformly 
+and indepen­dently over the backing store-often a plausible assumption, since BACKER hashes pages to 
+the backing store. Then, for any given in­put problem, the expected execution time is 0(7 1 (C)/P + mCT_). 
+In addition, we give a high-probability bound. This result is not as strong as we would like to prove, 
+because accesses to the backing store are not necessarily independent. For example, threads may concurrently 
+access the same pages by algo­rithm design. We can artificially solve this problem by insisting, as does 
+the EREW-PRAM model, that the algorithm performs exclu­sive accesses only. More seriously, however, congestion 
+delay in ac­cessing the backing store can cause the computation to be scheduled differently than if there 
+were no congestion, thereby perhaps causing more congestion to occur. It may be possible to prove our 
+bounds for a hashed backing store without making this independence as­sumption, but we do not know how 
+at this time. The problem with independence does not seem to be serious in practice, and indeed, given 
+the randomized nature of our scheduler, it is hard to conceive of how an adversary can actually take 
+advantage of the lack of in­dependence implied by hashing to slow the execution, Although our results 
+are imperfect, we are actually analyzing the effects of congestion, and thus our results are much stronger 
+than if we had assumed, for example, that accesses to the backing store indepen­dently suffer Poisson-distributed 
+delays. In this paper, we also analyze the number of page faults that oc­cur during algorithm execution. 
+Again, execution is scheduled with the work-stealing scheduler and dag consistency is maintained by the 
+BACKER coherence algorithm, and we assume that accesses to backing store are random and independent. 
+Under this assumption, we show that for any given input problem, the expected number of page faults to 
+solve the problem on P processors, each with an LRU cache of size C, is at most F1 (C)+ O(CPT_). In addition, 
+for regu­lar divide-and-conquer multithreaded algorithms, we derive a good upper bound on F1(C) in terms 
+of the input size of the problem. For example, we show that the total number of page faults incurred 
+by a divide-and-conauer matrix-multiplication al~orithm when mul­ t~plying n x n matflces using P processors 
+is 6(n3/(m312JC) + CPlg2 n), assuming that the independence assumption for the back­ing store holds. 
+Finally, in this paper, we analyze the space requirements of sim­ple multithreaded algorithms that use 
+dag-consistent shared mem­ory. We assume that the computation is scheduled by a sched­uler, such as the 
+work-stealing algorithm, that maintains the busy­leaves property [7, 10]. For a given simple multithreaded 
+algo­rithm, let S1 denote the space required by the standard, depth-first serial execution of the algorithm 
+to solve a given problem. In pre­vious work, we have shown that the space used by a P-processor execution 
+is at most S1P in the worst case [7, 10]. We improve this characterization of the space requirements, 
+and we provide a much stronger upper bound on the space requirements of regular divide­and-conquer multithreaded 
+algorithms. For example, we show that a divide-and-conquer matrix-multiplication algorithm multiplying 
+n x n matrices on P processors uses only @(n2P1i3 ) space, which is tighter than the 0(n2P) result obtained 
+by directly applying the S1P bound. The remainder of this paper is organized as follows. Section 2 gives 
+a precise definition of dag consistency and describes the BACKER coherence algorithm for maintaining 
+dag consistency. Section 3 analyzes the execution time of fully strict multithreaded algorithms when 
+the execution is scheduled by the randomized work-stealing scheduler and dag consistency is maintained 
+by the BACKER coherence algorithm. Section 4 analyzes the number of page faults taken by parallel divide-and-conquer 
+algorithms. Section 5 analyzes the space requirements of parallel divide-and­ conquer algorithms. Section 
+6 presents some sample analyses of al­ gorithms that use dag-consistent shared memory. Finally, Section 
+7 offers some comparisons with other consistency models and some ideas for the future. 2 Dagconsistency 
+and the Backer coherence algorithm In this section we give a precise definition of dag consistency, and 
+redescribe the BACKER [8] coherence algorithm for maintaining dag consistency. Dag consistency is a relaxed 
+consistency model for distributed shared memory, and the BACKER algorithm can main­tain dag consistency 
+for multithreaded computations that execute on a parallel computer with physically distributed memory. 
+Shared memory consists of a set of objects that instructions can read and write. When an instruction 
+performs a read of an object, it receives some value, but the particular value it receives depends upon 
+the consistency model. Like location consistency [14], dag consistency is defined separately for each 
+object in shared memory. In order to define dag consistency precisely, we need some termi­nology. Let 
+G = (V, E) be the dag of a multithreaded computation. For u, v ~ V, if a path of nonzero length from 
+instruction u to v exists in G, we say that u (strictly) precedes v, which we write u + v. We say that 
+two instructions u, v ~ V with u # v are incomparable if we have u < v and v < u. To track which instruction 
+is responsible for an object s value, we imagine that each shared-memory object has a tag which the write 
+operation sets to the name of the instruction per­forming the write. We make the technical assumption 
+that an initial sequence of instructions writes a value to every object. We can now define dag consistency. 
+Definition 1 The shared memoty M of a multithreaded computa­tion G = (V, E) is dag consistent if for 
+every object x in the shared memory, there exists a function fx : V ~ V such that the following conditions 
+hold. 1. For all instructions u c V, the instruction fx (u) writes to x, 2. If an instruction u writes 
+to x, then we have fx(u) = u. 3. If an instruction u reads x, it receives a value tagged with fx(u). 
+ 4. For all instructions u G V, we have u # fx(u). 5. For each triple u, v, and w of instructions such 
+that u + v + w, if fx(v) # u holds, then we have fx(w) # u.  Informally, the function fx (u) represents 
+the viewpoint of instruc­tion u on the contents of object x, that is, the tag of x from u s per­spective. 
+Therefore, if an instruction u writes, the tag of x becomes u (part 2 of the definition), and when it 
+reads, it reads something tagged with ~,(u) (part 3). Moreover, part 4 requires that future exe­cution 
+does not have any influence on the current value of the mem­ory. The rationale behind part 5 is shown 
+in Figure 2. When there Figure 2: Illustration of the definition of dag consistency. When there is a 
+path from u to w through v, then a write by v to an object masks u s write to the object, not allowing 
+u s write to be read by w. Instruction w may see writes to the object performed by instructionss and 
+f, however. is a path from u to w through v, then v masks u, in the sense that if the value written by 
+u is no longer current when v executes, then it cannot be current when w executes. Instruction w can 
+still have a different viewpoint on x than v. For instance, instruction w may see a write on x performed 
+by some other instruction (such ass and tin the figure) that is incomparable with v. In previous work 
+[8, 17], we presented a weaker definition of dag consistency from Definition 1. Definition 1 is stronger 
+than the ear­lier definition in that If the shared memory M is dag consistent in the sense of Definition 
+1, it also is dag consistent in the sense of the ear­lier definition, but the converse is not true. The 
+reason for the new definition is that Definition 1 confines nondeterminism in the fol­lowing sense. Consider 
+the case of two incomparable instructions u 1 and U2 writing to a memory object x and having a common 
+suc­cessor v. Suppose that no instruction other than U1 and U2 writes to x. In Definition 1, v is forced 
+to have a view of x that sees one of the two values, and moreover, all of v s successors then see that 
+same value. With the old definition, v s successors could each indi­vidually see either value of x, which 
+we viewed as nonintuitive and undesirable. A more detailed justification of Definition 1 and an ex­planation 
+of its properties are beyond the scope of this paper, but we are currently exploring the semantics of 
+dag consistency more fully. We now describe the BACKER coherence algorithm from [8], in which versions 
+of shared-memory objects can reside simultaneously in any of the processor caches and the backing store. 
+Each proces­sor s cache contains objects recently used by the threads that have executed on that processor, 
+and the backing store provides default global storage for each object. In order for a thread executing 
+on the processor to read or write an object, the object must be in the processor s cache. Each object 
+in the cache has a dirty bit to record whether the object bas been modified since it was brought into 
+the cache. 13ACKER uses three basic operations to manipulate shared­memory objects: fetch, reconcile, 
+and flush. A ~etch copies an object from the backing store to a processor cache and marks the cached 
+object as clean. A reconcile copies a dirty object from a processor cache to the backing store and marks 
+the cached object as ciean. Finally, a j%mh removes a clean object from a processor cache. The BACKER 
+coherence algorithm operates as follows. When the user code performs a read or write operation on an 
+object, the oper­ation is performed directly on a cached copy of the object. If the object is not in 
+the cache, it is fetched from the backing store before the operation is performed. If the operation is 
+a write, the dirty bit of the object is set. To make space in the cache for a new object, a clean object 
+can be removed by flushing it from the cache. To remove a dirty object, it is reconciled and then flushed. 
+Besides performing these basic operations in response to user reads and writes, BACKER performs additional 
+reconciles and flushes to enforce dag consistency. For each edge u ~ v in the com­putation cfag, If instructions 
+u and v are executed on different proces­sors, say p and q, then BACKER causes p to reconcile all its 
+cached objects after executing M but before enabling v, and it causes q to reconcile and flush its entire 
+cache before executing v. Note that if q s cache is flushed for some other reason after p has reconciled 
+its cache but before q executes v (perhaps because of another interpro­cessor dag edge), it need not 
+be flushed again before executing v. The following theorem, whose proof we shall omit, states that BACKER 
+is correct. Theorem 2 If the shared memory M of a multithreaded computa­tion is maintained using BACKER, 
+then M is dug consistent. 3 Analysis of execution time In this section, we bound the execution time of 
+fully strict multi­threaded computations when the parallel execution is scheduled by a work-stealing 
+scheduler and dag consistency is maintained by the BACKER algorithm, under the assumption that accesses 
+to the back­ing store are random and independent. For a given fully strict muhi­threaded algorithm, let 
+Tp (C) denote the time taken by the algorithm to solve a given problem on a parallel computer with P 
+processors, each with an LRU cache of C pages, when the execution is scheduled by the work-stealing scheduler 
+in conjunction with the B ACKER co­herence algorithm. In this section. we show that if accesses to back­ing 
+store are random and independent, then tbe expected value of Tp(C) is O(TI (C)/P + mCTW), where m denotes 
+tbe minimum time to transfer a page and T~ is the critical-path length of the computa­tion. In addition, 
+we bound the number of page faults. The expo­sition of the proofs in this section makes heavy use of 
+results and techniques from [7, 10]. In the following analysis, we consider the fully strict multi­threaded 
+computation that results when a given fully strict multi­threaded algorithm is executed to solve a given 
+input problem, We assume that the computation is executed by a work-stealing sched­uler in conjunction 
+with the BACKER coherence algorithm on a par­allel computer with P homogeneous processors. The backing 
+store is distributed across the processors by hashing, with each proces­sor managing a proportional share 
+of the objects which are grouped into fixed-size pages. In addition to backing store, each processor 
+has a cache of C pages that is maintained using the LRU replace­ment heuristic. We assume that a mimmum 
+of m time steps are re­quired to transfer a page. When pages are transfemed between pro­cessors, congestion 
+may occur at a destination processor, in which case we assume that the transfers are serviced at the 
+destination in FIFO (first-m, first-out) order. The work-stealing scheduler assumed in our analysis is 
+the work­stealing scheduler from [7, 10], but with a small technical modifica­tion. Between successful 
+steals, we wish to guarantee that a pro­cessor performs at least C page transfers (fetches or reconciles) 
+so that it does not steal too often. Consequently, whenever a processor runs out of work, if it has not 
+performed C page transfers since its last successful steal, the modified work-stealing scheduler performs 
+enough additional idle transfers until it has transferred C pages. At that point, it can steal again. 
+Similarly, we require that each pro­cessor perform one idle transfer after each unsuccessful steal request 
+to ensure that steal requests do not happen too often. Our analysis of execution time is organized as 
+follows. First, we prove a lemma describing how the BACKER algorithm adds page faults to a parallel execution. 
+Then, we obtain a bound on the num­ber of rounds that a parallel execution contains. Each round con­tains 
+a fixed amount of scheduler overhead, so bounding the number of rounds bounds the total amount of scheduler 
+overhead. To com­plete the analysis, we use an accounting argument to add up the total execution time. 
+Before embarking on the analysis, however, we first define some helpful terminology. A [ask is the fundamental 
+building block of a computation and is either a local instruction (one that does not ac­cess shared memory) 
+or a shared-memory operation. If a task is a local instruction or references an object in the local cache, 
+it takes 1 step to execute. Otherwise, the task is referencing an object not in the local cache, and 
+a page transfer occurs, taking at least m steps to execute. A synchronization task is a task in the dag 
+that forces BACKER to perform a cache flush in order to maintain dag consis­tency. Remember that for 
+each interprocessor edge i + j in the dag, a cache flush is required by the processor executing j sometime 
+af­ter i executes but before j executes. A synchronization task is thus a task j having an incoming interprocessor 
+edge i + j in the dag, where j executes on a processor that has not flushed its cache since i was executed. 
+A subcomputation is the computation that one pro­cessor perfotms from the time it obtains work to the 
+time it goes idle or enables a synchronization task. We distinguish two kinds of sub­computations: primary 
+subcomputations start when a processor ob­tains work from a random steal request, and secondary subcompu­tations 
+start when a processor starts executing from a synchroniza­tion task. We distinguish three kinds of page 
+transfers. An intrinsic transfer is a transfer that would occur during a 1-processor depth­first execution 
+of the computation. The remaining exn-insic page transfers are divided into two types. A prima~ transfer 
+is any ex­trinsic transfer that occurs during a primary strbcomputation. Like­wise, a secondary transfer 
+is any extrinsic transfer that occurs dur­ing a secondary subcomputation. We use these terms to refer 
+to page faults as well. Lemma 3 Each primary transfer during an execution can be asso­ciated with a 
+currently running primary subcomputation such that each prima? subcomputation has at most 3C associated 
+primary transfers. Similarly, each secondary transfer during an execution can be associated with a currently 
+running seconda~ subcomputa­tion such that each secondary subcomputation has at most 3C asso­ciated secondary 
+transfers. Proof For this proof, we use a fact shown in [8] that executing a subcomputation starting 
+with an arbitrary cache can only incur C more page faults than the same block of code incurred in the 
+serial execution. This fact follows from the observation that a subcompu­tation is executed in the same 
+depth-first order as it would have been executed in the serial execution, and the fact that the cache 
+replace­ment strategy is LRU. We associate each primary transfer with a running primary sub­computation 
+as follows. During a steal, we associate the (at most) C reconciles done by the victim with the stealing 
+subcomputation. In addition, the stolen subcomputation has at most C extrinsic page faults, because the 
+stolen subcomputation is executed in the same or­der as the subcomputation executes in the serial order. 
+At the end of the subcomputation, at most C pages need be reconciled, and these reconciles may be extrinsic 
+transfers. In total, at most 3C primary transfers are associated with any primary subcomputation. A similar 
+argument holds for secondary transfers. Each sec­ondary subcomputation must perform at most C reconciles 
+to flush the cache at the start of the subcomputation. The subcomputation then has at most C extrinsic 
+page faults during its execution, because it executes in the same order as it executes in the serial 
+order. FL nally, at most C pages need to be reconciled at the end of the sub­computation. We now bound 
+the amount of scheduler overhead by counting the number of rounds in an execution, Lemma 4 If each page 
+transfer (fetch or reconcile) in the execu­tion is serviced by a processor chosen independently at random, 
+and each processor queues its transfer requests in FIFO orde~ then, for any E >0, with probability at 
+least 1 e, the total number of steal requests and primary transfers is at most O(CPT~ + CP1g( 1/&#38;) 
+). Proof To begin, we shall assume that each access to the backing store takes one step regardless of 
+the congestion. We shall describe how to handle congestion at the end of the proof. First, we wish to 
+bound the overhead of scheduling, that is, the additional work that the one-processor execution would 
+not need to perform. We define an event as either the sending of a steal re­quest or the sending of a 
+primary-page-transfer request. In order to bound the number of events, we divide the execution into rounds. 
+Round 1 starts at time step 1 and ends at the first time step at which at least 27CP events have occurred. 
+Round 2 starts one time step after round 1 completes and ends when it contains at least 27CP events, 
+and so on. We shall show that with probability at least 1 e, an ex­ecution contains only 0( T-+ lg( 
+1/&#38;) ) rounds. To bound the number of rounds, we shall use a delay-sequence argument. We define a 
+modified dag D exactly as in [ 10]. (The dag D is for the purposes of analysis only and has no effect 
+on the com­putation.) The critical-path length of D is at most 2T_. We define a task with no unexecuted 
+predecessors in D to be critical, and it is by construction one of the first two tasks to be stolen from 
+the processor on which it resides. Given a task that is critical at the beginning of a round, we wish 
+to show that it is executed by the start of the next round with constant probability. This fact will 
+enable us to show that progress is likely to be made on any path of D in each round. We now show that 
+at least 4P steal requests are initiated during the first 22CP events of a round. If at least 4P of the 
+22CF events are steal requests, then we are done. If not, then there are at least 18CP primary transfers. 
+By Lemma 3, we know that at most 3CP of these transfers are associated with subcomputations running at 
+the start of the round, leaving 15CP for steals that start in this round. Since at most 3C primary transfers 
+can be associated with any steal, at least 5P steals must have occurred. At most P of these steals were 
+requested in previous rounds, so there must be at least 4P steal re­quests in this round. We now argue 
+that any task that is critical at the beginning of a round has a probability of at least 1/2 of being 
+executed by the end of the round. Since there are at least 4P steal requests during the first 22CP events, 
+the probability is at least 1/2 that any task that is critical at the beginning of a round is the target 
+of a steal re­quest [10, Lemma 10], if it is not executed locally by the processor on which it resides. 
+Any task takes at most 3mC + 1 < 4mC time to execute, since we are ignoring the effects of congestion 
+for the mo­ment. Since the last 4CP events of a round take at least 4mC time to execute, if a task is 
+stolen in the first part of the round, it is done by the end of the round. We want to show that with 
+probability at least 1 &#38;, the total number of rounds is O(TW + lg( 1/&#38;)). Consider a possible 
+delay se­quence. Recall from [10] that a delay sequence of size R is a max­imal path U in the augmented 
+dag D of length at most 2T~, along with a partition H of R which represents the number of rounds dur­ing 
+which each task of the path in D is critical. We now show that the probability of a large delay sequence 
+is tiny. Whenever a task on the path U is critical at the beginning of a round, it has a probability 
+of at least 1/2 of being executed dur­ing the round, because it is likely to be the target of one of 
+the 4P steals in the first part of the round. Furthermore, this probability is independent of the success 
+of critical tasks in previous rounds, be­cause victims are chosen independently at random. Thus, the 
+prob- R 2T-that a particular delay sequence with ability is at most (1/2) ­size R > 2T~ actually occurs 
+in an execution. There are at most 22T-(R~~~-) delay sequences of size R. Thus, the probability that 
+any delay sequence of size R occurs is at most 2 T (RE?  G)R 2T Theorem 5 Consider any fullv strict 
+multithreaded computation executed on P processors, each with an LRU cache of C pages, us­ 5 22T (e(RLw2T 
+GlR-2T ing our work-stealing scheduler in colyunction with the BACKER 4e(R+ 2T~) 2 1 R ~ 2Tm 5 ( )() 
+ which can be made less than &#38; by choosing R = 14T~ + lg( 1/&#38;). Therefore, there are at most 
+0( T-+ lg( 1/&#38;) ) rounds with probabil­ity at least 1 c. In each round, there are at most 28CP events, 
+so there are at most O(CPT~ + CPlg( 1/&#38;) ) steal requests and primary transfers in total. Now, let 
+us consider what happens when congestion occurs at the backing store. We still have at most 3C transfers 
+per task, but these transfers may take more than 3rrrC time to complete be­cause of congestion. We define 
+the following indicator random variables to keep track of the congestion. Let Xu,l, be the indica­tor 
+random variable that tells whether task u s ith transfer request is delayed by a transfer request from 
+processor p. The probability y is at most 1/P that one of these indicator variables is 1. Further­more. 
+we shall argue that they are nonpositively correlated, that is, Pr { x[(i[, z 1 IALtJi,l, XUJill,! 1 
+} < l/P, as long asnoneofthe (u , i ) requests execute at the same time as the (u, r ) request. That 
+they are nonpositively correlated follows from an examination of the queu­ing behavior at the backing 
+store. If a request (u , i ) is delayed by a request from processor p (that is, ~Ulil~l = 1), then once 
+the (u , i ) request has been serviced, processor p s request has also been ser­viced, because we have 
+FIFO queuing of transfer requests. Con­sequently. p s next request, if any, goes to a new, random proces­sor 
+when the (u, i) request occurs. Thus, a long delay for request (~~,i ) cannot adversely affect the delay 
+for request (u, i). Finally, we also have Pr {xU,,, = 1 IA,,J#,j xU,,,I = 1 } < 1/P, because the re­quests 
+from the other processors besides p are distributed at random. The execution time X of the transfer requests 
+for a path U in D can be written as X < ZUeu(5rnC + m ~ll,xUtlj ) Rearranging. we have X <1 OrnCT= + 
+rrr~U,J,x,,ll,. because U has length at most 2T~. This sum is just the sum of 10CF T_ indicator random 
+variables, each with expectation at most 1/P. Since the tasks u in U do not execute concurrently, the 
+,Yt,l,) are nonposittvely correlated, and thus, them sum can be bounded using combinatorial techniques. 
+The sum is greater than z only if some z-size subset of these 10CPT~ variables are ail 1, which happens 
+with probability: This probability can be made less than ( I /2): by choosing z ~ 20eCT~. Therefore. 
+we have X > (10+ 20e)mCT~ with probabil­ity at most ( l/2)x ]On cT-. Since there are at most 2T~ tasks 
+on the critical path, at most 2T~ + X/mC rounds can be overlapped by the long execution of page transfers 
+of these critical tasks. Therefore. the probability of a delay sequence of size R is at most ( 1/2) R 
+o(~-). Consequently, we can apply the same argument as for umt-cost transfers, with slightly different 
+constants, to show that with prob­ ability at least I e, there are O(TQ + lg( 1/E)) rounds, and hence 
+O(CPT~ + CPlg( 1/8) ) events, during the execution. We now bound the running time of a computation. coherence 
+algorithm. Let m be the service time for a page fault that encounters no congestion, and assume that 
+accesses to the backing store are random and independent. Suppose the computation has TI computational 
+work, F1(C) serial page faults, TI (C) = T] + mFl (C) total work, and T-critical-path length. Then for 
+anv c >0, the execution time is O(T1 (C)/P+ mCT~ + m lgP + mClg( 1/E)) with probabili~ at least i E 
+Moreover the expected execution time is O(Tl(C)/Pi-mCT_). Proof As m [10], we shall use an accounting 
+argument to bound the running time. During the execution, at each time step, each pro­cessor puts a dollar 
+into one of 5 buckets according to its activity at that time step. Specifically, a processor puts a dollar 
+in the bucket labeled: WORK, if the processor executes a task;  STEAL, If the processor sends a steal 
+request;  STEALWAIT, If the processor waits for a response to a steal request; e XFER, if the processor 
+sends a page-transfer request; and  XFERWAIT, if the processor waits for a page transfer to com­  plete. 
+When the execution completes, we add up the dollars in each bucket and divide by P to get the running 
+time. We now bound the amount of money in each of the buckets at the end of the computation by using 
+the fact, from Lemma 4, that with probability at least 1 E , there are O(CPT~ + CPlg( 1/E )) events: 
+WORK. The WORK bucket contains exactly T, dollars. because there are exactly Tl tasks in the computation. 
+STEAL. We know that there are O(CPT_ + C F lg( 1/E ) ) steal re­quests, so there are O(CPT_ + CPlg( 1/E 
+) ) dollars in the S t EAL bucket. STEALWAIT. We use the analys~s of the recycling game ([10, Lemma 5]) 
+to bound the number of dollars in the STEALWAIT bucket. The recycling game says that if N requests are 
+distributed randomly to P processors for service, with at most P requests out­standing simultaneously, 
+the total time waiting for the requests to complete is O(N+ Plg P+ F lg( l/E )) with probability at least 
+1 e . Since steal requests obey the assumptions of the recycling game, if there are O(CPT~ + CPlg( 1/8 
+) ) steals, then the total time waiting for steal requests is O(CPT_ + PlgP + CP lg( 1/e )) with probabil­ity 
+at least 1 E . We must add to this total an extra O(mCPT-+ mCPlg( 1/&#38; )) dollars because the processors 
+initiating a success­ful steal must also wait for the cache of the victim to be recon­ciled, and we know 
+that there are O(CPT~ + CPlg( 1/E)),) such rec­onciles. Finally, we must add O(mCPT_ + mCPlg( 1/&#38; 
+l) dollars be­cause each steal request might also have up to m idle steps associ­ated with it. Thus, 
+with probability at least 1 8 , we have a totai of O(rnCPT~ + Plg P + mCPlg( l/E )) dollars in the STEALWAIT 
+bucket. XFER. We know that there are O(F} (C) + CPT_ + CPlg( 1/&#38; )) transfers during the executton: 
+a fetch and a reconcile for each Intrinsic fault, O(CPTm + CPlg( 1/s )) primary transfers from Lemma 
+4, and 0(C17~ + CPlg( 1/&#38; ) ) secondary transfers. We have this bound on secondary transfers, because 
+each secondary subcomputation can be paired with a unique primary subcomputa­tion. We construct this 
+pairing as follows. For each synchroniza­tion task j, we examine each interprocessor edge entering j. 
+Each of these edges corresponds to some child of j s thread in the spawn tree, because the computation 
+is fully strict. At least one of these children (call it k) is not finished executing at the time of 
+the last cache flush by j s processor, since j is a synchromzat~on task. We now show that there must 
+be a random steal of j s thread just after k is spawned. If not, then k is completed before J S thread 
+contin­ues executing after the spawn. There must be a random steal some­where between when k is spawned 
+and when j is executed, how­ever, because j and k execute on different processors. On the last such random 
+steal, the processor executing j must flush its cache, but this cannot happen because k is still executing 
+when the last flush of the cache occurs, Thus, there must be a random steal just after k is spawned. 
+We pair the secondary subcomputation that starts at task j with the primary subcomputation that starts 
+with the random steal after k is spawned. By construction, each primary subcomputation has at most one 
+secondary subcomputation pained with it, and since tXdCh primary subcomputation does at least C extrinsic 
+transfers and each secondary subcomputation does at most 3C extrinsic transfers, there are at most O(CPT~ 
++ CP lg( 1,/E )) secondary transfers. Since each transfer takes m time, the number of dollars in the 
+XFER bucket is O(nrFl(C) +mCPTm+ mCPlg( l/d)). XFERWAIT. To bound the dollars in the XFERWAIT bucket, 
+we use the recycling game as we did for the STEALWAIT bucket. The recycling game shows that there are 
+O(mFl (C)+ mCPTW + nrPlgP + mCPlg( 1/&#38; )) dollars in the XFERWAIT bucket with probability at least 
+1 e . With probability at least 1 3&#38; , the sum of all the dollars in all the buckets N TI +O(mF1 
+(C) +mCPT_+mP1gP+mCP lg( 1/8 )). Dl­vidingby P, we obtain a running time of TPs O((TI +mF~ (C))/P+ mCT_ 
++ m lgP + mClg( 1/: )) with probability at least 1 3&#38;~. Us­ing the identity Tl (C) = T1 + mFl (C) 
+and substituting&#38;= 3&#38; yields the deswed high-probability bound. The expected bound follows similarly. 
+We now bound the number of page faults, Corollary 6 Consider any fully strict nudtithreaded computation 
+executed on P processors, each with an LRU cache of C pages, us­ing our work-stealing scheduler in conjunction 
+with the BACKER coherence algorithm. Assume tht accesses to the backing store are random and independent. 
+Suppose the computation has FI (C) se­rial page faults and Tw crttica[-path length. Then for any e >0, 
+the number of page faults is at most Fl (C)+ O(CPT-+ CP Ig( I /S )) with probability at least 1 E. Moreove~ 
+the expected number of page faults is ur mosf FI (C) + O(CPTW). Proo~ In the parallel execution, we have 
+one fault for each in­trinsic fault, plus an extra O(CPT_ + CPlg( 1/&#38;) ) primary and sec­ondary faults. 
+The expected bound follows similarly. 4 Analysis of page faults This section provides upper bounds on 
+the number of page faults for regular diwde-and-conquer multithreaded algorithms when the parallel execution 
+is scheduled by our randomized work-stealing scheduler and dag consistency is maintained by the BACKER 
+algo­rithm, In a regular divide-and-conquer multithreaded algorithm, each thread, when spawned to solve 
+a problem of size n, operates as follows. If n is larger than some given constant, the thread divides 
+the problem into a subproblems, each of size n/b for some constants a ~ I and b > 1. and then it recursively 
+spawns child threads to solve each subproblem. When all a of the children have completed, the thread 
+merges their results, and then returns. In the base case, when n is smaller than the specified constant, 
+the thread directly solves the problem, and then returns. Corollary 6 bounds the number of page fnults 
+that a fully strict multithreaded algorithm incurs when run on P processors using a randomized work-stealing 
+scheduler and the BACKER coherence al­ gorithm. Specifically, for a given fully strict mtrhithreaded 
+algo­ rithm, let FI (C, n) denote the number of page faults that occur when the algorithm is used to 
+solve a problem of size n with the standard, depth-first serial execution order on a single processor 
+with an LRU cache of C pages. In addition, for any number P z 2 of processors, let FP(C, n) denote the 
+number of page faults that occur when the al­ gorithm is used to solve a problem of size n with the work-stealing 
+scheduler and BACKER on P processors, each with an LRU cache of C pages. Corollary 6 then says that the 
+expectahon of FP[C, n) IS at most F1(C, n) + O(CPT~(n )). where TM(n) is the crihcal path of the computation 
+on a problem of size n. The O(CPT~(n ) ) term represents faults due to warming up the processors caches. 
+Generally, one must implement and run an algordhm to get a good estimate of F1(C, n ) betore one can 
+predict whether It will run well m parallel. For regular divide-and-conquer muhithreaded algorithms, 
+however, analysis can provide good asymptotic bounds on FI (C, n), and hence on FP(C, n). Theorem 7 Consider 
+an-v regular divide-and-conquer multi­threaded algorithm executed on I processor with an LRU cache of 
+C pages, using the standard, depth-j%-st serial execution order Let nc be t}te largest problem size that 
+can be solved wholly within the cache. Suppose that each thread. when spawned to solve a problem of size 
+n larger than or equal to nc, divides the problem into a subproblems each of si:e n/b for some constants 
+a ~ 1 and b > 1. Additionally suppose each thread solving a problem of size n makes p(n) page faults 
+in the worst case. Then, the number FI (C, n ) of page faults taken by the aigorithm when solving a problem 
+of size n can be determmed as follows:z 1. ffp(n) = O(n]Ogf)u-&#38;) for some constant &#38; >0, /hen 
+FI (C, n) = O(C(n/nC)lOg{, ), lfp(n) further satisfies the regularity condi­rion that p(n) s ayp(n/b) 
+for some constant y < 1. 2. ,ffp(n) = @(n] 0~~, ), then FI (C, n) = O(C(n/nc)lOglU lg(n/nc)).  3. Ifp(n) 
+= !Q(niOgr +E) for some constant &#38; >0, then F, (C,n) =  O(C(n/ncjlO~/ + p(n) ), ifp(,n) further 
+sattsjies the regtdaruy condition that p(n) z ayp( n/b) for some constanr y > 1. Prooj If a problem 
+of size n does not tit in the cache, then the number Fl (C, n) of faults taken by the algorithm in solving 
+the prob­lem is at most the number F1(C, n/b) of faults for each of the a sub­problems of size n/b plus 
+an additional p(n) faults for the top thread itself. If the problem can be solved in the cache, the data 
+for it need only be paged into memory at most once. Consequently, we obtain the recurrence aFl (C, n/b) 
++p(n) F,(C,n)< c { We can solve this recurrence using standard tion 4.4]. We iterate the recurrence, 
+stopping ifn> nc t (1) ifrr<rrc. techniques [ 12, Sec­as soon as we reach the first value of the iteration 
+count equivalently when k = ~logb(n/nc)] Fl(C, n) ~ aLFl (C, n/bk) + 0 C(nJnc) Ogl -( k such that n/bk 
+< nc holds, or holds. Thus, we have k 1 ~ a p(n/b ) i=0 IOg,,\ (n/n~) + ~ a p(njb ) ,=0 )  Other cases 
+exist bewdes the three glveo here. If p(n) satisfies the conditions of Case 1, the sum is geometrically 
+increasing and is dominated by its last term. For p(n) satisfying Case 2, each term in the sum is the 
+same. Finally, for p(n) satisfy­ing Case 3, the first term of the sum dominates. Using the inequality 
+P(nc) < C, we obtain the stated results. 5 Analysis of space utilization This section provides upper 
+bounds on the memory requirements of regular divide-and-conquer multithreaded algorithms when the par­allel 
+execution is scheduled by a busy-leaves scheduler, such as the work-stealing scheduler used by Cilk. 
+A busy-leaves scheduler is a scheduler with the property that at all times during the execu­tion, if 
+a thread has no living children, then that thread has a pro­cessor working on it. The work-stealing scheduler 
+is a busy-leaves scheduler [7, 10]. We shall proceed through a series of lemmas that provide an exact 
+characterization of the space used by simple mul­tithreaded algorithms when executed by a busy-leaves 
+scheduler. A simple mt.dtithreaded cdgorihrt is a fully strict multithreaded algo­rithm in which each 
+thread s control consists of allocating memory, spawning children, waiting for the children to complete, 
+deallocat­ing memory, and returning, in that order. We shall then specialize this characterization to 
+provide space bounds for regular divide-and­conquer algorithms. Previous work [7, 10] has shown that 
+a busy-leaves scheduler can efficiently execute a fully strict multithreaded algorithm on P pro­cessors 
+using no more space than P times the space required to ex­ecute the algorithm on a single processor. 
+Specifically, for a given fully strict multithreaded algorithm, if .S1denotes the space used by the algorithm 
+to solve a given problem with the standard, depth-first, serial execution order, then for any number 
+P of processors, a busy leaves scheduler uses at most PSI space. The basic idea in the proof of this 
+bound is that a busy-leaves scheduler never allows more than P leaves in the spawn tree of the resulting 
+computation to be living at one time. If we look at any path in the spawn tree from the root to a leaf 
+and add up all the space allocated on that path, the largest such value we can obtain is S1. The bound 
+then follows, because each of the at most P leaves living at any time is responsible for at most S1 space, 
+for a total of PSI space. For many algorithms, how­ever. the bound PSI is an overestimate of the true 
+space, because space near the root of the spawn tree maybe counted multiple times. In this section, we 
+tighten this bound for the case of reWlar divide­and-conquer algorithms. We start try considering the 
+more general case of simple multithreaded algorithms. We first introduce some terminology. Consider any 
+simple mul­ tithreaded algorithm and input problem, and let T be the spawn tree of the simple multithreaded 
+computation that results when the given algorithm is executed to solve the given problem. Let A be any 
+nonempty set of the leaves of 7 . A node (thread) u c T is covered by A if u lies on the path from some 
+leaf in A to the root of T. The cover of A, denoted C(A), is the set of nodes covered by A. Since all 
+nodes on the path from any node in C(A) to the root are covered, it follows that C(A) is connected and 
+forms a subtree of T. If each node u allocates f(u) memory, then the space used by A is defined as The 
+following lemma shows how the notion of a cover can be used to characterize the space required by a simple 
+multithreaded algorithm when executed by a busy leaves scheduler. Lemma 8 Let T be the spawn tree of 
+a simple multithreaded com­putation, and let f(u) denote the memory allocated by node u c T. 1 0 Figure 
+3: An illustration of the definition of a dominator set. For the tree shown, let fbe given by the labels 
+at the left of the nodes, and let A = {F. H}. Then, the serial space S is given by the labels at the 
+right of the nodes, C(A) = {A, B, C. D,F,H} (the shaded nodes), and D(A. G) = {CD}. The space required 
+by A is .5(A) = 12. For any number P of processors, if the computation is executed us­ing a busy-leaves 
+schedule~ then the total amount of allocated mem­ory at any time during the execution is at most ,s , 
+which we dejine by the identity .5 = ,n@A) , with the maximum taken over all sets A of leaves of T of 
+size at most P. Proof Consider any given time during the execution, and let A de­note the set of leaves 
+living at that time, which by the busy-leaves property has cardinality at most P. The total amount of 
+allocated memory is the sum of the memory allocated by the leaves in A plus the memory allocated by all 
+their ancestors. Since both leaves and ancestors belong to C(A) and IA I < P holds, the lemma follows. 
+The next few defimhons will help us characterize the structure of C(A) when A maximizes the space used. 
+Let T be the spawn tree of a simple multithreaded computation, and let f (u) denote the mem­ory allocated 
+by node u c T, where we shall henceforth make the technical assumption that f(u) = O holds if u is a 
+leaf and f (u) >0 holds if u is an internal node. When necessary, we can extend the spawn tree with a 
+new level of leaves in order to meet this techni­cal assumption. Define the serial-space function S(u) 
+inductively on the nodes of T as follows: O if u is a leafi S(u) = f(u)+ max{S(v) : visa child of u} 
+if u is an internal node of T. { The serial-space function assumes a strictly increasing sequence of 
+values on the path from any leaf to the root. Moreover$ for each node u ? , there exists a leaf such 
+that if x is the unique simple path from u to that leaf, then we have S(u) = ~Ven f (v). We shall denote 
+that leaf (or an arbitrary such leaf, if more than one exists) by ~(u). The u-induced dominator of a 
+set A of leaves of T is defined by !D(A, u) = {v c T: 3W E C(A) such that w is a child of v and S(w) 
+< S(u) < S(v)} . The next lemma shows that every induced dominator of A is in­deed a dominator of A. 
+Lemma 9 Let T be the spawn tree of a simple multithreaded computation encompassing more than one node, 
+and let A be a nonernpty set of leaves of T. Then, for any internal node u E T, re­moval of D (A, u) 
+from T disconnects each leaf in A from the roo~ of T. Prooj Let r be the root of T, and consider the 
+path z from any leaf 1 c A to r. We shall show that some node on the path belongs to !D(A, u). Since 
+M is not a leaf and S is strictly increasing on the nodes of the path rz, we must have O = S(l) < S(u) 
+< S(r). Let w be the node lying on rt that maximizes S(w) such that S(W) < S(u) holds, and let v be its 
+parent, We have S(w) < S(u) < S(v) and w c C(A), because all nodes lying on n belong to C(A), which implies 
+that v e D(A, u) holds. The next lemma shows that whenever we have a set A of leaves that maximizes space, 
+every internal node u not covered by A in­duces a dominator that is at least as large as A. Lemma 10 
+Let T be the spawn tree of a simple multithreaded com­ putation encompassing more than one node, and 
+for any integer P ~ 1, let A be a set of leaves such that .$ (A) = 5 holds. Then, for all internal nodes 
+u @ C(A), we have [!D(A, u) I z [Al. Proof Suppose, for the purpose of contradiction, that I!D (A, u) 
+I < \Al holds. Lemma 9 implies that each leaf in A is a descendant of some node in D (A, u), Consequently, 
+by the pigeonhole princi­ple, there must exist a node v G D (A, u) that is ancestor of at least two leaves 
+in A. By the definition of induced dominator, a child w E C(A) of v must exist such that S(w) < S(u) 
+holds. We shall now show that a new set A of leaves can be constructed such that we have ._f(A ) > S(A), 
+thus contradicting the assumption that 3 achieves its maximum value on A. Since w is covered by A, the 
+subtree rooted at w must contain a leaf 1 E A. Define A = A {l}U {k(u)}. Adding k(u) to A causes the 
+vahre of S(A) to increase by at least S(u), and the removal of 1 causes the path from 1 to some descendant 
+of w (possibly w itself) to be removed, thus decreasing the value ofs (A) by at most S(w). Therefore. 
+we have ~ (A ) a 5(A) S(w)+ S(u) > S(A), since S(w) < S(u) holds. We now restrict our attention to regular 
+divide-and-conquer mul­tithreaded algorithms, as introduced in Section 4. In a regular divide-and-conquer 
+multithreaded algorithm, each thread, when spawned to solve a problem of size n, allocates an amount 
+of space s(n) for some functions of n. The following lemma characterizes the structure of the worst-case 
+space usage for this class of algo­rithms. Lemma 11 Let T be the spawn tree of a regular divide-and­conquer 
+multithreaded algorithm encompassing more than one node, and for any integer P ~ 1, [et A be a set of 
+leaves such that S(A) = S* holds. Then, C(A) contains every node at every level of the tree with P or 
+fewer nodes. Proo$ If T has fewer than P leaves, then A consists of all the leaves of T and the lemma 
+follows trivially. Thus, we assume that T has at least P leaves, and we have [Al = P. Suppose now, for 
+the sake of contradiction, that there is a node u at a level of the tree with P or fewer nodes such that 
+u @C(A) holds. Since all nodes at the same level of the spawn tree allocate the same amount of space, 
+the set 27 (A, u) consists of all covered nodes at the same level as u, all of which have the same serial 
+space S(u). Lemma 10 then says that there are at least P nodes at the same level as u that are covered 
+by A. This fact contradicts our assumption that the tree has P or fewer nodes at the same level as u. 
+Finally, we state and prove a theorem that bounds the worst-case space used by a regular divide-and-conquer 
+mukithreaded algorithm when it is scheduled using a busy-leaves scheduler. Theorem 12 Consider any regular 
+divide-and-conquer multi­threaded algorithm executed on P processors using a busy-leaves schedulet Suppose 
+that each thread, when spawned to solve a prob­lem of size n, allocates s(n) space, and if n is larger 
+than some con­staru, then the thread divides the problem into a subproblems each of size n/b for some 
+constants a ~ I and b > 1. Then, the total amount Sp(n) of space taken by the algorithm in the worst 
+case when solving a problem of size n can be determined as fOLIO WS: 3 1. If s(n) = t3(lgk n) for sotne 
+constant k ~ O, then Sp(n) = @(Plgk+i (n/F )). 2. Ifs(n) = O(nlO~l)U e) for some constant e >0, then 
+Sp(n) = @(Ps(n/P11 O~lJa)), 1Xin addition, s(n) satisjies the regular­ ity condition yl s(n/b) ~ s(n) 
+s ay2s(n/b) for some constants yl > landy2< 1.  3. Ifs(n) = ~(n~ gl,u), then Sp(n) = @(s(n) lgP). 4. 
+[fs(n ) = Q(nlOg/, +e) for some constanr E >0, then SP( n) = @S(ri) ), 1$ in additio;, s(n) satisfies 
+the regularity condition that s(n) ~ ays(n/b) for some constant y > 1.  Proof Consider the spawn tree 
+T of the multithreaded computa­tion that results when the algorithm is used to solve a given input problem 
+of size n. The spawn tree T is a perfectly balanced a-ary tree. A node u at level k in the tree allocates 
+space f(u) = s(n/bk). From Lemma 8 we know that the maximum space usage is bounded by S*, which we defined 
+as the maximum value of the space func­tion S (A) over all sets A of leaves of the spawn tree having 
+size at most P. In order to bound the maximum value of.$ (A), we shall appeal to Lemma 11 which characterizes 
+the set A at which this maximum occurs. Lemma 11 states that for this set A, the set C(A) contains every 
+node in the first lloga Pj levels of the spawn tree. Thus, we have [log,, P] -I Sp(n) ~ ~ a s(t~/b )+@(PS1 
+(n/P j Oga)) (2) ,=0 To determine which term in Equation (2) dominates, we must evaluate S1(n), which 
+satisfies the recurrence S] (n) = SI (n/b) +s(n) , because with serial execution the depth-first discipline 
+allows each of the a subproblems to reuse the same space. The solution to this recurrence [12, Section 
+4.4] is S1(n) = O(lgk+i n), ifs(n) = @(lgkn) forsomeconstant k >0, and  Sl (n) = @(s(n)), if s(n) = 
+!Q(n&#38;) for some constant &#38; > 0 and in addition satisfies the regularity condition that s(n) ~ 
+ys(n/b) for some constant y >1.  The theorem follows by evaluating Equation (2) for each of the cases. 
+We only sketch the essential ideas in the algebraic manipula­tions. For Cases 1 and 2, the serial space 
+dominates, and we simply substitute appropriate values for the serial space. In Cases 3 and 4. the space 
+at the top of the spawn tree dominates. In Case 3. the to­tal space at each level of the spawn tree is 
+the same. In Case 4, the space at each level of the spawn tree decreases geometrically. and thus, the 
+space allocated by the root dominates the entire tree. 9 30ther cases exist besides those given here, 
+305 6 Example analyses of multithreaded algorithms In this section we show how to apply the analysis 
+techniques of this paper to specific multithreaded algorithms. We focus first on analyz­ing matrix multiplication, 
+and then we examine LU-decomposition. We show that both of these matrix problems can be solved efficiently 
+with respect to the measures of time, page faults, and space us­ing recursive divide-and-conquer algorithms. 
+In our analyses, we shall assume that the cache memory of each of the P processors contains C pages and 
+that each page holds m matrix elements. We shall also assume that the accesses to backing store behave 
+as if they were random and independent, so that the expected bounds TP(c) = O(Tl (C)/F + mCT~) and FP(C) 
+= FI (C)+ O(CPT-) are good models for the performance of multithreaded algorithms. Multiplying two n 
+x n matrices (using the ordinary algorithm, and not a variant of Strassen s algorithm [28]) can be performed 
+us­ing @(rr3) work and can be done in El(lgrt) time [24]. Thus, for a problem of size n, we have computational 
+work T1(n) = @(rr3) and critical-path length T-(n) = @(lgrr). If there were no page faults, therefore, 
+the running time on P processors would be Tp(n) = o(rz3/P+lgn). We must also account for page faults, 
+however. Let us consider first the number of page faults incurred by the naive blocked serial algorithm 
+for computing R = AB in which the three matrices A, B, and R are partitioned into fi x A submatrix blocks. 
+We perform the familiar triply nested loop on the blocked matrix-indexing i through the row blocks of 
+R, j through the column blocks of R, and k through the row blocks of A and column blocks of B updating 
+R[i, j] +-R[i, j] + A[i, k]. B[k, j] on the matrix blocks. If the matrix B does not fit into the cache, 
+that is, mC < n2, then every access to a block of B causes a page fault. Consequently, the number of 
+serial page faults is FI (C, n) = (n/@i)3 = n3 /m3i2, even if we assume that A and R never fault. The 
+divide-and-conquer matrixmul algorithm from [8] uses the processor cache much more effectively. To multiply 
+then x n ma­trix A by similar matrix B, matrixmul divides each matrix into four n/2 x n/2 submatrices 
+and uses the identity [~:~ [  ~:1 [:::a A111311 A11B12 1[At2B*l A1*B2* A21B]1 A21B1* A2*B2* + A22B21 
+1 The idea of matrixmul is to recursively compute the 8 products of the submatrices of A and B in parallel, 
+and then add the subproducts together in pairs to form the result using recursive matrix addition. We 
+can apply Theorem 7 to analyze the page faults of matrix­ mul using a = 8, b = 2, nc = m, and p(n) = 
+@(n*/m). Case 1 of the theorem applies with E = 1, which yields F1 (C, n) = 0( C(n/@)3) = 0(n3/m312@), 
+a factor of ~Cfewer faults than the naive algorithm. To analyze the space for matrixmul, we use Theorem 
+12. For this algorithm, we obtain a recurrence with a = 8, b = 2, and s(n) = @(n*). Case 2 applies, yielding 
+a worst-case space bound of.Sp(n) = El(P(n/P1/3)2) = @(n2P1/3).4 The work and critical-path length for 
+matrixmul can also be computed using recurrences. The computational work 7 1(n) to multiply n x n matrices 
+satisfies T1(n) = 8T1(n/2) + @(n*), since 41n recent work, BleUoch, Gibbons, and Matins [6] have shown 
+that senes-pamllel dag computations can be scheduled to achieve suhstmrtially better space bounds than 
+we report here, For example, they give a bound of SP(n) = 0(n2 + Plg2n) for matrix multlplicabon. rfrelr 
+Improved space bounds come at the cost of substantially mom communication and overhead than is used by 
+our scheduler, however. adding two matrices in parallel can be done using O(n2) computa­tional work, 
+and thus, T1(n) = 6$(n3). Consequently, the total work is TI (C, n) = T1(n) +mFl (C, n) = @(n3). To derive 
+a recurrence for the critical-path length T-(n), we observe that with an infinite num­ber of processors, 
+only one of the 8 submultiplications is the bottle­neck, because the 8 multiplications can execute in 
+parallel. Conse­quently, the critical-path length T-(n) satisfies I L(n) = 7 (n/2) + El(lgn), because 
+the parallel addition can be accomplished recur­sively with a critical path of length f3(lg n). The solution 
+to this re­ currence is T@(n) = @(lg2 n). Using our performance model, the total expected time for matrixmul 
+on P processors is therefore TP(C, n) = O(T1 (C, n)/P+ mCT~ (n)) = 0(n3 /P + mC lg2 n). Consequently, 
+if we have P = 0(n3/(mClg2 n)), the algorithm runs in 0(n3/P) time, obtaining linear speedup. A parallel 
+version of the naive algorithm has a slightly shorter critical path, and therefore it can achieve 0(n3/P) 
+time even with slightly more processors. But matrixmul commits fewer page faults, which in practice may 
+mean better actual perfor­mance. Moreover, the code is more portable, because it requires no knowledge 
+of the page size m. What is important, however, is that the performance models for dag consistency allow 
+us to analyze the behavior of algorithms. Whh a simple change, matrixmul can be modified to use no aux­iliary 
+space, but at the cost of a longer critical path. The idea is to spawn 4 of the 8 subproducts which place 
+their results in the out­put matrix, wait for them to complete, and then spawn the other 4 to add their 
+results into the output matrix. Since we must wait for the first 4 to complete, the critical-path length 
+for this computation is T~(n) = 2T~(n/2) + @(1), which has solution T~(sz) = @(n). If the number P of 
+processors is not too large, this algorithm mav be preferable to matrixmul. because it uses only the 
+@rt2) spac~ needed for the output. Let us now examine the more complicated problem of performing an LU-decomposition 
+of an n x n matrix A without pivoting. The or­dinary parallel algorithm for this problem pivots on the 
+first diagonal element. Next, in parallel it updates the first column of A to be the first column of 
+L and the first row of A to be the first row of U. Then, it forms a Schur complement to update the remainder 
+of A, which it recursively (or iteratively) factors. This standard algorithm requires E)(n3) computational 
+work and it has a critical path of length El(n). Unfortunately, even when implemented in a blocked fashion, 
+the al­gorithm does not display good locality for a hierarchical memory system. Each step causes updates 
+to the entire matrix, resulting in FI (C, n) = @(n3 /m3/2) serial page faults, similar to blocked matrix 
+multiplication. A divide-and-conquer algorithm for the problem uses fewer page faults, at the cost of 
+a slightly longer critical path. Divide the matrix A and its factors L and U into four parts so that 
+A = L. U is written The parallel algorithm computes L and U as follows. It recursively factors Am into 
+~. UW. Then, it uses back substitution to solve for UO1 in the formula AO1 = LWUOI, while simultaneously 
+using forward substitution to solve for Llo in A 10 = LIOUN. Finally, it recursively factors the Schur 
+complement AI I LIOUO1 into LI j U1l. To understand the LU-decomposition algorithm completely, we must 
+first understand how the back-and forward-substitution al­ gorithms work. To solve these problems on 
+an n x n matrix, we can also use a parallel divide-and-conquer strategy. For back sub­ stitution (forward 
+substitution is symmetric), we wish to solve the matrix equation A = LX for the unknown matrix X, where 
+L is a lower triangular matrix. Subdividing the three matrices as we did 306 for LU-decomposition, we 
+solve the equation as follows. First, 7 Conclusion solve Am = ~Xw for Xm recursively, and in parallel 
+solve Aol = LWXOI for Xol. Then, compute A~o = A lo LIOXW and A\l = AI I LIOXO1 using a matrix-multiplication 
+subroutine. Finally, solve A{. = LI, X,. for XIO recursively, and in parallel solve A{, = L.llXI1 for 
+X1l. To analyze back substitution, let us assume that we are im­plementing an in-place algorithm, so 
+that we can use the mtrl­tiplication algorithm that requires no auxiliary space, but which has a critical 
+path of length El(n). The computational work for back substitution satisfies T] (n) = 4TI (n/2) + @(rr3), 
+since matrix multiplication has computational work @(n3 ), which has solution T1(n) = @(rr3 ). To bound 
+the number of page faults, observe that page faults in the one step of the algorithm are dominated by 
+the G(rr3 /m3i2 v?) page faults in the matrix multiplication, and hence we obtain the recurrence FI (C, 
+n) = 4FI (rs/2) + @(n3/m3/2~C). Therefore, we can apply Case 3 of Theorem 7 with a = 4, b = 2, nc= ~, 
+and p(n) = 0(n3/m3f2fl) to obtain the solution F] (C, n) = 0(n3 /m3i2@). The critical-path length for 
+back sub­ stitution is L(n) = 2Tq(n/2) + O(n), since the first two recursive subproblems together have 
+a critical path of T= (rr/2), as do the sec­ond two subproblems, which must wait until the first two 
+are done. The solution to this recurrence is T-(n) = @(n lgn). The results for forward substitution are 
+identical. We can now analyze the LU-decomposition algorithm. First, ob­serve that if the variant of 
+matrixmul that uses no auxiliary stor­age is used to form the Schur complement and in back and for­ward 
+substitution, the entire algorithm can be performed in place with no extra storage. For the computational 
+work of the algo­rithm, we obtain the recurrence TI (n) = 2TI (n/2) + @(n3), since we have two recursive 
+calls to the algorithm and El(n3 ) computa­tional work is required for the back substitution, the forward 
+sub­stitution, and the matrix multiplication to compute the Schur com­plement. This recurrence gives 
+us a solution of 7 1(n) = f3(n3) for the computational work. The number of serial page faults satisfies 
+F] (C, n) = 2F1 (C, rr/2) + f3(rs3/m3i2@, due to the matrix mul­tiplications and back substitution costs, 
+which by Case 3 of Theo­rem 7 with a = 2, b = 2, nc = KC, and p(n) = 0(n3/m3/2<C) has solution FI (C, 
+n) = @(rr3/m3i2@). The critical-path length has re­ctmrence Z -(n) = 2T,(n/2) + @(n Ign), since the back 
+and forward substitutions have @(n Ign) critical-path length. The solution to this recurrence is T-(n) 
+= @(n Igz n), which is slightly worse than the standard algorithm. Using our performance model, the total 
+expected time for LU-decomposition on P processors is therefore Tp(C, n) = O(TI(C,n)/P + mCTW(n)) = 0(n3/P 
++ mCnlg2n). If we have P = 0(n3 /mCn lg2 n), the algorithm runs in 0(n3/P) time, obtaining linear speedup. 
+As with matrixmul, many fewer page faults occur for the divide-and-conquer algorithm for LU­decomposition 
+than for the corresponding standard algorithm. The penalty we pay is a slightly longer critical path 
+~(n Igz n) versus @(n) which decreases the available parallelism. The critical path can be shortened 
+to @(n lg n) by using the more space-intensive matrixmul algorithm during back and forward substitution, 
+however. We leave it as an open question whether fully strict multithreaded algorithms with optimal critical 
+paths can be obtained for matrix multiplication and LU-decomposition without compromising the other performance 
+parameters. We briefly relate dag consistency to other distributed shared mem­ories, and then we offer 
+some ideas for the future. Like Cilk s dag consistency, most distributed shared memories (DSM S) employ 
+a relaxed consistency model in order to realize per­formance gains, but unlike dag consistency, most 
+distributed shared memories take a low-level view of parallel programs and cannot give analytical performance 
+bounds, Relaxed shared-memory con­sistency models are motivated by the fact that sequential consistency 
+[22] and various forms of processor consistency[16] are too expen­sive to implement in a distributed 
+setting. (Even modem symmet­ric multiprocessors do not typically implement sequential consis­tency.) 
+Relaxed models, such as location consistency [14] and vari­ous forms of release consistency [1, 13, 15], 
+ensure consistency (to varying degrees) only when explicit synchronization operations oc­cur, such as 
+the acquisition or release of a lock. Causal memory [2] ensures consistency only to the extent that if 
+a process A reads a value written by another process B, then all subsequent operations by A must appear 
+to occur after the write by B. Most DSM S im­plement one of these relaxed consistency models [11, 18, 
+21, 27], though some implement a fixed collection of consistency models [4]. while others merely implement 
+a collection of mechanisms on top of which users write their own DSM consistency policies [23. 26]. AH 
+of these consistency models and the DSM S that implement these models take a low-level view of a parallel 
+program as a col­lection of cooperating processes. In contrast, dag consistency takes the high-level 
+view of a parallel program as a dag, and this dag exactly defines the memory consis­tency required by 
+the program. Like some of these other DSM S, dag consistency allows synchromzation to affect only the 
+synchro­nizing processors and does not require a global broadcast to update or invalidate data. Unlike 
+these other DSM S, however, dag con­sistency requires no extra bookkeeping overhead to keep track of 
+which processors might be involved in a synchronization operation, because this information is encoded 
+explicitly in the dag. By lever­aging this high-level knowledge, the BACKER algorithm in con­junction 
+with the work-stealing scheduler is able to execute multi­threaded algorithms with the performance bounds 
+shown here. The BLAZE parallel language [25] and the Myrias parallel computer [3] define a high-level 
+relaxed consistency model much like dag consis­tency, but we do not know of any efficient implementation 
+of either of these systems. After an extensive literature search, we are aware of no other distributed 
+shared memory with analytical performance bounds for any nontrivial algorithms. We are currently working 
+on various extensions of dag consis­tency and improvements to our implementation of dag consistency in 
+Cilk. We are considering possible extensions to dag-consistent shared memory, since some operations are 
+impossible to express with dag-consistent reads and writes alone. For example, con­current threads cannot 
+increment a shared counter with only dag­consistent reads and writes. We are considering the possibility 
+of dag-consistent atomic updates in order to support such operations. In addition, the idea of dag consistency 
+can be extended to the do­main of file 1/0. We anticipate that it should be possible to memory­map files 
+and use our existing dag-consistency mechanisms to pro­vide a parallel, asynchronous 1/0 capability for 
+Cilk. We are also currently working on supporting dag-consi stent shared memory in our Cilk-NOW runtime 
+system [7] which executes Cilk programs in an adaptively parallel and fault-tolerant manner on networks 
+of workstations. We expect that the well-structured nature of Cilk computations will allow the runhme 
+system to maintain dag consis­tency efficiently, even in the presence of processor faults. Finally, we 
+observe that our work to date leaves open several an­alytical questions regarding the performance of 
+multithreaded NgO­ 307 rithms that use dag consistent shared memory. We would like to im­prove the analysis 
+of execution time to directly account for the cost of page faults when pages are hashed to backing store 
+instead of as­suming that accesses to backing store appear to be independent and random as assumed here. 
+We conjecture that the bound of Theo­rem 5 holds when pages are hashed to backing store provided the 
+al­gorithm is EREW in the sense that concurrent threads never read or write to the same page. We would 
+also like to obtain tight bounds on the number of page faults and the memory requirements for classes 
+of multithreaded algorithms that are different from, or more general than, the class of regular divide-and-conquer 
+algorithms analyzed here, Acknowledgments Thanks to the National University of Singapore for resources 
+used to prepare this paper. Thanks to Chee Chee Weng of Singapore s National Supercomputer Research Center 
+for his contributions to the LU-decomposition algorithm. Thanks to Feng Ming Dong of the National University 
+of Singapore and Philip Lisiecki of MIT for helpful discussions. Thanks to Bruce Maggs of Carnegie Mellon 
+University for his O( 1)-time page transfers to the SPAA program committee. Thanks to Arvind and his 
+dataflow group at MIT for helpful discussions and continual inspiration. References <RefA>[1] Sarita V. Adve 
+and Mark D. Hill. Weak ordering -a new definition. In Proceedings of the 17thAnnual International Symposium 
+on Computer Architecture, pages 2-14, Seattle, Washington, May 1990. [2] Mustaqrre Ahamad, Phillip W. 
+Hutto, and Ranjit John. Implementing and programming causal distributed shared memory. In Proceedings 
+of the 11th International Conference on Distributed Computing systems, pages 274-281, Arlington, Texas, 
+May 1991. [3] Monica Beltrametti, Kenneth Bobey, and John R. Zorbas. The control mechanism for the Myrias 
+parallel computer system. Computer Archi­recmre News, 16(4):21 30, September 1988. [4] Brian N, Bershad, 
+Matthew J. Zckauskas, and Wayne A. Sawdon. The Midway distributed shared memory system. In Digest of 
+Papers from the Thirty-Eighth lEEE Computer Society International Confer­ence (Spring COMPCON), pages 
+528 537, San Francisco, California, February 1993. [5] Guy E. Blelloch. Programming parallel algorithms. 
+Coornrwtica?ions of the ACM, 39(3), March 1996. [6] Guy E. Blelloch, Phillip B. Gibbons, and Yossi Matins. 
+Provably effi­cient scheduling for languages with fine-grained parallelism. In Pro­ceedings of the Seventh 
+Annual ACM Symposium on Parallel Algo­rithms and Architectures, pages 1 12, Santa Barbara, California, 
+July 1995. [7] Robert D. Blumofe. Executing Multtthreaded Programs Efficiently. PhD thesis, Department 
+of Electrical Engineering and Computer Sci­ence, Massachusetts Institute of Technology, September 1995. 
+[8] Robert D. Blumofe, Matteo Frigo, Christopher F. Joerg, Charles E. Leiserson, and Keith H. Randall. 
+Dag-consistent distributed shared memory, In Proceedings of the 10th International Parallel Process­ing 
+Symposium, Honolulu, Hawaii, April 1996. [9] Robert D. Blumofe, Christopher F, Joerg, Bradley C. Kuszmaul, 
+Charles E. Leiserson, Keith H. Randrdl, and Yrrli Zhou. Cdk: An efficient multithreaded nmtime system. 
+In Proceedings of the Fifih ACM S[GPLAN Symposium on Principles and Practice of Parallel Programming 
+(PPoPP), pages 207 216, Santa Barbara, California, July 1995. [10] Robert D. Blumofe and Charles E. Leiserson. 
+Scheduling multi­threaded computations by work stealing. In Proceedings oj the 35th Annual Symposium 
+on Foundations of Computer Sctence, pages 356 368, Santa Fe, New Mexico, November 1994. [11] John B. 
+Carter, John K. Bennett, and Winy Zwaenepoel. Implementa­tion and performance of Mumn. In Proceedings 
+of the Thirteenth ACM Symposium on Operating SystemsPrmclples, pages 152-164, Pacific Grove. California, 
+October 1991. [12] Thomas H. Cormen, Charles E. Lciserson, and Ronald L. Rivest. hr­troduction ro Algorithms. 
+The MIT Press, Cambridge, Massachusetts, 1990. [13] Michel Dubois, Chnstoph Schertrich. and Faye Briggs. 
+Memory ac­cess buffering m multiprocessors. In Proceedings of the 13th Annual International Symposmm 
+on Computer Architecture, pages 434+42, June 1986. [14] Guang R. Gao and Vlvek Sarkar. Location consistency: 
+Stepping be­yond the barriers of memory coherence and serializability. Technical Report 78, McGill University, 
+School of Computer Science, Advanced Compilers, Architectures, aad Parallel Systems (ACAPS) Laboratory, 
+December 1993 [15] Kourosh Ghasachodoo, Daniel Lenoski, James Laudon, Phdlip Gib­bons, Anoop Gupta, and 
+John Hennessy, Memory consistency and event ordering in scalable shared-memory mttltlprocessors In Pro­ceedurgs 
+of the 17thAnnua[ International Symposium on Compute rAr­chltecture, pages 15 26, Seattle, Washington, 
+June 1990. [16] James R. Goodman. Cache consistency and sequential consistency. Technical Report 61, 
+IEEE Scalable Coherent Interface (SCI) Working Group, March 1989. [17] Christopher F. Joerg. The Cilk 
+System jor Parallel Multithreaded Com­putmg. PhD thesis, Department of Electrical Engineering and Com­puter 
+Science, Massachusetts Institute of Technology, January 1996. [18] Kirk L. Johnson, M. Frans Kaashoek, 
+and Deborah A. Wallach. CRL: High-performance all-software distributed shared memory, In Pro­ceedings 
+of the Fifteenth A CM Symposium on Operating Systems Prin­ciples, pages 2 13 228, Copper Mountain Resort, 
+Colorado, December 1995. [19] Edward G. Coffman Jr, and Peter J. Denning. Operating Systems The­ory. 
+Prentice-Hatl, Inc., Englewood Cliffs, NJ, 1973, [20] Richard M Karp and Vljaya Ranrachandran. Paraflel 
+algorithms for shared-memory machines In J van Leeuwen, editor, Handbook of Theoretical Computer Science 
+Volume A: Algorithms and Complex­ity, chapter 17, pages 869 94 1. MIT Press, Cambridge, Massachusetts, 
+1990, [21] Pete Keleher, Alan L, Cox, Sandhya Dwarkadas, and WIlly Zwaenepoel. TreadNfarks: Distributed 
+shared memory on stan­dard workstanons and operating systems. In USENIX Winter 1994 Conference Proceedings, 
+pages 115 1 32, San Francisco, California, January 1994. [22] Leslie Lamport. How to make a multiprocessor 
+computer that correctfy executes multiprocess programs. IEEE Transactions on Computers, C-28(9).690-691, 
+September 1979, [23] James R. Laros, Brad Richards, and Guhan Vkwanathan. LCM: Mem­ory system support 
+for parallel language implementation. In Proceed­ings of the Sixth International Conference on A rcht 
+iectural Support for Programming Lartgua,ges and Operaang Systems, pages 208 218, San Jose, California, 
+October 1994. [24] F Thomson Leighton. Introduction to Parallel Algorithms and Archi­tectures. Arrays 
+Trees . Hypercubes Morgan Kaufmann Publishers, San Mateo, California, 1992. [25] Piyush Mehrotra and 
+John Van Rosendale. The BLAZE language: A parallel language for scientific programmmg. Parallel Computmg, 
+5:339 361, 1987. [26] Steven K. Reinhmdt, James R. Lams, and David A. Wood. Tem­pest and Typhoon. User-1evel 
+shared memory In Proceedings of the 21st Annual International Symposium on Computer Archuecture. pages 
+325-336, Chicago, Illinois, Aprd 1994. [27] Daniel J. Scales and Monica S. Lam. The design and evaluation 
+of a shared object system for distributed memory machines. In Proceedings of the First Symposium cm Operating 
+Systems Design and Implemen­tation, pages 10 1 1 14, Monterey, Califomla, November 1994, [28] Volker 
+Strassen. Gaussian elimination is not optimaf. Numertsche Mathematik, 14(3):354-356, 1969. 308 </RefA> 
+			
