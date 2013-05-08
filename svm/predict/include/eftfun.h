@@ -2,6 +2,7 @@
 #define __EFTFUN_H__
 #include <stdio.h>
 #include "persistence.h"
+#include "svm_common.h"
 
 
 
@@ -26,12 +27,13 @@ int getLastPage2Offset(unsigned int startOffset,int limit);
 // main function 
 int basicFilter(endFeatureDataContainer *container,unsigned int startOffset);
 int combineOffsets(endFeatureDataContainer *container);
-int makeSequenceForCombinedOffsets(endFeatureDataContainer *container);
+//int makeSequenceForCombinedOffsets(endFeatureDataContainer *container);
 
 
 
 //file write
-int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int step);
+//int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int step);
+int genNextDataForEndfeatureW(WORD *w,endFeatureData fd,int start);
 
 int prepareDensityData(void);
 

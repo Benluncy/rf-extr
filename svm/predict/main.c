@@ -37,52 +37,39 @@
  *
  **/
 
-# include "svm_common.h"
+#include "svm_common.h"
+#include "ftGenerate.h"
+#include "dirTraversal.h"
+#include <stdio.h>
 
-const char *testfile="data/orbz_sec/An analysis of trends in productivity and cost drivers over years.txt";
+const char *testfile="data/orbz/Analysis of algorithms, a case study.txt";
 
 
 
 int main (int argc, char* argv[])
 {
-	DOC *doc;
-	WORD words[3];
-	char *comment = "";
-	MODEL *model;
-	char modelfile[200];
-	double dist;
-	WORD distVal;
-	//load modelfile
-	sprintf(modelfile,"svm_model");
-	
-	model=read_model(modelfile);
+	//int offset;
+	initFindStart();
+	initFindEnd();
+	int total;
+	int correct;
 
-	words[0].wnum = 1;
-	words[0].weight = 1;
+	do
+	{
+		dirTraversal("data/",1,predictCtl);
+	}while(adjust());
+	//offset = predictCtl(testfile,0);
 	
-	words[1].wnum = 2 ;
-	words[1].weight = 0;
+	total = getTotalFile();
+	correct = getCorrectFile();
 	
-	words[2].wnum = 0;
+	printf(" %d:%d %f\n",correct,total,(double)correct/total);
 	
-	// compute weight vector
-	if(model->kernel_parm.kernel_type == 0) { /* linear kernel */
-		add_weight_vector_to_linear_model(model);
-	}
+	//printf("offset:%d\n",offset);
 	
-	for(j=0;(words[j]).wnum != 0;j++)
-		if((words[j]).wnum>model->totwords) (words[j]).wnum=0;
-
-	doc = create_example(-1,0,0,0.0,create_svector(words,comment,1.0));
-	dist=classify_example(model,doc);
-		
-	free_example(doc,1);
-
-	free_model(model,1);
-
-	printf("dest is :%f",dist);
-
-	return(0);
+	freeFindStart();
+	freeFindEnd();
+	return 0;
 }
 
 

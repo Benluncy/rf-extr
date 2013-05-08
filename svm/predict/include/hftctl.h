@@ -1,6 +1,7 @@
 #ifndef __HFTCTL_H__
 #define __HFTCTL_H__
 #include <stdio.h>
+#include "common.h"
 #include "persistence.h"
 //definitions
 
@@ -77,10 +78,13 @@ int maxTop(StackInfo info[],int len);
 
 // sample generater
 //int generateSample(const char* fileName,int isDir);
-int genStartSampleCtl(const char* fileName,int isDir);
+//int genStartSampleCtl(const char* fileName,int isDir);
 
-int gen26ToEnd(FILE *fp,featureData fd);
+//int gen26ToEnd(FILE *fp,featureData fd);
 
+int gen26ToEndW(WORD *w,featureData fd,int start);
+//int genStartSampleCtlW(const char* fileName,WORD *feature,int flen);
+int genStartSampleCtlW(const char* fileName,WORD features[ITNUM][FTWIDE],long offlist[ITNUM]);
 
 // set && get
 int getFileNum();
@@ -91,6 +95,8 @@ FILE * getTrainFile(void);
 FILE * getTestFile(void);
 
 void selfAddFileNum();
+
+int getREFO();
 
 #endif //__HFTCTL_H__
 

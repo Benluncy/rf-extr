@@ -1,0 +1,678 @@
+
+ A Methodology and an Evaluation of the SGI Origin2000 Dongming Jiang and Jaswinder Pal Singh Department 
+of Computer Science Princeton University Princeton, NJ 08544 {dj, jps}@cs.princeton.edu Abstract As hardware-coherent, 
+distributed shared memory (DSM) multiprocessing becomes popular commercially, it is impor- tant to evaluate 
+modern realizations to understand how they perform and scale for a range of interesting applications 
+and to identify the nature of the key bottlenecks. This paper evaluates the SGI Origin2000-the machine 
+that perhaps has the most aggressive communication architecture of the recent cache-coherent offerings-and, 
+in doing so, articulates a sound methodology for evaluating real systems. We ex-amine data access and 
+synchronization microbenchmarks; speedups for different application classes, problem sizes and scaling 
+models; detailed interactions and time breakdowns using performance tools; and the impact of special 
+hardware support. We find that overall the Origin appears to deliver on the promise of cache-coherent 
+shared address space mul- tiprocessing, at least at the 32-processor scale we examine. The machine is 
+quite easy to program for performance and has fewer organizational problems than previous systems we 
+have examined. However, some important trouble spots are also identified, especially related to contention 
+that is ap- parently caused by engineering decisions to share resources among processors. 1 Introduction 
+Research prototypes of hardware cache-coherent shared ad-dress space multiprocessors have been shown 
+to deliver good performance on many applications at small to moderate scale [lo, 15, 1, 41. However, 
+these studies were largely done either on simulated systems or on systems with slow proces- sors that 
+are quite dated. As this style of multiprocessing becomes more popular commercially, it is important 
+to eval- uate modern realizations of these systems and to understand how they perform and scale for a 
+range of interesting appli-cations. The SGI Origin2000 [9] is a commercial CC-NUMA ma-chine with fast, 
+MIPS RlOOOO processors and an aggres-sive, scalable distributed shared memory (DSM) architec-ture. The 
+question we are interested in here is whether a real modern system like the Origin2000 delivers on the 
+promise of cache-coherent multiprocessing, even at moder-ate (here 32-processor) scale. And when applications 
+do not perform well, what are the important bottlenecks that come in the way of good performance? Are 
+they fundamental to permission 10 make digital or hard copies of all or part 01 this work for personas 
+or classroom USC is granted without fee provided that copies are not made or distributed for profit or 
+commercial advert- tagc md that copier bear this notice and the full citation on the first Page. To copy 
+otherwise, to republish. to pwt on servers Or 10 redistribute to list*, requimr prior specific Permission 
+and/or a fee. SIGMETRICS 98 Madison. WI. USA 6 ,996 ACM 0.89791-962-3/99/0006...$5.00 the shared address 
+space model or the cache coherence pro-tocols used? If not, what are the important architectural, organizational 
+or implementation causes, so architects may avoid them in the future? Architectural evaluation involves 
+a large design space, consisting of application parameters as well as both per-formance and granularity 
+(size) parameters of a machine. Evaluating a real machine is simpler than evaluating an ar- chitectural 
+tradeoff through simulation, since the organiza-tional and performance parameters of the machine are 
+fixed. However, application parameters and their interactions with the machine are still variable, as 
+is the machine scale. In the course of performing our evaluation in this paper, we also articulate a 
+methodology for evaluating a real system and illustrate some of the important issues. Some key issues 
+in the complementary problem-choosing machine parame-ters given a set of application parameters for a 
+simulation study-were discussed in [18]. We begin by briefly describing the memory and com-munication 
+architecture of the Origin2000 in Section 2. We then isolate the basic performance characteristics of 
+data ac-cess and synchronization in the machine, using microbench-marks, including comparing different 
+synchronization algo-rithms and primitives (Section 3). The rest of the evalu-ation is done with actual 
+workloads. There are three ma-jor methodological issues that we have to address: choosing workloads, 
+choosing problem sizes for a fixed-size machine and scaling with machine size (where we must select both 
+scaling models and useful speedup metrics under them). We address these issues and evaluate performance 
+for the sim-plest scaling model in Section 4. We focus more on ap-plications that do not perform well 
+than on those that do, and discover the causes of poor performance using tools and special experiments. 
+Some interesting results under more complex scaling models are examined in Section 5. Finally, Section 
+6 evaluates some performance enhancing features that the architecture provides, such as dynamic page 
+migra- tion, and Section 7 concludes the paper. Overall, we find that the Origin2000 generally delivers 
+good parallel performance for shared memory programs, at least at the 32-processor scale we examine. 
+However, some important communication-intensive kernels like FFT and Radix sorting perform much worse 
+than in previous sim-ulation studies, despite the very high network interface, link and bisection bandwidths 
+of the machine. This appears to be primarily due to implementation decisions to share a co- herence controller 
+between two processors and a network router between two controllers. While we used the available performance 
+debugging infrastructure on the machine, more detailed infrastructure is necessary to truly understand 
+the causes of poor performance due to contention when it oc-curs. Of the special features that the machine 
+provides, we find that prefetching (of remote data) is effective in some programs and the at-memory fetch-and-op 
+support is useful for scalable barrier synchroiization. The aggressive ratio of remote to local access 
+latency and the large per-processor caches combine to make data placement not nearly so im- portant to 
+application performance as on previous machines, making programming easier. However, the hardware and 
+software support for dynamic page migration does not ap-pear to be so effective in the absence of process 
+migration in our experiments. Finally, fairly simple synchronization algo-rithms seem to perform and 
+scale quite well using the prim- itives provided, although evaluating synchronization raises interesting 
+methodological questions. 2 SGI Origin2000 The SGI Origin2000 [9] is a scalable shared-memory mul-tiprocessing 
+architecture, as shown in Figure l(a). It pro-vides global address spaces not only for memory, but also 
+for the IO subsystem. The communication architecture is much more tightly integrated than in other recent 
+commer-cial distributed shared memory (DSM) systems, with the stated goal of treating a local access 
+as simply an optimiza- tion of a general DSM memory reference. The two proces-sors within a node do not 
+function as a snoopy SMP cluster, but operate separately over the single multiplexed physical bus and 
+are governed by the same, one-level directory pro-tocol. Less snooping keeps both absolute memory latency 
+and the ratio of remote to local latency low [9, lo], and provides remote memory bandwidth equal to local 
+memory bandwidth (780MB/s each) [9, 10, 111. The two processors within a node share a hardwired coherence 
+controller called the Hub that implements the directory based cache coher- ence protocol. The Origin2000 
+includes other architectural features for good performance, including support for dynamic page mi- gration 
+and prefetching, a high-performance local and global interconnect design, coherence protocol features 
+to minimize latency and bandwidth needs per access, and synchroniza-tion primitives like LL/SC and at-memory 
+fetch-and-op, to reduce the serialization for highly contended synchroniza-tion events. These are not 
+described here [9]. Figure 1 (b) shows the topology of a 32 processor Ori-gin2000 system, the size used 
+in this paper. Two nodes (4 processors) are connected to each router, and routers are connected by CrayLinks. 
+With this configuration, the max-imum number of hops between any two processors is three. Within a node, 
+each processor has separate 32KB first-level I and D caches, and a unified 4MB second-level cache with 
+2-way associativity and 128 byte block size. The machine we use has 8GB of main memory and a 16KB page 
+size. 3 Isolating Performance Characteristics We first use microbenchmarks to understand the basic per-formance 
+capabilities of data access and synchronization. 3.1 Data Access Performance Measuring access latencies 
+for dynamically scheduled pro-cessors like the RlOOOO is nontrivial because multiple out-standing transactions 
+(cache misses) are overlapped and in- teract. Results for latencies for accesses from a single pro-cessor 
+are shown in Table 1. The in-isolation latency is that yielded by a pointer-chasing microbenchmark, so 
+only one load is outstanding at a time and it does not contend at the caches etc. with any others. Back-to-back 
+latency is that yielded by a microbenchmark that issues read misses without waiting for previous ones 
+to complete, so the misses contend with each other for resources. Both measure la-tency from processor 
+issue till the first word of the block is returned to the processor. Similar results are reported in-dependently 
+in a recent microbenchmarking paper by other researchers [5]. For comparison, results for three types 
+of in-isolation misses for some other machines are provided in Table 2. While the high-memory-bandwidth 
+Origin2000 (like the Convex Exemplar) ha higher local miss latencies than machines based on PentiumPro 
+Quad nodes, the re-mote miss latencies are much better, and therefore so arc the remote-to-local ratios 
+(2:l for the best, nearest-neighbor case). The communication architecture is relatively very ag-gressive. 
+ back-to-back (ns) in-isolation (ns) Table 1: Load latencies on a 32-processor Origin2000 for different 
+memory levels. 8P means the machine has 8 processors, and the block is in the main memory of the furthest 
+node away. A similar story holds for bandwidth, where both local and remote bandwidth are comparatively 
+very aggressive on this machine. The raw memory bandwidth on a 2-processor node board is 780MB/sec, and 
+the Hub and CrayLink pro-vide a raw node-to-network bandwidth of 780MB/sec in each direction as well. 
+The peak aggregate bandwidth for a 32- processor SGI Origin2000 is linear due to hypercube inter-connect 
+at this scale, at 12.48GB/sec. The achieved node-to-network bandwidth is about 613MB/sec, measured by 
+a microbenchmark that transfers 512MB of data one-way in 16KB chunks per iteration.  3.2 Synchronization 
+Performance Origin2000 provides synchronization primitives, such as at- memory fetch-and-op and in-cache 
+LL/SC. The former is well suited to reducing the serialization and transfer time for highly contended 
+synchronization events, since cache in- validations and fetches do not have to occur each time, while 
+the latter is good for repeated access from the same proces-sor. We implement well-known lock and barrier 
+algorithms (see for example [12]) using both fetch-and-op and LL/SC, and measure their performance on 
+this machine. The measurements here are on a much more modern sys-tem with quite different communication 
+to processing ra-tios than previously reported [12], the primitives used are newer and different, and 
+this is perhaps the first time results are reported for a cache-coherent machine with physically distributed 
+memory. However, the results comparing algo-rithms are not very different from what one would expect. 
+The interesting observations at this scale have more to do with methodological issues, and are pointed 
+out below. Personal communication with Russell Clapp, Tom Lovett, and Wolf-D&#38;rich Weber. The simpler 
+array-based lock performs better than the more so-phisticated queuing lock, since the latter s advantage 
+in allowing syn-chronization variables to be placed appropriately in distributed mem-ory is not important 
+on a cache-coherent machine. node=Zprocessors Scalable Interconnect Network (a) The SGI Origin block 
+diagram (b) A 32-processor SGl Origin2000 Figure 1: The SGI Origin2000 block digram and topology. Machines 
+Local Remote Clean Remote Dirty Remote/Local Remote/Local (ns) (ns) in 3rd node (ns) Ratio (Clean) Ratio 
+(Dirty) Origin2000 338 656 892 2:l 3:l Convex Exemplar X 450 1315 1955 3:l 5:l Data General NUMALiiNE 
+240 2400 3400 1O:l 14:l Hal Sl 240 1065 1365 5:l 6:l Sequent NUMAQ 240 2500 N/A 1O:l N/A Table 2: Latencies 
+and remote to local latency ratio on different systems. Barriers (not shown) are quite obviously better 
+off us- -Array-Based -+ Queuing ing fetch-and-op than LL/SC. Interestingly, comparing flat --a--LUSC 
+ barriers with tree barriers, we find that at least at this scale t LWSC. Em, -Ticket flatter barriers 
+perform better on the barrier microbench- -Ticket, Prop mark. The multiple steps up the tree hurt performance, 
+and -t Fop- cache&#38;spin -+-Fop-cached-spin the reduction in contention at a single node is not enough 
+to make them worthwhile. Overall, synchronization performance with the appropri- Number of Proce.uors 
+Number of Pnresson ate algorithms is quite good on the Origin2000 (e.g. about (a) Null (b) Delay 3psec 
+per lock transfer). However, issues like fairness, la- Figure 2: Performance of locks on the SGI Origin2000. 
+The tency versus traffic, and the impact of delays make evalua-fetch-and-op related locks are implemented 
+using the at-memory tion with microbenchmarks methodologically questionable. fetch-and-op primitive. 
+Fop-uncached-spin spins on an uncached Some preliminary results in the context of real applications location 
+while Fop-cached-spin spins on a cacheable variable, but they both try to access the lock using a fetch-and-op. 
+All others will be discussed in Section 4.2. Let us proceed now to ap- are implemented using the LL/SC 
+primitive. The lock algorithms plication performance in general. are well known [12], so we do not explain 
+them. In particular, the queuing locks are the software MCS locks, and Exp and Prop 4 Performance Under 
+Problem-Constrained Scaling refer to exponential and proportional backoff respectively. This section 
+begins by addressing key methodological issues For a simple lock microbenchmark in which processes re-for 
+evaluation with real workloads, and then evaluates per-peatedly issue locks with null critical sections 
+(Figure 2(a)), formance under the simplest scaling model. the simple and unfair LL/SC locks behave well 
+at this scale compared to the more sophisticated, fair lock algorithms 4.1 Evaluation using Workloads: 
+Methods, Models and (which may themselves use LL/SC). This is because with Metrics the simple LL/SC lock 
+the same processor is likely to repeat- To evaluate a given machine, we need to choose (i) work-edly 
+obtain the lock from its own cache, without accessing loads, (ii) problem sizes for a given number of 
+processors, the bus, while other processors attempts take longer to cross and (iii) a scaling model (as 
+processor count changes) withthe network and arrive too late. It is not clear, then, what to its associated 
+performance metrics. conclude from the results of this standard microbenchmark. Second, for fair locks, 
+the best lock implemented with fetch-4.1.1 Choosing Workloads and-op indeed performs better on microbenchmarks 
+than The tradeoffs among types of workloads -kernels, complete those with LL/SC, due to the shorter transfer 
+time. How- applications and multiprogrammed workloads -are wellever, the Fetchop locks do generate more 
+network traffic, so known: they have increasing complexity and realism, but it is not clear which will 
+perform better in real applications. decreasing ability to isolate performance effects. We use a Figure 
+2 (b) shows the results with a non-null critical few important kernels and several real applications, 
+but no section as well as a delay between repeated lock accesses. multiprogrammed workloads. Now, the 
+lock is transferred between processors every time The workloads chosen should exhibit good representa- 
+even with the simple LL/SC lock, since the releasing proces-tiweness of application domains, good coverage 
+of behavioral sor waits before its next acquire. In this case simple LL/SC properties, and adequate concurrency 
+for the size of system locks do not perform or scale well, due to the extra traffic at hand. Representativeness 
+of domains is a difficult task to they generate, but many of the more sophisticated locks do. accomplish. 
+However, it is critical that the workloads taken Fop-uncached-spin still performs and scales well, but 
+now together stress a range of important performance charac-no better than some of the lower-traffic, 
+LL/SC based locks. teristics. We use applications, most of which are from the SPLASH-2 suite, which were 
+chosen to cover a wide range of behavioral properties for cache-coherent DSMs: regular and irregular 
+access patterns, local and remote memory accesses, static and dynamic load balancing, localized and long-range 
+communication patterns, and small and large working sets (see [18] for details on most of the applications). 
+Even the three kernels we choose range from localized near-neighbor communication (SOR) to all-to-all 
+regular communication (FFT) to all-to-all irregular communication (Radix sorting). Next, we ensure that 
+the applications have enough con-currency and computational load balance for the system size at hand 
+with reasonable problem sizes, since there is not a lot that the architecture can do to help otherwise. 
+The al-gorithmic (PRAM) speedups with some small problem sizes for most of our programs can be found 
+in [18] and are ade-quate (they assume data access and communication are free, and measure only computational 
+load imbalance and serial- ization as well as extra work done in the parallel program). An important 
+aspect of coverage is the fact that real par- allel programs will not always be highly optimized, either 
+by users or especially when generated automatically. The performance robustness of a machine to lack 
+of optimiza- tion is important. In particular, three important levels of optimization are important to 
+consider: algorithmic (par-titioning), data structuring, and data layout, distribution and alignment 
+[4, 61. While our standard set consists of well-optimized applications, we discuss the impact of other 
+versions as well. 4.1.2 Choosing Problem Sizes Having chosen a workload or parallel program, we have 
+to choose a problem size. Even for a fixed number of proces- sors, the problem size chosen can dramatically 
+affect all of the most important execution characteristics of the program (both inherent to the program 
+and artifactual due to inter-actions with machine granularities), and hence the results of an evaluation. 
+It may even change the nature of the dom- inant bottleneck; i.e. whether it is inherent or artifactual 
+communication, load imbalance or local data access. We use more than one problem size per number of processors 
+for the evaluation. Inherent execution characteristics tend to vary smoothly with problem size, and to 
+improve with increasing problem size. Hence, to capture these we choose several (say three) problem sizes 
+for each application from within the realistic range. The smallest is one that has enough concurrency 
+for the machine size at hand. The largest reduces the impact of inherent communication, stresses memory 
+system inter-actions, and allows other characteristics to show through. Interactions with the machine 
+s extended memory hier-archy can cause us to adjust our choices or to add new prob-lern sizes to the 
+set. Small problems, even when appropri-ate from the viewpoint of inherent characteristics, can cause 
+issues like false sharing and spatial locality to play an un-realistic role if these problem sizes are 
+not representative of real usage for that machine scale. Very large sizes can cause a different problem. 
+A problem may be too big for a single processor, in that it may have data requirements that do not fit 
+in the memory of a single node. This may cause exces-sive thrashing to disk or a lot of artifactual communication 
+as data are allocated in other nodes memories, and hence very poor uniprocessor performance. When enough 
+proces-sors are used, the data will fit in their collective memories, eliminating this problem (if the 
+data are distributed properly among memories). The resulting positive effect on speedup over the uniprocessor 
+may easily overcome the drawbacks of any parallelism overhead (such as communication and load imbalance), 
+leading to high or even superlinear speedups even if the communication architecture is in fact not well 
+suited to the program. Basically, each node operates much more efficiently for operations that do not 
+inherently require communication. This situation holds for any level of the memory hierar-chy, not just 
+main memory, and is often seen due to increas- ing aggregate cache capacity as the number of processors 
+in-creases (when the working set per processor tends to shrink and hence fit more easily with increasing 
+processor count). Of course, the superlinear effect only occurs if the caches at a given level are not 
+so large, relative to the problem size and number of processors, that the important working sets always 
+fit even on a uniprocessor and not so small that they never fit even on the biggest multiprocessor used. 
+This superlinear speedup is in fact a real effect, and from a user s perspective the availability of 
+more, distributed memory is an important advantage of parallel systems over uniprocessor workstations. 
+However, it does not allow us to separate out the two effects, and is not in itself enough to evaluate 
+the effectiveness of the machine s communication architecture. The working set issue is especially critical 
+in CC-NUMA machines like the Origin2000, since the resulting capacity misses can dramatically affect 
+not only local memory traffic and intra-node performance but also (artifactual) communi-cation, even 
+if the inherent properties do not change much. In applications like Raytrace, the important working sets 
+are large and consist of data that are mostly allocated in re- mote nodes; artifactual capacity-related 
+communication is usually much larger than inherent communication, and it grows rather than diminishes 
+with increasing problem size. When capacity misses are mostly to logically local data (e.g. Ocean, SOR, 
+FFT and Radix) these misses may become re-mote if data are not distributed properly. Spatial locality 
+and its interactions with system gran-ularities may (or may not) also change dramatically with problem 
+size, including the ability to distribute data at page granularity, the wasted data fetched in large 
+cache blocks, and the amount of false sharing. Both spatial and tempo- ral locality interactions with 
+machine parameters are often threshold effects, so they may require us to add problem sizes (to include 
+situations representing both sides of the threshold when these situations are realistic, even if inher- 
+ent characteristics don t change much). We do so in this paper, based on known application characteristics 
+as in [18]. We also try to use a problem size that is as large as the system will let us run, to stress 
+memory system and TLB interactions where relevant.  4.1.3 Metrics Of the two metrics by which we may 
+evaluate a parallel system -absolute performance and performance improve-ment due to parallelism -we 
+focus on the latter, usually measured as speedup over the best uniprocessor execution. Origin has a fast 
+enough processor and node, and our goal is not to compare with the absolute performance of other processors. 
+As the number of processors changes, we need a scaling model under which to scale the problem size [17, 
+141. We use the three major models, which may each be applica- ble in different circumstances:-problem 
+constrained (PC) or constant problem size scaling, time constrained (TC) scal-ing, and memory constrained 
+(MC) scaling. Most of the pa- per focuses on PC scaling, under which speedup is defined simply as the 
+familiar Time(l) / Time(p). Speedup met- rics under other models will be developed when we examine those 
+models in Section 5. 4.2 Overview of Speedups -+-Barnes (I-SK particles) + Ocean (1026x1026 grid) -Raytrace 
+(256x256 car) --a.-Shear-Warp (256x256~256 head) + V&#38;end (256x256~256 head) -w-LU (2@48x204X matrix) 
+t Wuer-Nsquared (4096 muls) -FFT (IM points) 12 t War-Spatial (4096 mols) _, -D-Radix (4M keys) ,I t 
+ample-Sort (4M key+ 28 4 8 12 16 20 24 28 32 Number f Processors Number of Processors (a) Kernels (b) 
+Applications Figure 3: Application speedup with 32 processors. Application; Figure 4: Average time 
+breakdown with 32 processors. Figure 3 (a) and (b) show the speedups of the kernels and ap- plications 
+for one problem size each. These problem sizes are large enough to be reasonable for this machine size 
+and not suffer unduly from artifacts, but are not nearly the largest we run. Almost all the applications 
+scale well, with more than 70% parallel efficiency, while some kernels like FFT and Radix scale poorly 
+on 16 processors and beyond. Fig-ure 4 shows the breakdowns of average execution time across 32 processors 
+into busy, memory stall and synchronization stall time (measured by using pixie and prof and timing syn-chronization 
+operations), giving an idea of where programs spend their time. Synchronization is generally not a large 
+bottleneck, even for the applications that use synchroniza- tion extensively, e.g. Barnes, Raytrace for 
+locks and Ocean for barriers. By instrumenting synchronization to further divide the time into waiting 
+time and the cost of performing the synchronization, we find that the waiting time, espe-cially at barriers, 
+almost always dominates. This indicates that synchronization time is usually due to load imbalance in 
+these experiments, not the cost of the coordination, at least at this scale. The bottleneck in FFT and 
+Radix is clearly memory stall time. Per-processor breakdowns show that this time is very imbalanced across 
+the 32 processors, unlike other applications like Ocean which also have high memory stall time. All three 
+applications have balanced miss frequencies (measured using performance counters), so the imbalance in 
+FFT and Radix is due to contention. 4.3 Performance Analysis Let us look more carefully at the individual 
+programs, in-cluding other problem sizes, focusing mostly on those that don t perform well. We use various 
+types of per-process in- strumentation and the hardware performance (frequency) counters [19] to obtain 
+insights into runtime behavior. 4.3.1 Computational Kernels We first examine computational kernels, since 
+they have rel- atively clean access patterns and are easier to understand. SOR: The SOR kernel iterates 
+over a two-dimensional grid, and computes every grid point as the average of its near-est neighbors. 
+There are two major partitioning methods: square-shaped for optimal inherent communication to com-putation 
+ratio, and a simpler partitioning into chunks of contiguous rows. The grid is naturally implemented as 
+a 2-d array. However, with this representation, the square-shaped (sub-block) partition of each processor 
+is not allocated con-tiguously in memory (the row-wise partition is naturally contiguous even with a 
+2-d array [15]). The 4-d array is a more optimized alternative to make square-shaped parti-tion contiguous 
+[lo], but is much more difficult to code for near-neighbor calculations. Figure 5 shows the speedups 
+for SOR with different combinations of partition shapes, data structures, problem sizes, and page placement 
+policies. 48 -w-4D-FT 48 44 -4D-RR 44 40 t ROW-F-l 40 36 + ROW-RR 36 -2D-FT 32 g 28 -62D-RR 28 / / 
+24 1;; ,, 20 ,- 16 I6 12 12 8 8 4 4 c/ . , . , v . 1 , 4 8 12 16 20 24 ZR 32 4 8 12 16 20 24 28 12 Number 
+of Processors Number of Proceswrs (a) 512x512 grid (b) 12288x12288 grid Figure 5: Speedup of SOR with 
+different grid size. 21) and 4D refer to 2-d and 4-d array grid implementation. ROW refers to row-wise 
+partitioning method in 2-d grid implementation. FT and RR refer to first-touch and round-robin page allocation 
+scheme respectively. The effect of FT is to ensure, to the extent possible, that the pages assigned to 
+a processor will be allocated in its local memory. In Figure 5 (a), the total data set is 2MB and fits 
+in a single cache (4MB), so data distribution does not really matter. Communication misses dominate. 
+The interesting result here is that row-wise partitions perform better than square sub-blocks despite 
+the worse inherent communication to computation ratio. This is because the square partitions do not use 
+large cache blocks effectively at column-oriented boundaries: a whole cache block is fetched from a remote 
+node when only a single element is needed, and the rest of the block is useless (this is true even with 
+4-d arrays, and is not a false-sharing issue). Communication is at row-oriented boundaries does not have 
+this problem: all remote elements brought in on a cache block are useful for subsequent grid points, 
+thus delivering prefetching. In Figure 5 (b), the data set (1152MB) does not fit in the 4MB caches even 
+on 32 processors. Capacity/conflict misses dominate. Data distribution helps significantly in the cases 
+where each partition is contiguous (4-d array and rowwise) but not when they are not (2-d array subblock, 
+since each subrow is smaller than a 16KB page). Since ca-pacity misses also decrease on more processors, 
+the 4-d and row-wise versions with data distribution yield super-linear speedups beyond 8 processors. 
+More interestingly, however, the benefits of data distribution are not nearly so large as in some previous 
+machines studied [15]. This is because of 17.5 the large caches, the very low-latency communication archi-tecture, 
+and the fact that contention does not occur in this case. In fact, none of the other, more realistic 
+applications and kernels shows significant benefit from data distribution even for the largest problem 
+we ran (see also Section 6). -4 Yhx u,Y6 -Syncbroniradm I 4 8 16 12 (a) Speedups (b) Breakdown (1024xlO24) 
+(c) Breakdown (4OYhx4096) Figure 6: Performance of LU with different matrix sizes, and breakdowns in 
+different program phases. LU: The only problem here is load imbalance, which im-proves with bigger problem 
+sizes. Working sets are small and unchanging (due to blocking), so data distribution does not matter, 
+and spatial locality is excellent even on remote data. -16M -4M -Transpose ., I R I 16 20 21 28 12 I 
+4 8 16 12 I 4 8 16 32 Number of Processors Number of processors Number of proceswrs (a) Speedups (b) 
+Breakdown (256K) (c) Breakdown (16M) Figure 7: Performance of FFT with different number of points, and 
+breakdowns in different program phases. FFT: FFT is more interesting. Figure 7 (a) shows that FFT does 
+not scale well beyond 16 processors, even though it scaled very well to large processor counts in the 
+previ-ous simulation study of cache-coherent DSM machines [4]. Increasing problem size improves performance 
+but not very quickly. Figure 7 (b) and (c) indicate that as expected it is the all-to-all matrix transpose 
+phases that are the problem. Larger problems improve speedup a bit in two ways: first, local row FFTs 
+are better load balanced; second, there is better spatial locality, since there is wasted traffic if 
+a sub- row of a block being transposed is not a multiple of a cache line (128 bytes). While data distribution 
+made a big dif-ference for this application on the Stanford DASH machine [15] where caches were smaller 
+and four processors shared a coherent bus, it is not important here even for a 16M-point FFT because 
+the caches are big enough to hold the impor-tant working set (see [13] for working set sizes) and inherent 
+communication dominates. The transpose in FFT is blocked to obtain reuse of re-motely fetched cache blocks. 
+We found that the block size should be constrained not just by the size of the L2 cache but also by the 
+number of TLB entries available per proces- sor (each cache block fetched is in a new row and hence on 
+a new page). Otherwise, TLB misses are a substantial bottle-neck. We also experimented with hand-inserted 
+prefetching, for remote data only, in FFT. Prefetching helps to improve the performance on 32 processors 
+by about 30%, illustrating its value despite the dynamically scheduled processors, but parallel efficiency 
+(speedup divided by number of proces- sors) is still less than 60% (see lowest curves of each graph in 
+Figure 8). The remote to local latency ratio is aggressive (more so than in the simulation study), the 
+Hub itself is hardwired and has relatively low occupancy [4], and the network band-width (even bisection 
+bandwidth for this size system) is very high. The tools and time breakdowns show that memory stall time 
+is very imbalanced across processors while the frequency of cache misses is balanced, indicating that 
+con-tention is the problem. While we do not have appropriate tools to diagnose the contention, we perform 
+some contrived experiments that indicate that it is due to two processors sharing a Hub controller or 
+two Hubs sharing a router (see Figure 1 (b)); i.e. at the end points, despite our use of a staggered 
+transpose to avoid too much traffic to one node at a time. Our experiment is to have only certain processors, 
+instead of all, perform the transpose communication. All processors perform the local computation phases 
+but some stay idle (i.e. are silenced ) during the transpose phases. In particular, we compare FFT performance 
+with two other cases: (i) only one processor out of two that share a Hub controller perform the transpose, 
+and (ii) only one proces-sor out of four that share a router perform the transpose. Of course, these 
+experiments give the wrong answer for the FFT, since the full transpose is not performed so the wrong 
+values are manipulated in the local computation phase, but they allow us to have a Hub or a router be 
+effectively at-tached to only one processor that generates traffic. --transposing lprocs/2i1odes~~ , 
++-transposing lpr$&#38;ode ZR , -+-transposing ?pfocs/node 21 , ,/ 2 16 12 8F P 4 4 8 12 16 20 24 2 31 
+4 x 12 16 20 2.4 2s 12 Number of Processors Number of Processors (a) No Prefetching (b) Prefetching 
+Figure 8: FFT with different number of processors to transpose for 16M points. The comparisons, for the 
+two with and without prefetch-ing, are shown in Figure 8. Note that speedup is measured with respect 
+to the same full uniprocessor FFT as before, since what we really want to measure is whether parallel 
+execution time decreases as a result of this silencing. (The useful work we are silencing is fully in 
+parallel with work we are not silencing, so we are not changing the critical path of useful work in the 
+parallel execution. We can ignore second-order network contention effects at this level and for the hypercube 
+network used at this scale.) Comparing the two graphs, we see that prefetching remote data indeed improves 
+speedups. Let us first look at figure (b), which uses prefetch- ing so that network latency should not 
+be the main problem. Prefetching places some additional strain on the communica- tion controller as well, 
+but it is clearly much smaller than the benefits from silencing, since the top curves on the right are 
+much better than the bottom curve on the left. Prefetching helps more with silencing than without. The 
+performance improvements obtained by silencing are very substantial and this false FFT finally achieves 
+a very good speedup on 32 processors for this data set, especially when prefetching is used (much like 
+the simulation results in [4] where proces-sors did not share these resources). Performance improves 
+with greater silencing, which indicates that the sharing of both Hubs and routers is a problem despite 
+their aggressive bandwidth. It will be useful to determine exactly what it is in the implementation details 
+that causes this contention, but we do not have the tools for this. Other possibilities are that a part 
+of the problem lies between the Hub and the processors, since the source data of the transpose are very 
+likely to be in the source processor s cache rather than in main memory (which may increase contention 
+in the node), or that the problem is contention within the network itself due to limited bisection bandwidth 
+(our silencing experi-ments do indeed reduce the traffic placed on the network), though this appears 
+less likely on this machine at this small scale. As things stand, our FFT does not scale well. --32M 
+--IhM , --4M ,f --IM ,, , (a) Radix Speedups (b) Radix Breakdown (32M) (c) Sample Speedups Figure 9: 
+Performance of Radix and Sample sort with different key numbers. Radix: Like FFT, Radix is also a challenging 
+kernel for par- allel machines and scales poorly on Origin2000, as shown in Figure 9 (a). For smaller 
+problems, the phase that accu-mulates local histograms into a global histogram using a parallel prefix 
+tree scales poorly as well (hence the 1M key problem speeds up worse than the others), but the dom-inant 
+problem in most cases is the permutation phase in which keys are permuted from an input to an output 
+array based on histogram values. Problem size does not help much since the communication to computation 
+ratio does not de-pend on it; also, while 1M is borderline, all the problem sizes are large enough that 
+false sharing is not the dominant problem. Nor are capacity misses. The hardware perfor-mance counters 
+(using the Perfex tool) detect that the very high memory overhead that was seen in Figure 4 is espe- 
+cially due to TLB misses in the permutation phase, which reflects its highly scattered pattern of remote 
+writes, despite attempts to first buffer the writes locally. The all-to-all scat-tered communication 
+also causes contention at the network interfaces, controller, and memory, exacerbated by the si-multaneous 
+bursty propagation of coherence messages like invalidations and acknowledgments. Prefetching does not 
+have a noticeable impact on performance, since it does not help the permutation phase [4]. We use similar 
+silencing experiments to those in FFT (Figure 8) for the permutation phase The resulting speedup (relative 
+to the full uniprocessor sort) improves due to alle-viation of contention at Hubs and routers, but not 
+so much as in FFT (about 20% in the best case). This is because other bottlenecks coexist that are not 
+alleviated: e.g. TLB misses and contention at memory banks due to both local and incoming accesses in 
+the large problems. Sample Sort: We also examine another sorting algorithm, sample sorting [2], which 
+alleviates the scattered writing pat-tern in Radix, but introduces extra computational complex-ity (more 
+local sorting). Communication is still all-to-all, but it is performed through remote reads of contiguously 
+allocated keys from other processors rather than scattered remote writes; spatial locality is much better, 
+and TLB misses are alleviated. As shown in Figure 9 (c), sample sort achieves very good speedup up to 
+32 processors on Ori- gin. Communication behaves well enough that speedups are superlinear for some processor 
+counts due to cache capacity effects. Prefetching improves performance around lo%, but not higher because 
+data transfer is not such a large compo-nent of execution time. Sample sorting is more effective on this 
+machine than radix sorting, despite the extra computa-tion it performs. This is because the extra computation 
+is in-cache even for the largest problems we run (128M keys), and the dominant bottlenecks in Radix are 
+poor interactions with the communication architecture and TLB misses, both of which Sample sort alleviates. 
+ 4.3.2 Complete Applications Fortunately the complete applications do not use the trou-blesome all-to-all 
+kernels. In addition to several applica-tions from SPLASH-2, we also examine a shear-warp vol-ume renderer[7], 
+a probabilistic inference method applied to disease diagnosis in medical networks [8] and a protein structure 
+prediction application 131. The last two are shown together in a single graph (Figure-10 (g)), with only 
+single nroblem size of a real medical Bavesian network for the for- mer. The problem sizes we choose 
+are based on the method- ology described in Section 4.1.2. For several of the applica-tions the working 
+set always fits in the second-level cache and it is the first-level cache that is more important for 
+sizing (though it does not cause artifactual communication). Un-like the kernels, spatial locality in 
+many of these programs does not improve significantly with problem size, since the data structures are 
+records whose spatial contiguity rela-tive to each other has little to do with their assignment to processors. 
+In others, like Ocean and Shear-Warp, it does improve. Figure 10 shows that most applications speed up 
+very well at reasonable problem sizes: Barnes, Raytrace, Shear-Warp, Water-Nsquared, and Water-Spatial 
+do so despite their irregular and fine-grained access patterns because of their high degree of temporal 
+and spatial locality and Ori-gin s low remote access latency. Speedups increase with larger problems, 
+since inherent properties improve while the working sets usually fit in the second-level cache and spa-tial 
+locality either improves or stays the same. Sometimes, working sets starting to fit in the first-level 
+cache helps par-allel performance a little, though most times they either fit always or fit never. In 
+Ocean, hardware performance counters and precise profiles indicate that memory stall time (due to communi-cation) 
+is the dominant bottleneck even when working sets fit in the second-level cache. An important factor 
+in this communication overhead is the large, 128-byte cache line size, since an entire cache line is 
+fetched from a remote pro-cessor even though only one neighbor element on it is needed at a column-oriented 
+partition boundary, as in SOR (how-ever, large cache lines are very useful for local data and row-oriented 
+boundaries, which have good spatial locality). This relative communication overhead decreases for larger 
+problem sizes, but remains a bottleneck at small to moder-ate sizes scaling under other models discussed 
+in the next section. Under problem-constrained scaling then, all of the appli- cations except FFT and 
+Radix (which have all-to-all com-munication patterns) seem to speed up quite well up to the scale examined 
+so far; however, several of them need some-what larger problem sizes than we might have expected from 
+previous simulation studies of machines with simpler orga-nizations. --Y-Inference (static CPCS-422)+ 
+1024K -2050x2050 -balls(128x128) -640x640~640 -o--Protein (helix64)-512K -1026x1026 --+-car(256x256) 
+-512X512X512 -4096 mols -c-4096 mols -b--Protein (h&#38;x32)--c 256K -514x514 -Car(128X128 -0-512 mols 
+-0-512 mols -64K , 42+ 258x2 -16K 28 I I 24 I 20 it 16 16 12 12  8 x 4 4 LTfr.cf l!ccf 4 8121620242832 
+4 X 121620242832 4 8121620242832 4 8 121620242832 4 8 121620242832 4 R 121620242832 4 R 121620242832 
+ Processors Processors Processors Processors Proce.ssors Processors Processors (a) Barnes (b) Ocean (c) 
+Raytrace (d) Shear-Warp (e) Water-Nsquared (f) Water-Spatial (g) Others Figure 10: Speedups of applications 
+with different problem sizes. 5.1 Metrics Performance is best measured as work done per unit time, where 
+work is the useful work that would be done by a se- quential program, not including the overheads of 
+parallelism. The amount of work to be done is usually defined by the in- 8 d put configuration on which 
+the program operates. How work is measured will be discussed shortly. Given the definition of performance, 
+a consistent framework for speedup under Number of Proe.wors Number of Processors Number of Proce.sors 
+ any scaling model is that it should always be measured as: (a) Barnes (16K) (b) Ocean (1026% 1026) (c) 
+LU (2048x2048) Figure 11: Speedups of applications with less and more opti- Perfb) Work(p) Time( 1) 
+Speedup = -zz-* (1) mized versions. Perf(l) Time(p) Work(l) 4.3.3 Performance Robustness Under Problem-constrained 
+scaling(PC), the problem size and hence the useful work remain fixed, so equation (1)As we pointed out 
+earlier in Section 4.1, the performance ro-yields the familiar speedup expression of Time(l) / Time(p). 
+bustness of a machine to lack of optimization is an important Under the other scaling models, we have: 
+attribute. We use less optimized versions of a few applica- tions to examine this on Origin in Figure 
+11 (speedups are l Time-constrained scaling(TC) Here execution time re-calculated based on the best uniprocessor 
+execution time mains fixed under scaling by definition (Time(p) = for each application, and data are 
+distributed appropriately Time(l)). From (l), speedup can be measured as the where possible). Two major 
+optimization levels, algorithmic increase in the useful work done during that fixed ex-and data structuring, 
+are examined. The static algorithm in ecution time Speedup = Work(p) / Work(i). Barnes (Figure 11(a)) 
+simply assigns particles to processors round-robin rather than computing good partitions dynam-l Memory-constrained 
+scaling(MC) Here neither work ically [16]. Load balance works out okay due to randomiza- nor time remains 
+fixed (in fact, both can increase dra- tion, but the big impact is on communication. Nonetheless, matically 
+as discussed in 1141). We must therefore re- communication volume is still small, the machine is good 
+at sort to the full expression in (l), so Speedup = In- low-latency fine-grained communication, and there 
+is little crease in Work Done / Increase in Time Taken. contention, so the difference between versions 
+is not very large at this scale. The use of simpler, more natural 2-d For the memory-constrained scaling 
+expression, if the in- array data structures to represent 2-d grids or matrices in crease in execution 
+time were only due to the increase in Ocean and LU (Figure 11(b) and (c)) has a much greater work and 
+not due to overheads of parallelism, and if there effect on performance and scalability, since it causes 
+a lot were no memory system artifacts, the speedup would be p more false sharing and especially conflict 
+misses, and makes which is what we want. data difficult to distribute. We also examined the impact The 
+outstanding question is how to measure work, given of further optimizations to some of our applications, 
+start-a problem size (i.e. configuration). The most likely metric, ing from our regular set, that were 
+developed in the context execution time on a uniprocessor, includes memory system of page-based software 
+shared memory systems and are de-artifacts and is hence not appropriate. For example, to mea- scribed 
+in [6]. They were designed to combat systems with sure speedup under TC or MC scaling, we would have 
+to run slow communication and large granularities, and their im-the larger (scaled) problem size on a 
+single processor of the pact on this aggressive architecture are small at this scale. machine to obtain 
+the numerator; this is fraught with the same thrashing difficulty in cache or memory as before, and 5 
+Performance Under Time-and Memory-Constrained may frequently lead to superlinear speedups. The desirable 
+Scaling properties for a work metric are that it be easy to measure, architecture-independent as far 
+as possible, and scale lin- Now let us examine the impact of time-constrained and early with the sequential 
+time complexity of the application memory-constrained scaling for some applications on Ori-(if it is 
+sublinear, e.g. if we use the number of rows n ofgin2000. We do not do this exhaustively, for space reasons, 
+an n-by-n matrix as the metric in matrix factorization, thenbut only illustrate some interesting effects 
+with the Barnes even the ideal parallel performance will lead to sublinearand Ocean applications, which 
+are different, nontrivial and speedup under this work measure.) Many applications do can be naturally 
+scaled. And we start with a fixed problem not have intuitive, user-oriented metrics that fit these crite- 
+size in each case. Before we do this, we need to define ap-ria, and in any case analytical work expressions 
+are difficult propriate performance improvement (speedup) metrics for to construct accurately. The most 
+general work measure forthese scaling models. a platform, therefore, is the time taken to run the problem 
+on a uniprocessor assuming that all memory references are cache hits and take the same amount of time 
+(say a single cycle), thus eliminating artifacts due to the memory system. This can be called the perfect-memory 
+uniprocessor execu-tion time. Ease of measurement is provided by the fact that most computers have system 
+utilities that can measure this work metric (e.g. pixie), and the other desirable quali-ties are already 
+present in this measure. This is how we measure work to compute speedups for time- and memory- constrained 
+scaling. 5.2 Results -+ Naive TC -+-Naive MC -=+TC +MC *PC / &#38;.... 4 8 I2 16 2 24 2x 32 4 8 I2 16 
+2 24 2x 32 PKICCSSOCS PlWCCSSO~S (a) Barnes Speedup (b) Ocean Speedup Figure 12: Scaling results under 
+different scaling models for Barnes and Ocean on Origin2000. The size of main memory (8GB) constrains 
+the TC and MC experiments to 16 processors but not beyond. Naive TC and MC refers to scaling on the number 
+of particles (n) without changing other application pa-rameters, while TC and MC refers to scaling with 
+changing all application parameters that matter realistically [14]. For most applications, considering 
+only inherent character-istics like inherent communication to computation radio and load balance, we 
+expect speedups to be best under MC scal- ing, since these properties usually depend mostly on data set 
+size per processor which remains about constant under this model. (Note that MC scaling is often unrealistic 
+in its execution time requirements, including for Barnes and Ocean [14]). Interactions with page and 
+cache line granular- ities (spatial locality) also do not degrade with scaling in this case. For FFT 
+and Radix, this is generally true, but since the dependence of the inherent communication to compu-tation 
+ratio (which is the dominant source of performance bottleneck) on data set size is either gradual or 
+nonexistent, the improvements in speedup relative to other models are small. The results for Barnes and 
+Ocean, shown in Figure 12, are more interesting and raise important methodological is-sues. Here, even 
+greater improvement might be expected from MC scaling compared to other models, since communi- cation 
+to computation ratio has a roughly linear rather than logarithmic relationship with data set size. However, 
+other interactions -especially temporal locality -in fact cause a reversal in the expected trend. For 
+Barnes, the speedups are quite good for 32 processors under all scaling models (Figure 12(a)). The differences 
+can be explained by exam-ining the major performance factors. The communication to computation ratio 
+and load balance in the dominant, force calculation phase depend primarily on the number of par- ticles, 
+so they behave best under naive TC and naive MC scaling. However, working sets behave differently. Unlike 
+many applications in which the most important working set is proportional to data set size and inversely 
+proportional to the number of processors p (like SOR, Ocean, FFT, etc.), in this case the most important 
+working set is largely in-dependent of p. It increases very slowly (logarithmically) with data set size 
+and much more quickly with force cal-culation accuracy, which in turn increases with p under re-alistic 
+TC and MC scaling. Under these models, and to a lesser extent under naive TC and MC scaling where only 
+n increases, the important working set grows rather than shrinks as p increases. On 0 ri g m, the 4MB 
+second-level caches are always large enough to fit the working set in our experiments, so little artifactual 
+communication is gener- ated. However, the working set starts to fit less well in the first-level cache 
+with increasing p, making local node per-formance worse with scaling, so speedup in fact degrades. This 
+is quite the opposite of the superlinearity effect we dis- cussed earlier for some other applications, 
+and is different from the behavior of Barnes itself under PC scaling where the working set size remained 
+constant. Ocean is an example that illustrates the superlinearity effect even under other scaling models 
+than PC. Here, the most important working set is proportional to the data set size per processor. If 
+we start from a problem size in which the working set does not fit in the cache on a uniprocessor (figure 
+(b)), then under both PC and also realistic TC scal-ing the data set size per processor diminishes quite 
+quickly. Despite the fact that the communication to computation ratio increases quickly, we observe the 
+expected superlinear speedups once the working set starts to fit in the cache. Un-der MC scaling, communication 
+to computation ratio does not change much, but nor does the working set size per pro- cessor. Thus, although 
+the scaling behavior is better for the communication architecture, speedups are not so good due to the 
+performance effects on the local behavior within a node. On Origin, the 4MB second-level caches suggest 
+that this issue reveals itself for both the first and (to a lesser extent) second-level caches. Counting 
+cache misses with the performance counters confirms this. (The effect may be larger on machines that 
+don t have such large second-level caches.) The result is that TC and PC scaling show better speedups 
+than MC here as well, though for a very different reason than in Barnes. We therefore have to be careful 
+to understand application behavior when interpreting metrics like scaled speedups, even when the scaling 
+model is well defined. 6 Effectiveness of Other Hardware Support The Origin2000 has three important performance 
+enhancing features: the fetch&#38;op primitive, software controlled prefec-thing support, and hardware/software 
+support for dynamic page migration. The fetch&#38;op primitive is used mostly for synchronization, as 
+seen in Section 3. We examined prefetching only for remote data, and found it to help sub-stantially 
+in FFT (30%, and even more in the silencing ex-periments when communication bandwidth is less stressed) 
+but not so much in other programs. It is usually difficult to predict cache misses and thus schedule 
+prefetches early enough for most of the irregular applications. For regular applications in our benchmark 
+suite, however, either net-work latency is not the bottleneck (e.g. LU), or prefetching is not efficient 
+due to poor spatial locality (e.g Ocean). We now examine dynamic page migration, which can help make 
+capacity misses local. To alleviate the TLB shoot-down normally needed when migrating a page, Origin2000 
+incorporates hardware support in its protocol that allows it to delay invalidating the TLBs of processors 
+from the time of the page migration itself until the time that processor ac-cesses a cache line on that 
+page again [9] 3. As discussed 3To migrate a page. the block transfer engine reads cache blocks earlier, 
+it was difficult to find an application among our set in which data distribution was very important, 
+given the large caches and aggressive communication architecture. Migra-tion is done at page granularity, 
+and the large pages make it more difficult to do effectively. Since the exception was the 4-d array SOR 
+kernel on the very large data set, we investi- gate dynamic page migration for this very attractive case: 
+A migration has to be done just once to get pages to the right memories, and all capacity misses thereafter 
+are local in-stead of (almost) all being remote. We also examine the 4-d array version of Ocean for the 
+largest data set (2050 x 2050) that can be run on the machine. In both cases, we invoke dynamic page 
+migration for an execution in which pages are initially distributed round-robin. Unfortunately, dynamic 
+page migration does not improve the performance for SOR much, and even hurts performance for Ocean (with 
+its smaller grids) a little. To understand whether this is because of the high overheads, or because 
+the migration policies used causes too much unnecessary mi-gration due to near-neighbor sharing of pages, 
+we modified SOR to just touch grid points rather than do near-neighbor computation on them, so that each 
+page of data is guaran- teed to be accessed by only one processor. Thus, each page is guaranteed to migrate 
+at most once if it has to. Migra-tion does not improve performance much in this case either, indicating 
+that the migration overhead is too high to be ben- eficial. The automatic page migration support is likely 
+to be more effective in conjunction with process migration, to bring a migrating process s pages to the 
+memory of it new node, rather than within a parallel program whose processes do not migrate. 7 Discussion 
+and Conclusions Evaluating a real machine, while simpler than evaluating a tradeoff through simulation, 
+involves many issues and in-teractions that must be navigated in a methodologically sound way. We have 
+articulated such a methodology, and have used it to evaluate the SGI Origin2000 as a hard-ware cache-coherent 
+DSM machine. We used not only end performance and speedups, but also detailed instrumenta-tion and hardware-supported 
+performance tools to obtain insights into the performance. The following are the main conclusions from 
+our study. First, the microbenchmark performance of the commu-nication architecture is quite impressive. 
+The ratio of un-loaded remote to local access latency is quite low (from 2-to-l to 4-b-l), bandwidths 
+are high, and fairly simple, well-known synchronization algorithms built on top of the LL-SC and fetch&#38;op 
+primitives perform and scale well. Nonethe-less, evaluating synchronization performance through mi-crobenchmarks 
+has several methodological difficulties. Second, most of the real applications we examined were able 
+to achieve very good speedups on the 32-processor ma-chine, which is encouraging. However, most of them 
+re- from the source page location using special uncached read exclusive requests. This request type returns 
+the latest coherent copy of the data and invalidates any existing cached copies (like a regular read-exclusive 
+request), but it also causes main memory to be updated with the latest version of the block and puts 
+the directory in a special poisoned state. The migration itself thus takes only the time to do this 
+block transfer, not TLB invalidations, and TLB invalidations are ultimately performed at only those processors 
+that need the page again. When a processor next tries to access a block from the old page, it will miss 
+in the cache, and will find the block in poisoned sta1.e at the directory. At that time, the poisoned 
+state will cause the processor to see a bus error. The special OS handler for this bus error invalidates 
+the processor s TLB entry, so that it obtains the new mapping from the page table when it retries the 
+access. quire substantially larger problem sizes to achieve this par-allel performance than on recently 
+studied simulated DSM systems. This is due to several architectural and organiza-tional reasons (in addition 
+to the difference between simu-lation and real systems); for example, the faster processors on the Origin2000 
+and the very large secondary cache lead to very good uniprocessor performance even for large prob- lems. 
+Fast processors make the less parallelized computa-tional phases dominate OIL small problem sizes, so 
+that the dominant overhead on larger machines for smaller data sets is often load imbalance rather than 
+communication cost 4. Third, since most of the applications have working sets that fit in the large secondary 
+caches for realistic problem sizes, data distribution turns out not to be very important on this machine. 
+This is fortunate, because it can often be difficult to perform data distribution well at 16KB page granularity, 
+especially for irregular applications. Even in the examples where data distribution is important (e.g. 
+a very large SOR), unlike on previously studies machines [15] not distributing data does not destroy 
+performance. The aggressive communication architecture is a great help here: there is little contention 
+in this case, and the problem is simply remote access latency which is kept very low relative to local 
+latency as discussed earlier. Fourth, the most interesting parallel programs, of course, are those that 
+have enough concurrency and load balance but still do not do well. For the Origin2000, these are FFT 
+and Radix sorting, both of which display all-to-all bursty communication. While we do not have the tools 
+to tell for sure or identify the precise causes, our experiments to under- stand why indicate that the 
+problem may be primarily due to the engineering decision of having two processors share a Hub controller 
+and two Hubs share a network router. Raw link and router bandwidth seem high enough, so the key is likely 
+to be in the implementation details which we shall try to uncover with the designers. Bisection bandwidth 
+and cache interventions are other, seemingly less likely, possi-bilities. Other real machines have also 
+shown performance problems due to clustering processors, but for different rea-sons. For example, in 
+the Convex Exemplar SP-1200, it was found that the decision to cluster 8 processors in a node but provide 
+for only a small number of outstanding operations between node pairs (not a problem in the Origin) greatly 
+limited all-to-all performance. In that case, the processors within a node were kept coherent by a different 
+protocol, and this two-level coherence structure led to a high ratio of re- mote to local latency (the 
+use of a direct mapped remote ac- cess cache also led to poor performance on some applications such as 
+Raytrace, due to conflict misses on remote data that did not fit in the smaller processor caches). All 
+these experi- ences show that while aggressive hardware cache-coherence appears to be very successful, 
+detailed implementation issues often get in the way of challenging applications. Engineering decisions 
+to share resources can overturn the aggressiveness of a communication architecture measured in per-resource 
+latency or bandwidth. Fifth, scaling applications under different scaling models leads to interesting 
+and somewhat unexpected effects, such as speedup under memory constrained scaling being worse than under 
+other models. This is primarily due to the man- 4The issue of problem sizes is exacerbated in scame applications 
+because the size can grow only in certain fixed quanta. For exam-ple, Ocean only works on (2 + 2) x (2 
++ 2) grids, so the memory requirements increase dramatically between two consecutive (large) problem 
+sizes. If one problem is not large enough for good speedup on a machine, the larger one may very well 
+grow beyond the size that can be run. ner in which temporal locality interacts with the amount of memory 
+at different levels of the memory hierarchy as the problem and machine size scale. Finally, we also find 
+that the prefetching support pro-vided by the machine can be effective in real programs, as can the use 
+of the at-memory fetch-and-op primitive for bar- rier synchronization (especially at large scale), but 
+that the dynamic page migration support provided does not appear to be so effective (at least in the 
+absence of process migra-tion). Overall, besides the exceptions discussed above, the Ori- gin2000 appears 
+to deliver on the promise of cache-coherent shared address space multiprocessing. Even where it fails, 
+the reasons are engineering decisions rather than architec-tural shortcomings or communication architecture 
+parame-ters. We found that while the tools we used were very useful, the lack of tools to help diagnose 
+contention (e.g. provide timing information for cache misses rather than just frequen- cies) often came 
+in our way. Detailed tools to help diagnose the hub and router contention problems would have been very 
+useful, and would have let us avoid contrived exper-iments whose results we still cannot fully interpret. 
+For the future, we would like to extend many aspects of this study to larger scale systems. For example, 
+the hub/router contention problem can be studied in a complementary way without silencing by running 
+on 32 processors out of a 64- or 128-processor system (using only one processor per Hub or per router). 
+Other aspects we would like to study at larger scale include synchronization and understanding whether 
+the types of optimization that are very helpful for commod- ity based software shared memory systems 
+at small scale also help hardware DSM systems at large scale. Most generally, of course, we would like 
+to understand whether the promise of cache-coherent multiprocessing at larger scale shown through simulation 
+[4] holds in aggres-sive, real machines as well. In general, evaluations that use simulation are much 
+more difficult to be confident about (especially at larger scale where contention becomes even more significant). 
+One general reason is the larger parameter space since both application and machine parameters (orga-nization 
+and performance) may be variable. Some guidelines for dealing with the space can be found in [18], and 
+several are fundamentally similar or complementary to the ones ar- ticulated here. Perhaps a greater 
+concern for confidence is that simulation constraints require that application parame-ters (and machine 
+scale) be scaled down, and then the goal is to have the execution of the smaller problem on the smaller 
+machine represent that of the full-size problem on the full-size machine. For representativeness, this 
+requires scaling down machine parameters as well. Unfortunately, most im-portant execution characteristics 
+and interactions scale dif- ferently, and several have thresholds. Parameters like cache line size, associativity, 
+and performance parameters of the communication architecture are especially difficult to scale in representative 
+ways. It is difficult to hope for quantitative representativeness in these cases; while simulation certainly 
+has its important place, this makes evaluating aggressive real machines all the more critical. Acknowledgements 
+The authors thank SGI and NCSA for providing us critical access to Origin2000 systems. We are grateful 
+for valuable discussions with Dan Lenoski, Jim Laudon, Rohit Chan-dra, Christina Hristea, Marco Zagha, 
+and John McCalpin. Cheng Che Chen, Alexander Kozlov, and Sanjeev Kumar provided us with some applications 
+and microbenmark codes that we used in this study. References <RefA>A. Agarwal and et al. The mit alewife machine: 
+Architecture and performance. In Proceedings of the 22th International Symposium on Computer Architecuture, 
+pages 2-13, June 1995. [II G. Blelloch, C. Leiserson, and B. Maggs. A comparison of sortina algorithms 
+for the connection machine cm-2. In Svm- posium on Parallel Algorithms and Architectures, 1991. [31 PI 
+C. C. Chen, J. P. Singh, W. Poland, and R. Altman. Paral-lel protein structure determination in the presence 
+of uncer-tainty. In Proceedings of Supercomputing 94, 1994. 141 C. Halt, J. Singh, and J. Hennessy. 
+Application and archi-tectural bottlen&#38;ks in large scale distribited shared memory machines. In Proceedings 
+of the 23th Annual International Symposium on Computer Architecture, pages 134-145, May 1996. C. Hristea. 
+Personal communication. D. Jianp, H. Shan, and J. Singh. Application restructuring IIi and performance 
+portability 0; shared virtual memory ana hardware-coherent multiprocessors. In Proceedings of the 1997 
+ACM SIGPLAN Symposium on Principles and Prac-tice of Parallel Program&#38;&#38;g, June 1997. [71 D. 
+Jiang and J. Singh. Parallel shear-warp volume render-ing on shared address space multiprocessors. In 
+Proceedings of the 1997 ACM SIGPLAN Symposium on Principles an,d Practice of Parallel Programm&#38;,-June 
+1997. - PI A. Kozlov and J. P. Singh. Parallel probabilistic inference on cache-coherent multiprocessors. 
+Speical Issue of IEEE Com-puters on Applications for Shared-Memory Multiprocessors, 1996. PI J. Laudon 
+and D. Lenoski. The sgi origin: A ccnuma highly scalable server. In Proceedinqs of the 24th Annual Interna-tional 
+Symposium on Compvter Archit&#38;ture, June 1997. D. Lenoski, J. Laudon, T. Joe, D. Nakahira, L. Stevens, 
+ 1101 A. Gupta, and J. Hennessy. The DASH prototype: Imple-mentation and performance. In Proceedings 
+of the 19th An-nual International Symposium on Computer Architecture, pages 92-103, May 1992. [Ill T. 
+Lovertt and R. Clapp. Sting: A cc-numa computer sys-tem for the commercial marketplace. In Proceedings 
+of the 23rd Annual International tecture, May 1996. [=I J. M. Mellor-Crummey for scalable synchronization 
+sors. ACM nansactions Februar 1991. [I31 E. Roth t erg, J. P. Singh, sizes, and node granularity Symposium 
+on Computer Archi- -. and M. L. Scott. Algorithms on shared-memory multiproces-on Computer Systems, 9(1):21-65, 
+and A. Gupta. Working sets, cache issues for large-scale multiproces- sors. In Proceedings of the 20th 
+Annual International Sym-posium on Computer Architecture, pages 14-25, May 1993. J. Singh, T. Joe, J. 
+Hennessy, and A. Gupta. An empirical I141 J. Singh, A. Gupta, and J. Hennessy. Scaling parallel programs 
+for multiprocessors: Methodology and examples. IEEE Computer, 1994. 1151 comparison of the ksr-1 allcache 
+and Stanford dash multipro- cess&#38;s. In Supercomputing 93, November 1993. . [161 3. P. Singh, C. Halt, 
+T. Totsuka, A. Gupta, and J. Hennessy. Load balancing and data locality in adaptive hierarhcical n-body 
+methods: Barnes-hut,, fast multipole, and radiosity. Parallel and Distributed Computing, 1995. [I71 
+X. Sun and I,. Ni. Scalable problems and memory-bounded speedup. Parallel and Didtributed Computing,-19:27-37, 
+1993. [181 S. C. Woo, M. Ohara, E. Torrie, J. P. Singh, and A. Gupta. The splash-2 programs: Characterization 
+and methodologi-cal considerations. In Proceedings of the 22th Annual Inter-national Symposium on Computer 
+Architecture, June 1995. [I91 M. Zagha. B. Larson, S. Turner. and M. Itzkowitz. Perfor- - mance analysis 
+using the mips rlOOO0 performance counters. In Supercomputing 96, 1996.</RefA>    
+			

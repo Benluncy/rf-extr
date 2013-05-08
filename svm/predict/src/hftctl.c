@@ -176,6 +176,19 @@ int stackData(StackInfo *myStack,AcceptStr acceptStr,const char *content,int len
 	return 1;
 }
 
+int refo;
+
+void storeREFO()
+{
+	refo = getReferenceHeadOffset();
+}
+
+
+int getREFO()
+{
+	return refo;
+}
+
 
 unsigned int getReferenceHeadOffset()
 {
@@ -356,39 +369,15 @@ int gen26ToEndW(WORD *w,featureData fd,int start)
 		start+=wide;
 
 	}
-	return 1;
+	return start;
 }
 
 
 
-
-//int bingo = 0;
-//int generateSample(const char* fileName,int isDir)
-int genStartSampleCtl(const char* fileName,int isDir)
+int genStartSampleCtlW(const char* fileName,WORD ws[ITNUM][FTWIDE],long offlist[ITNUM])
 {
-	static int id = 1;
-	FILE *fp;
-	int trainOrTest;
-        if(isDir)
-        {
-                printf("ignore dir:%s\n",fileName);
-                return 1;
-        }
-	if(rand()%2) //train is 50% and test is 50%
-	{
-		fp = fpTrain;
-		trainOrTest = 1;
-	}else
-	{
-		trainOrTest = 0;
-		fp = fpTest;
-	}
-	
-	
-	
-        printf("[%d] %s:%s",id,(trainOrTest?"train":"test"),fileName);
-        fflush(NULL);
-        
+	//int id = 0;
+	static int id = 0;
         // parse tag or etc ,move data to RAM
  	initContent();
 	if(!parseFile(fileName))
@@ -397,14 +386,14 @@ int genStartSampleCtl(const char* fileName,int isDir)
 		getchar();
 		return 0;
 	}
-	
+
 	// search from db
 	if(!getFeature(fileName,&mfdc)) // get One To Five from DB
 	{
 		int i;
 		//int j;
 		int threshold;
-		unsigned int refOffset;
+//		unsigned int refOffset;
 		StackInfo info[FEATURE_SIZE];
 		for(threshold=0;threshold<FEATURE_SIZE;threshold++) 
 			stackData(&info[threshold],isAccpted,getPcontent(),getPclen(),threshold);
@@ -414,12 +403,12 @@ int genStartSampleCtl(const char* fileName,int isDir)
 		int maxid;
 		int maxoffset;
 	
-		int isPositive;
+//		int isPositive;
 		
 		// DB data set
 		mfd.qid = id;
 	
-		refOffset = getReferenceHeadOffset();
+//		refOffset = getReferenceHeadOffset();
 		
 		//init count 
 		for(i=0;i<FEATURE_SIZE;i++) count[i]=1;
@@ -431,9 +420,9 @@ int genStartSampleCtl(const char* fileName,int isDir)
 		{	
 			maxid = maxTop(info,FEATURE_SIZE);
 			maxoffset = info[maxid].data[info[maxid].top-1];
-			isPositive = VALUESDIFF(refOffset,maxoffset) < 10 ;
+//			isPositive = VALUESDIFF(refOffset,maxoffset) < 10 ;
 			
-			mfd.positive = isPositive;
+//			mfd.positive = isPositive;
 			mfd.offset = maxoffset;
 			
 			for(i=0;i<FEATURE_SIZE;i++)
@@ -473,14 +462,14 @@ int genStartSampleCtl(const char* fileName,int isDir)
 	
 
 	
-	printf(".");fflush(NULL);//TODO TIPS
+	
+	//printf(".");fflush(NULL);//TODO TIPS
 	
 	// generate feature info data
 	int beforeData;
 	int totalData;
 	for(int i=0;i<mfdc.top;i++)
 	{
-		
 		for(int j=0;j<CALLBACK_LEN;j++)
 		{
 			offsetStat(mfdc.data[i].offset,
@@ -490,9 +479,10 @@ int genStartSampleCtl(const char* fileName,int isDir)
 		}
 	}
 	
+	
 	//density and etc
 	
-	printf(".");fflush(NULL);//TODO TIPS
+	//printf(".");fflush(NULL);//TODO TIPS
 	
 	// adjacencyOffset setting ... 
 	for(int i=0;i<mfdc.top;i++)
@@ -509,8 +499,9 @@ int genStartSampleCtl(const char* fileName,int isDir)
 		}
 	}
 	
+	//printf("#D");fflush(NULL);
 	
-	printf(".");fflush(NULL);//TODO TIPS
+	//printf(".");fflush(NULL);//TODO TIPS
 	
 	int diff;
 	int lmt;
@@ -518,6 +509,7 @@ int genStartSampleCtl(const char* fileName,int isDir)
 	CloseKWD ckwd;
 	for(int i=0;i<mfdc.top;i++)
 	{
+		
 		for(int j=0;j<CALLBACK_LEN;j++)
 		{
 			mfdc.data[i].density[j][0][0] = (double)mfdc.data[i].fid[j][0]/NOTZERO(mfdc.data[i].offset);
@@ -547,9 +539,11 @@ int genStartSampleCtl(const char* fileName,int isDir)
 		}
 	}
 	
+	//printf("#G");fflush(NULL);
+	
 	
 	// sequence setting ... 
-	printf(".");fflush(NULL);//TODO TIPS
+	//printf(".");fflush(NULL);//TODO TIPS
 	for(int i=0;i<mfdc.top;i++)
 	{
 		for(int k=0;k<CALLBACK_LEN;k++)
@@ -562,20 +556,28 @@ int genStartSampleCtl(const char* fileName,int isDir)
 			if(i==j) continue;
 			for(int k=0;k<CALLBACK_LEN;k++)
 			{
-				if(mfdc.data[i].density[k][0][1]/NOTZERO(mfdc.data[i].density[k][0][0])
-					< mfdc.data[j].density[k][0][1]/NOTZERO(mfdc.data[j].density[k][0][0]))
+				//if(mfdc.data[i].density[k][0][1]/NOTZERO(mfdc.data[i].density[k][0][0])
+				//	< mfdc.data[j].density[k][0][1]/NOTZERO(mfdc.data[j].density[k][0][0]))
+				if(mfdc.data[i].density[k][0][1]*NOTZERO(mfdc.data[j].density[k][0][0])
+					<mfdc.data[j].density[k][0][1]*NOTZERO(mfdc.data[i].density[k][0][0]))
 					mfdc.data[i].seq[k][0] ++;
 				
-				if(mfdc.data[i].density[k][1][1]/NOTZERO(mfdc.data[i].density[k][1][0])
-					< mfdc.data[j].density[k][1][1]/NOTZERO(mfdc.data[j].density[k][1][0]))
+				//if(mfdc.data[i].density[k][1][1]/NOTZERO(mfdc.data[i].density[k][1][0])
+				//	< mfdc.data[j].density[k][1][1]/NOTZERO(mfdc.data[j].density[k][1][0]))
+				if(mfdc.data[i].density[k][1][1]*NOTZERO(mfdc.data[j].density[k][1][0])
+					<mfdc.data[j].density[k][1][1]*NOTZERO(mfdc.data[i].density[k][1][0]))
 					mfdc.data[i].seq[k][1] ++;
 				
-				if(mfdc.data[i].density[k][2][1]/NOTZERO(mfdc.data[i].density[k][2][0])
-					< mfdc.data[j].density[k][2][1]/NOTZERO(mfdc.data[j].density[k][2][0]))
+				//if(mfdc.data[i].density[k][2][1]/NOTZERO(mfdc.data[i].density[k][2][0])
+				//	< mfdc.data[j].density[k][2][1]/NOTZERO(mfdc.data[j].density[k][2][0]))
+				if(mfdc.data[i].density[k][2][1]*NOTZERO(mfdc.data[j].density[k][2][0])
+					<mfdc.data[j].density[k][2][1]*NOTZERO(mfdc.data[i].density[k][2][0]))
 					mfdc.data[i].seq[k][2] ++;	
 				
-				if(mfdc.data[i].vari[1]/NOTZERO(mfdc.data[i].vari[0])
-					< mfdc.data[j].vari[1]/NOTZERO(mfdc.data[j].vari[0]))
+				//if(mfdc.data[i].vari[1]/NOTZERO(mfdc.data[i].vari[0])
+				//	< mfdc.data[j].vari[1]/NOTZERO(mfdc.data[j].vari[0]))
+				if(mfdc.data[i].vari[1]*NOTZERO(mfdc.data[j].vari[0])
+					<mfdc.data[j].vari[1]*NOTZERO(mfdc.data[i].vari[0]))
 					mfdc.data[i].seq[k][3] ++;
 			}
 		}
@@ -583,52 +585,62 @@ int genStartSampleCtl(const char* fileName,int isDir)
 	
 	
 	
-	printf(".");fflush(NULL);//TODO TIPS
+	//printf(".");fflush(NULL);//TODO TIPS
 	// write sample
-	fprintf(fp,"#paper %d[%s] ",id,fileName);
-	for(int i=0;i<mfdc.top;i++) fprintf(fp,"[%d:%d]",i,mfdc.data[i].offset);
-	fprintf(fp,"\n");
+	//fprintf(fp,"#paper %d[%s] ",id,fileName);
+	//for(int i=0;i<mfdc.top;i++) fprintf(fp,"[%d:%d]",i,mfdc.data[i].offset);
+	//fprintf(fp,"\n");
+	int start = 0;
 	
 	for(int i=0;i<mfdc.top;i++)
 	{
-		
+		offlist[i] = mfdc.data[i].offset;	
 		if(REMOVE_ONLY_FIVE)
 		{
 			if(mfdc.data[i].t[0]==0&&mfdc.data[i].t[1]==0&&mfdc.data[i].t[2]==0&&mfdc.data[i].t[3]==0)
 				continue;
 		}
-		//fprintf(fp,"%c1 qid:%d ",mfdc.data[i].positive?'+':'-',i);
-		fprintf(fp,"%c1 ",mfdc.data[i].positive?'+':'-');
+		//fprintf(fp,"%c1 ",mfdc.data[i].positive?'+':'-');
 		for(int j=0;j<FEATURE_SIZE;j++)
-			rankWrite(fp,j*5+1,mfdc.data[i].t[j],5);
+		{
+			rankWriteW(ws[i],start,mfdc.data[i].t[j],5);
+			start+=5;
+		}
+		//	rankWrite(fp,j*5+1,mfdc.data[i].t[j],5);
 		//	fprintf(fp,"%d:%d ",j+1,mfdc.data[i].t[j]);
 			
-		gen26ToEnd(fp,mfdc.data[i]);
-		fprintf(fp,"\n");
+		start = gen26ToEndW(ws[i],mfdc.data[i],start);
 		
-		printf(".");fflush(NULL);//TODO TIPS
+		ws[i][start].wnum = 0; 
+		
+		
+		//for(int z=0;z<start;z++)
+		//{
+		//	printf("[%ld|%f]\n",ws[i][z].wnum,ws[i][z].weight);
+		//}
+		
+		//printf("\n");
+		//getchar();
+		
+		//fprintf(fp,"\n");
+		
+		//printf(".");fflush(NULL);//TODO TIPS
 	}
-		
 	
+	storeREFO();
 	
-	printf("  [done]\n");
-        cleanContent();
+	//printf("  [done]\n");
+        cleanContent(); //TODO REMOVE
         selfAddFileNum();
         id++;
-        return 1;
+        return mfdc.top;
 }
 
 
-
-
-
-
-
-
-
-
-int genStartSampleCtlW(const char* fileName,WORD *feature,int flen)
+int reGetOffsetStartFeaturesW(const char* fileName,WORD ws[ITNUM][FTWIDE],long offlist[ITNUM])
 {
+	//int id = 0;
+	static int id = 0;
         // parse tag or etc ,move data to RAM
  	initContent();
 	if(!parseFile(fileName))
@@ -637,159 +649,7 @@ int genStartSampleCtlW(const char* fileName,WORD *feature,int flen)
 		getchar();
 		return 0;
 	}
-	
-	// search from db
-	if(!getFeature(fileName,&mfdc)) // get One To Five from DB
-	{
-		int i;
-		//int j;
-		int threshold;
-		unsigned int refOffset;
-		StackInfo info[FEATURE_SIZE];
-		for(threshold=0;threshold<FEATURE_SIZE;threshold++) 
-			stackData(&info[threshold],isAccpted,getPcontent(),getPclen(),threshold);
-			
-		unsigned int count[FEATURE_SIZE];
-		//unsigned int status[FEATURE_SIZE];
-		int maxid;
-		int maxoffset;
-	
-		int isPositive;
-		
-		// DB data set
-		mfd.qid = id;
-	
-		refOffset = getReferenceHeadOffset();
-		
-		//init count 
-		for(i=0;i<FEATURE_SIZE;i++) count[i]=1;
-		
-		//data
-		mfdc.top = 0;
-		
-		while(!allZero(info,FEATURE_SIZE))
-		{	
-			maxid = maxTop(info,FEATURE_SIZE);
-			maxoffset = info[maxid].data[info[maxid].top-1];
-			isPositive = VALUESDIFF(refOffset,maxoffset) < 10 ;
-			
-			mfd.positive = isPositive;
-			mfd.offset = maxoffset;
-			
-			for(i=0;i<FEATURE_SIZE;i++)
-			{
-				//status[i] = 0;
-				mfd.t[i] = 0;
-				if(VALUESDIFF(info[i].data[info[i].top-1],maxoffset)<10)
-				{
-					info[i].top--;
-					//status[i] = count[i];
-					//DB data set
-					mfd.t[i] = count[i];//1,2,3,...
-					
-					count[i]++;//++
-				}
-			
-			}
-
-			if(!insertFeature(fileName,mfd))
-			{
-				fprintf(stderr,"[DB] insertFeature()(1): error --%d",__LINE__);
-				//getchar();
-			}
-		
-			mfdc.data[mfdc.top] = mfd;
-			mfdc.top ++ ;
-			
-		}
-		
-		//db insert
-		if(!insertFeatureInfo(fileName,mfdc.top))
-		{
-			fprintf(stderr,"[DB] insertFeatureInfo()(2): error %d",__LINE__);
-			getchar();
-		}
-	} // end of GET DATA FROM DB
-	
-
-	
-	printf(".");fflush(NULL);//TODO TIPS
-	
-	// generate feature info data
-	int beforeData;
-	int totalData;
-	for(int i=0;i<mfdc.top;i++)
-	{
-		
-		for(int j=0;j<CALLBACK_LEN;j++)
-		{
-			offsetStat(mfdc.data[i].offset,
-					&totalData,&beforeData,functionList[j]);
-			mfdc.data[i].fid[j][0] = beforeData;
-			mfdc.data[i].fid[j][1] = totalData;
-		}
-	}
-	
-	//density and etc
-	
-	printf(".");fflush(NULL);//TODO TIPS
-	
-	// adjacencyOffset setting ... 
-	for(int i=0;i<mfdc.top;i++)
-	{
-		mfdc.data[i].adjacencyOffset[0] = 0;
-		mfdc.data[i].adjacencyOffset[1] = getPclen();
-		for(int j=0;j<mfdc.top;j++)
-		{
-			if(i == j) continue;
-			if(mfdc.data[i].offset < mfdc.data[i].offset && mfdc.data[i].adjacencyOffset[0] < mfdc.data[i].offset)
-				mfdc.data[i].adjacencyOffset[0] = mfdc.data[i].offset ;
-			else if(mfdc.data[i].offset > mfdc.data[i].offset && mfdc.data[i].adjacencyOffset[1] > mfdc.data[i].offset)
-				mfdc.data[i].adjacencyOffset[1] = mfdc.data[i].offset ;
-		}
-	}
-	
-	
-	printf(".");fflush(NULL);//TODO TIPS
-	
-	int diff;
-	int lmt;
-	//density && variance setting ... 
-	CloseKWD ckwd;
-	for(int i=0;i<mfdc.top;i++)
-	{
-		for(int j=0;j<CALLBACK_LEN;j++)
-		{
-			mfdc.data[i].density[j][0][0] = (double)mfdc.data[i].fid[j][0]/NOTZERO(mfdc.data[i].offset);
-			mfdc.data[i].density[j][0][1] = (double)(mfdc.data[i].fid[j][1]-mfdc.data[i].fid[j][0])/NOTZERO(getPclen()-mfdc.data[i].fid[j][0]);
-			
-			offsetBetweenStat(mfdc.data[i].offset,mfdc.data[i].adjacencyOffset[0],&diff,functionList[j]);
-			//mfdc.data[i].density[j][1][0] = (double)(mfdc.data[i].offset-mfdc.data[i].adjacencyOffset[0])/NOTZERO(diff);
-			mfdc.data[i].density[j][1][0] = (double)diff/NOTZERO(VALUESDIFF(mfdc.data[i].offset,mfdc.data[i].adjacencyOffset[0]));
-			
-			offsetBetweenStat(mfdc.data[i].offset,mfdc.data[i].adjacencyOffset[1],&diff,functionList[j]);
-			mfdc.data[i].density[j][1][1] = (double)diff/NOTZERO(VALUESDIFF(mfdc.data[i].adjacencyOffset[1],mfdc.data[i].offset));
-			
-			
-			lmt = 300;
-			// prev && next 300* words
-			offsetBetweenStat(mfdc.data[i].offset,LMB(mfdc.data[i].offset-lmt),&diff,functionList[j]);
-			mfdc.data[i].density[j][2][0] = (double)diff/NOTZERO(VALUESDIFF(mfdc.data[i].offset,LMB(mfdc.data[i].offset-lmt)));
-			
-			offsetBetweenStat(mfdc.data[i].offset,LMB(mfdc.data[i].offset+lmt),&diff,functionList[j]);
-			mfdc.data[i].density[j][1][1] = (double)diff/NOTZERO(VALUESDIFF(LMB(mfdc.data[i].offset+lmt),mfdc.data[i].offset));
-			
-			// variance 
-			//int getCloseKWD(int offset,CloseKWD *closeKWD,int (*callback)(int offset,int limit));
-			getCloseKWD(mfdc.data[i].offset,&ckwd,functionList[j]);
-			mfdc.data[i].vari[0] = getVariance(ckwd.prev,ckwd.pLen);
-			mfdc.data[i].vari[1] = getVariance(ckwd.next,ckwd.nLen);
-		}
-	}
-	
-	
-	// sequence setting ... 
-	printf(".");fflush(NULL);//TODO TIPS
+	//for(int z=0;z<)
 	for(int i=0;i<mfdc.top;i++)
 	{
 		for(int k=0;k<CALLBACK_LEN;k++)
@@ -802,20 +662,28 @@ int genStartSampleCtlW(const char* fileName,WORD *feature,int flen)
 			if(i==j) continue;
 			for(int k=0;k<CALLBACK_LEN;k++)
 			{
-				if(mfdc.data[i].density[k][0][1]/NOTZERO(mfdc.data[i].density[k][0][0])
-					< mfdc.data[j].density[k][0][1]/NOTZERO(mfdc.data[j].density[k][0][0]))
+				//if(mfdc.data[i].density[k][0][1]/NOTZERO(mfdc.data[i].density[k][0][0])
+				//	< mfdc.data[j].density[k][0][1]/NOTZERO(mfdc.data[j].density[k][0][0]))
+				if(mfdc.data[i].density[k][0][1]*NOTZERO(mfdc.data[j].density[k][0][0])
+					<mfdc.data[j].density[k][0][1]*NOTZERO(mfdc.data[i].density[k][0][0]))
 					mfdc.data[i].seq[k][0] ++;
 				
-				if(mfdc.data[i].density[k][1][1]/NOTZERO(mfdc.data[i].density[k][1][0])
-					< mfdc.data[j].density[k][1][1]/NOTZERO(mfdc.data[j].density[k][1][0]))
+				//if(mfdc.data[i].density[k][1][1]/NOTZERO(mfdc.data[i].density[k][1][0])
+				//	< mfdc.data[j].density[k][1][1]/NOTZERO(mfdc.data[j].density[k][1][0]))
+				if(mfdc.data[i].density[k][1][1]*NOTZERO(mfdc.data[j].density[k][1][0])
+					<mfdc.data[j].density[k][1][1]*NOTZERO(mfdc.data[i].density[k][1][0]))
 					mfdc.data[i].seq[k][1] ++;
 				
-				if(mfdc.data[i].density[k][2][1]/NOTZERO(mfdc.data[i].density[k][2][0])
-					< mfdc.data[j].density[k][2][1]/NOTZERO(mfdc.data[j].density[k][2][0]))
+				//if(mfdc.data[i].density[k][2][1]/NOTZERO(mfdc.data[i].density[k][2][0])
+				//	< mfdc.data[j].density[k][2][1]/NOTZERO(mfdc.data[j].density[k][2][0]))
+				if(mfdc.data[i].density[k][2][1]*NOTZERO(mfdc.data[j].density[k][2][0])
+					<mfdc.data[j].density[k][2][1]*NOTZERO(mfdc.data[i].density[k][2][0]))
 					mfdc.data[i].seq[k][2] ++;	
 				
-				if(mfdc.data[i].vari[1]/NOTZERO(mfdc.data[i].vari[0])
-					< mfdc.data[j].vari[1]/NOTZERO(mfdc.data[j].vari[0]))
+				//if(mfdc.data[i].vari[1]/NOTZERO(mfdc.data[i].vari[0])
+				//	< mfdc.data[j].vari[1]/NOTZERO(mfdc.data[j].vari[0]))
+				if(mfdc.data[i].vari[1]*NOTZERO(mfdc.data[j].vari[0])
+					<mfdc.data[j].vari[1]*NOTZERO(mfdc.data[i].vari[0]))
 					mfdc.data[i].seq[k][3] ++;
 			}
 		}
@@ -823,41 +691,44 @@ int genStartSampleCtlW(const char* fileName,WORD *feature,int flen)
 	
 	
 	
-	printf(".");fflush(NULL);//TODO TIPS
+	//printf(".");fflush(NULL);//TODO TIPS
 	// write sample
-	fprintf(fp,"#paper %d[%s] ",id,fileName);
-	for(int i=0;i<mfdc.top;i++) fprintf(fp,"[%d:%d]",i,mfdc.data[i].offset);
-	fprintf(fp,"\n");
+	//fprintf(fp,"#paper %d[%s] ",id,fileName);
+	//for(int i=0;i<mfdc.top;i++) fprintf(fp,"[%d:%d]",i,mfdc.data[i].offset);
+	//fprintf(fp,"\n");
+	int start = 0;
 	
 	for(int i=0;i<mfdc.top;i++)
 	{
-		
+		offlist[i] = mfdc.data[i].offset;	
 		if(REMOVE_ONLY_FIVE)
 		{
 			if(mfdc.data[i].t[0]==0&&mfdc.data[i].t[1]==0&&mfdc.data[i].t[2]==0&&mfdc.data[i].t[3]==0)
 				continue;
 		}
-		//fprintf(fp,"%c1 qid:%d ",mfdc.data[i].positive?'+':'-',i);
-		fprintf(fp,"%c1 ",mfdc.data[i].positive?'+':'-');
+		//fprintf(fp,"%c1 ",mfdc.data[i].positive?'+':'-');
 		for(int j=0;j<FEATURE_SIZE;j++)
-			rankWrite(fp,j*5+1,mfdc.data[i].t[j],5);
+		{
+			rankWriteW(ws[i],start,mfdc.data[i].t[j],5);
+			start+=5;
+		}
+		//	rankWrite(fp,j*5+1,mfdc.data[i].t[j],5);
 		//	fprintf(fp,"%d:%d ",j+1,mfdc.data[i].t[j]);
 			
-		gen26ToEnd(fp,mfdc.data[i]);
-		fprintf(fp,"\n");
+		start = gen26ToEndW(ws[i],mfdc.data[i],start);
 		
-		printf(".");fflush(NULL);//TODO TIPS
+		ws[i][start].wnum = 0; 
+		
 	}
-		
 	
+	storeREFO();
 	
-	printf("  [done]\n");
+	//printf("  [done]\n");
         cleanContent();
         selfAddFileNum();
         id++;
-        return 1;
+        return mfdc.top;
 }
-
 
 
 

@@ -58,7 +58,7 @@ int doCreateTable()
 				sampleNumber int\
 				)",0,0,0);
 	sqlite3_exec(featureSrc,createTableQuery,0,0,0);
-	sqlite3_exec(featureSrc,createTableQuery2,0,0,0);
+	//sqlite3_exec(featureSrc,createTableQuery2,0,0,0);
 	return 0;
 }
 
@@ -93,7 +93,8 @@ int insertFeature(const char* fileName,featureData data)
 		data.t[2],
 		data.t[3],
 		data.t[4],
-		data.positive,
+		//data.positive,
+		0,
 		data.offset);
 	
 	//DEBUG	
@@ -156,15 +157,12 @@ int doGetFeatureData(void *a_param, int argc, char **argv, char **column)
 	featureData *fd;
 	fdc->top ++;
 	fd = &(fdc->data[fdc->top-1]);
-	//printf("ok1");
 	fd->qid = atoi(argv[0]);
-	//printf("ok2");
 	for(i=0;i<5;i++) fd->t[i] = atoi(argv[i+1]);
-	//printf("ok3");
-	fd->positive = atoi(argv[6]);
-	//printf("ok4");
+	
+	//fd->positive = atoi(argv[6]);
+	
 	fd->offset = atoi(argv[7]);
-	//printf("ok5");
 	return 0;
 }
 

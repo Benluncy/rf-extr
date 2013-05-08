@@ -1,6 +1,11 @@
 #ifndef __COMMON_H__
 #define __COMMON_H__
 #include <stdio.h>
+#include "svm_common.h"
+
+//for predict
+#define FTWIDE 302 //feature number
+#define ITNUM 512 // item number
 
 #define thresholdForDifferneces  2
 #define exThresholdForDifferences (thresholdForDifferneces*2)
@@ -44,6 +49,6 @@ int rateWriteW(WORD *w,int start,double rate);
 
 
 int setFtValue(WORD *w,int start,int val);
-
+int setFtValueF(WORD *w,int start,double val);
 
 #endif // __COMMON_H__

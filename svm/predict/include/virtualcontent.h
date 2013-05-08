@@ -14,6 +14,7 @@ unsigned int *getTags(void);
 int getClen(void);
 int getPclen(void);
 
+
 //inline
 int getTokenId(char *tkname,unsigned int len);
 

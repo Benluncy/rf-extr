@@ -78,7 +78,7 @@ int main (int argc, char* argv[])
     	printf("A:");
     
       for(j=0;(words[j]).wnum != 0;j++) {  /* Check if feature numbers   */
-      	//printf("[%ld~%f|",words[j].wnum,words[j].weight);
+      	printf("[%ld~%f|\n",words[j].wnum,words[j].weight);
 	if((words[j]).wnum>model->totwords) /* are not larger than in     */
 	  (words[j]).wnum=0;               /* model. Remove feature if   */
 	//printf("%ld~%f] ",words[j].wnum,words[j].weight);

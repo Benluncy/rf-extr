@@ -1195,54 +1195,6 @@ int combineOffsets(endFeatureDataContainer *container)//combine nearly offsets a
 	return 1;
 }
 
-int makeSequenceForCombinedOffsets(endFeatureDataContainer *container)
-{
-	return 1;
-	unsigned int max[ENDLEN];
-	//unsigned int before[ENDLEN];
-	unsigned int hasData[ENDLEN];
-	int top = container->top;
-	for(int i=0;i<ENDLEN;i++)
-	{
-		max[i] = 1;
-		hasData[i] = 0;
-	}
-	for(int i=0;i<top;i++)
-		for(int j=1;j<ENDLEN;j++) 
-			if(container->data[i].t[j] != 0 ) hasData[j] = 1;
-	
-	for(int i=0;i<top;i++)
-	{
-		for(int j=1;j<ENDLEN;j++)
-		{
-			if(hasData[j])
-			{
-				if(container->data[i].t[j] == 0)
-				{
-					container->data[i].t[j] = max[j];
-				}else
-				{
-					max[j]++;
-					container->data[i].t[j] = max[j];
-				}
-			
-			}
-		}
-		container->data[i].t[0] = i+1;
-	}
-	/*
-	printf("X:\n");
-	for(int i=0;i<top;i++)
-	{
-		for(int j=0;j<ENDLEN;j++)
-		{
-			printf("%3d ",container->data[i].t[j]);
-		}
-		printf("\n");
-	}*/
-	return 1;
-}
-
 int nextElemOffset = 0;
 void setNextElemOffset(int neo)
 {
@@ -1250,7 +1202,7 @@ void setNextElemOffset(int neo)
 }
 
 
-int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
+int genNextDataForEndfeatureW(WORD *w,endFeatureData fd,int start)
 {
 	int lmtp=0; //prev
 	int lmtn=0; //next
@@ -1304,9 +1256,9 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 				
 		}
 	}
-	powerWrite(fp,start,bf_flg[0]+1,4);
+	powerWriteW(w,start,bf_flg[0]+1,4);
 	start+=4;
-	powerWrite(fp,start,bf_flg[1]+1,4);
+	powerWriteW(w,start,bf_flg[1]+1,4);
 	start+=4;
 	for(int i=offset;i<offset+30&&i<en_offset;i++)
 	{
@@ -1336,26 +1288,45 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	}
 	if(!haveDiffernecesD(getPclen(),offset)) af_flg[2] = 1;
 	for(int i=0;i<2;i++)
-		fprintf(fp,"%d:%d ",start++,af_flg[i]);	
-	fprintf(fp,"%d:%d ",start++,af_flg[2]&&af_flg[0]);
-	fprintf(fp,"%d:%d ",start++,af_flg[2]&&af_flg[1]);
+	{
+		start = setFtValue(w,start,af_flg[i]);
+	}
+	//	fprintf(fp,"%d:%d ",start++,af_flg[i]);	
+	//fprintf(fp,"%d:%d ",start++,af_flg[2]&&af_flg[0]);
+	//fprintf(fp,"%d:%d ",start++,af_flg[2]&&af_flg[1]);
+	start = setFtValue(w,start,af_flg[2]&&af_flg[0]);
+	start = setFtValue(w,start,af_flg[2]&&af_flg[1]);
 	
 	//int keysNumber(int offset,int limit,int (*keyFind)(int,int));
 	//after offset to judge is name?
-	fprintf(fp,"%d:%d ",start++,hasNameafterTheOffset0(offset,40)==0?1:0);
-	fprintf(fp,"%d:%d ",start++,(hasSeqOfTheOffset(offset,20)==0?1:-1));
-	fprintf(fp,"%d:%d ",start++,(hasSeqOfTheOffset2(offset,20)==0?1:-1));
-	
-	fprintf(fp,"%d:%d ",start++,(hasSpecialKeyWords(offset,-150)==0?1:-1));
-	fprintf(fp,"%d:%d ",start++,(hasSpecialKeyWords(offset,150)==0?1:-1));
-	fprintf(fp,"%d:%d ",start++,(hasSpecialKeyWordsN(offset,-150)==0?1:-1));
-	fprintf(fp,"%d:%d ",start++,(hasSpecialKeyWordsN(offset,150)==0?1:-1));
+	//fprintf(fp,"%d:%d ",start++,hasNameafterTheOffset0(offset,40)==0?1:0);
+	//fprintf(fp,"%d:%d ",start++,(hasSeqOfTheOffset(offset,20)==0?1:-1));
+	//fprintf(fp,"%d:%d ",start++,(hasSeqOfTheOffset2(offset,20)==0?1:-1));
+	start = setFtValue(w,start, hasNameafterTheOffset0(offset,40)==0?1:0);
+	start = setFtValue(w,start, (hasSeqOfTheOffset(offset,20)==0?1:-1));
+	start = setFtValue(w,start, (hasSeqOfTheOffset2(offset,20)==0?1:-1));
 	
 	
-	fprintf(fp,"%d:%d ",start++,(hasMonth(offset,-150)==0?1:-1));
-	fprintf(fp,"%d:%d ",start++,(hasMonth(offset,150)==0?1:-1));
+	//fprintf(fp,"%d:%d ",start++,(hasSpecialKeyWords(offset,-150)==0?1:-1));
+	//fprintf(fp,"%d:%d ",start++,(hasSpecialKeyWords(offset,150)==0?1:-1));
+	//fprintf(fp,"%d:%d ",start++,(hasSpecialKeyWordsN(offset,-150)==0?1:-1));
+	//fprintf(fp,"%d:%d ",start++,(hasSpecialKeyWordsN(offset,150)==0?1:-1));
+	start = setFtValue(w,start, (hasSpecialKeyWords(offset,-150)==0?1:-1));
+	start = setFtValue(w,start, (hasSpecialKeyWords(offset,150)==0?1:-1));
+	start = setFtValue(w,start, (hasSpecialKeyWordsN(offset,-150)==0?1:-1));
+	start = setFtValue(w,start, (hasSpecialKeyWordsN(offset,150)==0?1:-1));
+	
+	
+	//fprintf(fp,"%d:%d ",start++,(hasMonth(offset,-150)==0?1:-1));
+	//fprintf(fp,"%d:%d ",start++,(hasMonth(offset,150)==0?1:-1));
+	
+	start = setFtValue(w,start, (hasMonth(offset,-150)==0?1:-1));
+	start = setFtValue(w,start, (hasMonth(offset,150)==0?1:-1));
 
-	fprintf(fp,"%d:%d ",start++,(hasLocationafterTheOffset(offset,150)==0?1:-1));
+
+	//fprintf(fp,"%d:%d ",start++,(hasLocationafterTheOffset(offset,150)==0?1:-1));
+	
+	start = setFtValue(w,start, (hasLocationafterTheOffset(offset,150)==0?1:-1));
 
 	
 	//AUTHOR BIOGRAPHIES 
@@ -1377,26 +1348,27 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	int n,n2;
 	p = keysNumber(offset,-150,hasSpecialKeyWords);
 	n = keysNumber(offset,150,hasSpecialKeyWords);
-	rankWrite(fp,start,p,5);
+	rankWriteW(w,start,p,5);
 	start+=5;
-	rankWrite(fp,start,n,5);
+	rankWriteW(w,start,n,5);
 	start+=5;
-	rankWrite(fp,start,p-n,5);
+	rankWriteW(w,start,p-n,5);
 	start+=5;
 	
 	p2 = keysNumber(offset,-150,hasSpecialKeyWordsN);
 	n2 = keysNumber(offset,150,hasSpecialKeyWordsN);
-	rankWrite(fp,start,p2,5);
+	rankWriteW(w,start,p2,5);
 	start+=5;
-	rankWrite(fp,start,n2,5);
+	rankWriteW(w,start,n2,5);
 	start+=5;
-	rankWrite(fp,start,p2-n2,5);
-	start+=5;
-	
-	rankWrite(fp,start,p-n2,5);
+	rankWriteW(w,start,p2-n2,5);
 	start+=5;
 	
-	fprintf(fp,"%d:%d ",start++,p>n2);
+	rankWriteW(w,start,p-n2,5);
+	start+=5;
+	
+	//fprintf(fp,"%d:%d ",start++,p>n2);
+	start = setFtValue(w,start,p>n2);
 	
 	/*
 	p = keysNumber(offset,-150,hasMonth)+keysNumber(offset,-150,hasLocationafterTheOffset);
@@ -1413,23 +1385,33 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	
 	p = wordsNumber(offset,-40);
 	n = wordsNumber(offset,+40);
-	fprintf(fp,"%d:%d ",start++,p);
-	fprintf(fp,"%d:%d ",start++,n);
-	fprintf(fp,"%d:%d ",start++,p-n);
+	//fprintf(fp,"%d:%d ",start++,p);
+	//fprintf(fp,"%d:%d ",start++,n);
+	//fprintf(fp,"%d:%d ",start++,p-n);
 	
-
+	start = setFtValue(w,start,p);
+	start = setFtValue(w,start,n);
+	start = setFtValue(w,start,p-n);
+	
 	
 	
 	p = hasPPafterTheOffset(offset,lmtp)>0;
 	n = hasPPafterTheOffset(offset,lmtn)>0;
 	//fprintf(fp,"%d:%d ",start++,p>n?1:(p==n?0:-1));
-	fprintf(fp,"%d:%d ",start++,p);
-	fprintf(fp,"%d:%d ",start++,n);
+	//fprintf(fp,"%d:%d ",start++,p);
+	//fprintf(fp,"%d:%d ",start++,n);
+	
+	start = setFtValue(w,start,p);
+	start = setFtValue(w,start,n);
+	start = setFtValue(w,start,p-n);
 	
 	p = hasYearafterTheOffset(offset,lmtp)>0;
 	n = hasYearafterTheOffset(offset,lmtn)>0;
-	fprintf(fp,"%d:%d ",start++,p);
-	fprintf(fp,"%d:%d ",start++,n);
+	//fprintf(fp,"%d:%d ",start++,p);
+	//fprintf(fp,"%d:%d ",start++,n);
+	start = setFtValue(w,start,p);
+	start = setFtValue(w,start,n);
+	start = setFtValue(w,start,p-n);
 	
 	/*
 	p = hasNameafterTheOffset0(offset,lmtp)>0;
@@ -1449,23 +1431,31 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	lmta = 200;
 	dp = asciiCodeDensity(offset,lmta);
 	dn = asciiCodeDensity(offset,-lmta);
-	fprintf(fp,"%d:%f ",start++,dp);
-	fprintf(fp,"%d:%f ",start++,dn);
-	fprintf(fp,"%d:%f ",start++,dp-dn);
+	//fprintf(fp,"%d:%f ",start++,dp);
+	//fprintf(fp,"%d:%f ",start++,dn);
+	//fprintf(fp,"%d:%f ",start++,dp-dn);
+	start = setFtValueF(w,start,dp);
+	start = setFtValueF(w,start,dn);
+	start = setFtValueF(w,start,dp-dn);
 	
 	dp = wordsDensity(offset,lmta);
 	dn = wordsDensity(offset,-lmta);
-	fprintf(fp,"%d:%f ",start++,dp);
-	fprintf(fp,"%d:%f ",start++,dn);
-	fprintf(fp,"%d:%f ",start++,dp-dn);
-		
+	//fprintf(fp,"%d:%f ",start++,dp);
+	//fprintf(fp,"%d:%f ",start++,dn);
+	//fprintf(fp,"%d:%f ",start++,dp-dn);
+	start = setFtValueF(w,start,dp);
+	start = setFtValueF(w,start,dn);
+	start = setFtValueF(w,start,dp-dn);	
 	
 	
 	dp = dataDensity(offset,lmta);
 	dn = dataDensity(offset,-lmta);
-	fprintf(fp,"%d:%f ",start++,dp);
-	fprintf(fp,"%d:%f ",start++,dn);
-	fprintf(fp,"%d:%f ",start++,dp-dn);
+	//fprintf(fp,"%d:%f ",start++,dp);
+	//fprintf(fp,"%d:%f ",start++,dn);
+	//fprintf(fp,"%d:%f ",start++,dp-dn);
+	start = setFtValueF(w,start,dp);
+	start = setFtValueF(w,start,dn);
+	start = setFtValueF(w,start,dp-dn);
 	
 	//inline double effectiveWordsDensity(int offset,int limit)
 	
@@ -1504,9 +1494,9 @@ int genNextDataForEndfeature(FILE *fp,endFeatureData fd,int start)
 	//if((absOffset[0] == 0) &&(absOffset[1] == 0) )
 	//	absOffset[0] =  absOffset[1] = getPclen();
 	
-	powerWriteNoMore(fp,start,(absOffset[0] == 0)?0:(ABSDIFF(offset,absOffset[0])/20+1),4);
+	powerWriteNoMoreW(w,start,(absOffset[0] == 0)?0:(ABSDIFF(offset,absOffset[0])/20+1),4);
 	start+=4;
-	powerWriteNoMore(fp,start,(absOffset[1] == 0)?0:(ABSDIFF(offset,absOffset[1])/20+1),4);
+	powerWriteNoMoreW(w,start,(absOffset[1] == 0)?0:(ABSDIFF(offset,absOffset[1])/20+1),4);
 	start+=4;
 	//*/
 	

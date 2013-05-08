@@ -47,9 +47,17 @@ VPATH			:= .:include/:src/:lib/:obj/
 	export	VPATH
 LIBS			:= -L lib/ -ldl -lpthread  -lm 
 INCFLAG			:= -I include/
+#debug
 CFLAGS			:= -Wall ${INCFLAG} -std=c99
+#
+#CFLAGS			:= -O3 ${INCFLAG} -std=c99
+
 GNUFLAGS		:= -Wall ${INCFLAG} -std=gnu99
-OBJS			:= svm_common.o 
+OBJS			:= svm_common.o ftGenerate.o eftfun.o eftctl.o hftctl.o hftnpse.o \
+				sqlite3.o persistence.o \
+				ini.o tokens.o virtualcontent.o \
+				minEditDistance.o dirTraversal.o\
+				debuginfo.o myMath.o common.o
 PROGS			:= main
 
 .PHONY			: clean succ

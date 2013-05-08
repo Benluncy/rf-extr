@@ -30,7 +30,7 @@ typedef struct sFeatureData //start feature data
 	int qid;
 	//char fileName[1024];	
 	int t[LENOFT];
-	int positive;
+//	int positive;
 	int offset;
 	int adjacencyOffset[2]; //0: prev 1:next 
 	int fid[CALLBACK_LEN][2];//feature info data fid[x][0] == beforeData fid[x][1] == totalData

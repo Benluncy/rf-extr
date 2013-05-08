@@ -2,6 +2,17 @@
 #include "svm_common.h"
 #include "hftctl.h"
 #include "eftctl.h"
+#include "eftfun.h"
+
+#include "common.h"
+#include "debuginfo.h"
+
+#include <stdlib.h>
+
+double line = -1.5;
+double lmt = 1;
+int last = 0;
+
 
 MODEL *mstart,*mend;
 
@@ -24,11 +35,13 @@ int initFindStart()
 	
 	// load model
 	loadModel("model/head.model",1);
+	return 1;
 }
 
 int freeFindStart()
 {
 	cleanFilterData();
+	return 1;
 }
 
 int initFindEnd()
@@ -62,7 +75,9 @@ int freeFindEnd()
 int loadModel(const char *modelfile,int start)
 {
 	MODEL *model;
-	model=read_model(modelfile);
+	char mfstr[522];
+	sprintf(mfstr,"%s",modelfile);
+	model=read_model(mfstr);
 	if(model == NULL) return 0;
 	if(start) mstart = model;
 	else mend = model;
@@ -78,15 +93,21 @@ int freeModel(int start)
 	return 1;
 }
 
-WORD doPredict(const char *fileName,MODEL *model)
+WORD doPredictStart(const char *fileName,MODEL *model)
 {
-	DOC *doc;
+	
 	//WORD words[3];
+	//MODEL *model;
+	//char modelfile[200];
 	// now is 299
-	WORD feature[302];
-	MODEL *model;
-	char modelfile[200];
+	WORD feature[ITNUM][FTWIDE];
+	long offlist[ITNUM];
+	int itemnum;
+	DOC *doc;
 	WORD distVal,nowVal;
+	
+	//
+	int j;
 	
 	distVal.weight = -10;
 	distVal.wnum = -1;
@@ -96,48 +117,134 @@ WORD doPredict(const char *fileName,MODEL *model)
 		add_weight_vector_to_linear_model(model);
 	}
 	
-	for(j=0;(features[j]).wnum != 0;j++)
-		if((features[j]).wnum>model->totwords) (features[j]).wnum=0;
+	
+	itemnum = genStartSampleCtlW(fileName,feature,offlist);
+	
+	
+	//for(j=0;(feature[j]).wnum != 0;j++)
+	//	if((feature[j]).wnum>model->totwords) (feature[j]).wnum=0;
 
-	doc = create_example(-1,0,0,0.0,create_svector(features,"",1.0));
-	nowVal.weight=classify_example(model,doc);
+	for(j=0;j<itemnum;j++)
+	{
+		doc = create_example(-1,0,0,0.0,create_svector(feature[j],"",1.0));
+		nowVal.weight=classify_example(model,doc);
 		
-	free_example(doc,1);
+//		printf("~%ld,%f VS %ld,%f ",offlist[j],nowVal.weight,
+//						distVal.wnum,distVal.weight);
+	
+		if(nowVal.weight > distVal.weight && !(nowVal.weight > 100))
+		{
+//			printf("\n%ld:%f => %ld:%f",distVal.wnum,distVal.weight
+//					,nowVal.wnum,nowVal.weight);
+			distVal.weight = nowVal.weight;
+			distVal.wnum = offlist[j];
+//			printf("update!");
+		}
+		free_example(doc,1);
+//		printf("\n");
+	}
+	
 
-
-	//printf("dest is :%f",dist);
 	return distVal;
 }
 
+int all = 0;
+int correct = 0;
 
-
-int predictStartOffset(const char *fileName)
-{
-	//dirTraversal("data/",1,genStartSampleCtl);
-	return 1;
-}
-
-int predictEndOffset(const char *fileName)
-{
-	//dirTraversal("data/",1,genEndSampleCtl);
-	return 1;
-}
-
+int pp = 0;
+int cc = 0;
 
 int predictCtl(const char* fileName,int isDir)
 {
 	if(isDir)
 	{
 		//printf("ignore dir:%s\n",fileName);
-		return 1;
+		return 0;
 	}
 	WORD res;
-	int predictedOffset;
-	res = doPredict(fileName,mstart);
-	if(res.weight > -0.5) predictedOffset = res.wnum;
+	int predictedOffset = 0;
+	int realoffset;
+	int unavailable = 0;
+
+	res = doPredictStart(fileName,mstart);
 	
-	return 1;
+	//unavailable = res.weight < -1.5 ? 1:0;
+	unavailable = res.weight < line ? 1:0;
+	predictedOffset = res.wnum;
+	realoffset = getREFO();
+	
+	//printf("real is : %d predicted is : %d",getREFO(),predictedOffset);
+	
+	
+	all++;
+	//if(!haveDiffernecesE(predictedOffset,realoffset))
+		//|| !haveDiffernecesD(predictedOffset,realoffset))
+	//if((ABSDIFF(predictedOffset,realoffset) < 30) ^ unavailable)
+	if((ABSDIFF(predictedOffset,realoffset) < 30) || unavailable)
+		correct++;
+	else 
+	{
+		cc++;
+		printf("> ");
+	}
+	printf("%d/%d(%f)  ",correct,all,100*(double)correct/all);
+	printf(" #%d",predictedOffset);
+	/*
+	if(ABSDIFF(predictedOffset,realoffset) >30) 
+	{
+		
+		printf(" ##%f",res.weight);
+	}
+	if(ABSDIFF(predictedOffset,realoffset) < 30 && unavailable)
+	{
+		printf("~%f",res.weight);
+		pp++; // >> : lineplus
+	}
+	*/	
+	printf("\n");
+	return predictedOffset;
 }
 
+
+int getTotalFile(){return all;}
+int getCorrectFile(){return correct;}
+
+void half()
+{
+	lmt =  lmt <= 0.01 ? 0.01 : lmt/2;
+}
+
+void lineplus()
+{
+	if(last != 1)
+	{
+		last = 1;
+		half();
+	}
+	line += lmt;
+}
+
+void linedec()
+{
+	if(last != -1)
+	{
+		last = -1;
+		half();
+	}
+	line -= lmt;	
+}
+
+int adjust()
+{
+	if(cc>pp) lineplus();
+	else if(cc<pp) linedec();
+	else return 0;
+	char str[200];
+	sprintf(str,"echo %f >> line",line);
+	system(str);
+	all = 0;
+	correct = 0;
+	return 1;
+}
 
 

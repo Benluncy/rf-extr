@@ -29,7 +29,7 @@ void closeLogFile()
 
 int errs = 0;
 
-int genEndSampleCtl(const char* fileName,int isDir)
+int genEndSampleCtlW(const char* fileName,WORD *w,int limit)
 {
 	//
 	/**
@@ -39,49 +39,24 @@ int genEndSampleCtl(const char* fileName,int isDir)
 	 */
 	//ONLY("data/orbz_sec/Animating facial expressions.txt");
        	//ONLY("data/orbz_sec/Antecedents and consequences of job satifaction among information center employees.txt");
-	FILE *fp;
 	static int id = 0;
-	int trainOrTest;
-	unsigned int targetOffset;
+	//unsigned int targetOffset;
 	unsigned int startOffset;
 	endFeatureDataContainer *_mfdc =getEndFeatureDataContainer();
 	//endFeatureDataContainer tmpCter ;
 	memset(_mfdc,0,sizeof(endFeatureDataContainer));
 	//memset(&tmpCter,0,sizeof(endFeatureDataContainer));
-	// ignore dir
-	if(isDir)
-        {
-                printf("ignore dir:%s\n",fileName);
-                return 1;
-        }
-        
-        // train or test
-	if(rand()%2) //train is 50% and test is 50%
-	{
-		fp = getTrainFile();
-		trainOrTest = 1;
-	}else
-	{
-		fp = getTestFile();
-		trainOrTest = 0;
-	}
-	
-	//printf("[%d] %s:%s",id,(trainOrTest?"train":"test"),fileName);
-	printf("[%d] %s:%s",id,(trainOrTest?"train":"test"),queryEscape(fileName));
-	
-	//printf("\n");
-	//TODO 	
-        
+
+
         // parse tag or etc ,move data to RAM
  	initContent();
 	if(!parseFile(fileName))
 	{
 		fprintf(stderr,"[[error parsing file : #%s#]]",fileName);
-		//getchar();
 		return 0;
 	}
 	
-	targetOffset = getReferenceEndOffset();
+//	targetOffset = getReferenceEndOffset();
  	startOffset = getReferenceHeadOffset();
 	//step 1: offsets generate
 	//if(!getFeature(fileName,_mfdc)) // get One To Five from DB
@@ -133,7 +108,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 	// 18 index of page2
 	
 	//step 3: write into file
-	fprintf(fp,"# %s \n",fileName);
+	//fprintf(fp,"# %s \n",fileName);
 	//int pptag = 0;
 	int start = 1;
 	for(int i = 0; i < _mfdc->top ;i++)
@@ -153,9 +128,9 @@ int genEndSampleCtl(const char* fileName,int isDir)
 		
 		
 		//positive
-		fprintf(fp,"%c1 ",!haveDiffernecesD(_mfdc->data[i].offset,targetOffset)?'+':'-');
+		//fprintf(fp,"%c1 ",!haveDiffernecesD(_mfdc->data[i].offset,targetOffset)?'+':'-');
 		//if(!haveDifferneces(_mfdc->data[i].offset,targetOffset)) pptag ++;
-		start = 1;
+		start = 0;
 		for(int j=0;j<ENDLEN;j++)
 		{
 			//break;//when debuging .. .. ingore these info
@@ -167,7 +142,8 @@ int genEndSampleCtl(const char* fileName,int isDir)
 				//rateWrite(fp,start,(double)_mfdc->data[i].t[0]/_mfdc->top);
 				//start+=5;
 				//rankWrite(fp,start,_mfdc->top-_mfdc->data[i].t[0]+1,5);
-				rankWriteNoMore(fp,start,_mfdc->top-_mfdc->data[i].t[0]+1,5);
+				//rankWriteNoMore(fp,start,_mfdc->top-_mfdc->data[i].t[0]+1,5);
+				rankWriteNoMoreW(w,start,_mfdc->top-_mfdc->data[i].t[0]+1,5);
 				start+=5;
 				break;
 			// */
@@ -179,7 +155,8 @@ int genEndSampleCtl(const char* fileName,int isDir)
 				// 1 acknowledgements etc.
 				// 2 table , he is figure ... (a list)
 				//fprintf(fp,"%d:%d ",start++,_mfdc->data[i].t[j]);
-				rankWrite(fp,start,_mfdc->data[i].t[j],3);
+				//rankWrite(fp,start,_mfdc->data[i].t[j],3);
+				rankWriteW(w,start,_mfdc->data[i].t[j],3);
 				start += 3;
 				break;
 			// */
@@ -189,7 +166,8 @@ int genEndSampleCtl(const char* fileName,int isDir)
 			case 3:
 			case 4:
 			case 5:
-				rankWrite(fp,start,_mfdc->data[i].t[j]+1,3);
+				//rankWrite(fp,start,_mfdc->data[i].t[j]+1,3);
+				rankWriteW(w,start,_mfdc->data[i].t[j]+1,3);
 				start += 3;
 				break;
 			// */
@@ -198,10 +176,8 @@ int genEndSampleCtl(const char* fileName,int isDir)
 			// f 3
 			case 6: // is end of article ?
 				// 0 , 1 , 2
-				fprintf(fp,"%d:%d ",start++,chkSpecialFlag()?
-						//_mfdc->data[i].t[j]:
-						0:
-						_mfdc->data[i].t[j]*2);
+				//fprintf(fp,"%d:%d ",start++,);
+				start = setFtValue(w,start,chkSpecialFlag()?0:_mfdc->data[i].t[j]*2);
 				break;
 		
 			// f 4
@@ -215,21 +191,24 @@ int genEndSampleCtl(const char* fileName,int isDir)
 				// 12 end page before ack or table
 				// end year before article
 				// 0 , 1 , 2,
-				rankWrite(fp,start,_mfdc->data[i].t[j],5);
+				//rankWrite(fp,start,_mfdc->data[i].t[j],5);
+				rankWriteW(w,start,_mfdc->data[i].t[j],5);
 				start += 5;
 				break;	
 		
 			case 9:
 			case 12:
 			case 15:
-				rankWrite(fp,start,_mfdc->data[i].t[j-1]+_mfdc->data[i].t[j-2],5);
+				//rankWrite(fp,start,_mfdc->data[i].t[j-1]+_mfdc->data[i].t[j-2],5);
+				rankWriteW(w,start,_mfdc->data[i].t[j-1]+_mfdc->data[i].t[j-2],5);
 				start += 5;
 				break;
 
 			case 16:
 			case 17:
 			case 18:
-				powerWriteNoMore(fp,start,_mfdc->data[i].t[j],5);
+				//powerWriteNoMore(fp,start,_mfdc->data[i].t[j],5);
+				powerWriteNoMoreW(w,start,_mfdc->data[i].t[j],5);
 				start+=5;
 				break;
 
@@ -243,7 +222,7 @@ int genEndSampleCtl(const char* fileName,int isDir)
 			case 21:
 			case 24:
 			case 27:
-				powerWriteNoMore(fp,start,_mfdc->data[i].t[j],8);
+				powerWriteNoMoreW(w,start,_mfdc->data[i].t[j],8);
 				start+=8;
 				break;
 			}
@@ -252,15 +231,16 @@ int genEndSampleCtl(const char* fileName,int isDir)
 		}
 			
 		setNextElemOffset(i<_mfdc->top-1?_mfdc->data[i+1].offset:0);
-		start = genNextDataForEndfeature(fp,_mfdc->data[i],start);
+		start = genNextDataForEndfeatureW(w,_mfdc->data[i],start);
 		
+		w[start].wnum=0;
 		
 		// endness of data
-		fprintf(fp," #%d",_mfdc->data[i].offset);
-		fprintf(fp,"\n");
+		//fprintf(fp," #%d",_mfdc->data[i].offset);
+		//fprintf(fp,"\n");
 	}
 
-	printf(" ok\n");
+	//printf(" ok\n");
 	id++;
 	
 	

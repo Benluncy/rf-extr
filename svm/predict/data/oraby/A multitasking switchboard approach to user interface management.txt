@@ -1,0 +1,420 @@
+
+ A Multitasking Switchboard Approach to User Interface Management Peter P. Tanner t, Stephen A. MacKay, 
+Darlene A. Stewart, and Marceli Wein Laboratory for Intelligent Systems National Research Council of 
+Canada Ottawa, Ontario K1A 0R8 Canada  Abstract A Switchboard model of user input management is presented 
+which takes advantage of opportunities afforded by a multitasking multiprocessor programming environment. 
+This model further separates application programming from the programming of the interaction dialogues 
+as compared with conventional user interface management systems. It also provides powerful tools for 
+implementing parallel forms of mput, is suitable for managing interaction in window-based systems, and 
+is very flexible. The paper describes this Switchboard model and its implementation on top of the Harmony 
+operating system, as well as discussing some of the graphics support needed for the model. CR Categories 
+and Subject Descriptors: D.1.3 [Programming Techniques]: Concurrent Programming; D.2.2 [Software Engineering]: 
+Tools and Techniques --user interfaces; D.4.1 [Operating Systems]: Process Management --concurrency, 
+multiprocessing/multi-programming, synchronization; D.4.7 [Operating Systems]: Organization and Design 
+--real-time systems; 1.3.2 [Computer Graphics]: Graphics Systems --distributed/network graphics; 1.3.4 
+[Computer Graphics]: Graphics Utilities --graphics packages, software support; 1.3.6 [Computer Graphics]: 
+Methodology and Techniques- device independence, ergonomics, interaction techniques. General Terms: Algorithms, 
+Design, Human Factors. Additional Keywords and Phrases: input model, message passing, parallel input, 
+user interface management systems, workstations. t current address: Computer Graphics Laboratory University 
+of Waterloo Waterloo, Ontario N2L 3G 1 Canada. NRC number: 25635 ISBN 0-89791-196-2 Introduction The 
+development of Adagio, a workstation to support research in intelligent robotics, draws on current research 
+in multitasking/multiprocessing, window management, and user interface management and thereby leads to 
+a novel approach to the programming model of the workstation. Adagio is implemented as a large number 
+of cooperating tasks (currently about 50 tasks are simultaneously active at any one time). Each of these 
+tasks is associated with one of: a screen window, a tablet window, a scarce resource such as a device 
+or data structure, or alternatively, acts as a courier between other tasks. One of the tasks, the Switchboard, 
+is responsible for connecting tasks which consume input to tasks which produce it. This responsibility 
+extends to coordinating the flow of input so that fresh input is available, that redundant input is discarded, 
+that tasks are provided with connections to the devices they require at task creation or on request, 
+and that these connections are closed when a task is destroyed. After discussing the goals of the Switchboard 
+approach to user input management, this paper describes the Switchboard model --illustrating the multitasking 
+approach, the window management facility and the user interface possibilities. Most importantly, the 
+paper will show that these three concepts are complementary and lead to the development of a powerful 
+user interface management system (UIMS), notable both for its flexibility and its support for parallel 
+user input. Input Management Goals The design of the software that supports the computer-human interface 
+has been greatly influenced by the ideas and goals put forward by researchers in User Interface Management 
+Systems (UIMS's) [10, 15]. Studies of UIMS approaches have established the advantages of separating the 
+application from the interaction programming, where this interaction programming is done using the assistance 
+of a UIMS. Because a UIMS permits rapid prototyping, an iterative style of specifying the interactive 
+dialogue is encouraged. The implementor may try out several possible interaction techniques on potential 
+users, evaluate them, and then select the one that is the most appropriate. In addition to providing 
+an easy prototyping capability, UIMS designers strive to make a variety of input techniques available 
+to the implementor. The goals for Adagio's input control include:  the separation of interaction programming 
+from application programming  the availability of easily modifiable connections between the  input 
+requirements of the application and the input devices (we use the term device to mean either a physical 
+or a virtual device) a facility that encourages the implementation of several input streams, all active 
+in parallel Multitasking Tasking Model The Switchboard UIMS model is based on and depends on Harmony, 
+a multitasking realtime operating system with rapid intertask message passing developed at the National 
+Research Council of Canada [7]. A program in Harmony is typically composed of many tasks. A task is often 
+used as one would use a subroutine in a conventional O/S, except that an instance of the task must be 
+explicitly created, and once it has been created it executes independently of, and'in parallel with, 
+the task that created it. (Executing in parallel is, of course, only strictly possible on a multiprocessor 
+-- the current implementation of Adagio runs on a single processor. Harmony, however, is a multiprocessor 
+operating system where the tasking operations are accomplished in a uniform manner whether the tasks 
+involved are on the same or different processors, so few problems are foreseen for the planned expansion 
+to a multiprocessor). Tasks communicate and synchronize with each other using the send-receive-reply 
+mechanism. The primitives are similar to those used in Thoth, the forerunner of Harmony, described previously 
+at SIGGRAPH by Beach et al [1], although Harmony supports variable length messages rather than being 
+limited to fixed length messages for task communication. In brief, a task may send information or may 
+send a request for information to another task with the blocking _Send primitive. The recipient of the 
+message, which receives the message with a _Receive or a_Try_receive, unblocks the sender by replying 
+using the _Reply primitive. The _Receive primitive causes the receiving task to block if no incoming 
+messages are queued; _Try receive, on the other hand, never blocks. With either receive primitive, the 
+programmer can specify whether a message may be accepted from any task or from some specific task. Note 
+that a task need not reply to the previous message it received before receiving the next; replies may 
+be issued in any order and at any time the recipient sees fit. A message passing system such as Harmony 
+makes a multitasking approach to programming feasible as the programmer is provided with an easy to use 
+and intuitive tasking model whose message passing and other tasking operations are accomplished very 
+rapidly. A send-receive-reply sequence in Harmony takes about 1 ms. Beach et al [1] demonstrate the value 
+and effectiveness of the multitasking message-based approach for building an interactive application. 
+As will be described below, the multitasking environment makes possible a much closer relationship among 
+windows and lays the groundwork for the Switchboard UIMS. Servers In addition to facilitating the use 
+of many small tasks, Harmony encourages the use of servers to provide various sorts of services, such 
+as the managing of scarce resources. These servers, all individual and separate tasks, are modelled on 
+the administrator concept [6]. An administrator normally does not send messages (it only receives and 
+replies to requests), and it often relies on one or more worker tasks (which send it requests for work 
+to do) to manipulate the resource it owns and to perform major computations, freeing up the administrator 
+task to process the client requests as quickly as possible. The scarce resources controlled by Adagio 
+servers include input devices, data structures, and the graphics display list. The Switchboard itself, 
+as will be illustrated below, is a server. An illustrative example of a server is the one used to manage 
+tablet input (Figure 1). Clients of the Tablet Server, which are of course tasks themselves, each send 
+messages requesting tablet input from a specific window. These requests are responded to when the tablet 
+pen is in the appropriate window, but held for later, thus blocking the client, when the pen is in another 
+window. A worker task, the Tablet Notifier, which communicates directly with the Tablet Interrupt Handler, 
+sends a message to the Tablet Server whenever the pen changes significantly in position or status. The 
+Tablet Server, following the administrator concept, is never blocked from processing requests. It is 
+always either waiting for a request or processing one. The request processing may result in zero or more 
+replies, not necessarily including one to the sender. If a server wishes to communicate with another 
+server, it usually does so through a courier which it may create for the purpose. Such couriers are used 
+between the Switchboard and the device servers. Servers provide for a highly structured design with controlled 
+access to resources. The server concept simplifies complex systems and is fundamental in the design of 
+Adagio. Window Management Windows The implementation of windows in the Adagio system reflects Adagio's 
+goals of supporting robot simulation and programming. In many window-based systems, windows are viewports 
+for disjoint applications, some disjoint to the degree that each window runs a different shell or instance 
+of the operating system. On the other hand, all Adagio windows assist in the single job of creating and 
+manipulating a data structure defining the robot, its environment, and the robot's tasks. Consequently 
+there is a much tighter coupling among the windows. Because Adagio is implemented on an Adage 3000, a 
+high performance raster graphics device with 24 bits per pixel, the difficulties involved in rasterops 
+and the large memory requirements for such a system led to the use of a tiled window approach rather 
+than the use of overlapping windows. (This decision is supported by the experimental work of Bly and 
+Rosenberg [2]). There are two fundamentally different types of windows supported by the Adagio system, 
+one for text and 2D symbolic graphics, the second for the display of three dimensional views of the robot 
+and its environment. Using the multitasking approach, there is a single task associated with each 2D 
+window, whether it be a menu window, a virtual device echo !i::ilTablet=ii!i!!i"ilntermp!il;} !............................... 
+Tablet Figure 1. The Tablet Server. (Note that arrow-heads point away from the taskmaking the request.) 
+ window (described below under Virtual Devices) or some other interaction window. Because each 3D window 
+displays a graphic representation of the current state of the single data structure describing the robot 
+and its environment and, with the multitasking approach to the workstation, it is quite feasible that 
+more than one task would need to update or query the structure representing the 3D geometric data, a 
+single task, the Data Structure Server, is given control over what is to be displayed in all the 3D windows. 
+The Data Structure Server To guarantee a tight coupling between the 3D windows and the data structure 
+they display, and to prevent corruption of the data from concurrent accesses, the data structure is known 
+only to a single task, the Data Structure Server. All requests for data structure updates and for information 
+from the data structure are fielded by the Data Structure Server (Figure 2). This serialization of accesses 
+to the data structure is not considered a bottleneck because of the low amount of processing performed 
+by the Data Structure Server for each request. Any update that requires a modification of the screen 
+image is forwarded by the Data Structure Server to the Graphics Server (described below). To avoid blocking 
+the Data Structure Server, these updates are passed via the Display List Courier. When a major portion 
+of the graphics data structure must be sent to the Graphics Server for the creation of the display list, 
+this is done by sending a pointer to the structure, thus making the structure temporarily known to another 
+task. (Such sharing of a data structure can always be done among tasks running in the same processor. 
+It can also be done among tasks executing in different processors of a multiprocessor with shared memory.) 
+Until the Display List Courier reports the completion of the screen update, the Data Structure Server 
+will satisfy only 3D data information requests. Requests to change the data will be held until it is 
+safe to do so. The Graphics Server Both the Data Structure Server and the 2D window tasks request modifications 
+to the display by sending messages to the Graphics Server. This server replaces the graphics subroutine 
+package traditionally used in a single-task graphics program. Running as an independent task with the 
+role of managing the frame buffer and the Adage bitslice processor, the Graphics Server handles three 
+classes of request messages --window management messages, 2D graphics messages, and 3D graphics messages 
+(Figure 3). Window management messages come from three distinct sources. The Window Manipulator task, 
+as the coordinator of the arrangement of windows on the display, requests changes in Application Task 
+ Structure ~ List Task Figure 2. Task structure for 3D graphics. Figure 3. The Graphics Server. (* denotes 
+that there may be multiple instances of the task.) the positions of windows. View Control tasks are responsible 
+for requesting changes in the viewing parameters associated with each window. Window Watchdog tasks ask 
+that they be informed (via a _Reply) of any changes to their respective windows. The 2D graphics messages 
+request text or symbolic output to be directed to the screen window associated with the requesting task. 
+The server is responsible for translating from the virtual coordinate system of the requestor to the 
+screen coordinates of its window. If required, the messages to a window may be stored and then reinterpreted 
+if the window is modified in size, or if a picture segment that potentially blocks other segments is 
+moved. This is different from many other tiled window systems that require the application running in 
+the window to become involved with the redraw of a window that has been changed in size. The 3D graphics 
+messages are in the form of commands for the Graphics Server to modify the display list. The display 
+list is in turn interpreted by the Adage bitslice processor to render the 3D image into the frame buffer 
+[8]. The microcode running in the bitslice processor is not strictly speaking a Harmony task, using shared 
+memory for communication rather than the send-receive-reply message passing primitives. However, it can 
+still be viewed externally like any other independent Adagio task. The Graphics Server acts as an agent 
+task, as described by Plebon and Booth [11], for the task running in the bitslice processsor, providing 
+an interface to the other processor and managing the communication between and the shared resources of 
+the two processors. Because requests for the bitslice processor to update the display list are buffered 
+by the Graphics Server until the bitslice is ready to begin another update, client tasks requesting the 
+services of the Graphics Server do not remain blocked for long. To prevent the Graphics Server from wasting 
+time monitoring the shared memory, a worker task, the Bitslice Notifier, is responsible for checking 
+the condition of the bitslice processor and informing the Graphics Server when the bitslice processor 
+has finished. The display list supports multiple views of a single environment where these views may 
+differ in their viewpoints as well as their display parameters. Using different display parameters for 
+different 3D windows permits, for example, the posting of shaded images of the robot in one window and 
+a simple stick figure of only the axes of rotation of each of the joints in another --both rendered from 
+the same display list. f The Switchboard  Introduction The Switchboard model of interactive programming 
+has, for its goal, the handling of user input in a multitasking window-based environment. It was therefore 
+designed to handle many sources of user input (be they physical or virtual devices), and to properly 
+direct each input to the appropriate task, selected from the many tasks that may request input. The idea 
+of several tasks requesting input through a single program entity is not new. Enderle, in his Seeheim 
+workshop report on the interface of the UIMS to the application [4], describes the relationship shown 
+in Figure 4 --a UIMS funnelling input to a set of application modules executing in parallel. Conventional 
+operating systems provide a mechanism through which input device information flows to several tasks. 
+However, the restricted nature of this flow and the difficulty in developing abstractions of input that 
+easily coexist results in a far less flexible situation than is provided by the Switchboard model. These 
+difficulties have, for example, resulted in the paucity of implementations of the full GKS level 2C input 
+model [12]. The Switchboard, together with Harmony, provides a more appropriate base for a UIMS. The 
+Switchboard is a task that communicates with both cfients (tasks requiring input from user controllable 
+peripherals) and device couriers (tasks that provide this input) (Figure 5). Clients are often application 
+tasks in that they use information from the input peripherals in order to determine how to carry out 
+their assigned functions. Device couriers, on the other hand, provide a link between the Switchboard 
+and the device servers or handlers. In the message passing paradigm, the courier alternates between sending 
+requests to the server to acquire input values, and sending messages to the Switchboard to report these 
+values. The device servers and the Switchboard are never request-blocked, as they never send messages, 
+they only receive them and reply to them. SCHEDULER APPLICATION UIMS GRAPHICAL SYSTEM ,,It..- Figure 
+4. UIMS structure for parallel processes (from [4]). Figure 5. The Switchboard task. The role of the 
+Switchboard is to manage the connections between clients and device couriers. When a client requests 
+a connection to a certain device, it is the Switchboard that determines to which courier it will be connected. 
+(This association of device and task can be done at either link time or run time.) The Switchboard then 
+directs the subsequent communication between the client and the device courier.  Input Example To illustrate 
+how a Switchboard input communication proceeds, imagine a user wishing to control the viewpoint of a 
+specific window using a trackball. After the user has used an interactive menu-based dialogue to specify 
+this connection, the Switchboard starts transmitting the trackball information from the Trackball Courier 
+to the Window Viewpoint task, an example of a View Control task (Figure 6). Messages are then passed 
+along this communication path in the following manner: 1. The Trackball Courier requests input from the 
+Trackball Server. 2. The Trackball Server holds its reply, thus blocking this path, until the trackball 
+has moved a significant amount since the previous input request. A reply containing the current trackball 
+data is then passed to the Trackball Courier. 3. The Trackball Courier sends the data on to the Switchboard. 
+ 4. The Switchboard forwards the data to the client task which had requested the connection to the trackball 
+(Window Viewpoint). This forwarding is in the form of a reply to a READ_REQUEST message from the Window 
+Viewpoint task. 5. The Window Viewpoint task then calculates what the new viewing transformation should 
+be, and sends this to the Graphics Server. After the Graphics Server replies, the Window Viewpoint task 
+again makes a READ_REQUESTto the Switchboard. 6. On receipt of the READ_REQUEST, the Switchboard replies 
+to the Trackball Courier, thus releasing it to try to get more input from the Trackball Server.  When 
+the user is ignoring the trackball, this connection uses almost no CPU time, only that required for the 
+server to monitor the trackball. What is more significant for both programmer and user is that this connection 
+is independent of other tasks running on the system both in terms of the setup of the information flow 
+and the subsequent timing of the flow. This connection may be made at any time during an interactive 
+dialogue, and, once made, the trackball will control the viewpoint of the window no matter what the user 
+is doing with the window. He may be using one application module to define a robot, switch to Server 
+Window Switchboard Courier C Graphics '~ Figure 6. Example of Switchboard mediated use of a trackball. 
+ another to specify a robot movement, then use a third to view a simulation of the movement, during which 
+time his connection will remain in force and be usable. The application modules are unaware of the connection, 
+they are dealing only with the modification of data bases, and not with how the data is to be displayed. 
+ Switchboard Functionality The Switchboard, following the administrator model, processes incoming messages. 
+A client sends the Switchboard READ_ REQUEST messages asking for input from any of the devices to which 
+it is connected as well as messages requesting that new connections be established between itself (the 
+client) and other devices. Device couriers, on the other hand, send messages containing significant input 
+from their respective devices. The functioning of the Switchboard is then best explained by describing 
+its reactions to the arrival of its various messages. Input message arrival: The Switchboard has access 
+to information about each input message that arrives and about each courier with which it corresponds. 
+Each input structure (there are different structures depending on whether the input is a valuator, a 
+2D or 3D locator, a string, etc.) has, as a header, the structure IN_STD (Figure 7). In addition, each 
+task corresponding with a server such as the Switchboard is registered with that server, and this registration 
+results in a connection record being created. The Switchboard can look up the connection record for a 
+device courier which includes a pointer to an instance of the COURIER structure (Figure 8). Task selection: 
+On the arrival of an input message, the Switchboard must select the task to which the message will be 
+forwarded. There is not necessarily a simple one to one, courier to client correspondence as perhaps 
+has been implied to this point. Three types of task selection are possible. If the courier is a TASK_COURIER, 
+it is indeed the case where a single client task has requested a connection to a specific device. This 
+client's ID is listed in the TASK_INFO portion of the COURIER structure. The Switchboard, based on UIMS 
+concepts, supports the idea of application modules being called on by the system to perform specific 
+application functions [4, 15], often in response to menu selections by the user. This results in a relaxation 
+of the concept of the client task to that of a client set. A client set is a set of application tasks 
+called upon to perform certain duties. The client set tasks for a window form a task stack controlled 
+by the menu system associated with that window (described by Tanner et al [14]). For any particular window, 
+the input active task (the task ready to accept input) is on top of the task stack for the client set. 
+Input directed at the window will therefore be sent to this top task. Device couriers whose messages 
+are to be treated in this way are of type CLIENT_SET_COURIER. The final method of task selection is necessitated 
+by the existence of only a single keyboard and a single button box at the workstation. Ideally, one would 
+prefer to have a keyboard for each window, but this is physically impractical. To compensate, a keyboard 
+icon is placed on the screen. All keyboard input and certain button box selections (such as HELP and 
+UNDO) are sent to the client (or client set) associated with the window displaying the keyboard icon. 
+(This still results in the problem, particularly during debugging, that one cannot type to tasks not 
+associated with a window.) Couriers for the keyboard and the button box are of type SYSTEM_COURIER. In 
+this case the client (set) associated with the window containing the keyboard icon is chosen. Message 
+queueing or forwarding: If the selected task is waiting for input when the input message arrives, the 
+message is simply forwarded to that task, thus unblocking it, and the ID of the courier is placed in 
+the client's TASK_INFO structure. The courier itself is not replied to and so remains blocked. If the 
+selected task is busy processing input from some other device, the input message is placed in a FIFO 
+queue linked to the client's TASK_INFO structure, and again the courier remains blocked. Client's READ_REQUEST: 
+When a client has finished processing an input message, it requests new input from the Switchboard. On 
+receipt of this request, the Switchboard struct IN STD { I uint_l 6 int_l 6 stmct IN_STD struct IN_STD 
+uint_32 uint_32 int_l 6 uint_32 }; MSG_SIZE; MSG TYPE; *IN_NEXT; *IN_PREV; *IN_WINDOW; 1N_COURIER_ID; 
+IN_VI RTUAL I D; IN_CONNECTION;  /* message size - in all Harmony messages */ /* message type - in all 
+Harmony messages */ /* to link to next input in list */ /* to link to previous input in list */ /* window 
+pointer */ /* ID of courier providing input */ /* device ID known to client */ /* Connection ID for the 
+Switchboard */ struct COURIER { struct COURIER struct COURIER union START MSG struct CLIENT_SET struct 
+TASK_INFO uint_l 6 Figure 7. The header for all input messages. *COU_NEXT; /* pointer to next courier 
+in list */ *COU_PREV; /* pointer to previous courier in list */ *COU_START_MSG; /* start-up message for 
+the courier */ *COU_CLIENT_SET; /* pointer for CLIENT SET COURIER */ *COU TASK_INFO; /* pointer forTASK_COURIER 
+*/ COU_TYPE; /* CLIENT_SET_COURIER, TASK_COURI ER, or SYSTEM_COURIER */ Figure 8. The COURIER structure. 
+replies to the device courier associated with the input that the task received in its previous request, 
+thus unblocking the courier. This is to say that a courier, on presenting the Switchboard with input, 
+is blocked until not only the client has received the input, but until it has processed the data and 
+then asked for more. This prevents the problem of input coming in faster than it can be handled. After 
+freeing the courier, the Switchboard either replies to the client with input from the input queue (logging 
+the ID of the courier of the new input) or, if the queue is empty, logs the fact that the client is waiting, 
+and blocks it by not replying to it. Task Destruction: In Harmony, when a task is destroyed, all servers 
+to which it is connected are informed. The Switchboard, on the death of a client, discards all pending 
+input and replies to all blocked device couriers for that client, after destroying those couriers associated 
+exclusively with the dying task. In addition to these message handling capabilities, the Switchboard 
+is also responsible for creating and destroying tasks as a service for the menu servers. It can be thought 
+of as being responsible for many of the services normally assigned to a conventional operating system, 
+but with the ability to carry out these operations in a highly flexible manner, more suited to multitasking. 
+Switchboard Attributes Parallel Input As most of us have two hands and two feet, and as we are capable 
+of using more than one of these appendages at the same time, a fact normally ignored by interactive systems 
+designers, we can certainly make use of more than one input device at a time [3, 13]. Implementation 
+of parallel input with several devices active at the same time is achieved in two complementary ways. 
+First, several application tasks can be executing at any one time, each reacting to the inputs from one 
+or more devices. This is called simultaneous input because the user may control several different things 
+simultaneously. Second, each of these application tasks can receive input from any of several input devices 
+to which a connection was established through the Switchboard. In this case, referred to as user's-choice 
+input, the task can offer the user more than one device with which to perform a single operation, the 
+choice of which to use being entirely' left up to the user, e.g. type point coordinates to define a point, 
+or alternatively, use the tablet to define a point. The manner in which a task requests input encourages 
+the programmer to offer the user alternative input techniques. Adagio's implementation of this second 
+form of parallelism modifies the programmer's model of input. This is an attempt to break away from the 
+idea that the user input is a single stream that can be parsed. In Adagio, as mentioned before, the only 
+input instruction available to application tasks is READ_REQUEST. This request is always sent to the 
+Switchboard which replies with a message containing input from any one of the devices to which the task 
+is connected or with a system message. The underlying model of READ REQUEST is an elaboration of the 
+model present in GKS lev~ 2C [12]. GKS specifies three modes of implementing input: request, await event, 
+and sample. The first is the classical FORTRAN approach in a time-sharing environment, and is of no interest 
+here. The second mode permits a task to await an input event that is triggered by operator action. In 
+this await event mode, a task can wait for the next event produced by one of a number of devices. However, 
+the task will only be given the device values, such as tablet coordinate values, when the corresponding 
+device is triggered. In the case of a tablet, the trigger would be the push of the puck button. The third 
+mode permits the task to loop, sampling one or more input devices repetitively. In our model these latter 
+two modes are merged. Devices make available the most recent value, as in sample mode, but only if that 
+value is significantly different from the previous sample (akin to event mode). Taking the example of 
+a regular application task associated with a window on the screen, it is, by default, connected through 
+the Switchboard to the tablet and to the keyboard. It may also have requested connections to other devices 
+(Figure 9). Inputs from these devices are then passed on to the application task as replies to READREQUESTs. 
+A courier that provides input to the Switchboard is blocked from fetching more input until the application 
+task has accepted its previous input message, processed it, and requested input again. One consequence 
+is that the system menu manager may well receive input from the terminal keyboard instead of the tablet. 
+This possibility encouraged the implementor to allow the user to make his selections with either device 
+-- giving the user two ways of accomplishing the same thing. Because a program is made up of many tasks, 
+not all the input to the entire program is interleaved in a single slxeam; only the input for each task 
+is. Therefore the merging of input directly supports the making of several devices available to control 
+some single aspect of the system. Delivering all input to each task through a common interface is an 
+experiment which we hope will result in a different attitude among programmers and in better styles of 
+interaction.  System Commands Tasks that consume input are programmed to expect this input from any 
+of a number of devices -- the choice of which device to use at any time is the user's. In addition to 
+input data there are system commands that must be sent asynchronously to these tasks. These commands 
+include such messages as SUSPEND (a task may be suspended when the user wishes to work on something else, 
+and then resume the operation), RESUME, COMMIT_SUICIDE (the user has called for the cessation of the 
+current operation and the task must now stop Courier Terminal Courier Device Switchboard Courier Courier 
+Figure 9. An application task (or Switchboard client) corresponding to a screen window is connected, 
+through the Switchboard to the tablet, a terminal, and possibly to other input devices. what it was 
+doing and clear away any side-effects before dying), UNDO, and HELP. In all cases, system command messages 
+are put into the client task's input stream so that they are passed on to the task as if they were input 
+messages. In addition to simplifying the application programming, this technique also forces the programmer 
+to handle each of these messages. At the very least, the programmer must consciously decide to include 
+code that ignores the messages -- although COMMITSUICIDE may not be ignored. Of course, all these commands 
+are the direct or indirect result of some user action. However, they are actions on devices not specifically 
+connected with the receiving task necessitating their being treated separately with additional mediation 
+by the Switchboard.  Aging of input One may note that input may remain queued during the time a client 
+is processing input from another device, thus possibly resulting in delayed response to user actions. 
+The possibility of such delay is handled on the servers' side of the Switchboard by ensuring that each 
+value from a device that is sent along the communication path reflects an accumulation of changes to 
+the device since the previous reading. On the clients' side, the problem is usually minimized by the 
+small amount of processing required to respond to most inputs. In the case of computing intensive tasks, 
+the client is programmed as an overseer which creates a worker task that actually performs the calculations. 
+The overseer can then respond to input as it deems fit. In particular, an overseer can react to the COMMIT_SUICIDE 
+or UNDO system commands in the input stream by killing the worker it has created, and removing its unfinished 
+work.  Multiwindow Tablet A tasking mechanism for a multiwindow approach to the tablet illustrates a 
+typical use of the Switchboard. The tablet, a single input device, must be viewed by a window-based system 
+as a set of virtual locator devices, one device for each window, and one for the tracker if the tablet 
+tracker is to be independent of the application tasks (see MacKay and Tanner [9] for a description of 
+the tracker model). To accomplish this, an instance of the Tablet Courier task is created for each window. 
+This task, knowing its allocated tablet real estate, logs a connection with the Tablet Server giving 
+it this information. The Tablet Server will then feed the courier tablet values when the puck or pen 
+is in the appropriate tablet window, and let it know when the user moves on to another window [14]. The 
+Tablet Courier then forwards these input values to the Switchboard, which, knowing to what this courier 
+is connected, will forward the input in turn to the appropriate client task (Figure 10). The Tablet Courier 
+is responsible for translating from the tablet coordinates provided by the Tablet Server, to the coordinates 
+of the window-based virtual tablet. For 3D windows, the courier must provide the definition of a line 
+in three-space represented by the tablet position. The Tablet Courier performs frequent non-blocking 
+_Try_receive's to determine if its Window Watchdog task has sent it a message indicating a new viewing 
+transformation for its window. All consumers of tablet information are unaware of the area on the screen 
+or the tablet they occupy and of the viewing transformations for the 3D windows they may be modifying 
+through the Data Structure Server and the Graphics Server.  Sharing of a Single Device The Switchboard 
+model illustrates two methods of using a single device simultaneously for several clients. The keyboard, 
+with a single courier, has its input directed by the Switchboard to the client associated with the window 
+in which the keyboard Switchboard Client   <,..-.._-., Figure 10. Window based communications between 
+the Tablet Server and the Switchboard. icon rests. The tablet, on the other hand, has a courier for 
+each window. Each Tablet Courier requests, from the Tablet Server, pen or puck input from a specific 
+region. The courier can then make a window specific transformation of the data before passing it on to 
+the Switchboard. Both methods are extensible to other devices. One could have device icons for directing 
+input from other devices to specific windows although the screen clutter problem is a limiting factor. 
+Couriers for button boxes or sets of potentiometers might request input from different subsets of the 
+buttons or pots, leaving it to the device server to reply to the appropriate courier when a device is 
+used. Techniques such as these are essential for multitask implementations of interactive dialogues. 
+Virtual Devices Device couriers have been described, up to this point, as tasks that forward input device 
+values to the Switchboard. There is nothing implicit in the system that forces a courier to seek these 
+inputs from an actual device server. Couriers that create user input following some predefined pattern, 
+or that relxieve stored input from a previous session are quite possible. A particularly useful extension 
+to the device courier idea permits the implementation of more complex virtual devices. Virtual devices 
+such as the tablet-based virtual devices described by Evans et al [5] may be implemented in a manner 
+quite invisible to the task that makes use of the resulting values. To illustrate possible implementations 
+with an example, one can consider a virtual device program that takes locator values and simulates a 
+slider. Figure 11 shows this virtual device acting as a Switchboard client in that it sends a request 
+to the Switchboard for input from the tablet when the pen is in the virtual device's window. After processing 
+the locator input and updating the device echo on the screen, it then acts as a device courier by sending 
+the virtual valuator input to the Switchboard which forwards it to the second client. This client had 
+requested Figure 11. Virtual device implementation. a connection to a valuator, but the decision of which 
+valuator to use was made at the Switchboard (and hence easily modifiable). The client is ignorant of 
+what physical or virtual device the input is from, save that it is from valuator X as the association 
+was made either by the interaction designer or by the user through an earlier interactive dialogue. Conclusion 
+In many ways, interactive graphics and realtime systems have much in common. Consequently, it is reasonable 
+that a realtime operating system be used as the basis for interactive graphics. In realtime work, the 
+processors must be able to respond in a reasonable way to inputs that are sent to them asynchronously 
+from a variety of sources. Although much early work in interactive programming modelled the user as a 
+file that could be read, the realtime model is far more appropriate. The user can, and will, send inputs 
+to a task when he sees fit and using the device he sees fit. In essence, the user is unpredictable. The 
+Switchboard is an appropriate vehicle for linking a multitasking environment to this set of asynchronous 
+inputs. It, together with the multitasking capability, provides the flexibility to handle parallel input 
+-- both the use of several devices to control several parameters simultaneously, and the offering of 
+a choice of several devices to control a single parameter. The Switchboard provides a basis for the implementation 
+of a rich variety of virtual devices allowing, for example, a single device to be used as a set of devices. 
+This approach is particularly useful for interacting with multiwindow systems. It also provides, as does 
+any good model, a design aid where new possibilities of device-task communication become apparent. In 
+addition, the Switchboard simplifies the implementation of logically consistent interactions. For example, 
+control of window viewing parameters and values in the data structure is independent of the application 
+tasks running in the system. Consequently, the definition of the interaction control remains in effect 
+from one application to the next. As presented in this paper, the concept of multitasking extends to 
+the entire application. Thus it represents a major restructuring of the application program. However, 
+the process can also be evolutionary, whereby the Switchboard and the Harmony kernel could be embedded 
+in a dedicated processor. The rest of the application program could then remain in the more traditional 
+form on the workstation host processor. The multiprocessor capabilities of the Switchboard and Harmony 
+permit the implementation of the ideal form of time-sharing, whereby all the processors time-share the 
+user rather than users time-sharing a processor.  Bibliography <RefA>[11 Beach, R.J., Beatty, J.C., Booth, 
+K.S., Fiume, E.L., and Plebon, D.A. The message is the medium: Multiprocess structuring of an interactive 
+paint program. Computer Graphics 16, 3 (July 1982), 277-287. [2.] Bly, S.A. and Rosenberg, J.K. A comparison 
+of tiled and overlapping windows. Proc. CHI'86 Human Factors in Computing Systems, Boston (Apr. 1986), 
+101-106. [3] Buxton, W.A.S. There's more to interaction than meets the eye. User Centered System Design, 
+New Perspectives in Human Computer Interaction, D.A. Norman and S.W. Draper (Ed.), Lawrence Erlbaum Associates, 
+Hillsdale, NJ (in press). [4] Enderle, G. Report on the interface of the UIMS to the application, in 
+[10], 21-29. [5] Evans, K.B., Tanner, P.P., and Wein, M. Tablet-based valuators that provide one, two, 
+or three degrees of freedom. Computer Graphics 15, 3 (Aug. 1981), 91-97. [6] Gentleman, W.M. Message 
+passing between sequential processes: the reply primitive and the administrator concept. Software Praet. 
+&#38; Exper. 11,5 (May 1981), 436-66. [7"] Gentleman, W.M. Using the Harmony operating system. Report 
+of DEE, National Research Council of Canada, NRCC-ERB-966, Ottawa, Ont. (Dec. 1983, revised May 1985). 
+[8] LOG, R. ARIA --A near-real-time graphics package. M.Math Thesis, Univ. of Waterloo, Dept. of Computer 
+Science (1986). [9] MacKay, S.A. and Tanner, P.P. Graphics tools in Adagio, a robotics multitasking multiprocessor 
+workstation. Proc. Graphics Interface '86, Vancouver (May 1986), 98-103. [10] Pfaff, G.E. (Ed.). User 
+Interface Management Systems, Proc. Seeheim Workshop on User Interface Management Systems, Nov. 1983, 
+Springer-Verlag, Berlin (1985). [11] Plebon, D.A. and Booth, K.S. Interactive picture creation systems. 
+Univ. of Waterloo, Dept. of Computer Science, CS-82-46 (Dec. 1982). [12] Rosenthal, D.S.H., Michener, 
+J.C., Pfaff, G., Kessener, R., and Sabin, M. The detailed semantics of graphics input devices. Computer 
+Graphics 16, 3 (July 1982), 33 -43. [13"] Tanner, P.P. and Wein, M. Parallel input in computer-human 
+interaction. Proc. 18th Annual Meeting, Human Factors Association of Canada, Hull, Quebec (Sept. 1985), 
+141-144. [14] Tanner, P.P., Wein, M., Gentleman, W.M., MacKay, S.A., and Stewart, D.A. The user interface 
+of Adagio, a robotics multitasking multiprocessor workstation. Proc. 1st International Conference on 
+Computer Workstations, San Jose (Nov. 1985), 90-98. [15] Thomas, J.J. and Hamlin, G.H. Graphical input 
+interaction technique workshop summary. Computer Graphics, 17, 1 (Jan. 1983), 5-30. </RefA>
+			

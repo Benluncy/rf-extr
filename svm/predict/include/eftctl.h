@@ -1,8 +1,10 @@
 #ifndef __EFTCTL_H__
 #define __EFTCTL_H__
+#include "svm_common.h"
 
+//int genEndSampleCtl(const char* fileName,int isDir);
+int genEndSampleCtlW(const char* fileName,WORD *w,int limit);
 
-int genEndSampleCtl(const char* fileName,int isDir);
 
 void openLogFile();
 void closeLogFile();

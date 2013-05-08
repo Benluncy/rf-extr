@@ -246,7 +246,7 @@ int rankWriteW(WORD *w,int start,int rank,int len)
 	}
 	//fprintf(fp,"%d:%d ",start+len-1,rank >= len ? 1 : 0);
 	w[start+len-1].wnum = start+len;
-	w[start+len-1].wnum = rank >= len ? 1 : 0;
+	w[start+len-1].weight = rank >= len ? 1 : 0;
 	return start+len;
 }
 
@@ -267,12 +267,17 @@ int rateWriteW(WORD *w,int start,double rate)
 int setFtValue(WORD *w,int start,int val)
 {
 	w[start].wnum=start;
-	w[start].weight = val;
+	w[start].weight = (double)val;
 	return start+1;
 }
 
 
-
+int setFtValueF(WORD *w,int start,double val)
+{
+	w[start].wnum=start;
+	w[start].weight = val;
+	return start+1;	
+}
 
 
 
