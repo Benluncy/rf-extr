@@ -1,0 +1,357 @@
+
+ A Parallel Gauss-Seidel Algorithm for Sparse Power System Matrices D. P. Koester, S. Ranka, and G. C. 
+Fox School of Computer and Information Science and The Northeast Parallel Architectures Center (NPAC) 
+Syracuse University Syracuse, NY 13244-4100 dpk(hpac.syr. edu, ranka@top. cis.syr. edu, gcf(hzpac.syr. 
+edu Abstract We describe the implementation and performance of an eficient parallel Gauss-Seide! algorithm 
+that has been developed for irregular, sparse matrices from elec­trical power systems applications. Although, 
+Gauss-Seidel algorithms are inherently sequential, by per­ forming specialized orderings on sparse matrices, 
+it is possible to eliminate much of the data dependen­cies caused by precedence in the calculations. 
+A two­part matrix ordering technique has been developed first to partition the matrix into block-diagonal­bordered 
+form using diakoptic techniques and then to multi-co[or the data in the last dtagonal block using graph 
+coloring techniques. The ordered matrices of­ten have extensive parallelism, while maintaining the strict 
+precedence relationships in the Gauss-Seide[ al­gorithm. We present timing resu[ts for a paral~el Gauss-Seidel 
+so[ver implemented on the Thinking Ma­chines CM-5 distributed memory multi-processor. The algorithm presented 
+here requires active message re­mote procedure calls in order to minimize communi­cations overhead and 
+obtain good relative speedup. Introduction Power system distribution networks are generally hierarchical 
+with limited numbers of high-voltage lines transmitting electricity to highly interconnected lo­cal networks 
+that eventually distribute power to cus­tomers. Electrical power grids have graph represen­tations which 
+in turn can be expressed as matrices . electrical buses are graph nodes and matrix diag­onal elements, 
+while electrical transmission lines are graph edges which can be represented as non-zero off­diagonal 
+matrix elements. We show that it is possible to identify the hierarchi­cal structure within a power system 
+matrix using only the knowledge of the interconnection pattern by tear­ing the matrix into partitions 
+and coupling equations that yield a block-diagonal-bordered matrix. Node­tearing-based partitioning identifies 
+the basic network structure that provides parallelism for the majority of calculations within a Gauss-Seidel 
+iteration. Graph multi-coloring has been used to order the last diago­nal matrix block and subsequently 
+identify available parallelism. We implemented explicit load balancing as part of each of the aforementioned 
+ordering steps to maximize parallel algorithm efficiency. We implemented the parallel Gauss-Seidel algo­rithm 
+on the Thinking Machines CM-5 distributed memory multi-processor exclusively using explicit message passing 
+based on Connection Machine ac­tive message layer (CMAML) remote procedure calls (RPCS). The communications 
+paradigm we use throughout this algorithm employs CMAML RPCS to send individual values to destination 
+processors as soon as values have been calculated. This paradigm greatly simplified the development and 
+implementa­tion of this parallel sparse Gauss-Seidel algorithm. Parallel implementations of Gauss-Seidel 
+have gen­erally been developed for regular problems such as the solution of Laplace s equations by finite 
+differ­ences [4, 5], where red-black coloring schemes are used to provide independence in the calculations 
+and some parallelism. This scheme has been extended to multi­coloring for additional parallelism in more 
+complicated regular problems [5], however, we are interested in the solution of irregular linear systems. 
+There has been some research into applying parallel Gauss-Seidel to circuit simulation problems [11], 
+although this work showed poor parallel speedup potential in a theoretical study. This reference also 
+extended traditional Gauss­ 1063-9535/94 $4.0001994 IEEE Seidel and Gauss-Jacobi techniques to waveform 
+re­laxation methods that trade overhead and conver­gence rate for parallelism. Other research with parallel 
+ Gauss-Seidel methods for power systems applications is presented in [7], although our research differs 
+sub­st antially from that work: our research utilizes a dif­ferent matrix ordering paradigm, a different 
+load bal­ancing paradigm, and a different parallel implemen­ tation paradigm. Our work utilizes diakoptic-based 
+matrix partitioning techniques developed initially for a parallel block-diagonal-bordered direct sparse 
+linear solver [9, 10]. In reference [9] we examined load bal­ancing issues associated with partitioning 
+power sys­tems matrices for parallel Choleski factorization. The paper is organized as follows. In section 
+2, we introduce the electrical power systems application that is the basis for this work. In section 
+3, we briefly re­view the Gauss-Seidel iterative method, then present a theoretical derivation of the 
+available parallelism with Gauss-Seidel for a block-diagonal-bordered form sparse matrix. We discuss 
+the preprocessing phase that orders the sparse matrices in section 5, and we de­scribe our parallel Gauss-Seidel 
+algorithm implemen­t ation in section 6. Analysis of parallel algorithm per­formance for actual power 
+system load flow matrices are presented in section 7. We present our conclusions in section 8. Power 
+System Applications The underlying motivation for our research is to im­prove the performance of electrical 
+power system ap­plications to provide real-time power system control and real-time support for proactive 
+decision making. This research has focused on matrices from load-flow applications [14]. Load-flow analysis 
+examines steady­state equations based on the symmetric positive def­inite network admittance matrix that 
+represents the power system distribution network. Load flow analy­sis entails the solution of non-linear 
+systems of simul­taneous equations, which are performed by repeatedly solving sparse linear equations. 
+Sparse linear solvers account for the majority of floating point operations encountered in load-flow 
+analysis. 3 The Gauss-Seidel Method We are considering an iterative solution to the lin­ ear system Ax 
+= b, (1) where A is an (n x n) sparse matrix, x and b are vectors of length n, and we are solving for 
+x. It­erative solvers are an alternative to direct methods that attempt to calculate an exact solution 
+to the sys­tem of equations. Iterative methods attempt to find a solution to the system of linear equations 
+by repeat­edly solving the linear system using approximations to the x vector. Iterations continue until 
+the solution is within a predetermined acceptable bound on the error. The Gauss-Seidel method can be 
+written as: (k+l) _ 1 o(k),  z; hi ~aijzjk+l) Uij Zj a~~ j<i j>i ( (2) where: xi k) is the ith unknown 
+in x during the kth iteration, i= 1,. ... n and k = 0,1, . . . , xi 0) is the initial guess for the ith 
+unknown in x, aij is the coefficient of A in the it h row and jth column, bi is the ith value in b. or 
+x@+l) = (D+ L)-l[b Ux@)], (3) where: x(~) is the kth solution to x, k = (), 1, ... , X(0) is the initial 
+guess at x, D is the diagonal of A, L is the strictly lower triangular portion of A, U is the strictly 
+upper triangular portion of A, b is right-hand-side vector. The representation in equation 2 is used 
+in the de­velopment of the parallel algorithm, while the equiv­alent matrix-based representation in equation 
+3 is used below in discussions of available parallelism. We present a general sequential sparse Gauss-Seidel 
+algo­rithm in figure 1. This algorithm calculates a constant number of iterations before checking convergence. 
+It is very difficult to determine if one-step iterative methods, like the Gauss-Seidel method, converge 
+for general matrices. Nevertheless, it is possible to prove that the Gauss-Seidel method does converge 
+and yields the unique solution x for Ax = b with any initial starting vector x(o) for both diagonally 
+dominant and symmetric positive definite matrices [5]. These the­orems prove that the Gauss-Seidel method 
+converges for these matrix types, however, there is no evidence as to the rate of convergence. Symmetric 
+sparse matrices can be represented by graphs with elements in equations corresponding to C+W while c 
+> e~~~~~~g~ for k = 1to n~~er fori=l ton z~+ xi Zi~ bi for each ~ such that a~j # O Z; + XZ (aij * Zj) 
+endfor Xi + X~/aii endfor endfor C+cl fori=l ton c t c+ abs(ii Xt) endfor endwhile Figure 1: Sparse 
+Gauss-Seidel Algorithm undirected edges in the graph [6]. Ordering a symmet­ric sparse matrix is actually 
+little more than chang­ing the labels associated with nodes in an undirected graph. Modifying the ordering 
+of a sparse matrix is simple to perform using a permutation matrix P that simply generates elementary 
+row and column ex­changes. Applying a permutation matrix to the origi­nal linear system in equation 1 
+yields (PAPT)(Px) = (Pb). (4) While ordering the matrix can greatly simplify access­ing parallelism inherent 
+within the matrix structure, ordering can have an effect on convergence [5]. In sec­tion 7, we present 
+empirical data to show that in spite of the ordering to yield parallelism, convergence ap­pears to be 
+rapid for positive definite power systems load-flow matrices. Available Parallelism While Gauss-Seidel 
+algorithms for dense matrices are inherently sequential, it is possible to identify sparse matrix partitions 
+that do not have mutual data dependencies, so calculations can proceed in parallel while maintaining 
+the strict precedence rules in the Gauss-Seidel technique. Entire sparse matrix parti­tions can be calculated 
+in parallel without requiring communications. All parallelism in the Gauss-Seidel algorithm is derived 
+from within the actual intercon­nection relationships between elements in the matrix. While much of the 
+parallelism in this algorithm comes from the block-diagonal-bordered ordering of the sparse matrix, further 
+ordering of the last diagonal block is required to provide parallelism in what would otherwise be a purely 
+sequential portion of the algo­rithm. The last diagonal block represents the inter­connection structure 
+within the equations that couple the partitions in the block-diagonal portion of the ma­trix. These equations 
+are rather sparse, so, it is sim­ple to color the graph representing this portion of the matrix. Separate 
+graph colors represent rows where ~(~+1) can be calculated in parallel, because within a color, no two 
+nodes have any adj scent edges. To clearly identify the available parallelism in the block-diagonal-bordered 
+Gauss-Seidel method, we de­fine a block diagonal matrix partition, apply that partition to formula 3, 
+and equate terms to identify available parallelism. We must also define a sub­partitioning of the last 
+diagonal block to identify par­allelism after multi-coloring. 4.1 Block-Diagonal-Bordered Mat rices 
+We define a partitioning of the system of linear equations defined in equation 4, where the permut a­tion 
+matrix P orders the matrix into block-diagonal­bordered form. We define Al,l O Al)m PAP~= 0 + Am l,m_l 
+Am-l,m ( Am, I . . . Am,m-I )Am,m (5) and Px and Pb are partitioned with similar dimen­ sions. Equation 
+3 divides the PAPT matrix into a diagonal component D, a strictly lower diagonal ma­trix L, and a strictly 
+upper diagonal matrix U such that: PAPT=D+L+U (6) Derivation of the block-diagonal-bordered form of the 
+D, L, and U matrices is straightforward. Equation 3 requires the calculation of (D + L) 1, which also 
+is simple to determine explicitly, because this matrix has block-diagonal-lower-bordered form. Given 
+these partitioned matrices, it is relatively straightforward to identify available parallelism. For i, 
+(i = 1,. ... m 1), we obtain: (k+l) = (Di ~+ Li,i)-l hi ui,ixi (~) Ui )~x:) ,xi 1 (7) and for the lower 
+border and last diagonal block we obt sin: ~g+l) = (Qn,m + Ln,na)- x [bm-EgT (L;~ixY+l)) -uf%mx$)] (8) 
+ We can identify the parallelism in the block­diagonal-bordered portion of the matrix by examining equations 
+7 and 8. If the block-diagonal-bordered ma­trix partitions Ai,i, Atn,i, and Ai,m (1 < ~ < ~ 1) are assigned 
+to the same processor, then there are no ~ommunications until ~g+l) is calculated Note that the vector 
+X9) is required for the calculations in each partition, however, there is no violation of the strict 
+precedence rules in the Gauss-Seidel method, because these values are not calculated until the last step. 
+Af­ (k+l) . ter calculating Xi m the first (m 1) partitions, the values of Xg+l) must be calculated 
+using the lower border and last block. If we assign m-1 b = bm ~ (L#ix\k+l)) , (9) ial then the formulation 
+of X9+1) = ii(~+l) looks similar to equation 3: ~(k+l) = (Dm,m + Lm,m)-l ~ Um,mx(k)] . (10) Figure 
+2 describes the calculation steps in the paral­lel Gauss-Seidel for a block-diagonal-bordered sparse 
+matrix. This figure depicts four diagonal blocks, and data/processor assignments (Pl, P2, P3, and P4) 
+are listed for the data block. 4.2 Multi-Colored Matrices The ordering imposed by the permutation matrix 
+P, includes multi-coloring-based ordering of the last diagonal block that produces sub-partitions with 
+par­allelism, We define the sub-partitioning as:  Dl,l Al,z ... Al,c A2,1 D2,2 . . . A2,C (11) A fn,m 
+= . .: ~\ L where Di,i are diagonal blocks and c is the number of colors. After forming Lm,m and Um,~, 
+it is straight forward to prove that: i (k+l) = D;; ba ~A1,jxy+l) ~ A;,jiy j<i j>i 1 [ (1) SOLVE FOR 
+X IN DIAGONAL BLOCKS X b $* o PT PI w I% oM$&#38; o m o P&#38; Pa o 0 ~p P4 w W wit ;1-~ -i 1 (2) 
+CALCULATE (MATRIXx VECTOR) (3) SOLVE FOR X PRODUCTAND SEND IN LAST DIAGONAL BLOCK Figure 2: Block-Bordered-Diagonal 
+Form Gauss-Seidel Method (m= 5) Calculating x$~+l) in each sub-partition (color) of the last diagonal 
+block does not require values of Xfk+l) within the sub-partition, so we can calculate the in­dividual 
+values within a color in any order and dis­tribute these calculations to separate processors with­out 
+concern for precedence. In order to maintain the strict precedence in the Gauss-Seidel algorithm, the 
+values of x~~+l) calculated in each step must be broad­cast to all processors, and processing cannot 
+proceed for any processor until it receives the new values of ~+1) from other Figure 3 illustrates Xj 
+all processors. the data/processor assignments in the last diagonal block. 5 The Preprocessing Phase 
+In the previous section, we developed the theory for parallel Gauss-Seidel methods, however, before such 
+techniques can be implemented on real power systems matrices, we must be able to generate the permutation 
+matrices, P, to produce block-diagonal­bordered/multi-colored sparse matrices. All avail­able parallelism 
+for our Gauss-Seidel algorithm is identified from the interconnection structure of ele­ments in the sparse 
+matrix during this preprocessing phase. Inherent in both preprocessing steps is explicit load-balancing 
+to determine processor/data mappings for efficient implementation of the Gauss-Seidel algo­rithm. This 
+preprocessing phase incurs significantly (12) more overhead than solving a single instance of the x b 
+P1 o PI cl \ P2 P3 o \ P4 \P1 o PI C2 l\ P2 w P3 I o \ P4 q (1) SOLVE FOR X WITHIN A COLOR (2) BROADCAST 
+NEW xVALUES  Figure 3: Multi-Colored Gauss-Seidel Method for the Last Diagonal Block (c= 3) sparse 
+matrix; consequently, the use of this technique will be limited to problems that have static matrix structures 
+that can reuse the ordered matrix multiple times in order to amortize the cost of the preprocess­ing 
+phase over numerous matrix solutions. 5.1 Ordering the Matrix into Block-Bordered-Diagonal Form We require 
+a technique that orders irregular matri­ces into block-diagonal-bordered form while limiting the number 
+of coupling equations. Minimizing the number of coupling equations minimizes the size of the last diagonal 
+block, and minimizes the amount of broadcast communications required when calculating values of x(~+l). 
+Minimizing the size of the last di­agonal block has some drawbacks. We have found an inverse relationship 
+between last block size and load­imbalance between processors. This can affect poten­tial parallelism 
+if the resulting workload in the diago­nal blocks cannot be distributed uniformly throughout a multi-processor 
+[9]. When determining the optimal ordering for a sparse matrix, the size of the last diag­onal block 
+and the subsequent additional communica­tions may be traded for an ordering that yields good load balance 
+in the highly parallel portion of the cal­culations, especially for larger numbers of processors. We 
+have chosen node-tearing [10, 12], which is a specialized form of diakoptics, to order sparse power systems 
+matrices into block-diagonal-bordered form. We have selected node-tearing nodal analysis because this 
+algorithm determines the natural structure in the matrix while providing the means to minimize the number 
+of coupling equations [12]. Tearing here refers to breaking the original problem into smaller sub­problems 
+whose partial solutions can be combined to give the solution of the original problem. The node-tearing-based 
+ordering algorithm has a user-selectable input parameter, maxnB, the maxi­mum size of the diagonal blocks. 
+Varying this input parameter permits the user to vary characteristics in the ordered diagonal blocks. 
+Empirical data is pre­sented later in section 7 to illustrate parallel linear solver algorithm performance 
+as a function of this pa­rameter. Load balancing for node-tearing-based ordering is performed with a 
+simple pigeon-hole type algorithm that uses a metric based on the number of floating point multiply/add 
+operations in a partition, instead of simply using the number of rows per partition. Load balancing examines 
+the number of operations when calculating x(~+ll in the matrix partitions and the number of operations 
+when calculating the sparse ma­trix vector products in preparation to solve for x(~+ll. This algorithm 
+finds an optimal distribution for work­load to processors, however, actual disparity in pro­cessor workload 
+is dependent on the actual irregular sparse matrix structure.  5.2 Ordering the Last Diagonal Block 
+The multi-coloring algorithm we selected for this work is based on the saturation degree ordering al­gorithm 
+[1]. We also require load balancing, a fea­ture not commonly implemented within graph multi­coloring. 
+The saturation degree ordering algorithm se­lects a node in the graph that has the largest number of 
+differently colored neighbors. We have added the capability to the saturation degree ordering algorithm 
+to select the color for a node in a manner that equal­izes the number of nodes with a particular color. 
+The graphs encountered for coloring in this work were very sparse, and often required three or less colors. 
+Details of this graph multi-coloring algorithm are presented in [8]. 6 Parallel Implementation We have 
+implemented a parallel version of a block­diagonal-bordered sparse Gauss-Seidel algorithm in the C programming 
+language for the Thinking Ma­chines CM-5 multi-computer using CMAML RPCS as the exclusive basis for interprocessor 
+communications [13]. Underlying the whole concept of active messages is the paradigm that the user takes 
+the responsibility for handling messages as they arrive at a destination. The user writes a handler 
+function that takes the data from a register and uses it in a calculation or assigns the data to memory. 
+By assigning message handling responsibilities to the user, communications overhead can be significantly 
+reduced. Significant improvements in the performance of the algorithm were observed for active messages, 
+when compared to more traditional communications paradigms that use the standard blocking CMMD-send and 
+CMMDzeceive functions in conjunction with pack­ing data into communications buffers. A significant portion 
+of communications require each processor to send short data buffers to every other processor. For traditional 
+message passing paradigms, the cost for communications increases drastically as the number of processors 
+increases, because each message incurs the same latency regardless of the amount of data sent. As a result, 
+performance for buffered communications quickly becomes unacceptable as the number of pro­cessors increases. 
+To significantly reduce communications overhead, we implemented each portion of the algorithm using CMAML 
+remote procedure calls (CMAMLXpC). The communications paradigm we use throughout this al­gorithm is to 
+send a double precision data value to the destination processor as soon as the value is cal­culated. 
+Communications in the algorithm occur at distinct time phases, so polling for the active message handler 
+function is efficient. An active message on the CM-5 has a four word payload, which is more than ad­equate 
+to send a double precision floating point value and an integer vector position indicator. The use of 
+ac­tive messages greatly simplified the development and implementation of this parallel sparse Gauss-Seidel 
+al­gorithm, because there was no requirement to main­t ain and pack communications buffers. This implementation 
+uses implicit data structures based on vectors of C programming language struc­tures to store and retrieve 
+data efficiently within the sparse matrix. These data structures provide good cache coherence, because 
+non-zero data values and col­umn location indicators are stored in adjacent physi­cal memory locations. 
+Data is stored aa sparse vectors wit h implicit referencing, so only the SPARC proces­sors on each node 
+were used for calculations. Our parallel Gauss-Seidel algorithm has the follow­ing distinct sections: 
+1. solve for x(~+l) in the diagonal blocks 2. calculate b = b~ ~~=~ 1 (L~~ix~~+l)) by form­ing the 
+(matrix x vector) products in parallel 3. solve for x(~+lj in the last diagonal block  4. check convergence 
+A pseudo-code representation of the parallel Gauss- Seidel solver is presented in figure 4. 7 Empirical 
+Results Overall performance of our parallel Gauss-Seidel linear solver is dependent on both the performance 
+of the matrix ordering in the preprocessing phase and the performance of the parallel Gauss-Seidel implementa­tion. 
+Because these two components of the parallel Gauss-Seidel implementation are inextricably related, the 
+best way to assess the potential of this technique is to measure the speedup performance using real power 
+system load-flow matrices. We first present speedup results for three separate power systems matrices: 
+ BCSPWR09 1,723 nodes and 2,394 edges [2]  BCSPWR1O 5,300 nodes and 8,271 edges [2]  EPRI-6K 4,180 
+nodes and 5,226 edges [3]  Matrices BCSPWR09 and BCSPWR1O are from the Boeing Harwell series and the 
+EPRI-6K matrix is dis­tributed with the Extended Transient-Midterm Sta­bility Program (ETMSP) from EPRI. 
+These matrices have been preprocessed using a sequential program that orders the matrix, load balances 
+each ordering step, and produces the implicit data structures for the parallel Gauss-Seidel linear solver. 
+The preprocessing was repeated for multiple values of mazDB, the input value to the node-tearing algorithm. 
+Due to the static nature of the power system grid, such orderings could be reused for many hours or even 
+days of calculations in real electrical power utility operations load-flow ap­plications. Empirical performance 
+data was collected for each of the aforementioned power systems matrices using 1 through 32 processors 
+on the Thinking Machines CM­5 at the Northeast Parallel Architectures Center at Syracuse University. 
+The NPAC CM-5 is configured with all 32 nodes in a single partition, so user software was required to 
+define the number of processors used to actually solve a linear system. We present empiri­cal speedup 
+data collected on the parallel Gauss-Seidel algorithm for the three power systems matrices, and we also 
+present a detailed performance analysis using actual run times for the individual subsections of the 
+parallel Gauss-Seidel linear solver to illustrate the ef­ficacy of the load balancing step in the preprocessing 
+phase and to illustrate performance bottlenecks. All timing samples are for a combination of four iterations 
+and a single convergence check. Node Program 6*W . whale c > cCO~v~~~~ for k= 1to rq~er /* solve for 
+X(h+ ) in the diagonal blocks*/ for all rows i on this processor 5i+ xi xi+ bi for each j c [1, n] such 
+that aij # O Xi+ Zi-(U~j *$j) endfor Xi t Xi/Uii endfor /* calculate L~liX\~+lJ */ for all rows i on 
+this processor 5i* %~ &#38;~ bi endfor for all lower border non-zero rows i for each ~ such that a~j 
+# O 0~0 (a~j*Xj) endfor using active message rpc on processor p(i) bi+gi u endfor /* solve for X(k+l) 
+m the last diagonal block */ for all colors on this processor c for all rows i in color c ; Xi +Oi for 
+each ~ such that aij # O Zit Zi (a~j*Zj) endfor Xi + Z~/Uii using active message rpc broadcast xi endfor 
+wait until all values of xi have arrived endfor endfor / check convergence */ A (~+-() for all rows i 
+on this processor 6Xt 6A+ abs(ii Xi) endfor e+c~ for all other processors p using active message rpc 
+on processor p f+E+EA endfor endwhile Figure 4: Parallel Sparse Gauss-Seidel Algorithm RELATIVE SPEEDUP 
+FOR GAUSS SEIDEL BCSPWR09 + 16 BCSPWRI O -+­t EPRI-6K -n--i 12 ---------1 /B.. ...... -----­ 8­6> 2K 
+0 I 1 1 24 8 32 NUMBER O#:ROCESSORS Figure 5: Relative Speedup 2, 4, 8, 16, and 32 processors 7.1 Performance 
+Analysis As an introduction to the performance of the par­allel Gauss-Seidel algorithm, we present a 
+graph that lots relative speedup versus the number of proces­ p sors. Figure 5 plots the best speedup 
+measured for each of the power systems matrices for 2, 4, 8, 16, and 32 processors. These graphs show 
+that performance for the EPRI-6K data set is the best of the three data sets examined. Speedup reaches 
+a maximum of 11.6 for 32 processors and speedups of greater than 10.0 were measured for 16 processors. 
+Relative speedups for the BCSPWR09 and BC-SPWR1O matrices are less than for the EPRI-6K ma­trix, but 
+each has speedup in excess of 7.0 for 16 pro­cessors. For both the BCSPWR09 and BCSPWR1O matrices, the 
+last diagonal block requires approxi­mately 5 %0of the total calculations while the last block of the 
+EPRI-6K matrix can be ordered so that only l% of all calculations occur there. The likely cause for lim­ited 
+speedup with the Boeing-Harwell matrices is that communications overhead becomes a significant part of 
+the overall processing time because x(~+l) values must be broadcast to other processors before process­ing 
+can proceed to the next color. There are insuf­ficient parallel operations when solving for x(~+l) in 
+the diagonal blocks for these matrices to offset the ef­fect of the communications overhead encountered 
+in the last block. A detailed examination of relative speedup is pre­sented in figure 6 for the EPRI-6K 
+data. This fig­ure contains a graph with four curves plotting relative speedup for each of four maximum 
+matrix partition sizes, 128, 192, 256, and 320 nodes, used in the node­ Diagonal Blocks and Upper Border 
+I I 1 I I n 128 NODES - 3 n w 16 192 NODES 256 NODES -+­-n-­ - w nCn 12 - 320 NODES -x-­------------­------­. 
+. . . . . . ---­ 8 4 2 -1 ()~ 248 32 NUMBER O#:ROCESSORS Figure 6: Relative Speedup for EPRI-6K Data 
+ 2, 4, 8, 16, and 32 processors tearing algorithm. The speedup curves for the various matrix orderings 
+clearly illustrate the effects of load imbalance for some matrix orderings. For all four ma­trix orderings, 
+speedup is nearly equal for 2 through 16 processors. However, the values for relative speedup diverge 
+for 32 processors. We can look further into the cause of the disparity in the relative speedup values 
+in the EPRI-6K data by examining the performance of each of the four distinct sections of the parallel 
+algorithm. Figure 7 cent ains four graphs that each have four curves that plot pro­cessing time in milliseconds 
+versus the number of pro­cessors for each of four values of ~aZD~. These graphs are log-log scaled, so 
+for perfect speedup, processing times should fall on a straight line with decreasing slope for repeated 
+doubling of the number of proces­sors. One or more curves on each of the performance graphs for the diagonal 
+blocks and upper border, for updating the last diagonal block, and for convergence checks illustrate 
+nearly perfect speedup with as many as 32 processors. Unfortunately the performance for calculating values 
+in the last block does not also have stellar parallel performance. The performance graph for the diagonal 
+blocks and lower border clearly illustrates the causes for the load imbalance observed in the relative 
+speedup graph in figure 6. For some matrix orderings, load balancing is not able to divide the work evenly 
+for larger num­bers of processors. This occurs for larger values of maxDB. Selecting small values of 
+maxDB will prO­vide better speedups for sixteen or more processors. Updating the last block requires 
+both calculations of spar= (matrix x vector) products and irregular com­munications, but yields good 
+performance even for 32 64 ~ OY n 16 - g w 8 - (n i ~ 4 - X2 2 s~ 4 2 1 OS ~ 2 d~ m n 2­z ~ <k rn i 
+1 z ~ 0.5 ~ 2 16 ~ 4­2­1~ 2 Figure 7: Timings EPRI-6K Data NUMiER OF SROCESi60RS RUN TIME -128 - RUN 
+TIME -192 -+­ - RUN TIME -256 -D-- RUN TIME -320 %-- Update Last Block RUN TIME -128 -RUN TIME -192 
+-+--RUN TIME -256 -D--RUN TIME -320 -x--- NUMtER OF SROCESi60RS Last Block RUN TIME -128 4---RUN TIME 
+-192 -+- NUMtER OF ~ROCES!S60RS Check Convergence RUN TIME -128 -RUN TIME -192 -+-_ RUN TIME -256 -a-­ 
+...$ RUN TIME -320 -x-- NUMtER OF ~ROCES S60RS for Algorithm Components 2, 4, 8, 16, and 32 processors 
+processors. Update times are correlated to the size of the last diagonal block, which is inversely related 
+to the magnitude of maxD13. The performance graph for checking convergence illustrates that the load 
+balanc­ing step does not assign equal numbers of rows to all processors. The number of rows on a processor 
+varies as a function of the load balancing. While the curves on this graph are somewhat erratic, performance 
+is improving with near perfect parallelism even for 32 processors. We must reiterate that all available 
+parallelism in this work is a result of ordering the matrix and identi­fying relationships in the connectivity 
+pattern within the structure of the matrix. Power systems load flow matrices are some of the most sparse 
+irregular ma­trices encountered. For the EPRI-6K data, the most frequently encountered number of edges 
+at a node is only two, and 84.4~o of the nodes have three or less edges. For the BCSPWR1O matrix, 7170 
+of the nodes have three or less edges. Consequently, power sys­tems matrices pose significant challenges 
+to produce efficient parallel sparse matrix algorithms. In figure 8, we present a representative ordering 
+of the EPRI-6K data with maxDB equal to 256 nodes. This matrix represents the adjacency structure of 
+the net work graph, and clearly illustrates sparsit y. Non­zero entries in the matrix are represented 
+as dots, and the matrix is delimited by a bounding box. This figure cent ains two matrices: the ordered 
+sparse matrix and an enlargements of the last block after multi-coloring. This partitioned matrix has 
+been load-balanced for eight processors. The number of nodes in the last diagonal block is 120, the numbers 
+of edges are only 22, and this matrix partition is bipartite requiring only two colors. To obtain the 
+full benefits of parallel processing speedup throughout a load flow application, all data redistribution 
+must be eliminated. Jacobian calcula­tions when solving the systems of non-linear equations must consider 
+the processor/data assignments from the sparse linear solver. Otherwise, data redistribu­tion overhead 
+would nullify any speedup obtainable in the parallel linear solver. 7.2 Convergence Convergence for 
+a given data set is critical to the performance of an iterative linear solver. We have ap­plied our solver 
+to sample positive definite matrices that have actual power networks as the basis for the sparsit y pattern, 
+and random values for the entries. A sample of measured convergence data is presented in table 1. This 
+table presents the total error and Figure 8: Ordered EPRI-6K Matrix maxDB = 256 Tot al Error 4 0.000000000002 
+] 0.000478321442 Table 1: Convergence for EPRI-6K Data the maximum value for an iteration. All initial 
+val­ues, x(o), have been defined to equal 0.0. Convergence is rather rapid, and after four iterations, 
+total error 2 x 10 -lZ We hypothesize that this good con­ equals . vergence rate is in part due to having 
+good estimates of the initial starting vector. For actual solutions of power systems load flows, this 
+solver would be used within an iterative non-linear solver, so good estimates of starting points for 
+each solution would be readily available. 8 Conclusions We have developed a parallel sparse Gauss-Seidel 
+ solver with the potential for good relative speedup for the very sparse, irregular matrices encountered 
+in electrical power system applications. Block-diagonal­bordered matrix structure offers promise for 
+simplified [4] implementation and also offers a simple decomposition of the problem into clearly identifiable 
+subproblems. The node-tearing ordering heuristic has proven to be [5]successful in identifying the hierarchical 
+structure in the power systems matrices, and reducing the number of coupling equations so that the graph 
+multi-coloring algorithm can usually color the last block with only [6] two or three colors. All available 
+parallelism in our Gauss-Seidel aIgorithm is derived from within the ac­tual interconnection relationships 
+between elements in the matrix, and identified in the sparse matrix order­ings. Consequently, available 
+parallelism is not unlim-[7] ited. Relative speedup tends to increase nicely until either load-balance 
+overhead or communications over­head cause speedup to level off. WJe have shown that, depending on the 
+matrix, rela­tive efficiency declines rapidly after 8 or 16 processors, [8]limiting the utility of applying 
+large numbers of pro­cessors to a single parallel linear solver. Nevertheless, other dimensions exist 
+in electrical power system ap­plications that can be exploited to use large numbers of processors efficiently. 
+While a moderate number of [9] processors can be efficiently applied to a single power system simulation, 
+multiple events can be simulated simultaneously. Acknowledgments [10] We thank Alvin Leung, Nancy McCracken, 
+Paul Coddington, and Tony Skjellum for their assistance in this research. This work has been supported 
+in part by Niagara Mohawk Power Corporation, the New York [11] State Science and Technology Foundation, 
+the NSF under co-operative agreement No. CCR-9120008, and ARPA under contract #DABT63-91-K-OO05. [12] 
+References <RefA>[1] D. Br61az. New Methods to Color the Vertices of a Graph. Comm. ACM, 22:251, 1979. [13] 
+[2] I. S. Duff, R. G. Grimes, and J. G. Lewis. Users Guide for the Harwell-Boeing Sparse Matrix Col­lection. 
+Technical report, Boeing Computer Ser­vices, 1992. [14] [3] Electrical Power Research Institute, Palo 
+Alto, California. Extended Transient-Midterm Stabi!ity Program: Version 3.0-Volume 4: Programmers Manual, 
+Part 1, April 1993. G. FOX, M. Johnson, G. Lyzenga, S. Otto, J. Salmon, and D. Walker. Solving Problems 
+on G oncurreni Processors. Prentice Hall, 1988. G. Golub and J. M. Ortega. Scientific Comput­ing with 
+an Introduction to Parallel Computing. Academic Press, Boston, MA., 1993. M. T. Heath, E. Ng, and B. 
+W. Peyton. Parallel Algorithms for Sparse Linear Systems. In Parallel Algorithms for Matrix Computations, 
+pages 83­ 124. SIAM, Philadelphia, 1991. G. Huang and W. Ongsakul. Managing the Bottlenecks in Parallel 
+Gauss-Seidel Type Algo­rithms for Power Flow Analysis. Proceedings of the 18th Power Industry Computer 
+Applications (PICA) Conference, pages 74-81, May 1993. D. P. Koester, S. Ranka, and G. C. Fox. A Parallel 
+Gauss-Seidel Algorithm for Sparse Power Systems Matrices. Technical Report SCCS-630, NPAC, April 1994. 
+D. P. Koester, S. Ranka, and G. C. Fox. Parallel Block-Diagonal-Bordered Sparse Linear Solvers for Electrical 
+Power System Applications. In Pro­ceeding of the Scalable Parallel Librartes Confer­ence. IEEE Press, 
+1994. D. P. Koester, S. Ranka, and G. C. Fox. Par­allel Choleski Factorization of Block-Diagonal-Bordered 
+Sparse Matrices. Technical Report SCCS-604, NPAC, January 1994. R. A. Saleh, K. A. Gallivan, M. Chang, 
+I. N. Hajj, D. Smart, and T. N. Trick. Parallel Circuit Sim­ulation on Supercomputers, Proceedings of 
+the IEEE, 77(12):1915-1930, December 1989. A. Sangiovanni-Vincentelli, L. K. Chen, and L. O. Chua. Node-Tearing 
+Nodal Analysis. Technical Report ERL-M582, Electronics Research Labora­tory, College of Engineering, 
+University of Cali­fornia, Berkeley, October 1976. T. von Eicken, D. E. Culler, S. C. Goldstein, and 
+K. E. Schauser. Active Messages: a Mechanism for Integrated Communication and Computation. In Nineteenth 
+International Symposium on Com­puter Architecture, New York, 1992. ACM Press. Y. Wallach. Calculations 
+and Programs for Power System Networks. Prentice-Hall, 1986.  </RefA>
+			

@@ -1,0 +1,514 @@
+
+ A General Approach for Run-Time Specialization and its Application to C Charles Consel Frangois Noel 
+University of Rennes / Irisa Campus Universitaire de Beaulieu 35042 Rennes Cedex, France {cOnsel,fnoel}@ 
+irisa. fr Abstract Specializing programs with respect to run-time invariants is an optimization technique 
+that has shown to improve the performance of programs substantially. It allows a program to adapt to 
+execution contexts that are valid for a limited time. Run-time specialization is being actively investigated 
+in a variety of areas. For example, recently, major operating system research projects have been focusing 
+on run-time specialization as a means to obtain efficiency from highly extensible and parameterized systems. 
+This paper describes a general approach to rrm-time spe­cialization. For a given program and a declaration 
+of its run­time invariants, it automatically produces source templates at compile time, and transforms 
+them so that they can be processed by a standard compiler. At run time, only mi­nor operations need to 
+be performed: selecting and copying templates, filling holes with run-time values, and relocating jump 
+targets. As a consequence, run-time specialization is performed very efficiently and thus does not require 
+the spe­cialized code to be executed many times before its cost is amortized. Our approach improves on 
+previous work in that: (1) templates are automatically produced from the source pro­gram and its invariants, 
+(2) the approach is not machine dependent, (3) it is formally defined and proved correct, (4) it is efficient, 
+as shown by our implemen tation for the C language. Introduction Specializing programs at run time 
+with respect to dynamic invariants is an optimization technique that has already been explored in various 
+areas such as operating systems [16] and graphics [14]. This technique is aimed at adapting programs 
+to execution contexts by using run-time invariants. In the context of file system operations, examples 
+of run­time invariants include the type of the file being opened, the device where it resides, and whether 
+it is exclusively read. When a file is being opened, at run time, invariants become available and can 
+be exploited to specialize read and/or write routines. As reported by Pu et al. this specializa- Perrnission 
+to make digital/had copies of all or part of this material for personal or classroom use is granted without 
+fee provided that the copies a.m not made or distributed for profit or commercial advantage, the copy­rtgbt 
+notice, the title of the publication and its date appear, and notice is given that copyright is by permission 
+of the ACM, In.. To copy otherwise, to republish, to post on servers or to redistribute to lists, requires 
+specific permission and/or fee. POPL 96, St. Petersburg FLA USA @ 1996 ACM 0-89791 -769-3/95/01.. $3.50 
+tion eliminates redundant interpretation of data structures and yields significant improvements [15]. 
+In fact, various forms of run-time specializations have been studied on practical systems, and substantial 
+improve­ments have been reported. Locanthi et al., for example, applied specialization to the bitblit 
+procedure [14, 12]; their specialized code ran about 4 times faster than a generic im­plementation, In 
+the area of operating system, Massalin and Pu designed an operating system ~hich utilized run­time specialization 
+as a fundamental technique to optimize a wide variety of system components. They report speedup factors 
+that range from 2 to 40 depending on the system component considered [13]. Although various forms of 
+run-time specializations have undoubtedly been shown to improve substantially the per­formance of programs, 
+the specialization process has always been done manually [9]. The usual approach consists of defining 
+code templates, that is, code fragments parametri­zed with respect to run-time values. Then at run time, 
+templates are linked together depending on the control flow, and holes (Z.e., template parameters) are 
+filled with run-time values [10]. To minimize the cost of run-time specialization, templates are often 
+represented in a binary form to avoid invoking an assembler, or even more expensive, a complete compiler, 
+at run time. While the idea of run-time specialization is certainly at­tractive, considering the degree 
+of improvement it can yield, the approaches explored so far have fundamental drawbacks. They are manual. 
+Usually templates are written by the programmer either directly in some low level language, or using 
+some syntactic facilities [6].  They are not clearly defined. Although existing ap­proaches have shown 
+their effectiveness, the process of run-time specialization has always been presented as a black-box; 
+only the functionalities were described not the techniques.  They are not portable. When templates are 
+written in assembly language, they are limited to a given proces­sor. Often, templates have to be optimized 
+manually to obtain good performance.  They are error-prone. Because templates are directly written by 
+the programmer in a low-level language, errors may easily be introduced.  In this paper we present 
+a general approach for run-time specialization and its application to the C programming lan­ guage. Our 
+approach can be decomposed in the follow­ing main stages. At compile time, a program is analyzed for 
+a given context of invariants declared by the program­mer. This analysis determines the program transformation 
+to be performed for every syntactic construct in the pro­gram. This information is used by a subsequent 
+analysis to produce a safe approximation of the possible specializations of this program, in the form 
+of a tree grammar. Then, this tree grammar isusedto generate templates autornaticallyat the source level. 
+These templates capture thedynamiccom­putations, that is, the computations that rely on data that vary. 
+Once compiled by a standard compiler (in the case of the C language), various linking information (i. 
+e., labels and holes) iscollected from the compiled templates. Finally, the parts of the program corresponding 
+to the static computa­tions, i.e., the computations that rely onthe invariants, are compiled; they represent 
+the mm-time specialize. When it is executed at run time, in addition to computing invariants, therun-time 
+specializer also selects templates depending on the control flow, relocates jump targets, and fills template 
+holes with the invariant values. Our approach has many advantages compared to the ex­isting ones. * It 
+is automatic. Templates are automatically gener­ated from a description of the possible specializations 
+of a program, itself produced by an analysis. e It is formally based. We have formally defined the approach 
+for a subset of an imperative language and proved it correct. * It is general. In principle, our approach 
+applies to a variety of languages, from imperative to applicative ones.  o It is portable. In our approach, 
+most of the special­ization process is in fact performed at the source level. Only minor operations in 
+the linking phase of tem­plates need to be ported. These operations are limited to collecting locations 
+of template holes and jump la­bels within templates. It is efficient. we have applied the approach to 
+the C language: an implementation of a run-time specialize of C programs has been developed. It has been 
+used on various kinds of programs. The run-time specializa­tion process incurs a negligible overhead. 
+Preliminary experimentation shows that on procedures exhibiting a clear interpretive layer (e. g., variations 
+of printf ), run-time specialized code requires as little as 3 runs to amortize the cost of specialization, 
+and it executes 5 times faster than the non-specialized version. Our run-time specialization approach 
+is based, in part, on partial evaluation technology [8, 3]. In fact, it is inte­grated in a complete 
+partial evaluation system for C pro­grams that performs compile-time specialization as well as run-time 
+specialization [4]; this aspect is further discussed in Section 2. This system has been applied to various 
+kinds of programs such as operating system code. Plan. In Section 2, the underlying concepts of partial 
+eval­uation are reviewed. In Section 3, the approach and its main components are described; examples 
+are used to illus­trate the presentation. In Section 4, the approach is for­mally defined and proved 
+correct. Section 5 then discusses the related work. Finally, Section 6 gives some concluding remarks, 
+and outlines the future directions of this work. 2 Partial Evaluation Partial evaluation is a program 
+transformation technique aimed at specializing a program with respect to some parts of its input [8, 
+3]. There are two main strategies to perform partial evaluation. The first strategy, called on-line, 
+consists of specializing a program in a single pass. As the program gets processed, the program transformations 
+are determined and performed. Because program transformation occurs in the presence of concrete values, 
+on-line partial evaluation achieves a high-degree of specialization. The second strategy to partial evaluation, 
+called off-line, is composed of two parts: preprocessing and specialization. For a given program and 
+a description of its input (known or unknown), the preprocessing phase essentially compiles the specialization 
+phase. It does so by determining a program transformation for each syntactic construct in the program. 
+Then, the specialization phase is performed with respect to some partial input value. This process is 
+solely guided by the information produced by the preprocessing phase. As a consequence, specialization 
+is efficient. Whether on-line or off-line, partial evaluation has always been studied and understood 
+as a source-to-source program transformation. In this paper, we introduce an approach that goes beyond 
+this view. We propose to use partial eval­uation as a basis for run-time specialization. In fact, this 
+work is part of a complete partial evaluation system which specializes C programs at compile time as 
+well as at run time [4]. Let us briefly outline the salient features of this system. Our partial evaluation 
+system is based on an off-line strategy. The preprocessing phase mainly consists of an alias analysis, 
+a binding-time analysis, and an action analysis. The alias analysis is needed because of the pointer 
+facilities offered by the C language. The binding-time analysis deter­mines the binding-time property 
+of the variables in a pro­gram, given a program and a description of its context (z. e., global variables 
+and formals are declared as static/known or dynamic/unknown). While the binding-time analysis deter­mines 
+what to do for each syntactic construct in a program, the action analysis determines how to do it [2]. 
+In other words, binding-time information is used to determine what specialization actzon (z. e., program 
+transformation) should be performed. A small subset of the actions used for the C language is presented 
+in Section 4. Once the actions of a program are produced, various back-ends can exploit this information. 
+Firstly, they can be interpreted; this situation corresponds to a specialize. Sec­ondly, they can be 
+compiled to produce a dedicated special­ize (also called a generating extension [8]). Finally, actions 
+can be used to achieve run-time specialization. The last al­ternative comes from the fact that actions 
+define program transformations and thus can be used as a basis to determine what specialized programs 
+an action-analyzed program can yield. In fact, in our approach, an analysis of an action­analyzed program 
+is performed to determine an approxima­tion of this set of possible specialized programs; this set is 
+described as a tree grammar. 3 An Approach to Run-Time Specialization As mentioned in Section 2, run-time 
+specialization is one int f(int z, int y) { int f(int x, int y) { } int 1; 1=2*X; if(l==2) l=l+y; eIsel=y 
+return 1; *z; } int 1; (1= 2 * z) ifled ( 1== lzd =.eb else lad = eb (return l) d ; ed 2 ) ~e. ~reb 
+y%d * b ; ~zd z .r.b ; eb (a) Source program (b) Action-analyzed (o= static, y = program dynamic) Figure 
+1: An example program of the three ways of exploiting action-analyzed programs. This section presents 
+an approach to run-time specialization based on actions. Let us explain in detail how a program gets 
+annotated wit h actions by taking a concrete example. Actions are in­deed a key aspect of our approach: 
+it is the starting point of the run-time specialization process. Figure l-a presents a source program, 
+written in the C language. Figure l-b shows this program annotated with actions. For readability, the 
+action-analyzed program is rep­resented in concrete syntax and decorated with actions. Let us describe 
+how actions are determined for procedure f in the example program, assuming that its first parameter 
+is static and its second parameter dynamic. The first command in the procedure is assigned action erml 
+(ev). This action annotates completely static program fragments. Such program fragments represent computations 
+that solely depend on available data. Assuming that the symbol ; , at the end of the first command, is 
+a sequence construct, then it is assigned the action reduce (red) because the first command will be evaluated 
+away and thus the se­quence command will be reduced. Likewise, the conditional command can also be reduced 
+because the value of the test expression can be determined at specialization-time. Still, the branches 
+of the conditional command have to be rebuilt. More specifically, the assignment in the true branch has 
+to be rebuilt (reb) because the right-hand side does not par­tially evaluate to a constant. This is caused 
+by variable y which is dynamic. As such, this variable represents a com­pletely dynamic code fragment; 
+it is annotated with action identity (id). This action denotes code fragments that can be reproduced 
+verbatim in the specialized program. A sim­ilak situation occurs in the false branch of the conditional 
+command. Finally, the return command is globally anno­tated with id since it is uniformly dynamic. To 
+specialize a program at run time based on its ac­tions, a naive approach would simply consist of postponing 
+specialization until run time, that is, when the specializa­tion values become available. Then, the specialized 
+code would be compiled and dynamically linked to the running executable. The obvious drawback of this 
+approach is the cost of compilation which would require the run-time spe­cialized program to be run many 
+times to amortize the cost of specialization, compilation and linking. In fact, the reason why the compilation 
+of a particular specialized program has to be postponed until run time is because we do not know the 
+set of possible specializations an action-analyzed program can yield. If we knew such a set, or a description 
+of it, then it could be processed at compile time instead of run time. Unfortunately, the set of all 
+possible specializations is in general infinite (because of loop unrolling, for example). 3.1 Using 
+Tree Grammars A traditional way to finitely represent an infinite set of trees is to use tree grammars. 
+However, determining the exact set of the possible specializations of an action-analyzed pro­gram is 
+undecidable in general, since specialization values are unknown at compile time. Yet, an approximation 
+can be defined; it corresponds to the least superset of the exact set. It is safe to consider a tree 
+grammar that describes more specializations than the actual ones if they are ignored dur­ing run-time 
+specialization; more precisely, if no execution context leads to these specializations. We have developed 
+an analysis aimed at computing a tree grammar, called speciahmtion grammar in this context, which represents 
+a safe approximation of the set of all pos­sible specializations of an action-analyzed program. Let us 
+consider an example of a specialization grammar. Figure 2-a redisplays the action-analyzed procedure 
+f and Figure 2-b shows its corresponding specialization grammar. Like action-analyzed programs, specialization 
+grammars are rep­resented in concrete syntax. The first rule F describes the possible specializations 
+of procedure ~. Unlike compile-time specialization, when a procedure is specialized at run time, it does 
+not need to be renamed. Indeed, during execution, templates have a bi­nary format. Only code addresses 
+are manipulated. Since local variable 1 is involved in some dynamic computations, it is residual, and 
+thus its declaration remains in the spe­cialized program. Directly following this declaration, in­stead 
+of the first command of the original procedure, the non-terminal S occurs. This non-terminal defines 
+the spe­cializations of the conditional command. In fact, the first command in ~ is not part of the specialization 
+grammar be­cause it is completely static (ev ); consequent ly, it will be evaluated at specialization-time. 
+Next to the occurrence of the non-terminal S, the return command appears. It is iden­tical to the command 
+in the original program because it is completely dynamic (id). As for the conditional command described 
+by rule S, it will be reduced at run time since its test expression is purely static. As a result, rule 
+S is com­posed of two alternatives, one for each branch. Each branch is an assignment to be rebuilt at 
+run time. However, each right-hand fiide of thetie assignments includes a completely static expression: 
+variables 1 and x. The integer values re­sulting from their run-time evaluation are described by the 
+generic terminal In&#38; it is a placeholder for integer values. int } f(int z, int int 1; (1= 2 * z) 
+ i~ed ( 1== ~td =reb else 1 d = b (return l) d y) { ; d 2 ) ~ev +reb y=d * b ; ~,d Z * .reb ; b F S 
++ -i I int f.t(int int 1; s return } l= Int+y; l=y*Int; y) 1; { (a) Action-analyzed program (b) Specialization 
+grammar Figure 2: Specialization grammar generated from an action-analyzed procedure At this stage it 
+is imp&#38;tant to notice that a special­purpose compiler could be developed to process right-hand sides 
+of specialization grammar rules. In other words, such a tool could compile incomplete syntax trees parameterized 
+with constant values. Compilation would be done statically and thus run-time specialization would mainly 
+amount to assembling binary fragments and instantiating them with respect to run-time values. Although 
+this method is pos­sible, it requires one to develop a complete compiler. This compiler would necessitate 
+time and effort to be competitive with advanced optimizing compilers currently available. A better approach 
+would consist of modifying an existing com­piler. However, real-size compilers are not as modular as 
+they claim to be: significant modifications may propagate throughout most of the compilation system. 
+Such modifi­cations may therefore not be necessarily much simpler than the previous approach. An even 
+better approach consists of using an existing compiler as is. This is discussed in the next sections. 
+3.2 Introducing Templates An existing compiler can be used to process right-hand sides of specialization 
+grammars. In this section we present a transformation process aimed at converting these right-hand sides 
+into source code fragments parameterized with run­time values. We call these fragments source templates. 
+Tem­plate parameters are often called holes in the literature [10]. At run time, part of the specialization 
+process consists of physically replacing these parameters by values. In other words, template holes are 
+filled with run-time values. The resulting object is called an instance of the template. Transforming 
+specialization grammars into source level templates mainly amounts to unparsing the right-hand side of 
+the grammar rules and delimiting individual templates. The former task is fairly straightforward. The 
+only interest­ing aspect is concerned with the treatment of generic termi­nals. This representation for 
+run-time values is transformed into holes. The concrete repre~entation of ELhole depends on both the 
+language and the compiler being used. To abstract over these issues, holes are just given a unique name 
+within brackets (for example [hi] in Figure 3). Delimiting templates can be done in several ways. Let 
+us present two approaches. The first approach consists of creating one template per right-hand side in 
+a specialization grammar. For example, based on the specialization grammar presented in Figure 2­ b, 
+the first approach would yield three templates as shown in Figure 3-a: one for procedure f, and one per 
+alternative in the conditional command. Just like the right-hand side of F in the specialization grammar 
+includes non-terminal S, its corresponding template includes a reference to other templates. The template 
+to be selected cannot be deter­mined at compile time since it depends on the value of the test expression 
+of the conditional command. Therefore, a placeholder (that is, some reserved space) is introduced to 
+insert the selected template. Although conceptually simple, this approach may be costly in practice. 
+Indeed, it assumes that the physical layout of template tlat run time includes enough space to insert 
+ei­ther template tzor template ts.If they have different sizes, the size of largest template is used. 
+As a result, placehold­ers for templates may have a large size. A more important drawback occurs if loops 
+are unrolled. In this case, the size of the unrolled loop cannot be determined at compile time. The second 
+approach is aimed at eliminating nested tem­plates such that no space be reserved to insert templates. 
+To do so, when the right-hand side of a specialization grammar rule includes a non-terminal, a template 
+is created before and after this non-terminal. This approach is illustrated by Figure 3-b. Template tl 
+represents a first fragment of the specialized version of procedure f. Then, either template tz or tsis 
+appended. Finally, template tqcompletes a special­ized procedure. Notice that for the formal definition 
+of the run-time spe­cialization process, the first approach is used to simplify the presentation and 
+abstract over these implementation issues.  3.3 Compiling Templates Statically Once templates are identified 
+and transformed into concrete syntax, they can be compiled. Because they are available at compile time, 
+they can be compiled then. They become object templates. Of course, the way templates are compiled depends 
+on the language in which they are written, and the compiler which is used. In this section we discuss 
+the generaI issues arising for template compilation, mostly independently of a specific language or compiler. 
+So far, the templates of a procedure have been described as separate entities. However, if templates 
+were to be com­ piled separately, the quality of the code would be poor since the compilation process 
+would not take advantage of the context in which they appear. Some compilation aspects such as register 
+allocation and instruction scheduling would undoubtedly suffer from this situation. To circumvent this 
+problem, our approach consists of constructing a source code int f.t(int y) { tl int 1;   E3TEl 
+k?&#38;q 1 = Ih l]+y; 1 = [hlj+y; 1 =y* [hZ]; (b) Approach 2 (a) Approach 1 I Figure 3: Templates for 
+procedure f void rt_spec-f(int x) { int l; case 1: dump-template(tl ); 1 [ hl +Y; t2 1=2*X; break; 
+if(l== 2){ case 2: dump-template (tz); instantiate_hole( tz, 1); * 4 } else{ dump_template(ts); instantiate_hole 
+(ts, r); , I 1I } dump-template (tl); Figure 4: Source representation of templates } Figure 5: Run-time 
+specialize for j I that combines all the templates and still expresses the un­knowns as far as how exactly 
+these templates can be assem­bled at run time. A concrete example of this transformation 3.4 Producing 
+the Run-Time Specialize is presented in Figure 4. Now that templates have been generated, compiled and 
+ex-As can be noticed the source representation of templates tracted from the object code, and that information 
+needed for procedure ~ follows the structure of the specialization to instantiate them has been collected, 
+we are ready to pro­grammar. In particular, because we do not know prior to duce the run-time specialize. 
+This procedure consists of run time which alternative of the conditional command will eval fragments 
+interleaved with operations aimed at select­be included in the specialized version of procedure ~, both 
+ing and dumping templates, filling holes wit h run-time val­alternatives are included in a switch command 
+whose test ues, and relocating jump targets. The run-time specializevalue is unknown (variable unknown) 
+to the compiler. This is generated based on an action-analyzed program. layout is directly derived from 
+the specialization grammar. Figure 5 displays the run-time specialize. for procedureEven though there 
+is this unknown, the compiler can still ~. The control flow of this procedure can be seen as a subset 
+process the templates globally, in that it knows the possible of the control flow of the original procedure 
+in the sense that combinations that can occur. In fact, the source represen­only the static parts of 
+the original control flow graph appeartation of templates includes some form of markers around in the 
+run-time specialize. templates so that they can be identified and extracted from Since parameter x in 
+the original procedure was declared the object code. Object templates are used at run time by as static, 
+it appears as a parameter of the run-time spe­the specialize.. cialize.. Local variable 1 was involved 
+both in static and Finding an appropriate representation for template holes dynamic computations. Therefore 
+it appears in both a t em­is an issue that depends on both the language and the com­plate and the run-time 
+specialize.. The first operation of piler being studied. the run-time specialize. is to dump template 
+tl, which is Once templates are compiled, information from the re­the header of the specialized procedure. 
+The first command sulting object code must be collected: the address of tem­of the original procedure 
+can then be executed since it is plate holes needs to be recorded so that the run-time special­purely 
+static. Next, the conditional command is executed. ize. knows where values need to be installed. Also, 
+template The test expression can be fully evaluated; the resultingaddresses have to be determined so 
+that jumps can be relo­value determines whether the first or the second templatecated if needed. should 
+be dumped. The dumped template is then instanti­ated with the appropriate run-time value. Finally template 
+t4is dumped; it corresponds to the purely dynamic return command, and thus does not require any instantiation. 
+As can be noticed, the operations to perform the actual specialization are very simple and introduce 
+little overhead at run time. Relocation of jump targets and hole filling are compiled. Copying of templates 
+can be implemented very efficiently on some processors provided their memory layout is carefully done. 
+The result of an invocation of the run-time specialize is a specialized code ready to be used. In our 
+implementation, the last operation of the run-time specialize consists of re­turning the address of the 
+specialized code. For a procedure, it returns a procedure pointer which can then be invoked. 4 Semantic 
+Definition of Run-Time Specialization In this section, an imperative languague is introduced and its 
+semantics is defined. Then, a set of specialization actions for this language, as well as their semantics, 
+are presented. Also, the semantic definition of the process of generating run-time specializes is given. 
+Finally, the correctness criterion for this latter process is stated. It establishes that specializing 
+programs by interpreting actions, or by evaluating the run­time specialize yields the same specialized 
+program, given the same specialization values. Even though this presentation covers a simple impera­tive 
+language and a small set of actions, it still addresss the important steps of the run-time specialization 
+process. Because this presentation is done in a denotational frame­ work, it abstracts over implem entation 
+details and focuses on conceptual aspects. 4.1 The Language Variations of the language being studied 
+(and their semantic definition) are used in this presentation. To distinguish each of them, syntactic 
+domains and variables ranging over these domains are indexed by the abbreviated name of the varia­tion 
+(e. g., c E Cornz ), and similarly for valuation functions. The syntax of the imperative language being 
+studied is displayed in Figure 6. The first part of the figure (Corn and Ezp ) defines the language to 
+be handled by the spe­cialize. This initial language consists of commands (empty commands noted Nop, 
+assignments, sequences, and condi­tionals) and expressions (variables, constants, and primitive calls). 
+To reason about run-time specialization, the initial lan­guage is extended. To motivate these extensions, 
+let us dis­cuss some issues involved in modeling run-time specializa­tion in a denotational framework. 
+First, as can be expected the denotational definition of run-time specialization does not manipulate 
+object templates. Instead, it manipulates source templates. More precisely, since source templates are 
+essentially in a one-to-one corre­spondence with the right-hand sides of grammar rules, the latter ones 
+will now be manipulated by the run-time special­ization process. As a consequence of this change, instead 
+of dumping templates for each non-terminal and instantiating templates with constant values, run-time 
+specialization now substi­tutes non-terminals by their right-hand side, and generic terminals (encoded 
+as holes) by constant values. Two ex­tensions to our initial language make it possible to perform these 
+operations. Construct Rule(s, c s ) allows a non­ terminal s to be replaced by its right-hand side Crhs. 
+Con­ struct Inst (h, e) substitutes a hole h by a constant resulting x~Id Identifiers n c Num Numbers 
+ o E Oper Binary operators hEHoles ={hl,. ... h~} Holes s E Nterms = {s1, . . . . s~} Non-terminals .. 
+c E Corn .. Nop Assign(z, e ) Seq(cj, c>) I Cond(e , c;, c:) .. I e E Ezpl .. Var(z) Cst(n) I Call(o, 
+e:, ej) .. I c E Corn .. Nop Assign(z, e) Seq(c~, cz) Cond(e, cl, C2) Rule(s, c ~s) Inst(h, e) e E 
+Exp = Ezp% I C.hs E ComThs ::= Nop Assign(z, e ~ ) Seq(c~hs, cj~s) Cond(e h , c~h , Cjk ) Nterm(s) Var(x) 
+Cst(n) Call(o, e~hs, ejhs) Hole(h) Figure 6: Language syntax from the evaluation of an expression e. 
+The extended lan­guage is defined by domains Corn and Exp. Right-hand sides of rammar rules are defined 
+by do-F mains Com hs and Ezp . Just as templates can be nested, right-hand side terms (rhs-terms) may 
+include non-terminals (Nterm(s)). Also, expressions may include holes (Hole(h)). The end result of run-time 
+specialization now corresponds to the abstract syntax of the specialized program, without non-t erminals 
+nor holes. The model we just described does not contradict the fact that source templates are available 
+at compile time and can thus be compiled prior to run-time to achieve efficient spe­cialization in practice. 
+ 4.2 Semantic Definition of the Extended Language In this section the denotational semantics of the extended 
+language is defined. It is not necessary to define the deno­tational semantics of the initial language 
+since it is a subset of the extended one. The semantic domains as well as the valuation functions are 
+displayed in Figure 7. Notice that the process of substituting non-terminals by their right-hand side, 
+and holes by values is noted - . As discussed in the previous section, we define the seman­tics of run-time 
+specialization at the abstract syntax level. To do so, we have introduced extra constructs (Rule and 
+Inst) to build a specialized program by repeated substitu­tions. But we also need to define a place where 
+the program being specialized can be stored and incrementally built. To this end, a special identifier 
+fj is introduced; the store maps Figure 8: A run-time specialize written in the extended i f 6 Int E 
+Fun, = Int x Int + Int Integer Binary, values integer functions ~, 6 G Store = Id C : Corn + Store ~ 
+-+ (Int + comrh )~ Store  I c[Nop] C[Assign(x, CISeq(cl, C.[Cond(e, e)] c2)] cl, C2)] u= a u a = = = 
+c[Rule(s, CIInst(h, c )] e)] a u = = E ~ .Exp + Store &#38;[Var(x)] &#38;[Cst (n)] i?[Call(o, el,ez)] 
+4 Int u c7 cr = = = a(x) N[n] O[o](&#38;[el]a, &#38;[e~]u) N : Num --+Int D : Oper --+ Fun2 Figure 7: 
+Extended semantics 1 i rule(so, (s1; return l;D) 1=2*X; if(l== 2){ rule(sl, (1 = [hi] + y;)); inst([hl], 
+1); } else { rule(sl, 11 = y* [hZ]; )); inst([hz], z); } } language it to the specialized program being 
+built. For a specializa­tion grammar of a given program, the initial state of the specialization process 
+consists of a store mapping identifier ~ to the right-hand side of the start symbol of the grammar. Notice 
+that holes and non-terminals are unique, as spec­ified by the generator of run-time specializes (see 
+Section 4.4). Let us revisit the example of procedure f and examine the run-time specialize for its body; 
+it is displayed in Figure 8. The declaration is omitted, and the return command is left for the sake 
+of presentation although procedures are not included in the initial language. Since identifier ~ is initially 
+mapped to the right-hand side of the start symbol of the specialization grammar, as the run-time specialize 
+executes, the non-t erminals get re­placed by their right-hand side, and holes get substituted by constants. 
+ 4.3 Semantic Definition of Specialization Actions Now that the extended language is introduced, let 
+us define the syntsx and semantics of specialization actions. They represent the starting point of the 
+run-time specialization process. The set of actions considered for this presentation c G Corn ::= Eval(ci 
+) Id(c ) Rebassign(z, e ) Rebseq(c~, C: ) Redseq(c}, C; ) Rebcond(e~, c;, c; ) Redcond(e , c?, c;) e 
+G Expa ::= Eval(e ) I Id(e ) Rebcall(o, e;, ej) Figure 9: Actions syntax is displayed in Figure 9. 
+The meaning of all these actions has been discussed ear­lier except for Rebseq. This action is assigned 
+to a se­quence command to be rebuilt. Notice that eval and iden­tit y commands (and expressions) only 
+involve elements of the initial language. Indeed, in either case these commands (and expressions) do 
+not involve any specialization aspects and should thus be standard. A similar situation occurs for the 
+first argument of both Redseq and Redcond which is purely static. The semantic definition of the actions 
+is given in Figure 10. As discussed above, the semantic of action Redseq re­quires the first command 
+to be purely static; another action could be introduced to address the case when the second command is 
+purely static. Lwtly, it is important to notice that the actions of a given program are assumed to be 
+correct. Proving the correctness of actions is outside the scope of this paper. This issue is addressed 
+by Consel and Khoo in the context of a functional language [5]. 4.4 Generating Run-time Specializes 
+Given that the semantics of actions are defined, the re­maining step is aimed at generating the run-time 
+specialize from an action-analyzed program. This generator of run­ C : Coma + Store -+ (Corn X @[Eval(c 
+)] u = Ca[Id(c )] r= C [Rebassign(z, e )] a = C [Rebseq(c~, cj)] C= c [.lledseq(c~,c j)] u= C [Rebcond(e 
+, c~, c;)] a = C [Redcond(e , c;, c;)] a = &#38; : Expa + Store + EZPL S [Eval(e )] u= t7[Id(e )] u = 
+2 [Rebcall(o, e;, ej)] a = Figure 10: Semantic time specializes is defined as a non-standard interpretation 
+of actions. For a given action-analyzed program, it produces two results: an rhs-term which corresponds 
+to the unsubsti­tuted specialized program, and a run-time specialize which includes substitution operations 
+and eval fragments. The generator is defined in Figure 11. Let us describe in detail the treatment of 
+each action, starting with the commands. An eval command produces an rhs-term which consists of the empty 
+command since a command which can be completely evaluated will not appear in the specialized program. 
+As for the run-time specialize, it corresponds to the command itself since it can be com­pletely evaluated. 
+The inverse situation happens for identity commands. Rebuilding an assignment means that this construct 
+will be in the specialized program and thus is included in the resulting rhs-term. This rhs-term corresponds 
+to the original assignment where eval expressions (in the right-hand side) have been replaced by holes. 
+As for the run-time specialize, it is composed of the instantiation operations that may be needed to 
+fill the holes in the right-hand side expression of the assignment. Rebuilding a sequence command means 
+that this con­struct will appear in the specialized program, and indeed, it is part of the resulting 
+rhs-term. As for the run-time spe­cialize, it is composed of the eval commands contained in the arguments 
+of sequence command. When reducing a sequence command, the generated rhs­term only cent ains the commands 
+from the second argument of sequence to be rebuilt (the first argument can be com­pletely evaluated). 
+The run-time specialize is a sequence command which consistfi of the first argument of the original sequence, 
+and the eval commands from the second argument of sequence. Rebuilding a conditional command is very 
+similar to re­ building a sequence command; its description is thus omit­ ted. The reduction of a conditional 
+command involves a new aspect: it produces a fresh non-terminal as the rhs­ term. This is due to the 
+fact that, although the conditional command is known to be reduced, the branch to consider is unknown. 
+Therefore, a non-terminal is introduced as a Store) ([Nc)p], C[c ]a) ([cz], a) ([Assign(z, &#38; [e ]a)], 
+a) ([Seq(c~, c~)], a ) where (C:, a ) = Ca[c:]u (c;, a ) = Ca[c:]u Ca[c;](cfcj]a) ([Cond(&#38;ffi[ea] 
+a,c~, c~)], a ) where (C;, cr ) = C [cy]a (C;, ff ) = Cm[c;]a if t[e ]a then C [c~]a else C~[c~]a [Cst(t[.? 
+]cr)] [e ] [Call(o, ~ [e~]a, E [ej]cr)] definition of actions placeholder for the rhs-term of either 
+branch. Consequently, ~he run-time specialize produced in this situation consists of a conditional to 
+be evaluated whose branches substitute the fresh non-terminal by the rhs-term of the appropriate branch, 
+in addition to executing the eval commands con­tained in the corresponding branch. In the case of an 
+eval expression, the result of its evalu­ation will be substituted for a hole at run time. Therefore, 
+the analysis of such an expression produces a hole freshly generated as the rhs-term. As for the run-time 
+specialize, it consists of an instantiation command aimed at replacing the hole by a value computed at 
+specialization time. When an identity expression is analyzed, it is reproduced verbatim as the rhs-t 
+erm. As for the run-time specialize, it consists of the empty command since the expression is not processed 
+during specialization. Rebuilding a primitive call means that the rhs-term con­sists of this construct, 
+the operator, and the rhs-term of each operand. The run-time specialize is a sequence con­struct composed 
+of the instantiation commands caused by the possible eval expressions included in the call arguments. 
+ 4.5 Correctness Proving correct the process of generating run-time specializ­es consists of showing 
+that, for an action-analyzed program and some specialization values, the specialized program pro­duced 
+by interpreting actions is the same as the one pro­duced by executing the run-time specialize using the 
+same specialization values. This statement is formally expressed in the following the­orem. Theorem 1 
+(Vc E Corn ) (Vu @ Store) Let (cTks , c) = %m[c ] Then, a = C[c]a[$ ~ cr~s] * (a ($),;) = C [c ]5 Where 
+Vcr ~ Store, 6 = cr[~ ~J_] The proof is included in Appendix A.  C;en: Corn +( ComThs xc~m) Cj.%UEval(ci)] 
+= ([Nop], [c ]) C;.n[Id(c )] = ([c ], [NcIp]) C&#38;. [Rebassign(z, e )] = ([Assign(z, e ks)], [c]) 
+where (e hs, c) = Ejen[e ] C~en [Rebseq(cf, c; )] = ([Seq(c~~:l~~~~j [Seq(c~, c~)]) where = C;en[c;] 
+(C;h , c, ) = C;en[c;] C~em [Redseq(c}, c; )] = ([.; ], [~}y;:;)]) where = C;en [c;] Cj.n[Rebcond(ea, 
+c;, c;)] = (UCond(;~~;~S, Cjh )], [Seq(c, Seq(cl, .2))]) where = t~en [. ] (Cy,c, ) = C;en[.;] (Cy, c,) 
+= C;=n[c;] C~.. [Redcond(e , c;, c;)] = (Nterm(s), [Cond(e , Seq(Rule(s, C[hg), .1), Seq(Rule(s, cj s), 
+.2))]) where (Cyh , c,) = C;en [c;] (Cjh , c,) = C;en[c;] s is a fresh non-terminal E ~,. : Expa -+ (Exp 
+hs x Corn) Cj.~[Eval(ez)] = ([Hole(h)], [Inst(h, e )]) where h is a fresh hole = ([e ], [Nop]) &#38;jen[Rebcall(o, 
+e~, ej)] ~j.~[Id(e )] = ([ Call(ol e;hs, e;ks)l) [Seq(cl, .2)1) where (e~hs, .1) = &#38;j.n [e;] (ejhs, 
+c~) = &#38;j,. [ej] Figure 11: Abstract interpret ation of the actions 5 Related Work st rat egy makes 
+it difficult to generate efficient code. In contrast, our approach ~nables the compiler to process Recently 
+two approaches to run-time code generation have program fragments globally in that it is applied to the 
+pos­been reported by Engler and Proebsting [6], and by Leone sible combinations of templates which can 
+be constructed at and Lee [11]. These approaches include some aspects of run-run-time. Because the compiler 
+processes large code frag­time specialization and address issues related to compiling ments it is able 
+to produce efficient code. code at time. Many existing approaches (e. g., [11, 6]) emphasize the run 
+Engler and Proebsting s approach consists of providing need to perform elaborate optimizations at run 
+time based the programmer with operations to construct templates man-on the fact that much more information 
+is available then. ually in the intermediate representation of the LCC compiler This is a difficult challenge 
+because of the conflicting re­(a form of register transfer language) [7]. Then, at run time, quirements 
+of a run-time code generator, namely, produc­the operations to construct templates are executed, and 
+a ing code at low cost to allow this process to be amortized fast code generator is invoked to compile 
+templates into bi-quickly, and exploiting as much run-time information as pos­ nary code. sible to produce 
+highly-optimized code. When the run-time Not only is this approach error-prone because templates code 
+generator only focuses on the former requirement, even are written manually, but it also forces the code 
+generation if the number of instructions being executed is smaller, the process to be overly simple because 
+it needs to be fast (no quality of the generated code may be such that performance elaborate register 
+allocation or instruction scheduling is per-is degraded. When the run-time code generator puts too formed). 
+much effort on optimization, the overhead may be such that Leone and Lee s approach is developed for 
+a first-order the process may not be applicable to many situations. subset of a purely functional language. 
+It is aimed at post-Determining what kind of run-time code generation pro­poning certain compilation 
+operations until run time to bet-cess is most suitable for a given situation is a difficult prob­ter 
+optimize programs. Operations such as register alloca-lem. Two import ant fact ors need to be taken into 
+account: tion may be performed at run time for some program frag-the overhead introduced by the run-time 
+code generator and ments. The binding-time of a given function is defined by the frequency of execution 
+of the code fragment to be pro­the way it is curried. cessed at run time. Both approaches suffer from 
+the fact that the run-time To some extent run-time specialization simplifies the is­compiler does not 
+have a global view of the program to be sue in that it is not aimed at performing general-purpose specialized, 
+nor does it know what kind of specialized pro-optimizat ions that may or may not improve performance. 
+grams can be produced at run time. Consequently, run-time Rather i+ is restricted to specializing programs 
+with respect code generation is not performed at the level of a procedure to some run-time invariants. 
+If the program fragments to or a basic block, it is done at the instruction level. This be processed 
+offer good opportunities for specialization, the run-time specialization process will likely performance 
+should improve, provided the is executed many times. Techniques to specialize object-oriented time have 
+also been developed [1]. They timizing frequently executed code sections. specialization techniques do 
+not address arbitrary computa­tions: they are limited to the optimization of certain object­oriented 
+mechanisms such as method dispatch. 6 Conclusions and Future Directions We have presented an approach 
+to performing specializa­tion at run time, based on partial evaluation technology. It consists of producing 
+templates at compile time and trans­forming them so that they can be processed by a standard compiler. 
+At run time, only minor operations need to be performed: selecting and with run-time values, and result, 
+run-time specialization and thus does not require many times before its cost Our approach has been using 
+the GNU C compiler, copying templates, relocating jump is performed a specialized code is amortized. 
+implemented for and evaluation system that specializes as well as at run time. Future directions for 
+this work ough experimentation with our performing more measurements, be amortized specialized programs 
+are aimed However, filling holes targets. As a very efficiently to be executed the C language, is integrated 
+in a programs at compile include conducting C run-time specialize developing specific niques to use 
+run-time specialization in operating code where specialized code may be executing when and code at run 
+at op­these partial time a thor­and tech­system invari­ ant become invalid, and applying the approach 
+to different languages like ML. Acknowleginents The Partial Evaluation Group at Irisa and group at Oregon 
+Graduate Institute provided back on our work and detailed comments on Thanks also due to Olivier Danvy, 
+Pierre Keppel and Mark Leone for helpful comments and stimulating discussions. References the Synthetix 
+valuable feed­the paper. Jouvelot, David on the paper <RefA>[1] C. Chambers and D. Ungar. Customization: optimiz­ing 
+compiler technology for SELF, a dynamically-typed object-oriented programming language. In ACM SIG-PLAN 
+Conference on Programming Language Desagn and Implementation, pages 146 160, 1989. [2] C. Consel and 
+O. Danvy. From interpreting ing binding times. In N. D. Jones, editor, European Symposium on Programming, 
+Spr&#38;ger-Verlag, 1990. [3] C. Consel and O. Danvy. Tutorial notes uation. In ACM Symposium on Principles 
+mtng Languages, pages 493 501, 1993. [4] C. Consel, L. Hornof, F. Noel, J. Noye, schi. A Uniform Approach 
+for Comptle-Ttme Specializahon. Technical Report, Rennes/Inria, 1995. In preparation. to compil-ESOP 
+90, 3 d pages 88-105, on partial eval­of PTogram­ and N. Volan-Time and Run-University of [5] [6] [7] 
+[8] [9] [10]  [11] [12] [13] [14] [15] [16] C. Consel and S.C. Khoo. On-line @ Off-line Par­tial Evaluation: 
+Semantic Specifications and Correct­ness Proofs. Research Report, Yale University, New Haven, Connecticut, 
+USA, 1993. Extended version. To appear in Jou?mal of Functional Programming. D. R. Engler and T. A. Proebsting. 
+DCG: an efficient, retargetable dynamic code generation system. In ACM Conference on Architectural Support 
+for Programming Languages and Operating Systems, 1994. C. W. Fraser and D. R. Hanson. A code generation 
+in­terface for ANSI C. Software -Practice and Experience, 21(9):963-988, 1991. N. D. Jones, C. K. Gomard, 
+and P. Sestoft. Par­tial Evaluation and Automatic Program Generation. Prentice-Hall International, 1993. 
+D. Keppel, S. Eggers, and R. Henry. A Case for Run­time Code Generation. Technical Report, University 
+of Washington, Seattle, Washington, 1991. D. Keppel, S. Eggers, and R. Henry. Evaluating Run­time Compded 
+Value-Specijlc Optimzzations. Techni­cal Report 93-11-02, University of Washington, Seattle, Washington, 
+1993. M. Leone and P. Lee. Lightweight run-time code gen­eration. In ACM Workshop on Parttal Evaluation 
+and Semantics-Based ProgTam Mampulatzon, pages 97-106, 1994. B. N. Locanthi. Fast bitblt with asmo and 
+cpp. In European Unzx Usem Group Conference Proceedings (E UUG), 1987. H. Massalin and C. Pu. Threads 
+and input/output in the Synthesis kernel. In ACM Symposaum on Operating Systems Principles, pages 191-201, 
+1989. R. Pike, B. N. Locanthi, and J.F. Reiser. Hard­ware/software trade-offs for bitmap graphics on 
+the blit. Software -Practzce and Experience, 15(2):131-151, 1985. C. Pu, T. Autrey, A. Black, C. Consel, 
+C. Cowan, J. Inouye, L. Kethana, J. Walpole, and K. Zhang. Opti­mistic incremental specialization: streamlining 
+a com­mercial operating system. In ACM Symposium on Op­erating Systems Principles, 1995. To appear. C. 
+Pu, H. Massalin, and J. Ioannidis. The Synthesis kernel. ACM Computing Systems, 1(1):11 32, 1988. </RefA>A 
+Correctness In this section, the correctness proof which relate the stores being produced expressions 
+produced by interpretation lemmas are simple, they are omitted. of our approach by a run-time of actions 
+and is presented. specialize and by evaluation The proof of by standard of a run-time the main theorem 
+relies on four lemmas interpretation. It also relates specialized specialize. Because the proofs of these 
+ Lemma 1 states that the evaluation of a command written in the initial language does not affect (or 
+depend on) the program being specialized stored at location $. Lemma 1 (Vci c Corn ) (Vcr E Store) (Vcrhs 
+c C om ks) c[c~]u[~ ++ c+ ] = (c[c ]a)[~ 1+ c ~ ]. Lemma 2 stipulates that for any command written in 
+the extended language, whether or not it is evaluated with a store defined at location ~ does not affect 
+the other values contained in the store. Lemma 2 (Vc ~ C om)(Vu 6 Store) C[c]cr = C[c]t7 The following 
+two lemmas address a correctness issue regarding the expression included in assignments and conditionals. 
+More precisely, for a given action-analyzed expression and a store, a specialized expression can be produced 
+by interpreting the actions using &#38; . Another alternative is to evaluate the run-time specialize 
+produced by &#38;$n for this action-analyzed expression. Lemmas 3 and 4 state that these different evaluation 
+strategies produce the same specialized expression and the same store modulo the value of the store at 
+location $. The following lemma uses function Hole to collect holes in rhs-terms (expressions and commands). 
+Theorem 1 (Vc 6 Corn ) (Vcr c Stor-e) Let (c ks, c) = C~en[c ] Then, a = C[c]cJ[~ b+ C k ] + (a ($), 
+cJ) = C [c ]6 P roofi the proof is by structural induction on c If c = Eval(c ) then, C;=% [c ] = (Nop, 
+C ) CT = C~c ]a[~ ++ Nop] By Lemma 1, CT = (C[c ]cr)[~ ++ Nop] + (a (~), ~) = (Nop, C[ci]~) = C [c ]@ 
+ If co = Id(c ) then, C;=% [c ] = (c , Nop) u = CINop]a[$ ~ c ] = a[$ ++ c ] * (a ($),; ) = (C%,5) 
+= C [C ]6 If c = Rebassign(z, e ) then, C~.m [c=] = (Assign(z, e h ), CO) where (er~s, c.)= t~,n[e ] 
+ a = CICOla[!i ++ Assign($,e hs)l By lemma 3, (o ($),; ) = (Assign(z, S [e ]@), &#38;) * (a ($),; ) 
+= C [c ]ti e If c = Rebseq(c~, c;) then, C~en [c ] =( Seq(c~k , c$~s), Seq(cl, c2)) where [~~~~~~~ ~ 
+~n~~ gen { a =C. [Seq(cl, c2)]a[~~Seq(c~~ ,cjL )] =C[c2](C[cl]a[$ ++ Seq(c~~s, cjkS)]) Because only 
+cl(resp. C2) can substitute non-terminals and holes introduced in c~hs (resp. c~ks), . 6 = c[clja[~Hc;~ 
+] u = 6 [$ ++ Seq(6($),6 (~))] where 6 = c]c2]ti[~t-+cj~ ] { (c$(\))F) = C [c:]d By induction, (ti 
+(!j), t?) = ca[c;]~ { =+ (CT (s),; ) = C [c ]&#38;  [f c = Redseq(c~, c;) then, C~,n [c ] = (c~~s, Seq(cj, 
+c,)) where (cj~s, CZ) = C~.m[c~] 0 = CUSeq(c~, cz)]a[$ + Cjh ] = C[c2](C[c~]a[\ ++ c~hs]) By lemma 1, 
+u = C[c2](C[cj]cr)[$ E+ Cjhs] By induction, (a (!j), ~ ) = Ca[C~](C[C~]a) By lemma 2, (a ($),; ) = C 
+[cj](C[c~]~) + (a (~),; ) = C [c ]m. e If c = Rebcond(e , c~, c;) then, C g~~[c~~,= (Cond(e hs, Clhs, 
+Cjh ), Seq(co, Seq(c~, c,))) (e , co) = $~.nue ] where (c~h , c,) = C;en [c;] { (Cjh , c,) = C:en [c;] 
+r = C[seq(co, Seq(cl, C2))]O[$ w Cond(e ks, c~hs, c~hs)]  u = CISeq(cl, cz)]8 where 6 = C[co]cr[$j ~ 
+Cond(e kS, c~ks, cjhs)] By construction, e h , c~hs and c~h do not share holes and lemma 4 gives, b(~) 
+= Cond(t [e ]@, c~fis, Cjhs) and ; = 6 + 6 = u[$ R Cond(tY[e ]@, c~hs, c~hs)] > # = CISeq(cl, c2)]c 
+T[3++ Cond(C [e ]6, c]hs, cjh ) o = CUc2](C[cl]c7[~ ~ Cond(&#38;~[e ]@, c~hs, cjhs)])  As in the case 
+of Rebseq, we have, # = C[cl]u[$ H c;~ ] a = 6 [~ ++ Cond(E [e ]6,6 ($), 6 (fj))] where { b = cuc,]c$ 
+[~ ++ C;h ] = C [c; ]ii By induction, (6 ($),0) = c~[c;]j (~ ($)j~) { * (a (!j), a) = Ca[c ]a  * If 
+c = Redcond(e , c;, c;) then, C~en [c ] = (Nterm(s), Cond(e , Seq(Rule(s, c~ks), cl), Seq(Rule(s, c~h 
+), cz))  (cp, c,) = C;en[c;] where (Cjh , c,) = C;en [c;]  { a = CICond(ez, Seq(Rule(s, c~h ), cl), 
+Seq(Rule(s, Cjhs), Cz))]a[$ ++ Nterm(s)] a = if &#38;[eZ]a[$ ++ Nterm(s)] then C[cl](CIRuIe(s, c~~ )]a[~ 
+~ Nterm(s)]) else C[cZ](CIFtule(s, Cjh )]a[$ ~ Nterm(s)])  61 = C[c,]a[fj t--+ Cihs] 0- = if J5[e ]@ 
+then &#38; else 62 where 62 = C[c,]o[g l-+ Cp ] { (61($ ),{,) = c~[c;]; By induction, (6,($ ),6,) = 
+c~[c;]d { ~ (a (~),; ) = if S[e ]@ then C [c~]&#38; else C [cj]6 = C [c ]@  
+			

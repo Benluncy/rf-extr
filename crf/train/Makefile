@@ -30,56 +30,110 @@
 #
 # Makefile
 #
-# Edited By Yu Jing @ Mar. 24 , 2013
+# Edited By Yu Jing @ May. 8 , 2013
 #
 ########################################################################
 
-
-########################SYSTEM SETTINGS#################################
-CC			:= gcc
-CP			:= cp
-DEL			:= rm -rf
-MV			:= mv
-SAY			:= @echo
-
-########################COMPILE SETTINGS################################
-VPATH			:= .:include/:src/:lib/:obj/
-	export	VPATH
-LIBS			:= -L lib/ -ldl -lpthread  -lm 
-INCFLAG			:= -I include/
-CFLAGS			:= -Wall ${INCFLAG} -std=c99
-GNUFLAGS		:= -Wall ${INCFLAG} -std=gnu99
-OBJS			:= hftctl.o hftnpse.o sqlite3.o persistence.o \
-				ini.o tokens.o virtualcontent.o \
-				minEditDistance.o dirTraversal.o\
-				debuginfo.o myMath.o
-PROGS			:= main
-
-.PHONY			: clean succ
 ########################################################################
-all			: ${PROGS} succ
+# CRF++: Yet Another CRF Tool Kit
+# Copyright (C) 2005-2013 Taku Kudo, All rights reserved.
+#
+# Usage: crf_learn [options] files
+#  -f, --freq=INT              use features that occuer no less than 
+#				INT(default 1)
+#  -m, --maxiter=INT           set INT for max iterations in LBFGS 
+#				routine(default 10k)
+#  -c, --cost=FLOAT            set FLOAT for cost parameter(default 1.0)
+#  -e, --eta=FLOAT             set FLOAT for termination criterion
+#				(default 0.0001)
+#  -C, --convert               convert text model to binary model
+#  -t, --textmodel             build also text model file for debugging
+#  -a, --algorithm=(CRF|MIRA)  select training algorithm
+#  -p, --thread=INT            number of threads (default auto-detect)
+#  -H, --shrinking-size=INT    set INT for number of iterations variable 
+#				needs to  be optimal before considered for 
+#				shrinking. (default 20)
+#  -v, --version               show the version and exit
+#  -h, --help                  show this help and exit
+########################################################################
 
-rebuild			: clean all
+#############################SYSTEM#####################################
+LEARN			:= crf_learn
+TEST			:= crf_test
+CHECK			:= conlleval -d "	"
+
+SAY			:= @echo
+RM			:= rm -rf 
+#############################FILES######################################
+
+FLAGS			:= #-c 4.0 , -a MIRA  ... 
 
 
-main			: ${OBJS}
-	${CC} ${CFLAGS} $@.c -o $@ ${OBJS} ${LIBS}
+PATHA			:=a/
+PATHB			:=b/
+
+PA			:=${PATHA}
+PB			:=${PATHB}
+
+TEMPALTE		:=template
+TRAINDATA		:=train.data
+TESTDATA		:=test.data
+MODEL			:=model
+OUTPUT			:=output.txt
+#############################MAIN#######################################
+
+#${SAY} "Usage:make trainA|trainB|testA|testB|checkA|checkB"
+all			:train test check
 
 
-dirTraversal.o		: 
-	${CC} ${GNUFLAGS} -c -o $@ src/dirTraversal.c 
+train			:trainA
+
+test			:testA
+
+check			:checkA
+
+trainA			:
+	${LEARN} ${FLAGS} ${PA}${TEMPALTE} ${PA}${TRAINDATA} ${PA}${MODEL}
+	
+trainB			:
+	${LEARN} ${FLAGS} ${PB}${TEMPALTE} ${PB}${TRAINDATA} ${PB}${MODEL}
+
+
+testA			:
+	${TEST} -m ${PA}${MODEL} ${PA}${TESTDATA} > ${PA}${OUTPUT}
+
+testB			:
+	${TEST} -m ${PB}${MODEL} ${PB}${TESTDATA} > ${PB}${OUTPUT}
+
+checkA			:
+	${CHECK} < ${PA}${OUTPUT}
+
+checkB			:
+	${CHECK} < ${PB}${OUTPUT}
+
+clean			:
+	${RM} ${PA}${MODEL}
+	${RM} ${PB}${MODEL}
+	${RM} ${PA}${OUTPUT}
+	${RM} ${PB}${OUTPUT}
+	${RM} ${PA}*~ ${PB}*~ *~
 
 
 
-succ			:
-	${SAY} "Complete !" 
 
-clean			: 
-	${DEL} ${PROGS} doclassify
-	${DEL} ${OBJS} 
-	${DEL} *~ include/*~ src/*~ data/*~
-	${DEL} *.swp
 
-dbclean			:
-	${DEL} db/features.db
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 

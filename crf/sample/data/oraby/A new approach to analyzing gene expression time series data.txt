@@ -1,0 +1,435 @@
+
+ A New Approach to Analyzing Gene Expression Time Series Data Ziv Bar-Joseph Georg Gerber David K. Gifford 
+Tommi S. Jaakkola MIT Lab for Computer Science and MIT AI Lab 200 Technology Square, Cambridge, MA 02139 
+{zivbj,georg,gifford}@mit.edu, tommi@ai.mit.edu Itamar Simon Whitehead Institute for Biomedical Research 
+9 Cambridge Center, Cambridge, MA 02142simon@wi.mit.edu  Abstract We present algorithms for time-series 
+gene expression analy­sis that permit the principled estimation of unobserved time­ points, clustering, 
+and dataset alignment. Each expression profile is modeled as a cubic spline (piecewise polynomial) that 
+is estimated from the observed data and every time point influences the overall smooth expression curve. 
+We constrain the spline coefficients of genes in the same class to have sim­ilar expression patterns, 
+while also allowing for gene specific parameters. We show that unobserved time-points can be re­constructed 
+using our method with lo-15% less error when compared to previous best methods. Our clustering algo­rithm 
+operates directly on the continuous representations of gene expression profiles, and we demonstrate that 
+this is par­ticularly effective when applied to non-uniformly sampled data. Our continuous alignment 
+algorithm also avoids diffi­culties encountered by discrete approaches. In particular, our method allows 
+for control of the number of degrees of free­dom of the warp through the specification of parameterized 
+functions, which helps to avoid overfitting. We demonstrate that our algorithm produces stable low-error 
+alignments on real expression data and further show a specific application to yeast knockout data that 
+produces biologically meaningful results. 1 Introduction Principled methods for estimating unobserved 
+time-points, clustering, and aligning microarray gene expression time­ series are needed to make such 
+data useful for detailed anal­ysis. Datasets measuring temporal behavior of thousands of genes offer 
+rich opportunities for computational biologists. Permission to make digital or hard copies of all or 
+part of this work for personal or classroom use is granted without fee provided that copies are not made 
+or distributed for profit or commercial advantage and that copies bear this notice and the full citation 
+on the first page. To copy otherwise, to republish, to post on servers or to redistribute to lists, requires 
+prior specific permission and/or a fee. RECOMB 02, April 18-21, 2002 Washington, D.C., USA Copyright 
+2002 ACM ISEN l-58113-498-3-02/04 . ..$5.00 For example, Dynamic Bayesian Networks may be used to build 
+models and try to understand how genetic responses unfold. However, such modeling frameworks need a suf­ficient 
+quantity of data in the appropriate format. Current gene expression time-series data often do not meet 
+these re­quirements, since they may be missing data points, sampled non-uniformly, and measure biological 
+processes that exhibit temporal variation. In many applications, researchers may face the problem of 
+reconstructing unobserved gene expression values. Values may not have been observed for two reasons. 
+First, errors may occur in the experimental process that lead to corrup­tion or absence of some expression 
+measurements. Second, we may want to estimate expression values at time points different from those originally 
+sampled. In either case, the nature of microarray data makes straightforward interpola­tion difficult. 
+Data are often very noisy and there are few replicates. Thus, simple techniques such as interpolation 
+of individual genes can lead to poor estimates. Additionally, in many cases there are a large number 
+of missing time-points in a series for any given gene, making gene specific interpo­lation infeasible. 
+In the case of clustering, the treatment of time-series can be problematic, as a time-series represents 
+a set of dependent experiments. A particular problem arises when series are not sampled uniformly such 
+as in [ 14,3,7]. Variability in the timing of biological processes further complicates gene expression 
+time-series analysis. The rate at which similar underlying processes such as the cell-cycle unfold can 
+be expected to differ across organisms, genetic variants, and environmental conditions. For instance, 
+Spell­ man et al [14] analyze time-series data for the yeast cell­ cycle in which different methods were 
+used to synchronize the cells. It is clear that the cycle lengths across the different experiments vary 
+considerably, and that the series begin and end at different phases of the cell-cycle. Thus, one needs 
+a method to align such series to make them comparable. In this paper we use statistical spline estimation 
+to rep­resent time-series gene expression profiles as continuous curves. Our method takes into account 
+the actual duration each time point represents, unlike most previous approaches 39 that treat expression 
+time-series like static data consisting of vectors of discrete samples [7, 11, 81. Our algorithm generates 
+a set of continuous curves that can be used di­rectly for estimating unobserved data. However, although 
+our method uses spline curves (piecewise polynomials) to represent gene expression profiles, it is not 
+reasonable to fit each gene with an individual spline due to the issues with microarray datasets discussed 
+above. Instead, we constrain the spline coefficients of genes in the same class to covary similarly, 
+while also allowing for gene specific parameters. A class is a set of genes with similar expression profiles 
+that may be constructed using prior biological knowledge or clus­tering methods. We present a clustering 
+algorithm that infers classes automatically by operating directly on the continu­ous representations 
+of expression profiles. This is particu­larly effective when applied to non-uniformly sampled data. However, 
+note that our method does require data that has been sampled at a sufficiently high rate. We demonstrate 
+in Section 5 that our method performs well on several such datasets, but for other datasets that have 
+been sampled at rates too low to capture changes in the underlying biological processes, our method will 
+not be effective. A future direc­tion would be to use our method to determine the quality of the sampling 
+rate. Our alignment algorithm uses the same spline representa­tion of expression profiles to continuously 
+time-warp series. First, a parameterized function is chosen that maps the time­ scale of one series into 
+another. Because we use parame­ terized functions, we are explicitly specifying the number of allowed 
+degrees of freedom, which is helpful in avoiding overfitting. Our algorithm seeks to maximize the similarity 
+between the two sets of expression profiles by adjusting the parameters of the warping function. The 
+remainder of this paper is organized as follows. In Section 2 we discuss our algorithm for estimating 
+unob­served data and in Section 3 we extend this algorithm to perform clustering. In Section 4 we present 
+our alignment algorithm. Section 5 presents applications of our method to expression data and Section 
+6 concludes the paper and sug­gests directions for future work. 1.1 Related Work Recently, several papers 
+have focused on modeling and an­alyzing the temporal aspects of gene expression data. In Holter et al 
+[9] a time translational matrix is used to model the temporal relationships between different modes of 
+the Singular Value Decomposition (SVD). Unlike our work, this method focuses on the SVD modes and not 
+on specific genes. In addition, only relationships between time points that are sampled at the lowest 
+common frequencies can be studied. Thus, not all available expression data can be used. In Zhao et al 
+[ 171 a statistical model is fit to all genes in order to find those that are cell cycle regulated. This 
+method uses a cus­tom tailored model, relying on the periodicity of the specific dataset analyzed, and 
+is thus less general than our approach. Several papers have used simple interpolation techniques to estimate 
+missing values for gene expression data. Aach et al [l] use linear interpolation to estimate gene expres­sion 
+levels for unobserved time-points. D haeseleer [6] use spline interpolation on individual genes to interpolate 
+miss­ing time-points. As we show in Section 5.2, both techniques cannot approximate the expression curve 
+of a gene well, es­pecially if there are many missing values. In Troyanskaya et al [ 151 several techniques 
+for missing value estimations were explored. However, none of the suggested techniques take into account 
+the actual times the points correspond to, and thus time series data is treated in the same way as static 
+data. As a consequence, their techniques cannot estimate values for time-points between those measured 
+in the origi­nal experiments. There is a considerable statistical literature that deals with the problem 
+of analyzing non-uniformly sampled data. These models, known as mixed-effect models [2] use spline estimation 
+methods to construct a common class profile for their input data. Recently, James and Hastie [lo] presented 
+a reduced rank mixed effects model that was used for classi­fying medical time-series data. In this paper 
+we extend these methods to gene expression data. Unlike the above papers, we focus on the gene specific 
+aspects rather than the common class profile. In addition, we present a method that is able to deal with 
+cases in which class membership is not given. An­other difference between this work and [lo] is that 
+we do not use a reduced rank approach, since gene expression datasets contain information about thousands 
+of genes. Many clustering algorithms have been suggested for gene expression analysis (see [ 121). However, 
+as far as we are aware, all these algorithms treat their input as a vector of data points, and do not 
+take into account the actual times at which these points were sampled. In contrast, our algo­rithm weights 
+time points differently according to the sam­pling rate. Aach et al [l] presented a method for aligning 
+gene ex­pression time-series that is based on Dynamic Time Warp­ing, a discrete method that uses dynamic 
+programming and is conceptually similar to sequence alignment algorithms. Un­like with our method, the 
+allowed degrees of freedom of the warp operation in Aach et al depends on the number of data points in 
+the time-series. Their algorithm also allow map­pings of multiple time-points to a single point, thus 
+stop­ping time in one of the datasets. In contrast, our algorithm avoids temporal discontinuities by 
+using a continuous warp­ing representation. There is also a substantial body of work in the speech recognition 
+and computer vision community that deals with data alignment. For instance, non-stationary Hidden Markov 
+models with warping parameters have been used for alignment of speech data [5], and mutual informa­tion 
+based methods have been used for registering medical images [ 161. However, these methods generally assume 
+high resolution data, which is not the case with available gene ex­pression datasets.   2 Estimating 
+Unobserved Expression Values and Time Points In order to obtain a continuous time formulation, we use 
+cu­bic splines to represent gene expression curves. Splines can be described by a set of basis functions, 
+and are often used for fitting time-series and other data [4]. By knowing the value of the splines at 
+a set of control points in the time­ series, one can generate the entire set of polynomials from these 
+basis functions. In our formulation, the spline con­trol points are uniformly spaced to cover the entire 
+duration of the dataset. Once the spline polynomials are generated we can re-sample the curve to estimate 
+expression values at any time-points. When estimating these splines from expres­sion data, we do not 
+try to fit each gene individually. Due to noise and missing values, such an approach could lead to over-fitting 
+of the data and may in general lead to estimates that are very different from the real expression values 
+of that gene (see Section 5.1). Instead, we constrain the spline co­efficients of co-expressed genes 
+to have the same covariance matrix, and thus we use other genes in the same class to es­timate the missing 
+values of a specific gene. 2.1 A Probabilistic Model of Time Series Ex­pression Data In this section 
+we follow a method that is similar to the one used by James and Hastie [lo] for classification. However, 
+unlike their work, in this paper we focus on gene specific aspects rather than the common class profile. 
+This allows us to handle variations in expression levels that are caused by gene specific behavior. A 
+class is a set of genes that are grouped together using prior biological knowledge or a clustering algorithm. 
+In this section we assume that class information is given. We dis­cuss how to deal with cases in which 
+such class information is not given in Section 3. We represent each gene expression profile by a spline 
+curve. For a gene i in class j, Yi(t) is the observed value for i at time t. Let q be the number of spline 
+control points used, and s(t) the vector of spline basis functions evaluated at time t, with s(t) of 
+dimensions q by 1. Denote by p~j the average value of the spline coefficients for genes in class j, and 
+by yi the gene specific variation coefficients. We assume that yi is normally distributed vector with 
+mean zero and the class spline control points covariance matrix Ij, which is a q by q matrix. Denote 
+by ci a random noise term that is nor­mally distributed with mean 0 and variance cr2. According to this 
+model, Yi(t) can be written as:  This model includes both gene specific and class specific pa­rameters. 
+This allows us to use information from other genes in the class based on the extent to which gene specific 
+infor­mation is missing. We restrict the missing values of a gene by requiring them to vary with the 
+observed values according to the class covariance matrix l?j. Using the class average p~j and the gene 
+specific variation yi, we can resample gene i at any time t during the experiment. This is done by evaluating 
+the spline basis at time t , and setting Yz) = s(t )(pj +-yi). In order to learn the parameters of this 
+model (II, y, I and a) we use the observed values, and maximize the likelihood of the input data. Denote 
+by Yi the vector of observed ex­pression values for gene i, and by Si the spline basis func­tion evaluated 
+at the times in which values for gene i were observed. If we observed a total of m expression values 
+for i in our dataset, then S, is of dimensions mxq. The Icth row in S, contains the spline basis functions 
+evaluated at tk, where tk is the time at which the lath value was observed. Accord­ing to our model, 
+we have:  where ci is a vector of the noise terms. Note that since we are estimating the spline coefficients 
+at the control points, each observed value has an effect related to the actual time it represents. Thus, 
+different experiments can have different effects on the resulting curve if the expression values were 
+sampled non-uniformly. For our solution, we assume that the expression values for each gene were obtained 
+independently of other genes. This assumption is not entirely true since different experi­mental conditions 
+can affect multiple genes in the same ex­periment. However, this simplifying assumption allows for efficient 
+computations and allows us to capture the essence of the results. There are two normally distributed 
+parameters in our model, the noise term E and the gene specific parameters y. Thus the combined covariance 
+matrix for a gene in class j can be written as: cj = a21 + sr,sT  where S is the spline basis function 
+evaluated at all the time points in which experiments were carried out. Given this for­mulation, determining 
+the maximum likelihood estimates for our model parameters is a non-convex optimization problem (see [lo]). 
+Thus, we turn to the EM algorithm. If the y values were observed, we could have decomposed the probability 
+in the following way: P(Y, 7102, r, 4   14~2, r, k ~h-et&#38; c 14  which translates into the following 
+joint probability: where c is the number of classes and cj is the set of genes in class j. Note that 
+we need to maximize this joint probability simultaneously for all classes since the variance of the noise, 
+u2, is assumed to be the same for all genes.  This representation leads to the following procedure. 
+We treat the yi s as missing data and solve the maximum like­lihood problem using the EM algorithm. In 
+the E step we find the best estimation for y using the values we have for cr2, p and I. In the A4 step 
+we maximize equation 1 with respect to u2, p and I while holding the yi s fixed. See [lo] for complete 
+details. The complexity of each iteration of the EM algorithm is O(q(n + c * q)) since we estimate q 
+parameters for each gene and q2 + q parameters for each class. 3 Model Based Clustering Algorithm for 
+Temporal Data The algorithm described in the previous section allows us to lind the expression curve 
+for each gene when the class par­titioning is known. Though this information is sometimes available, 
+either from previous knowledge or from a classi­fication algorithm [14], this is not always the case. 
+In this section we describe a new clustering algorithm that simul­taneously solves the parameter estimation 
+and class assign­ment problems. rimeFit(Y, S, c, n) { For all classes j { choose a random gene i // 
+initialize class center with a random gene pL3 = ($-si)-l$Yz 1 Initialize p, gz, y arbitrarily Repeat 
+until convergence { E step: for all genes i and classes j  M step: for all genes i and classes j, Find 
+the MAP estimate of yi,j // see Appendix for complete details Maximize p, g2, p w.r.t. P(jli) // update 
+the class probability for all classes j, pj +-$ ca p(jli)  Figure 1: Estimating the model parameters 
+without class in­formation. The posterior probabilities P(j/i) can be used for clustering as described 
+in the text. Instead of the fixed class model from Section 2, we assume a mixture model. Thus, we can 
+model the expression vector for gene i in the following way. First, we select a class j for gene i uniformly 
+at random. Next, we sample yi using class j s covariance matrix Ij, and sample a noise vector ei using 
+c?. Finally we construct Yi by setting: V, = Si(pj + ri) + Ei  In Figure 1 we present TimeFit, our spline 
+fitting algo­rithm that performs class assignment. The number of desired classes, c, is an input to TimeFit. 
+Initially all classes are as­sumed to have the same prior probabilities, though it is easy to modify 
+this algorithm if one has prior knowledge about the different classes. TimeFit begins by choosing for 
+each class one gene at random, and using this gene as an initial estimate for the class center (or average 
+of the spline coefficients). We now treat the class assignments as the missing variables, and iterate 
+using a modified EM algorithm. In the E step we esti­mate for each gene i and class j the probability 
+that i belongs to class j, P(j/i), using the values we obtained for the rest of the parameters in the 
+M step. In the M step, instead of equation 1 we now maximize our parameters for each class with respect 
+to the class probability (P(jli)) as computed in the E step. In addition, we now treat the yi,j s as 
+param­eters, and find their MAP (maximum a posteriori) estimate, which is then used in the E step. The 
+complete details of this procedure are explained in the Appendix. As in the previous section, TimeFit 
+still increases the likelihood monotonically, and terminates when the parameters converge. When the algorithm 
+converges, for each gene i we dis­cover the class j such that p(j/i) = rn~zi<~<~P(lcli) and assign i 
+to this class. Using this hard clustering, when we need to re-sample gene i s expression curve (either 
+for missing values estimation or for new time points) we use the estimated class js parameters (yi,j, 
+bj) and continue as de­scribed in the previous section.  For TimeFit, the complexity of each iteration 
+of the EM algorithm is O(cq(n + q)) since we now estimate c + cq parameters for each gene. 4 Aligning 
+Temporal Data The goal of the alignment algorithm is to warp the time-scale of one realization of a biological 
+process into that of another. A set of genes are chosen that are assumed to have the same temporal pattern 
+of expression (e.g., from prior biological knowledge or clustering methods). A parameterized warp­ing 
+function (e.g., linear) is then selected and our algorithm seeks to produce an optimal alignment by adjusting 
+the func­tion parameters. Note that although it is possible to align in­dividual genes this is problematic 
+unless one has sufficiently high quality data (e.g., replicates or a large number of time points.) Assume 
+that we have two sets of time-series gene expres­sion profiles, one of which we will refer to as the 
+reference set. Denote a spline curve for gene i in the reference time series as g:(s), where s,,, 5 s 
+5 s,,,. Here, s,,, and s,,, are the starting and ending points for the reference time series respectively. 
+Similarly, we will denote splines in the set to be warped as g:(t) for tmin 5 t 5 t,,,. Define a mapping 
+T(s) = t, which transforms points in the reference scale into the time-scale of the set to be warped. 
+In this paper, we will discuss a linear transformation T(s) = (s b)/a, with a the stretch/squash parameter 
+and b the translation. However, more complex transformations could be used in our framework. We define 
+the alignment error ef for each gene as: D  (2)  where cy = max{s,i,, T- (tmin)} is the starting point 
+of the alignment, and /3 = min{s,,,, T- (t,,)} is its end point. The error of the alignment for each 
+gene is propor­tional to the averaged squared distance between the curve for gene i in the reference 
+set and in the set to be warped. In order to take into account the degree of overlap between the curves, 
+and to avoid trivial solutions such as mapping all the values in the curve to a single point, we divide 
+this error by the time-length of the overlap /?  a. Thus, our goal is to find parameters a and b that 
+minimize ep. As discussed, we suggest minimizing the error for a set of genes. We define the error for 
+a set of genes S of size n as: (3) The wwi s are weighting coefficients that sum to one; they could 
+be uniform (l/n) or used for unequal weighting. For instance, if one wishes to align wildtype time-series 
+expres­sion data with knockout data, many of the genes expres­sion patterns are expected to be unchanged 
+in the two ex­periments. However, a subset of the genes may be highly af­fected. In this case, we want 
+to down-weight the contribution of such genes, since they are not expected to align well. One way of 
+formulating this is to require that the product wief be the same for all genes (the weight will be inversely 
+propor­tional to the error). From wiea = K, we get that Es = nK and so we can deduce that: smce xi wi 
+= 1. As before, the objective is to minimize Es, or in this case equivalently to maximize xi l/e:. Minimization 
+of Es must be done numerically, since a closed form solution is not possible. In the linear case pre­sented, 
+we are only searching for two parameters, so we minimize Es directly using standard non-linear optimization 
+techniques. We use the Nelder-Mead simplex search method (available in the Matlab package), which does 
+not use gradi­ents and can handle discontinuities. For the linear warping case, the essential constraints 
+are that Q < /3 and a > 0. Since the use of a numerical optimization method does not guarantee convergence 
+to a global minimum, multiple ran­dom re-starts may be necessary. This leads to an algorithm with running 
+time O(rmnq2), in which r is the number of random re-starts, m is the number of iterations for conver­gence, 
+n is the number of genes in S, and q is the number of spline control points used. If a large number of 
+genes are to be aligned, we suggest the following algorithm to reduce the computation time. Be­gin by 
+choosing a random subset of fixed size (e.g., 50 genes) and random initial settings for the warping parameters 
+from a uniform distribution. The minimization procedure is then carried out and this process is repeated 
+with a new random choice of warping parameters for a set number of iterations. Upon termination, the 
+alignment parameters that correspond to the minimum error are chosen. These parameters are then used 
+as the starting conditions for the Es minimization us­ing the full set of genes. See Section 5.2 for 
+experimental results on how this reduces the running time on gene expres­sion datasets. 5 Results In 
+this section we demonstrate the application of our method to expression time-series datasets, showing 
+results for unob­served data estimation, clustering and alignment. Most of our results make use of the 
+cell-cycle time-series data from Spellman et al [14]. In that paper, the authors identify 800 genes in 
+Saccharomyces cerewisiae as cell cycle reg­ulated. The authors assigned these genes to five groups that 
+they refer to as Gl, S, S/G2, G2/M, and M/Gl.We also analyzed time-series data from a Fkhl/Fkh2 knockout 
+exper­iment done by Zhu et al [ 181. Table 5 summarizes the data sets that we used. 5.1 Unobserved Data 
+Estimation To test our missing value estimation algorithm we concen­trated on the cdcl5 dataset. We chose 
+this dataset (see Ta­ble 5) because it is the largest (24 experiments) and contains non-uniformly sampled 
+data. The results presented in this section were obtained using splines with 7 control points; however, 
+similar results were obtained for different numbers of control points (results not shown). We compared 
+our algorithm to three other interpolation techniques that have been used in previous papers: lin­ear 
+interpolation [ 11, spline interpolation using individual genes [6], and k-nearest neighbors (KNN) with 
+Ic = 20, which achieved the best results on static data out of all the algorithms described in [ 151. 
+In order to test our algorithm on a large scale we chose 100 genes at random from the set of cell-cycle 
+regulated genes. For each of these genes we ran each estimation algorithm four different times, hiding 
+1,2,3 and 4 consecutive time points, while not altering the other genes. Next, we computed the error 
+in our estimations when compared to an estimate of the variance of the log ra­tios of the expression 
+values (see the Appendix for complete details). dataset method of arrest start end sampling alphaDS alpha 
+mating factor Om 119m every 7m cdcl5DS temp. sensitive cdcl5 mutant 10m 290m ev. 20m for 1 hr, ev. 10m 
+for 3 hr, ev. 20 min for final hr cdc28DS temp. sensitive cdc28 mutant Om 160m every 10m fkh Mkh2DS 
+alpha mating factor Om 210m ev. 15m until 165m, then after 45m Table 1: Summary of gene expression time 
+series analyzed. Figure 2 (a) shows a comparison of the error of our estima­tion algorithm with the three 
+methods mentioned above. For our method, we performed two separate runs. In the first we used the class 
+information provided in [14] and in the sec­ond we used the algorithm described in Section 3 to obtain 
+the class information. For one missing value, our algorithm achieves 10% less error than k-nearest neighbors 
+(KNN). For two and three missing values our algorithm achieves lower or equal error rates when compared 
+with KNN, and it does far better than the two other interpolation techniques. Only when trying to estimate 
+four consecutive missing values does KNN perform better than our algorithm. However, four con­secutive 
+missing values are unusual in practice, and in almost all cases one does not need to estimate more than 
+two consec­utive values. Interestingly, our algorithm does better when it is allowed to estimate class 
+membership than it does when the class information is pre-specified. This can be attributed to the fact 
+that the five classes from [14] are somewhat ar­bitrary divisions of a continuous cycle. Thus, for missing 
+value estimation our clustering algorithm is able to assign more relevant class labels. Our algorithm 
+can estimate expression values at any time point during the course of the experiments. In Figure 2 (b) 
+we present results that were obtained by hiding 1,2,3 and 4 consecutive experiments. Again, our algorithm 
+achieves more than 15% less error than the other two techniques. Note that KNN cannot be used to estimate 
+missing experiments, and thus is not included in this comparison.  5.2 Clustering In order to explore 
+the effect that non-uniform sampling can have on clustering we generated two synthetic curves as fol­lows. 
+The first curve, fi is obtained using the equation f1 (z) = sin 2. The second curve is given by the following 
+equation: We sampled each curve 64 times between -+r and n and then sampled between 7r and 57r (the 
+remaining portion of the curve) at different rates of either every 7r, n/2, n/4 or 7-r/16. Note that 
+since all curves were sampled between -YT and 57r, the maximal difference between the sampled values 
+(ampli­tude of the curves) is at most 0.2. For each different sampling we generated 100 vectors from 
+each curve, and added ran­dom noise (normally distributed with mean 0 and variance 0.2). Next we used 
+our TimeFit algorithm, and compared the results to those of k-means clustering. K-means is a clus­tering 
+algorithm that assumes a mixture model and tries to assign genes to classes using the class centers (see 
+[12] for details). K-means treats all points in the same way, and does not use the actual times they 
+represent. As can be seen in Fig­ure 3, the lower the sampling rate, the larger the difference between 
+the performance of TimeFit and k-means. For ex­ample, for the sampling rate of 7r, k-means does only 
+slightly better than chance, while TimeFit has a much higher classi­fication success. Comparison between 
+k-means and TimeFit -A-TimeFit  Figure 3: A comparison between k-means and TimeFit for clus­tering 
+the vectors from fi and fi. The success rate was determined by the total number of correctly clustered 
+vectors out of the 200 vectors. As can be seen, the lower the sampling rate, the greater the advantage 
+of using our algorithm. Next we tested TimeFit on the cdcl5DS described above and compared the results 
+to k-means (results not shown). For both algorithms we generated five classes. When analyzing the results 
+we used the Spellman clusters as the gold stan­dard, and determined how many clusters in our results 
+cor­respond to these clusters. Four out of the five clusters that were generated by TimeFit correspond 
+to Spellmans clus­ters, containing genes from at most two neighboring phases (the fifth contained genes 
+from three consecutive phases). Since we are dealing with cell cycle data, the clusters defined in [14] 
+can only have arbitrary boundaries and thus joining two of them is reasonable. On the other hand, in 
+the k-means clustering result, one of the clusters contained a significant Comparison of Missing Values 
+Estimation Techniques Comparison of Missing Experiments Interpolation Techniques  1 2 3 I 234 Num 
+of missing values Num of missing experiments (a) Missing values (b) Missing experiments Figure 2: Comparison 
+among different missing value interpolation techniques. (a) Finding missing values and (b) finding missing 
+experi­ments (time points not originally sampled). As can be seen, in almost all cases our algorithm 
+does better than the others methods. number of genes from four of the Spellman clusters, and an­other 
+cluster contained genes from three clusters. Thus, the results of our clustering algorithm are in better 
+correspon­dence with existing biological knowledge than those of k­ means.  5.3 Alignment We aligned 
+three yeast cell-cycle gene expression time-series that clearly occur on different time-scales and begin 
+in dif­ferent phases. The cdcl5DS was used as a reference set and the alphaDS and cdc28DS were aligned 
+against it using a iin­ ear warping T(s) = (s b)/a and the full set of cell-cycle regulated genes as 
+identified in [14]. For the cdc28DS, we obtained a = 1.42 and b = 2.25 with Es = 0.1850. These results 
+indicate that the cdc28DS cell-cycle runs at approxi­mately 1.4 times the speed of the cdc I5DS cycle 
+and starts approximately 5.5 minutes before (i.e., we calculate T(lO) since cdcl5DS starts at 10 minutes). 
+For the alphaDS, we obtained a = 1.95 and b = -5.89 with Es = 0.1812. Fig­ure 4 shows the aligned/unaligned 
+expression values for the Cl and S/G2 clusters for the cdc28DS to cdcl5DS align­ment. Alignment for each 
+dataset took approximately 5.5 minutes on a 1 GHz Pentium III machine using our algorithm that performs 
+initial alignments on smaller subsets of genes; the alignments took approximately 45 minutes without 
+this improvement. To validate the quality of these alignments we performed two analyses: 1) alignments 
+of genes in alphaDS against genes in cdcl5DS with gene identity of those in cdc 15DS randomly permuted 
+and 2) alignments of alphaDS to cdcl5DS using different numbers of genes. Note that for brevity only 
+the alphaDS was used; we chose this dataset be­cause it is the smallest and presumably demonstrates worst- 
+ Table 2: Results of experiments in which random subsets of fixed size were sampled 100 times and alignment 
+of alphaDS and cdcl5DS were performed. The columns are as follows: number of genes used, stretch/squash 
+parameter, standard deviation of this pa­rameter, offset parameter, and standard deviation of this parameter. 
+This analysis shows that the variance in the parameters decreases as more genes are used and there is 
+convergence to the a and b settings found with the full set of genes. case results. For the first analysis, 
+we performed 200 tri­als giving ES scores between 0.2562-0.3554, with 50% of the scores lying between 
+0.2780-0.3129. These results sug­gest that the actual alphaDS to cdcl5DS Es score of 0.18 12 would not 
+arise by a chance alignment of the genes. For the second analysis, we sampled subsets of between 5-400 
+genes 100 times from the full set of cell-cycle regulated genes (Ta­ble 2). This analysis shows that 
+the variance in the param­eters decreases as more genes are used and there is conver­gence to the a and 
+b settings found with the full set of genes. Interestingly, our algorithm is usually able to find the 
+ac­tual a and b parameter settings even when relatively small numbers of genes are used. Thus, these 
+analyses give evidence that our algorithm can reliably align the cell-cycle datasets. These results compare 
+favorably with those in Aach et al [l] using the same data. In  , r I , .. I ../   0 50 100 150 200 
+250  Figure 4: Alignment of genes for the cdc28DS to cdcl5DS. Linear warning was used with the full 
+set of cell-cycle regulated genes. The left-hand side shows class-averages of unaligned expression values 
+for two clusters. The top row shows aligned results for the Gl cluster (186 genes) and the bottom row 
+the S/G2 cluster (283 genes). These results indicate that the cdc28DS cell-cycle runs at approximately 
+1.4 times the speed of the cdcl5DS cycle and starts approximately 5.5 minutes before. I -1 0 50 100 
+150 200 250 their case, they found that their actual alignment score was not at a low percentile when 
+compared against alignments using randomized data (gene values shuffled). Further, they indicate that 
+poor results were obtained with small cluster sizes (an analysis over a wide range of sizes was not pre­sented 
+in their paper). The fact that our method uses a con­tinuous representation and fits only two parameters 
+to all the genes helps to explain its good performance on the cell-cycle data. However, one must be careful 
+in extrapolating these results, since they are clearly dependent on the underlying dataset. In a second 
+application of our alignment algorithm, we used our method to discover yeast cell-cycle regulated genes 
+that appear to be regulated by the Fkh2 transcriptional fac­tor. Zhu et al performed an experiment in 
+which two yeast transcriptional factors (f&#38;l and flch2) were knocked out and a time-series of gene 
+expression levels was measured in synchronized cells [ 181. Simon et al [ 131 demonstrated with a microarray 
+DNA-binding experiment that a set of genes are bound by Fkh2 in wildtype unsynchronized yeast. We were 
+interested in discovering which genes in this set show altered expression in the knockout experiments. 
+However, direct comparison of the data from Zhu et al [ 181 and that from Spellman et al [14] is problematic, 
+because the series were sampled at different rates, begin at different cell-cycle phases, and exhibit 
+different periods. We used our algorithm to rank fifty-six genes bound by Fkh2 according to the difference 
+in expression curves of the aligned wildtype and knockout experiments. The non­uniform weighting version 
+of our algorithm was used to align the datasets using all genes identified as cell-cycle regulated in 
+[14] and the gene alignment error scores ef were used for ranking. Figure 5 shows a plot of the spline 
+expression profiles of the top four genes with the worst alignment scores and the top four with the best 
+scores. A poor alignment score indicates that a gene is behaving differently in the knockout experiment. 
+The ranking produced by our algorithm appears to yield biologically meaningful results, highlighting 
+which genes appear to be regulated by Fkh2 and those that are merely bound by it. For instance, all of 
+the genes with the worst alignment scores shown were determined to be bound by both Fkhl and Fkh2 in 
+[13], whereas all of the best aligning genes were determined to be bound by Fkh2 only. This cor­responds 
+to biological knowledge indicating that both Fkhl and Fkh2 are required for regulation of a number of 
+genes. It is also interesting that among the genes shown with good alignment, three are bound also by 
+Swi6 and either Mbpl or Swi4, factors that are likely to work independently of the Fkh proteins. Further, 
+the genes with poor alignment are known to be bound by Nddl and Mcml or Ace2 and/or Swi5. McmUNddl are 
+known to work with the Fkh proteins and are not sufficient to regulate expression without them. Ace2 
+and Swi5 apparently can bind and regulate independently of the Fkh proteins, but their expression is 
+Fkh dependent.  6 Conclusion and Future Work We presented a unified model and algorithms that use sta­tistical 
+spline estimation to represent gene time-series ex­pression profiles as continuous curves. Results using 
+our ap.  YHR143W, e=15 008 YER124C, e=8,7121 YJROOZW. e=7,5266 YBR158W, e=3.0811 22 2- YOR073W. e=2.2386 
+YJL158C, e=1.5594 YOR247W, emO.79258 2 21 2: YER070W. e*0.60998  Figure 5: Alignment of tkhUfkh2 knockout 
+data and the wildtype alphaDS. Genes shown are from a set of genes demonstrated to be bound by Fkh2. 
+Shown are the genes with the four worst (top row) and best (bottom row) gene alignment scores. A poor 
+alignment score indicates that a gene is behaving differently in the knockout experiment. See text for 
+biological interpretation of these results. preach on a large yeast cell-cycle data set demonstrate that 
+our framework, when used for estimating unobserved time­ points, clustering, and alignment of datasets 
+has substantial advantages over other methods that treat time-series as vec­tors of points. Overall, 
+we believe that as the analysis of dynamic genetic behavior becomes more sophisticated, prin­ cipled 
+model-based methods such as ours will become essen­ tial for reconstructing and combining data. There 
+are a number of interesting extensions that could be made to our work. Experimental biologists often 
+deter­mine the sampling rate for a time-series experiment based on knowledge about how quickly gene expression 
+values change. These assessments often make little use of infor­mation that may be gleaned from previous 
+expression exper­iments. Our algorithm could be used to find the right sam­pling rate for time-series 
+experiments, which could lead to substantial time/cost savings or improvements in biological results. 
+Another way of extending this work is to develop a clustering algorithm that uses our alignment method 
+in order to group genes that show similar kinetic changes between datasets. Another open problem is developing 
+a principled method for determining the significance of the alignment er­ror in order to automatically 
+detect genes whose temporal behavior is altered between experiments.  Acknowledgements The first author 
+acknowledges support by a Fellowship from the Program in Mathematics and Molecular Biology at the Florida 
+State University, with funding from the Burroughs Wellcome Fund Interfaces Program.  References <RefA>[l] 
+J. Aach and G. M. Church. Aligning gene expression time series with time warping algorithms. Bioinformat­ 
+its, 17:495-508,200l. [2] B. Brumback and J. Rice. Smoothing spline models for the analysis of nested 
+and crossed samples of curves. Am. Statist. Assoc., 93:961-976, 1998. [3] S. Chu, J. DeRisi, and et al. 
+The transcriptional program of sporulation in budding yeast. Science, 282:699-705.1998. [4] C. de Boor. 
+A practical guide to splines. Springer, 1978. [5] L. Deng, M. Aksmanovic, D. X. Sun, and C. F. J. x. 
+wu. Recognition using hidden markov models with polynomial regression functions as nonstationary states. 
+IEEE Transactions on Speech and Audio Pro­cessing, 2:507-520, 1994. [6] P. D haeseleer, X. Wen, S. Fuhrman, 
+and R. Somogyi. Linear modeling of mrna expression levels during ens development and injury. In PSB99, 
+1999.  [71 M.B. Eisen, P.T. Spellman, P.O. Brown, and D. Bot­ stein. Cluster analysis and display of 
+genome-wide ex­pression patterns. PNAS, 95:14863-14868, 1998. [81 N. Friedman, M. Linial, I. Nachman, 
+and D. Pe er. Us­ing bayesian network to analyze expression data. In RECOMB, 2000. [91 N. S. Holter, 
+A. Ma&#38;an, and et al. Dynamic modeling of gene expression data. PNAS, 98: 1693-1698,200l.  [lOI G. 
+James and T. Hastie. Functional linear discriminant analysis for irregularly sampled curves. Journal 
+of the Royal Statistical Society, to appear, 200 1. Vll S. H Neal, M. Madhusmita, and et al. Fundamental 
+patterns underlying gene expression profiles: Simplic­ity from complexity. PNAS, 97:8409-8414, 2000. 
+[I21 Sharan R. and Shamir R. Algorithmic approaches to clustering gene expression data. Current Topics 
+in Computational Biology, To appear. [I31 I. Simon, J. Bamett, and et al. Serial regulation of transcriptional 
+regulators in the yeast cell cycle. Cell, 106:697-708,2001.  [I41 T. S. Spellman, G Sherlock, and et 
+al. Comprehensive identification of cell cycle-regulated genes of the yeast saccharomyces cerevisia by 
+microarray hybridiza­tion. Mol. Biol. of the Cell, 913273-3297, 1998. [I51 0. Troyanskaya, M. Cantor, 
+and et al. Missing value es­timation methods for dna microarrays. Bioinformatics, 17x520-525,2001.  
+ [I61 P. Viola. Alignment by Maximization of Mutual Infor­mation. PhD thesis, MIT AI Lab, 1995. Cl71 
+L. P. Zhao, R. Prentice, and L. Breeden. Statisti­cal modeling of large microarray data sets to iden­tify 
+stimulus-response profiles. PNAS, 98:5631-5636, 2001. [If31 G. Zhu, Spellman T. S., and et al. Two yeast 
+forkhead genes regulate cell cycle and pseudohyphal growth. Nature, 406:90-94, 2000. </RefA>A EM Algorithm 
+for Class Assign­ment In this appendix we present the details of the EM algorithm that is used in Section 
+3. We start with the complete log likelihood given by: where j is the class index and ni is the number 
+of ob­served values for gene i. Z(jli) is an (unobserved) binary indicator variable that assigns each 
+gene to exactly one class. In the E step we compute the expected values for Z(j/i): P($) = E(Z(jli)lYi) 
+= p~e-(Y~-S,(~J+r~,,,))~(Y,-S,(~,+~ .,))/u~e-?7T~r;~~l., ~kpke-(Y7-S,(~L,+r r))T(Y,-sI(11L+Y,,k))/~2,-~r~,r, 
+r~,~  In the A4 step we first find the MAP estimate for yi,j by setting: yi,j = ((T2r; + $s~)- s~(yz 
+ S&#38;L&#38;j)  Next, we maximize 02, p and I w.r.t. the class assignment probabilities computed in 
+the E step: o2 ci cj PCMY,  Sz(Pj + ri,jFw Si(Pj + %,j))  c, 7%  pj is computed by setting: ,L$ = 
+(cP(3li)s:s,)- (cP(jli)s,T(Y, h,j)) 2 i  Then we set r j to:   B Computing Error Rates Here we describe 
+in detail the method we used to compute the error rates of the four different missing values algorithms 
+discussed in Section 5.1. Denote by Yi(t) the (hidden) ex­ pression values for gene i at time t, and 
+by Yz) the esti­mated values. Denote by m the number of missing (hidden) data points and by n the number 
+of genes that were used for the test. Denote by 11 the variance of the log ratios of expres­sion values. 
+Then the error of an estimation for m missing data points is defined as: 1 nm [K(h) ml2  err, = mn =d 
+V i=l kl  If err, is above 1 then the error is (on average) bigger than the replication variance, and 
+vice versa. The variance v was computed using the raw expression data of the unsynchro­nized cells from 
+two different time points.  exp[-(Yi Si(Pj + ri,j))T(E - Si(Pj + Ti,j))12f121 X &#38; :Pi-~YQ~l?i,jl) 
+(4) 3   
+			
