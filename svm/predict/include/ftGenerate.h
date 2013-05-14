@@ -19,6 +19,5 @@ int getTotalFile();
 int getCorrectFile();
 
 
-int adjust();
 
 #endif // __FEATURE_GENERATE_H__

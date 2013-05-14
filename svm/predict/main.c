@@ -54,10 +54,12 @@ int main (int argc, char* argv[])
 	int total;
 	int correct;
 
+	dirTraversal("data/",1,predictCtl);
+	/*
 	do
 	{
 		dirTraversal("data/",1,predictCtl);
-	}while(adjust());
+	}while(adjust());*/
 	//offset = predictCtl(testfile,0);
 	
 	total = getTotalFile();

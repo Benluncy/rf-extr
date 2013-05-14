@@ -78,7 +78,7 @@ inline int isPageNumber(const char *content,int limit)
 		if(editDistanceP("nnnennn",7,content,7)<=0) // 1?
 		{
 			a = ch2int(content[0])*100 + ch2int(content[1])*10 + ch2int(content[2]);
-			b = ch2int(content[0])*100 + ch2int(content[1])*10 + ch2int(content[2]);
+			b = ch2int(content[4])*100 + ch2int(content[5])*10 + ch2int(content[6]);
 			if(b>a && content[3] != ' ') 
 			{
 				//printf("[ACC]{%d-%d}",a,b);
@@ -86,6 +86,16 @@ inline int isPageNumber(const char *content,int limit)
 			}
 		}
 	case 6:
+		if(editDistanceP("nnennn",6,content,6)<=0) // 1?
+		{
+			a = ch2int(content[0])*10 + ch2int(content[1])*1;
+			b = ch2int(content[3])*100 + ch2int(content[4])*10 + ch2int(content[5]);
+			if(b>a && content[2] != ' ') 
+			{
+				//printf("[ACC]{%d-%d}",a,b);
+				return 7;
+			}
+		}
 	case 5:
 		if(editDistanceP("nnenn",5,content,5)<=0) // 1?
 		{

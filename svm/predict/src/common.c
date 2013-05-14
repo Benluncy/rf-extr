@@ -2,6 +2,7 @@
 #include "virtualcontent.h"
 #include "minEditDistance.h"
 #include "hftctl.h"
+#include "eftfun.h"
 #include <stdio.h>
 
 
@@ -277,6 +278,21 @@ int setFtValueF(WORD *w,int start,double val)
 	w[start].wnum=start;
 	w[start].weight = val;
 	return start+1;	
+}
+
+
+CPINT refo;
+
+void storeREFO()
+{
+	refo.a = getReferenceHeadOffset();
+	refo.b = getReferenceEndOffset();
+}
+
+
+CPINT getREFO()
+{
+	return refo;
 }
 
 

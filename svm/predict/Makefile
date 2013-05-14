@@ -57,7 +57,7 @@ OBJS			:= svm_common.o ftGenerate.o eftfun.o eftctl.o hftctl.o hftnpse.o \
 				sqlite3.o persistence.o \
 				ini.o tokens.o virtualcontent.o \
 				minEditDistance.o dirTraversal.o\
-				debuginfo.o myMath.o common.o
+				debuginfo.o myMath.o common.o hftrg.o
 PROGS			:= main
 
 .PHONY			: clean succ

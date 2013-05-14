@@ -29,7 +29,8 @@ void closeLogFile()
 
 int errs = 0;
 
-int genEndSampleCtlW(const char* fileName,WORD *w,int limit)
+//int genEndSampleCtlW(const char* fileName,WORD *w,int limit)
+int genEndSampleCtlW(const char* fileName,WORD ws[ITNUM][FTWIDE],long offlist[ITNUM],int startOffset)
 {
 	//
 	/**
@@ -41,7 +42,7 @@ int genEndSampleCtlW(const char* fileName,WORD *w,int limit)
        	//ONLY("data/orbz_sec/Antecedents and consequences of job satifaction among information center employees.txt");
 	static int id = 0;
 	//unsigned int targetOffset;
-	unsigned int startOffset;
+	//unsigned int startOffset;
 	endFeatureDataContainer *_mfdc =getEndFeatureDataContainer();
 	//endFeatureDataContainer tmpCter ;
 	memset(_mfdc,0,sizeof(endFeatureDataContainer));
@@ -57,7 +58,7 @@ int genEndSampleCtlW(const char* fileName,WORD *w,int limit)
 	}
 	
 //	targetOffset = getReferenceEndOffset();
- 	startOffset = getReferenceHeadOffset();
+ 	//startOffset = getReferenceHeadOffset();
 	//step 1: offsets generate
 	//if(!getFeature(fileName,_mfdc)) // get One To Five from DB
 	//TODO read and write offsets from | into db 
@@ -113,7 +114,8 @@ int genEndSampleCtlW(const char* fileName,WORD *w,int limit)
 	int start = 1;
 	for(int i = 0; i < _mfdc->top ;i++)
 	{
-		printf(".");
+		offlist[i] = _mfdc->data[i].offset;
+		//printf(".");
 		//adjust offset 
 		int adja = hasYearafterTheOffset(_mfdc->data[i].offset-4,30);
 		int adjb = hasPPafterTheOffset(_mfdc->data[i].offset-4,30);
@@ -143,7 +145,7 @@ int genEndSampleCtlW(const char* fileName,WORD *w,int limit)
 				//start+=5;
 				//rankWrite(fp,start,_mfdc->top-_mfdc->data[i].t[0]+1,5);
 				//rankWriteNoMore(fp,start,_mfdc->top-_mfdc->data[i].t[0]+1,5);
-				rankWriteNoMoreW(w,start,_mfdc->top-_mfdc->data[i].t[0]+1,5);
+				rankWriteNoMoreW(ws[i],start,_mfdc->top-_mfdc->data[i].t[0]+1,5);
 				start+=5;
 				break;
 			// */
@@ -156,7 +158,7 @@ int genEndSampleCtlW(const char* fileName,WORD *w,int limit)
 				// 2 table , he is figure ... (a list)
 				//fprintf(fp,"%d:%d ",start++,_mfdc->data[i].t[j]);
 				//rankWrite(fp,start,_mfdc->data[i].t[j],3);
-				rankWriteW(w,start,_mfdc->data[i].t[j],3);
+				rankWriteW(ws[i],start,_mfdc->data[i].t[j],3);
 				start += 3;
 				break;
 			// */
@@ -167,7 +169,7 @@ int genEndSampleCtlW(const char* fileName,WORD *w,int limit)
 			case 4:
 			case 5:
 				//rankWrite(fp,start,_mfdc->data[i].t[j]+1,3);
-				rankWriteW(w,start,_mfdc->data[i].t[j]+1,3);
+				rankWriteW(ws[i],start,_mfdc->data[i].t[j]+1,3);
 				start += 3;
 				break;
 			// */
@@ -177,7 +179,7 @@ int genEndSampleCtlW(const char* fileName,WORD *w,int limit)
 			case 6: // is end of article ?
 				// 0 , 1 , 2
 				//fprintf(fp,"%d:%d ",start++,);
-				start = setFtValue(w,start,chkSpecialFlag()?0:_mfdc->data[i].t[j]*2);
+				start = setFtValue(ws[i],start,chkSpecialFlag()?0:_mfdc->data[i].t[j]*2);
 				break;
 		
 			// f 4
@@ -192,7 +194,7 @@ int genEndSampleCtlW(const char* fileName,WORD *w,int limit)
 				// end year before article
 				// 0 , 1 , 2,
 				//rankWrite(fp,start,_mfdc->data[i].t[j],5);
-				rankWriteW(w,start,_mfdc->data[i].t[j],5);
+				rankWriteW(ws[i],start,_mfdc->data[i].t[j],5);
 				start += 5;
 				break;	
 		
@@ -200,7 +202,7 @@ int genEndSampleCtlW(const char* fileName,WORD *w,int limit)
 			case 12:
 			case 15:
 				//rankWrite(fp,start,_mfdc->data[i].t[j-1]+_mfdc->data[i].t[j-2],5);
-				rankWriteW(w,start,_mfdc->data[i].t[j-1]+_mfdc->data[i].t[j-2],5);
+				rankWriteW(ws[i],start,_mfdc->data[i].t[j-1]+_mfdc->data[i].t[j-2],5);
 				start += 5;
 				break;
 
@@ -208,7 +210,7 @@ int genEndSampleCtlW(const char* fileName,WORD *w,int limit)
 			case 17:
 			case 18:
 				//powerWriteNoMore(fp,start,_mfdc->data[i].t[j],5);
-				powerWriteNoMoreW(w,start,_mfdc->data[i].t[j],5);
+				powerWriteNoMoreW(ws[i],start,_mfdc->data[i].t[j],5);
 				start+=5;
 				break;
 
@@ -222,7 +224,7 @@ int genEndSampleCtlW(const char* fileName,WORD *w,int limit)
 			case 21:
 			case 24:
 			case 27:
-				powerWriteNoMoreW(w,start,_mfdc->data[i].t[j],8);
+				powerWriteNoMoreW(ws[i],start,_mfdc->data[i].t[j],8);
 				start+=8;
 				break;
 			}
@@ -231,9 +233,9 @@ int genEndSampleCtlW(const char* fileName,WORD *w,int limit)
 		}
 			
 		setNextElemOffset(i<_mfdc->top-1?_mfdc->data[i+1].offset:0);
-		start = genNextDataForEndfeatureW(w,_mfdc->data[i],start);
+		start = genNextDataForEndfeatureW(ws[i],_mfdc->data[i],start);
 		
-		w[start].wnum=0;
+		ws[i][start].wnum=0;
 		
 		// endness of data
 		//fprintf(fp," #%d",_mfdc->data[i].offset);

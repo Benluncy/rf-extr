@@ -96,7 +96,7 @@ FILE * getTestFile(void);
 
 void selfAddFileNum();
 
-int getREFO();
+
 
 #endif //__HFTCTL_H__
 

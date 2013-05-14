@@ -52,7 +52,8 @@ GNUFLAGS		:= -Wall ${INCFLAG} -std=gnu99
 OBJS			:= hftctl.o hftnpse.o sqlite3.o persistence.o \
 				ini.o tokens.o virtualcontent.o \
 				minEditDistance.o dirTraversal.o\
-				debuginfo.o myMath.o
+				eftfun.o crftctl.o strHandle.o common.o\
+				debuginfo.o myMath.o crftfun.o
 PROGS			:= main
 
 .PHONY			: clean succ

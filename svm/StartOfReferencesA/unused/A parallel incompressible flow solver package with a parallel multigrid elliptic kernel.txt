@@ -1,0 +1,609 @@
+
+ Permission to make digital or hard copies of part or all of this work or personal or classroom use is 
+granted without fee provided that copies are not made or distributed for profit or commercial advantage 
+and that copies bear this notice and the full citation on the first page. To copy otherwise, to republish, 
+to post on servers, or to redistribute to lists, requires prior specific permission and/or a fee. SC 
+'95, San Diego, CA &#38;#169; ACM 1995 0-89791-985-8/97/0011 $3.50 A Parallel Incompressible Flow Solver 
+Package with a Parallel Multigrid Elliptic Kernel John Z. Lou+ and Robert D. Ferraro++ Abstract A parallel 
+time-dependent incompressible .ow solver and a parallel multigrid elliptic kernel are described. The 
+.ow solver is based on a second-order projection method applied to a staggered .nite-difference grid. 
+The multigrid algorithms implemented in the elliptic kernel, which is needed by the .ow solver, are V-cycle 
+and full V-cycle schemes. A grid-partition strategy is used in the parallel implementations of both the 
+.ow solver and the multigrid elliptic ker­nel on all .ne and coarse grids. Numerical experiments and 
+parallel performance tests show the parallel solver package is numerically stable, physically robust 
+and computationally ef.cient. Both the mul­tigrid elliptic kernel and the .ow solver scale very well 
+to a large number of processors on the Intel Paragon and the Cray T3D for computations with moderate 
+granularity. The solver package has been carefully designed and coded so that it can be easily adapted 
+to solving a variety of interesting two and three-dimensional .ow problems. The solver package is portable 
+to parallel systems that support MPI, PVM and Intel NX for interprocessor communications. 1. Introduction 
+The objective of this work is to develop a parallel and scal­able incompressible .ow solver package which 
+can be used for solv­ing a variety of practical and challenging incompressible .ow problems arising from 
+physics and engineering applications. A few examples are convective turbulence modeling in astrophysics, 
+ther­mally driven .ows in cooling systems and combustion process mod­eling. A Navier-Stokes algorithm 
+for successfully solving these complicated, non-smooth .ow problems must be numerically stable, physically 
+robust and computationally ef.cient. Results from numeri­cal experiments in [2], [3] and [4] indicate 
+that a second-order pro­jection method proposed in [2] is a promising candidate for +lou@acadia.jpl.nasa.gov, 
+Jet Propulsion Laboratory, California Institute of Technol­ogy, Pasadena, CA 91109 ++ferraro@zion.jpl.nasa.gov, 
+Jet Propulsion Laboratory, California Institute of Tech­nology, Pasadena, CA 91109 simulations of complex 
+incompressible .ows. Our task is to develop an ef.cient, .exible and portable par­allel .ow solver package 
+for multiple applications. In terms of ef.­ciency, we want the solver to have high numerical ef.ciency 
+as well as parallel computing ef.ciency, which is the reason to use a parallel multigrid elliptic kernel 
+as a convergence accelerator for the parallel .ow solver. Flexibility and portability have been emphasized 
+throughout our design and implementation of the solver package. We want to develop the solver package 
+so that it can be used either as a stand-alone .ow solver for several types of .ow problems or as a .ow 
+solver template which can be modi.ed or expanded by the user for a speci.c application. A reusable or 
+template partial differ­ential equation (PDE) solver, in our view, is a PDE solver package that can be 
+adapted or expanded to solving a variety of problems using different (component) numerical schemes as 
+needed without a major rewriting of the solver code. A basic assumption in our solver package is the 
+use of .nite-difference methods on a rectangular grid or on a composite grids with each of its component 
+a rectangular grid. The use of rect­angular grids has several advantages: (1) .nite-difference is easy 
+to implement, and for many applications, stable and robust .nite-differ­ence methods already exist while 
+the use of a .nite-element type scheme may not be desirable for some applications due to physical and 
+numerical considerations; (2) multigrid is easy to apply; (3) par­allel implementations are easier than 
+on unstructured grids. Many practical problems are, however, de.ned in irregular domains. One way to 
+extend our solver package to problems in an irregular domain is to construct a mapping between the irregular 
+domain and a rectangular region. For a variety of non-rectangular domains, such mappings can indeed be 
+constructed (for more detail, see [10]). A projection method for solving incompressible Navier-Stokes 
+equations was .rst described in a paper by Chorin [7]. Bell et. al [2] [3] extended the method to second-order 
+accuracy in both time and space, and used a Godunov procedure combined with an upwind scheme in the discretization 
+of the convection term for improved numerical stability. The projection method is a type of operator-splitting 
+method which separates the solutions of velocity and pressure .elds with an iterative procedure. In particular, 
+at each time step, the momentum equations are solved .rst for an intermedi­ate velocity .eld without 
+the knowledge of a correct pressure .eld and therefore no incompressibility condition is enforced. The 
+inter­mediate velocity .eld is then corrected by a projection step in which we solve a pressure equation 
+and then use the computed pressure to produce a divergence-free velocity .eld. Our projection step, which 
+is based on a pressure equation derived in [1] and makes use of the highly ef.cient elliptic multigrid 
+kernel we devel­oped, is mathematically equivalent to but algorithmically different from the projection 
+step described in [2]. In actual .ow simulations, this prediction-correction type procedure is usually 
+repeated a few times (1 or 2 iterations seem to be enough from our experiments) until reasonably good 
+velocity and pressure .elds have been reached for that time step. In each time step for computing an 
+N­dimensional (N = 2 or 3) viscous .ow problem, we need to solvemN Helmholtz equations for the velocity 
+.eld and m Poisson × equations for the pressure .eld, where m is the number of iterations performed at 
+each time step. A fast multigrid elliptic solver is thus very useful to improve the computational performance 
+of the .ow solver. The multigrid kernel was designed to be a general-purpose elliptic solver. It can 
+solve N-dimensional ( = ) problems on ver- N3tex-centered, cell-centered and staggered grids, and it 
+can deal with a variety of different boundary conditions as well. Since the solver package is implemented 
+on rectangular grids, a natural parallel implementation strategy is grid-partitioning: the global computational 
+grid is partitioned and distributed to a logi­cal network of processors; message exchanges are performed 
+for grid points lying on partition boundary-layers (whose thickness is usually dictated by the numerical 
+schemes used) to ensure a correct implementation of the sequential numerical algorithms on the global 
+computational grid. In our implementation of the parallel multigrid V­cycle and full V-cycle schemes, 
+we apply this grid-partition to all coarse grids as well. This means on some very coarse grid, only a 
+subset of allocated processors will contain at least one grid point on that grid and they are therefore 
+active on that grid, whereas pro­cessors which do not contain any grid point will be idle when pro­cessing 
+that grid. The appearance of idle processors certainly introduces some complexity for a parallel implementation. 
+For example, the logical processor mesh on which the original computa­tional grid is partitioned can 
+not be used for communications on those coarse grids for which idle processors appear. Depending on the 
+type of .nite-difference grid and coarsening scheme, one may also need to consider, on those coarse grids, 
+how to correctly apply boundary conditions in boundary processors which contain at least one grid point 
+next to the boundary of the global grid, since bound­ary processors may change from one grid to another. 
+Grid-partition on all coarse grids is certainly not the only possibility for parallel mul­tigrid. Another 
+approach, e.g., is to duplicate some of the global coarse grids in every processor allocated, so that 
+processing on those coarse grids can be done without further interprocessor com­munication, but this 
+coarse-grid-duplication approach involves quite some global communication for grid duplication and it 
+needs some extra storage for global coarse grids. These requirements may severely affect the scalability 
+of the solver when running on a large number of processors. One may also stop further grid coarsening 
+at the coarsest grid for which no idle processor appears yet, and solve the coarse grid problem by some 
+direct or iterative methods. But the cost in solving the coarse grid problem with those methods is not 
+competitive compared to further grid coarsening. Although it seems no approach is perfect for implementing 
+a parallel classical multigrid cycle [6] [9], we do believe the use of grid-partition at all grid levels 
+is an appropriate approach for implementing a general-purpose paral­lel multigrid solver. The degradation 
+of parallel ef.ciency due to the idle processors on some coarse grids has been discussed in many papers 
+(e.g. [6] [9] [11]). The performance measurements from our parallel implementations indicate our multigrid 
+solver scales quite well on a 512-node Intel Paragon and on a 256-node Cray T3D for both 2D and 3D problems 
+with moderate sizes of local .nest grids. In fact, the percentage of time spent on those coarse grids 
+is insig­ni.cant compared to the total computation time. A similar observa­tion was also made in [9]. 
+As shown by a simple asymptotic analysis in [8], the parallel ef.ciency of multigrid schemes with the 
+grid-parti­tion approach is not qualitatively different from that of a single grid scheme. The rest of 
+the paper is organized as follows: Section 2 pre­sents numerical algorithms for the multigrid kernel 
+and the second­order projection method for the incompressible .ow solver; in Sec­tion 3, discussions 
+are made on issues related to the parallel imple­mentations of the solver package; numerical results 
+and parallel performances from the implemented parallel solvers are shown in Section 4,; Section 5 gives 
+some of our observations and conclu­sions. 2. The Numerical Methods A. The Multigrid Algorithms The 
+multigrid schemes implemented are the so-called V­cycle and full V-cycle schemes for solving elliptic 
+PDEs, discussed in some detail in [5] and [9]. The full V-cycle scheme is a generaliza­tion of the V-cycle 
+scheme which .rst restricts the residual vector to the coarsest grid and then performs a few smaller 
+V-cycle schemes upv upv upv up v u upv upv upv up v u upv upv upv up v u upv upv upv up v u  u p u p 
+v v u p u p v v x xxx x v v v vv v Figure 1: Coarsening of three types of grids: vertex-centered (top-left), 
+cell-centered (top-right) and staggered (bottom). on all coarse grids, followed by a complete V-cycle 
+scheme on all grids. The full V-cycle scheme often offers a better numerical ef.­ciency than the V-cycle 
+scheme by using a much better initial guess of the solution in the .nal V-cycle. The parallel ef.ciency 
+for the full V-cycle scheme, however, is poorer than the V-cycle scheme because it does more processing 
+on coarse grids. A typical multigrid cycle consists of three main components: relax on a given grid, 
+restrict the resulting residual to a coarse grid, and interpolate a correction back to a .ne grid. Our 
+multigrid solver can handle several different types of .nite-difference grids com­monly used in numerical 
+computations. Figure 1 shows how coarse grids are derived from .ne grids for vertex-centered, cell-centered 
+and staggered grids. Although the main steps in a V-cycle are the same for all these grids, restriction 
+and interpolation operators can have different forms on different grids. On a vertex-centered grid we 
+use a full-weighting stencil (9-point averaging on a 2D grid) to make the V-cycle scheme converge well 
+when a pointwise red-black Gauss-Seidal (GS) smoother is used; whereas on a cell-centered grid, a nearest-neighbor 
+stencil (4-point on a 2D grid) can be used with the pointwise red-black GS smoother to achieve a good 
+convergence rate. We also point out that, on a vertex-centered grid, the use of the nearest-neighbor 
+restriction stencil with the point-wise GS smoother does not even result in convergence on our test problems, 
+but the use of a Jacobi smoother with the nearest­neighbor restriction stencil results in convergence 
+but with a slower rate. The operator for transferring from a coarse grid to a .ne grid is basically bilinear 
+interpolation for all grids. Since .ne and coarse grid points do not overlap on cell-centered and staggered 
+grids, one xxxxx xxxxx xxxxx xxxxx xxxxx x x x x x x x x x x x x x x x x x x x x x x x x u u a 
+c b 1 16 121 242 121 1 16 022 044 022 1 16 044 044 000 c a b Figure 2: Restriction stencils for interior 
+point c and boundary points a and b. needs to set the values for grid points at the boundary of coarse 
+grids before a bilinear interpolation operator can be applied. More details on the constructions of restriction 
+and interpolation operators for different types of grids can be found in [14]. Our multigrid solver can 
+solve Dirichlet and Neumann prob­lems for the grids depicted in Figure 1. A periodic boundary condi­tion 
+is also implemented for a special case used in the NS .ow solver. The Dirichlet and Neumann boundary 
+conditions are applied only to the original (.nest) grid; a homogeneous (zero) boundary condition is 
+used on all coarse grids since residual equations are solved there. In the case of a Neumann boundary 
+condition, where the unknowns are solved on all grid points including those on the grid boundary, restriction 
+stencils are not well-de.ned for boundary grid points. Take for example the vertex-centered grid in Figure 
+2, where a 9-point full weighting stencil is used for restriction. This can be done naturally for the 
+interior point c. For boundary points a and b, however, only a subset of the neighboring points are within 
+the grid and therefore weighting stencils on those points still need to be de.ned in some way. On the 
+other hand, it is reasonable to have the following discrete integral condition satis.ed between a pair 
+of coarse and .ne grids: .UIJ × AIJ =.uij × aij, (1) IJ, ij, where and are solutions on coarse and .ne 
+grids, and UIJ uij AIJ and are areas of grid cells on coarse and .ne grids, respectively. aij Restriction 
+stencils for interior and boundary points that satisfy equation (1) are given in Figure 2. When solving 
+a Poisson equation with a Neumann bound­ary condition, the solution is determined up to a constant. We 
+use the following strategy to make sure the application of multigrid cycles converges to a .xed solution: 
+after every relaxation on each grid, we perform a normalization step by adding a constant to the computed 
+solution so that its value at a .xed point (we pick the point located at the center of the grid) is zero. 
+Our numerical tests show this simple step results in a good convergence rate for Neumann problems. B. 
+The Second-Order Projection Method We now give a brief description of the second-order projec­tion method 
+for solving the incompressible Navier-Stokes equations in a dimensionless form .u .t +(u · .) u = -.p 
++ Re-1.u , (2) .· u = 0 n whereu . R (n = 2 or 3) is the velocity .eld,p . R is the pressure .eld and 
+Re is the Reynolds number. A typical problem is to .nd u and p satisfying (2) in a domainO for a given 
+initial velocity .eld u0 inO and a velocity boundary conditionub on .O. The projection method for solving 
+equations (2) is based on the Hodge decomposi­tion which states that any vector .eld u can be uniquely 
+decom­posed into a sum ofu1 + u2 with.· u1 = 0 andu2 = .f for some scalar function f. The projection 
+method proceeds as a type of frac­tional step method by .rst writing the momentum equation in (2) in 
+an equivalent form .u = P (Re-1.u -(u · .) u) .t , (3) where P is an orthogonal projection operator which 
+projects a smooth function onto a divergence-free subspace. Equation (3) can be viewed as the result 
+of applying P to the momentum equation in (2) which can be rewritten as .u .t +.p = Re-1.u -(u · .) u 
+. (4) The projection operation removes the pressure gradient in (4) because.p is orthogonal to the projection. 
+Thus if we let the right­hand side of (4) be a vector .eld V, then .p =(IP) V. The sec­ - ond-order projection 
+method in [2] is a modi.cation to the original projection method proposed in [7] to achieve a second-order 
+tempo­ral accuracy and an improved numerical stability for the nonlinear convection. It uses the following 
+temporal discretization on the momentum equation at each half time step n+1/2 n1k+, nuu] n1 / 2 -+ + 
+[(u · .) u = .t n1k+, n , (5) + 1 + u n1 / 2, k u -.p+.( ) Re 2 n where we assume the velocityu is known, 
+and un+1,k is an interme­diate velocity .eld that satis.es the same boundary condition as the physical 
+velocity at time step n+1. The temporal discretization in (5) is second-order accurate provided that 
+the nonlinear convection term in (5) can be evaluated to the second-order accuracy at the half time step 
+n+1/2. The superscripts k in (5) indicate that an iterative + process is used for computing the velocity 
+at next time step un1, and the pressure at next half time step pn+1/2: given a divergence­n free .eldu 
+and the corresponding pressure .eld pn-1/2, we .rst set n+1/2,0 = p pn-1/2. For k1= , we solve (5) for 
+un+1,k. Since the correct pressure pn+1/2 is not known, the computed un+1,k is usually not n1 + divergence-free; 
+but un+1,k can be used as a guess foru and it is used to compute pn+1/2,k, a new guess for pn+1/2, by 
+solving a pres­sure equation. Once we have a new guess for pn+1/2, it is used in (5) to compute un,k+1. 
+This iterative procedure is performed at each time n1 / 2, k + 2 and un+1,k ++ n1 / n1 step until.p..p. 
+u. This itera­tive process converges because it can be shown that the mapping of errors from state k 
+to state k+1 is contractive [2]. In practice, we found 1 to 2 iterations would be enough to get a satisfactory 
+conver­gence. The convection term(u · .) u is evaluated at the half time n step n+1/2, using only the 
+velocityu and the pressure pn-1/2. On the staggered grid shown in Figure 1, the pressure p is de.ned 
+at cell centers, horizontal velocity u and vertical velocity v are de.ned at cell edges. Let us denote 
+cell (i,j) as the cell whose center is located at (i - 1/2). x, (j - 1/2). y for i = 1 ... I and j = 
+1 ... J. (u · .) u is then evaluated at i, j - 1/2 for u component and i - 1/2, j for v com­ponent. The 
+discretization for u component, for example, has the fol­lowing form [(u · .) u]= u +- ui1-/ 2,- / 2 
++/ 2, j1-/ 2ui1 / 2, j1 / 2 +/ 2,- j1 ui1 .- - ui1 j1 / 2 . 2 .. x . , +- vij,- 1 vij,. uij, uij,- 1 
+. + 2 ..y . where are velocities at cell centers, and are ui1 / 2,±/ , ± j12 uij, vijvelocities at cell 
+corners and all velocities are assumed to be at time n n+1/2. Sinceu is the only velocity available at 
+the start of computa­tions for time step n+1 and velocity values are not de.ned at cell centers and cell 
+corners, we use Taylor expansions of second-order accuracy in both time and space, as was done in [2] 
+and [3], to .nd velocities at appropriate locations and at the half time step n+1/2 for computing the 
+discrete convection term. To improve numerical sta­bility, a Godunov-type procedure combined with an 
+upwind scheme is used in determining velocity values at cell centers and cell cor­ners. To compute the 
+u velocity component at the cell center of cell (i,j), for example, we .rst compute .x .t Rnn n u=+ + 
+ui1j1 /2 uxi,-1,j1 /2 ,,j1 / -,- - uti -1 - 2 22 , (6) .x .t Lnn n u=- + uij 1 /2 uxij 1 /2 ,, -1 / ,- 
+,,- utij 2 22 where the expansions for uR and uL are evaluated on the right side of edge (i - 1, j - 
+1/2) and on the left side of edge (i, j - 1/2), respec­ n1 /2 tively. The choice of + is then made by 
+the following ui1 /2,- / - j12 upwind scheme: uR if uL >, 0uL +uR >0 n1 /2 +. =.0 if L R.(7) - j1 <0 
+ui1 /2,- /2u,u>0 . L otherwise uThe spatial derivatives in (6) are computed by .rst using a centered 
+differencing and then applying a slope-limiting step to avoid forming new maxima and minima in the velocity 
+.eld. Tempo­ral derivatives in (6) are computed by using the momentum equation (4). Derivatives at cell 
+corners are computed in a similar way. More details for the constructions of these derivatives are given 
+in [2] and [3]. After evaluation of the convection term, the intermediate velocity un+1,k can be found 
+by solving the following Helmholtz equation for each velocity component: n1k+, 2Re n1k +, -.u+ u= .t 
+. (8) n1+/21 n1 /2 nn - 2Re (-[(u ·.)u]+ u+.u-.p) .t We notice that the matrix resulted from equation 
+(8) becomes more diagonally dominant as the Reynolds number increases for a .xed grid size and a .xed 
+time step, which is fortu­nate for computing .ows with large Reynolds numbers. For Euler (inviscid) .ow 
+problems where Re =8, un+1,k can be computed explicitly from equation (5). Once un+1,k is computed, a 
+projection step is performed to .nd the pressure .eld pn+1/2,k+1 by solving a Poisson equation: + .p 
+= R (un , un1), (9) n1 + where un+1,k is used in place ofu in the right-hand side of equa­tion (5). Mathematically, 
+equation (9) is the result of applying a diver­gence operator to the momentum equations in (2). Since 
+no boundary condition is de.ned for the pressure .eld, some special treatments are needed at the boundary 
+grid points in solving equa­tion (9). The details of deriving the pressure equation (9) on a stag­gered 
+grid with appropriate treatments at boundary grid points for Dirichlet velocity boundary condition is 
+given in [1]. The treatment of pressure boundary condition for periodic velocity boundary condition using 
+a multigrid scheme is discussed in section 4. In computing a viscous .ow, the multigrid elliptic solver 
+is used to solve both equa­ n1k1, n+1,k+1 tions (8) and (9). After the pressure .eldp++ is found, un1k1 
++, + can be computed by using equation (5) withp in place of +, pn1 k, and this completes one iteration 
+in the computations for the time step n +1. un+1 and pn+1 are then obtained at the end of the last iteration. 
+The .ow of control for our incompressible Navier-Stokes solver is shown in Figure 3. 3. Parallel Implementations 
+A. Grid Partition and Logical Processor Mesh The approach we adopted in parallel implementations of the 
+multigrid elliptic solver and the incompressible .ow solver is grid­partition Our goal is to develop 
+parallel solvers that can partition any N-dimensional (N3) rectangular grids and run on any M-dimen­ 
+= sional(MN) logical processor meshes. For example, Figure 4 = shows the partition of a three-dimensional 
+grid and the assignment of the partitioned subgrids to a three-dimensional torus processor mesh. As shown 
+in Figure 5, logical processor meshes in our code are always constructed as toroidal meshes. Toroidal 
+meshes are useful in the construction of nested coarser processor meshes for the multigrid solver and 
+for dealing with problems with periodic boundary condition. In the multigrid solver, coarse grids and 
+coarse logical pro­cessor meshes are constructed automatically and recursively based on information on 
+a given .ne grid. All grid storages are allocated dynamically during the grid coarsening process. In 
+particular, for each multigrid level, a local coarse grid is derived from the local .ne grid and storages 
+are allocated for the coarse grid. Processors which will get at least one grid point on that coarse grid 
+will be in an  Figure 3: Flow diagram for the Navier-Stokes solver active state on that grid, otherwise 
+they will be in an idle state on that grid. A .ag is then set in each processor for that level depending 
+on the value of the state. A coarse processor mesh for that coarse grid can then be established by communicating 
+the states among proces­sors in the .ne processor mesh. This process is repeated recursively until all 
+coarse grids and coarse processor meshes have been con­structed. As an illustration, Figure 5 shows a 
+processor mesh and its derived coarse mesh for a problem with a Neumann boundary condi­tion. In our multigrid 
+solver, we put this construction process in an ini­tialization routine which must be called before the 
+.rst time the multigrid solver itself is called. The cost of running the initialization routine is relatively 
+small when one needs to call the multigrid solver a Figure 4: A 3D Grid partition and mapping to a processor 
+mesh. Only two wrap-around connections were shown in the logical processor mesh. large number of times, 
+as is the case for the Navier-Stokes .ow solver. After executing this initialization routine, every processor 
+knows its role at each level of the multigrid cycle, and also knows its neighboring processors on that 
+grid level. Figure 5: If the left processor mesh contains a 5x5 grid for a Neumann problem on a vertex-centered 
+grid, then the derived coarse processor mesh is the one on the right. B. Interprocessor Communications 
+To implement the multigrid scheme and the projection method on a partitioned grid, we need to exchange 
+data which are close to the partition boundaries of each subgrid local to a certain processor. Each processor 
+contains a rectangular subgrid sur­rounded by some ghost grid points which are duplicates of grid points 
+contained in other processors, as shown in Figure 6. The number of ghost points on each side of the subgrid 
+depends on numerical algorithms. For the multigrid elliptic solver using a stan­dard Laplacian stencil, 
+one ghost grid point on each side is needed for the local subgrid at each level, whereas for the second-order 
+pro­jection method, three ghost grid points on each side are needed in computing the nonlinear convection 
+term using Taylor series and upwind schemes. Therefore in the Navier-Stokes .ow solver, we allocate storages 
+for three ghost grid points for the .ne local grid and one ghost grid point for each coarse grid. For 
+certain operations Figure 6: A local subgrid (white area) with surrounding ghost points (shaded area). 
+ in the multigrid scheme (e.g. restriction and interpolation) and for computing the convection term in 
+the projection method, ghost grid points in the diagonal neighbor are also needed, as shown in Figure 
+7. Since processors Pi and Pj in Figure 7 are not nearest neighbors, direct data exchange between them 
+will introduce a more compli­cated message-passing pattern. Fortunately, direct data exchange between 
+Pi and Pj is not necessary to get the diagonal ghost grid points. It can be veri.ed that all data exchanges 
+that we need are of nearest neighbor types, as indicated in Figure 8 for 2D problems. As can be seen 
+in Figure 8 that when data lying on partition boundaries are exchanged, the sending blocks always include 
+ghost grid points. After data exchanges in Figure 8 are performed, all ghost grid points shown in Figure 
+6 will be obtained by appropriate neighboring pro­cessors. Each processor, therefore, only needs to know 
+its nearest neighboring processors on each logical processor mesh. In solving problems with periodic 
+boundary conditions, data exchanges are also required among processors lying on the boundary of a proces­sor 
+mesh, and the same message-passing operations as shown in Figure 8 can be used. Figure 8: Data exchanges 
+between neighboring processors for 2D problems. The data in black blocks in each processor are sent out., 
+which is stored in the blocks for ghost grid points in the neighboring processors. The parallel ef.ciency 
+of a parallel code is largely deter­mined by the ratio of local computations over interprocessor com­munications. 
+In our solvers, the best parallel ef.ciency is achieved on the .nest grid, where the communication cost 
+could be easily dominated by a large amount of computations, and the parallel ef.­ciency degrades as 
+the grid gets coarser. One way to hide commu­nication overhead and thus improve parallel ef.ciency on 
+all grids is to overlap communications with computations. In several places within our solvers, we have 
+the following sequence of operations for each processor: (1) Exchange data lying on partition boundaries; 
+ (2) Perform processing on all local grid points.  To overlap communications with computations, we can 
+per­form the following sequence of operations for the same result: (1) Initiate the data exchange for 
+partition boundaries; (2) Perform processing on interior grid points that do not need ghost grid points; 
+(3) Wait until data exchange in (1) is complete; (4) Perform processing on the remaining grid points. 
+ On the Intel Paragon, we implemented the second set of operations above in the multigrid solver and 
+the .ower solver using asynchronous message-passing calls. For one full V-cycle in the elliptic solver, 
+for example, the performance improvement on a 256x256 grid partitioned among 256 processors is about 
+15%, and the improvement on a2563 grid partitioned among 512 processors is about 22%. Faster and asynchronous 
+interprocessor communica­tion can also be achieved on the Cray T3D by using its shared­memory communication 
+model, in which direct memory copy is used at either sending or receiving processors for data exchanges 
+between different processors. Some synchronization between send­ing and receiving processors, however, 
+is needed before or after a direct memory copy is performed to ensure the correctness of a message-passing. 
+On T3D processor synchronization is provided only for a group of processors with a .xed stride in their 
+processor indexes, this shared-memory communication model can be easily used for exchange of partition 
+boundary data in the .ow solver and for multigrid elliptic solver on some .ne grids in which data exchanges 
+only occur between nearest-neighbor processors on the original processor mesh. C. Software Structures 
+Our solvers were implemented in C because we think it is the language that provides adequate support 
+for implementing advanced numerical software without incurring unreasonably large overhead. Since our 
+goal is to develop reusable and high-perfor­mance PDE solvers which can be used either as library routine 
+or as extensible, template-type code for different applications, we empha­size in our code design both 
+generality and .exibility. First, we want the solvers to be able to run on any M-dimensional rectangular 
+pro­cessor meshes for any N-dimensional rectangular grids with ( = ) MN(for multigrid processing, N is 
+usually a power of 2). This require­ment introduces some complexities in coding the multigrid solver 
+in terms of determining the right global indices for local grids at each grid level. Storages for all 
+grid variables are allocated at run time. For the multigrid solver, storages for local coarse grids are 
+allocated as they are derived recursively from local .ne grids. The user is given the option either to 
+supply the storage for variables de.ned on the original grid or to let the solver to allocate those storages. 
+An array of pointers to an N-dimensional grid (i.e. an N-dimensional data array) is allocated, and each 
+of the pointers points to a grid in the grid hierarchy. N-dimensional data array is constructed recur­sively 
+from one-dimensional data arrays. This strategy of dynamic memory allocation offers a greater .exibility 
+in data structure manip­ulations and more ef.cient use of memory than a static memory allo­cation, and 
+the user is also alleviated from the burden of calculating storage requirements for multigrid processing. 
+There are two major communication routines in the solvers: the communication routine for the .ow solver 
+exchanges partition boundary data only on the original grid; the communication routine for the multigrid 
+solver can exchange partition boundary data for all .ne and coarse grids, using a hierarchy of processor 
+meshes. To make the code portable across different message-passing systems, we de.ned our own generic 
+message-passing library as an interface with our solvers. To use a new message-passing system, we only 
+need to extend the generic message-passing library to that system without changing any code in our solvers. 
+Currently, our generic message-passing library can accommodate NX, MPI and PVM. A separate data exchange 
+routine has also been implemented for the .ow solver, which uses the shared-memory communication library 
+on the Cray T3D. Simple user interfaces to the parallel solvers have also been constructed. The elliptic 
+multigrid solver can be used as a stand-alone library routine with both C and Fortran interfaces. After 
+initialization of the problem to be solved and some algorithm param­eters, a preprocessing routine must 
+be called before the .rst time the multigrid solver routine is called. The preprocessing routine con­structs 
+the set of nested grids and the corresponding set of logical processor meshes. The .ow solver can be 
+used as a general-pur­pose incompressible .uid .ow solver on a rectangular, staggered .nite-difference 
+grid for problems with Dirichlet or periodic velocity boundary conditions. To use the multigrid solver 
+as a kernel for eval­uating velocity and pressure .elds, the preprocessing routine must be called for 
+each velocity component and the pressure, since they are de.ned on different grid points on a staggered 
+grid. Therefore separate data structures will be constructed in the preprocessing routine for each velocity 
+component and the pressure, which will be used in subsequent calls to the multigrid solver. 4. Numerical 
+Experiments and Parallel Performances We now report numerical experiments made to examine the numerical 
+properties of the parallel solvers on a few test problems, and parallel performance in terms of speed-up 
+and parallel scaling of the solvers on the Intel Paragon and the Cray T3D systems for problems with different 
+sizes and granularity. A. The Elliptic Multigrid Solver The multigrid elliptic solver was .rst tested 
+on a Helmholtz equation with known exact solutions. Table 1 shows the conver­gence rate of the multigrid 
+solver from a 3D Helmholtz equation of the form -.uu= f + with a Dirichlet boundary condition. The runs 
+were performed on the Intel Paragon. Errors displayed are the normalized maximum norm of the difference 
+between the computed solution and the exact solu­tion. The table shows the number of cycles needed in 
+each case to reach the order of discretization error (or truncation error). At each grid level, two red-black 
+relaxations were performed. Although the full V-cycle scheme has been shown more ef.cient than the V-cycle 
+scheme in sequential processing [5], the same statement may not be always true in parallel processing. 
+For a 2D test case with a20482 grid, we found the execution time needed for the computed solution to 
+reach a .xed accuracy is about the same for V-cycle and full V-cycle schemes. As shown for a 3D test 
+case in table 1, the full V-cycle scheme is still a little more ef.cient. With a grid-partition of both 
+.ne and coarse grids, parallel ef.ciency degrades as the pro­cessing moves to coarser grids. Since the 
+full V-cycle scheme does more processing on coarse grids, its parallel ef.ciency is worse than the V-cycle 
+scheme. For a large computational grid with many levels of coarse grids, the higher numerical ef.ciency 
+of the full V-cycle scheme may not improve overall computational performance due to its worse parallel 
+ef.ciency. Although not shown in the paper, the convergence rates of the multigrid solver were also measured 
+for cell-centered grid and staggered grid. We found for the same model problem the convergence speeds 
+are slightly slower on those grids, which could be due to the use of different restriction operators. 
+Table 1: Numerical Convergence: 3D Helmholtz Solver Scheme Grid Error # Nodes # Cycles CPU sec. Full 
+V-cycle 2563 1.2 × 10-5 64 4 71.3 V-cycle 2563 2.6 × 10-5 64 8 86.7 The parallel performance of an application 
+code is usually judged by two measurements: speed-up and scaling. Speed-up is measured by .xing the problem 
+size (or grid size in our case) and increasing the number of processors used. Scaling is measured by 
+.xing the local problem size in each processor and increasing the number of processors used. Although 
+a nice speed-up can be obtained for many applications with a small number of processors, the reduction 
+in CPU time often diminishes rapidly as the number of processors used exceeds some threshold. This phenomenon 
+is largely inevitable, as stated in Amdahl s law. Because as the num­ber of processors used increases 
+for a .xed problem size, the local communication cost and the cost for global operations will eventu­ally 
+become dominant over the local computation cost after a certain stage. This high ratio of communication 
+to computation makes the in.uence of a further reduction in the local computation very small on the overall 
+cost of running the application. On the other hand, the scaling performance seems to be a more realistic 
+measure of an application s parallel performance, since a code with a good parallel scaling implies, 
+given enough processors, it can solve a very large problem in about the same time as it requires for 
+solving a small problem, and this is indeed one of the main reasons to use a parallel machine. Figure 
+9 displays two speed-up plots for a multigrid V­cycle and a full V-cycle for solving 2D and 3D Helmholtz 
+equations with a Dirichlet boundary condition on a vertex-centered grid, mea­sured on the Intel Paragon 
+and the Cray T3D systems. For a com­parison, an ideal speed-up curve for one test case is also shown. 
+The code was compiled with the -O2 switch on both machines. The grid size for the 2D problem is 512 × 
+512, and the grid size for the 3D problem is 64 × 64 × 64. The maximum number of processors used for 
+the 2D problem is 256 on both machines. For the 3D problem, all 256 processors were used on the T3D (in 
+which case a rectangular processor mesh of dimensions 4x8x8 was used) and 512 proces­sors were used on 
+the Paragon. Speed-up on a 2D Problem Speed-up on a 3D Problem 100 10 1 .1 .01 .001 Num ber of 
+processors in power of 2 Num ber of processors in power of 2  Paragon:oneV-cycle Paragon:oneV-cycle 
+ Paragon:oneful V-cycle  Paragon:oneful V-cycle CrayT3D:oneV-cycle CrayT3D:oneV-cycle CrayT3D:oneful 
+V-cycle CrayT3D:oneful V-cycle A perfectspeed-up A perfectspeed-up Figure 9: Speed-up performance 
+of the elliptic multigrid solver. In terms of single processor performance, we found for our multigrid 
+solver that the Cray T3D is about 4 times faster than the Intel Paragon. But since the implementation 
+of PVM on T3D, which we used in our code for message-passing, is relatively slow for inter­processor 
+communication, the performance difference for a parallel application on both machines tends to become 
+smaller as granular­ity of the problem gets .ner. We can see for both 2D and 3D prob­lems that the V-cycle 
+scheme has a slightly better speed-up performance than the full V-cycle scheme, which is expected since 
+the full V-cycle scheme does more processing on coarse grids. For the 2D problem, speed-up started to 
+degrade when more than 16 processors were used, and for the 3D problem, the degradation started when 
+more than 8 processors were used. Despite the degra­dation in speed-up, we can still see some reduction 
+in CPU time when the largest number of processors was used in each case. Figure 10 shows the scalings 
+of the parallel multigrid solver on the Intel Paragon for problems with three different granularity, 
+using up to 512 processors. Figure 11 shows the scalings of the same problems on Cray T3D, using up to 
+256 processors. Shown in the plots are the ratio of CPU times of using n processors versus using one 
+processor. On each of the scaling curves, we .x the local grid size and increase the number of processors, 
+so a .at curve 01 2 345 6 78910 Scaling of a 2D V-cycle  3.0 2.5 2.0 1.5 1.0 024 6810 Num ber 
+of processors in pow er of 2  grid points/node:64x64 grid points/node:128x128 grid points/node:256x256 
+ Scaling of 3D V-cycle 8 6 4 2 0 024 6810 Num ber of processors in pow er of 2  grid points/node:16x16x16 
+grid points/node:32x32x32 grid points/node:64x64x64 Scaling of a 2D full V-cycle 4 3 2 1 024 6810 
+Num ber of processors in pow er of 2  grid points/node:64x64 grid points/node:128x128 grid points/node:256x256 
+ Scaling of a 3D full V-cycle 10 8 6 4 2 0 024 6810 Num ber of processors in pow er of 2  grid 
+points/node:16x16x16 grid points/node:32x32x32 grid points/node:64x64x64 Figure 10: Scaling of the multigrid 
+solver on Intel Paragon. means a perfect scaling. Since a larger global grid has more coarse grid levels 
+for a complete V-cycle or full V-cycle, cost for processing on coarse grids also rises as the number 
+of processors increases, and therefore it has a negative effect on the scaling performance. Like speed-up 
+performance, scaling performance is also largely determined by the ratio of local computation cost versus 
+communi­cation cost. This ratio can be dependent on both numerical/parallel algorithms and hardware/software 
+performance on each speci.c Scaling of a 2D V-cycle Scaling of a 2D full V-cycle 4.0 3.5 3.0 2.5 
+ 2.0 1.5 1.0  8 7 6 5 4 3 2 1  0246810 0246810 Num ber of processors in power of 2 Num ber of processors 
+in power of 2  grid points/node:64x64 grid points/node:128x128 grid points/node:64x64 grid points/node:128x128 
+grid points/node:256x256 grid points/node:256x256 Scaling of a 3D full V-cycle Scaling of a 3D V-cycle 
+ 02468 02468 Num ber of processors in pow er of 2 Num ber of processors in pow er of 2 grid points/node:16x16x16 
+ grid points/node:16x16x16  grid points/node:32x32x32 grid points/node:32x32x32 grid points/node:64x64x64 
+ grid points/node:64x64x64 Figure 11: Scaling of the multigrid solver on Cray T3D. machine. We can see 
+from all the plots in Figure 10 and Figure 11 that scaling performance improves as the size of local 
+grid increases. This improvement is expected for an iterative scheme on a single grid, since the computation 
+cost scales as (), where n is Onthe number of grid points in the local grid, whereas the communica­ / 
+On12 tion cost scales as (). For a multigrid scheme, it can still be shown that both computation cost 
+and communication cost scale with the same orders as on a single grid [8]. In addition, message­passing 
+latency does not increase as proportionally since the num­ Figure 12: Velocity vector plots from computing 
+an unsteady driven-cavity .ow with Re = 5000. The simulation was run on a256 × 256 grid, using 64 processors 
+on the T3D. Shown are plots at time = 0.16 (top left), 4.69 (top right) and 15.63 (bot­tom). The steady 
+state of the .ow is reached in the last plot. ber of messages communicated is still roughly the same 
+for a larger local grid (not exactly the same because more coarse levels are involved) though the size 
+of each message is larger. We can also see V-cycle scheme scales somewhat better than full V-cycle scheme, 
+which is expected since the latter does more operations on coarse grids. The scaling plots also show 
+2D test cases scales bet­ter than 3D test cases, which we think is due to the fact that 3D grids have 
+a higher surface to volume ratio than the 2D grids and thus the ratio of computations to communications 
+is smaller for 3D cases. As for a comparison between the Intel Paragon and the Cray T3D, our results 
+show that the scalings on Paragon are slightly better than on T3D. This could be explained by the fact 
+that single processor speed on T3D is much faster than on Paragon, whereas the speed of interprocessor 
+communication on T3D is not proportionally faster when PVM is used for communication. B. The Incompressible 
+Navier-Stokes Solver The parallel Navier-Stokes .ow solver was .rst tried out on a test problem in a 
+unit square with a known exact solution. The pur­pose of the test is to examine the convergence rate 
+of the .ow Figure 13: Velocity vector plot (top) and vorticity contour plot (bottom) from a driven-cavity 
+.ow with Re = 106, at time = 5.47. Grid size = 512 × 512. solver on smooth problems. A second-order convergence 
+rate was obtained on the test problem for Reynolds number up to 5000, as expected. For numerical stability 
+of the Godunov scheme used in dis­cretizing the convection term, the time step, . t, is restricted by 
+the CFL condition . t U< 0.5, (10) max . x in the test, where. x is the size of grid cells andU is the 
+maxi­ max mum value in the current velocity .eld. A detailed description of such a test is given in [2]. 
+Our next numerical experiment on the .ow solver was to simulate an evolving 2D driven-cavity .ow. The 
+computational domain is still in a unit box =, = . The no-slip velocity boundary 0xy1condition is applied 
+to all boundaries except at the top boundary, where the velocity value is given. We .rst tested the solver 
+on the problem in which the velocity initial condition is speci.ed by u = 0 inside the domain, and the 
+velocity at the top boundary is always one. Figure 12 displays the velocity vector .elds which show three 
+stages for time = 0.16, 3.91and 15.63 in the evolution of the .ow, computed on a256 × 256 grid with the 
+Reynolds number = 5000. The CFL number (i.e. the right hand-side of (10)) used in the calcu­lation is 
+0.4, and a total of 10,000 time steps were computed to reach the last state at time = 15.63. We found 
+the vorticity structure at time = 15.63 is similar to those obtained by solving the steady incompressible 
+Navier-Stokes equations (e.g. [12]). In running the parallel solver on the Cray T3D, the global staggered 
+grid was parti­tioned and distributed to an88 logically rectangular processor × mesh. In computing the 
+velocity vector .eld, velocity components de.ned on cell edges were averaged to the center of cells. 
+For bet­ter visibility, the vector .elds shown in Figure 12 are actually 32 × 32 data arrays which were 
+obtained by averaging the256 × 256 velocity vectors from the simulation. Vorticity .elds were computed 
+at cell corners by central differencing. The velocity vector plots in Figure 12 show clearly how the 
+cavity .ow develops from its initial state to the .nal steady state which is characterized by a primary 
+vortex in the center of the unit box and two secondary vortices at the two bottom corners and a small 
+vortex at the upper left corner (e.g. [12]). We also noticed, when reaching the .nal stage in Figure 
+12, that the change of numerical divergence of the computed velocity .eld before and after projection 
+is very small. This is because, when the steady state is reached, the intermediate velocity .eld would 
+be computed using the correct pressure .eld to result in a correct velocity .eld. Even though the initial 
+condition is not continuous along the top boundary and the boundary condition is not continu­ous at the 
+two upper corners of the unit box, the numerical computa­tion of the .ow solver turns out to be quite 
+stable. The .ow solver was next tried on a driven-cavity .ow prob­lem with some smooth initial and boundary 
+conditions. The top boundary now moves with a slip velocityut x =16x2 (1x- 2) () and the initial velocity 
+.eld is speci.ed through a stream function.xy) = (y2 y )ut x. (, - 3 () The velocity is then computed 
+byu =-. y and v =. x. In this case, we wanted to test the numerical stability of the .ow solver on problems 
+with large Reynolds numbers which will result in a very thin boundary layer at the top boundary. Figure 
+13 displays the result from a calculation with Re = 106 for a total of 7000 time steps on a512 ×512 grid. 
+The computation was performed on the Cray T3D using 64 processors. We noticed the computation using our 
+solver at such a high Reynolds number is still numerically stable, which we can judge by checking the 
+conver­gence rate of the pressure equation and the numerical divergence of the computed velocity. The 
+computed .ow structure at this Reynolds numbers, however, is quite different from that obtained from 
+the computed .ow with Re = 5000. First, at this high Reynolds numbers, the computed .ow does not show 
+any sign of approaching a steady state after computing the large number of time steps; while with Re 
+= 5000, for the same initial and boundary conditions, we found a steady state can be reached after computing 
+a much smaller num­ber of time steps. Secondly, we can see some interesting .ow pat­terns which do not 
+exist in the .ow with Re = 5000. As shown by the vorticity contour in Figure 13, the vorticity structures 
+in this high Rey­nolds number .ow is much more complicated. We can see that a large amount of vortices 
+are generated from the top boundary and then being .ushed down along the right wall. Once these vortices 
+reach the neighborhood of the lower right corner, they are pushed toward the interior of the box. We 
+found the vorticity plot in Figure 13 is similar to what reported in [13] where a different algorithm 
+was used on the same problem. The second problem used to test our .ow solver is an invis­cid .ow for 
+which the Euler equations are solved. The computational domain is again in a unit box, and a periodicity 
+of one is assumed in both horizontal and vertical directions. The initial velocity .eld is given by tanh 
+(y -0.25).for y = / 0.5 u ={ (0.75 -y / for y >0.5, (11) tanh ).v =dsin (2px) where.=0.03 and d=0.05. 
+Thus the initial .ow .eld consists of a jet which is a horizontal shear layer of .nite thickness, perturbed 
+by p p p p v v v p u p u p u p v v v p u p u p u p v v v p u p u p u p Figure 14: An example of a 
+staggered grid used for computing the doubly periodic shear .ow with N = 4. Unknowns for velocity and 
+pressure in the grid are shown.  a small amplitude of vertical velocity. Since the viscous term is dropped, 
+the pressure can be updated without computing the inter­mediate velocity .eld and the multigrid elliptic 
+solver is only used for solving the pressure equation (9). In addition, only one iteration at n1+/ 2 
+n1 each time step is needed for computingp andu+ because + the pressure can be computed without the knowledge 
+of un1. On the staggered grid we used, the pressure .eld is de.ned on a cell­centered grid whose linear 
+dimension, say N, is preferably taken as a power of 2 for the convenience of applying grid coarsening. 
+Thus there are N2 unknowns for the pressure. Since velocity .eld is only related to the pressure gradient 
+in the momentum equations, it makes sense to have the velocity de.ned on an (N1)×(N1) -- grid, as shown 
+in Figure 14. Therefore there are (N-1)2 unknowns for each velocity component. Since the velocity is 
+periodic, a peri­odic domain should have a dimension of (N1)×(N1) . Since -- the pressure gradient is 
+a function of velocity, it must have the same dimension of periodicity. Thus the physical boundary condition 
+for the pressure equation (9) in the horizontal direction, for example, can be speci.ed as P0j,=,+ -, 
+j - PN1, jP+,= PNj+ P2j- P1j, . (12) P1jPN2- N1j,, In a multigrid solution of the pressure equation, 
+the bound­ary condition (12) is clearly for use on the original, .nest grid. The use of condition (12) 
+on any coarse grid, however, is incorrect. Our numerical experiments indicate the use of (12) on coarse 
+grids will blow up the computation quickly. Since the unknown vector on a coarse grid is the difference 
+between an exact solution and an approximate solution on the .ne grid restricted to that coarse grid, 
+the solution on a coarse grid can be regarded as an approximation to the derivative of the solution on 
+the .ne grid. Since a derivative of the pressure .eld of any order is still periodic with the same period 
+as the velocity .eld, a reasonable boundary condition for pressure on coarse grids is == . (13) P0 PN 
++ PN1P1 Although condition (13) imposes a period which is one grid cell (of the .nest grid) larger than 
+the velocity period, we found it is easy to apply it to all the coarse grids, and our numerical results 
+show it works well. Numerical experiments for the inviscid periodic shear .ow were performed on Cray 
+T3D, using 64 processors in all cases. Fig­ure 15 shows vorticity contours of two early states of the 
+inviscid periodic shear .ow. Figure 16 and 17 show vorticity contours of the .ow at time = 1.25 and 2.50, 
+computed on a128 × 128 grid, and a512 × 512 grid, respectively. The CFL number used in the computa­tions 
+is still 0.4. On the512 × 512 grid, a total of 3200 time steps were computed to reach time = 2.50. These 
+vorticity plots show how the shear layers, which form the boundaries of the jet, evolve into a periodic 
+array of vortices, with the shear layer between the rolls stretched and thinned by the large straining 
+.eld there. A compari­son between Figures 17 and 18 clearly shows the resolution of the vorticity structure 
+improves as the computational grid gets .ner. The parallel performance of the incompressible .ow solver 
+was also evaluated in terms of speed-up and scalability. In each of the parallel performance measurement, 
+we ran the .ow solver on the driven-cavity problem for one time step, excluding any initializa­tion and 
+assignment of initial and boundary conditions. Figure 18 shows the speed-up curves of the .ow solver 
+on the Intel Paragon and the Cray T3D for three different problem sizes (ideal speed-up curves are shown 
+again for comparison). The speed-up perfor­mance improves as the problem size increases, as expected. 
+For the512 × 512 grid, no signi.cant reduction in execution time could be obtained after more than 64 
+processors were used. By running the .ow solver on a single processor, we found T3D is about .ve times 
+faster than the Paragon for the code compiled with the -O2 switch. But on 256 processors, T3D runs only 
+about 1.5~2.0 times faster than Paragon depending on problem sizes, because, as shown in Figure 18, the 
+speed-up performance of the .ow solver on Paragon is better than on T3D. Figure 19 shows scaling perfor­mance 
+of the parallel .ow solver on T3D and Paragon for three local problem sizes. Again, we see the scaling 
+improves as the size of local grid increases on both machines. In measuring the scalings of the .ow solver, 
+we used smaller local problem sizes than we did for the multigrid elliptic solver (see Figure 10 and 
+11). We expect the .ow solver to have better scalings than the multigrid elliptic solver because the 
+.ow solver, even though calling the elliptic solver sev­eral times at each time step, does substantially 
+additional process­ings on the .nest grid. Indeed, this scaling difference between the two solvers can 
+be veri.ed by looking at the scaling curves for the Figure 15: Vorticity contour plots from the periodic 
+shear .ow at time = 0.0 (left) and 0.62 (right). Grid size = 128 × 128. Figure 16: Vorticity contour 
+plots from the periodic shear .ow for time = 1.25 (left) and time = 2.50 (right). Grid size = 128 × 128. 
+Figure 17: Vorticity contour plots from the periodic shear .ow for time = 1.25 (left) and time =2.50 
+(right). Grid size = 512 × 512. Speed-up on Intel Paragon Speed-up on Cray T3D Num ber of processors 
+in pow er of 2 Num ber of processors in pow er of 2  Grid size:512x512  Grid size:512x512 Grid size:256x256 
+ Grid size:256x256 Grid size:128x128 Grid size:128x128 A perfectspeed-up A perfectspeed-up Scaling 
+on Cray T3D Scaling on Intel Paragon  024 6810 024 6810 Num ber of processors in pow er of 2 Num 
+ber of processors in pow er of 2 grid points/node:32x32  grid points/node:32x32  grid points/node:64x64 
+ grid points/node:64x64 grid points/node:128x128 grid points/node:128x128 Figure 19: Scaling performances 
+of the parallel Navier-Stokes solver 64 × 64 local grid for the .ow solver in Figure19 and for the multigrid 
+full V-cycle (which is used in the .ow solver) in Figure 10 and 11. In view of the scaling performance 
+in Figure 19, we would claim that our parallel .ow solver scales quite well on large numbers of proces­sors 
+as long as the local grid size is not smaller than 64 × 64.  5. Conclusions In this paper we presented 
+multigrid schemes for solving elliptic PDEs and a second-order projection method for solving the Navier-Stokes 
+equations for incompressible .uid .ows. Our parallel implementation strategies based on grid-partition 
+are discussed for implementing these algorithms on distributed-memory, massively parallel computer systems. 
+Our treatment of various boundary con­ditions in implementing these parallel solvers is also discussed. 
+We designed and implemented these solvers in a highly modular fash­ion so that they can be used either 
+as stand-alone solvers or as expandable template codes which can be used in different applica­tions. 
+Several message-passing protocols (MPI, PVM and Intel NX) have been coded into the solvers so that they 
+are portable to sys­tems that support one of these interfaces for interprocessor commu­nications. Numerical 
+experiments and parallel performance measure­ments were made on the implemented solvers to check their 
+numer­ical properties and parallel ef.ciency. Our numerical results show the parallel solvers converge 
+with the order of numerical schemes on a few test problems. Our numerical experiments also show the .ow 
+solver is stable and robust on viscous .ows with large Reynolds numbers as well as on an inviscid .ow. 
+Our parallel ef.ciency tests on the Intel Paragon and the Cray T3D systems show that good scalability 
+on a large number of processors can be achieved for both the multigrid elliptic solver and the .ow solver 
+as long as the granu­larity of the parallel application is not too small, which we think is typical for 
+applications running on distributed-memory, MIMD machines. For future work, we plan to generalize the 
+parallel solver package to thermally-driven .ows and variable density .ow prob­lems and extend the .ow 
+solver to 3D problems.  Acknowledgments: The authors wish to thank Dr. Sefan Vandewalle (California 
+Institute of Technology) and Dr. Steve McCormick (University of Col­orado) for some helpful discussions 
+on multigrid methods. This work was carried out at the Jet Propulsion Laboratory (JPL), California Institute 
+of Technology (Caltech), under a contract with the National Aeronautics and Space Administration (NASA) 
+and as a part of the NASA High-Performance Computing and Communications for Earth and Space Sciences 
+Project. The computations were performed on the Intel Paragon parallel computers operated by JPL and 
+by the Concurrent Supercomputing Consortium at Caltech, and on the Cray T3D parallel computer operated 
+by JPL. References: 1. C. Anderson, Derivation and Solution of the Discrete Pressure-Equations for the 
+Incompressible Navier-Stokes Equations. Lawrence Berkeley Laboratory Report, LBL-26353, 1988, Berke­ley, 
+CA (unpublished) 2. J. B. Bell, P. Colella and H. Glaz, A Second-Order Projection Method for the Incompressible 
+Navier-Stokes Equations, J. Comp. Phys., 85:257-283, 1989 3. J. B. Bell, P. Colella and L. H. Howell, 
+An Ef.cient Second-Order Projection Method for Viscous Incompressible Flow. Proceed­ings, 10th AIAA Computational 
+Fluid Dynamics Conference, Honolulu, HI, pp.360-367, 1991 4. J. B. Bell and D. L. Marcus, A Second-Order 
+Projection Method for Variable-Density Flows. J. Comp. Phys., Vol 101, No 2, pp. 334-348, 1992 5. W. 
+Briggs, A Multigrid Tutorial, SIAM, Philadelphia, 1987 6. T. F. Chan and R. S. Tuminaro, A Survey of 
+Parallel Multigrid Algorithms , in Parallel Computations and Their Impact on Mechanics , A. Noor, Ed., 
+Vol: AMD 86, 1986 7. A. J. Chorin, Numerical Solution of the Navier-Stokes Equa­tions, Math. Comp., 
+vol. 22, pp. 745-762, Oct. 1968 8. G. Fox, et. al., Solving Problems on Concurrent Processors. Vol. 
+I, Prentice Hall, Englewood Cliffs, New Jersey, 1988 9. S. F. McCormick, Multilevel Adaptive Methods 
+for Partial Differ­ential Equations. Frontiers in Applied Mathematics, SIAM, Phila­delphia, 1989 10. 
+W. D. Henshaw, Part I: The Numerical Solution of Hyperbolic Systems of Conservation Laws; Part II: Composite 
+Overlapping Grid Techniques, Ph.D Thesis, Dept. Appl. Math., California Institute of Technology, Pasadena, 
+CA, 1985 11. F. Roux and D. Tromeur-Dervout, Parallelization of a Multigrid Solver via a Domain Decomposition 
+Method. Manuscript, 1994 12. R. Schreiber and H. B. Keller, Driven Cavity Flows by Ef.cient Numerical 
+Techniques. J. Comp. Phys., 49, 310-333, 1983 13. Weinan E and Jian-Guo Liu, Essentially Compact Schemes 
+for Unsteady Viscous Incompressible Flows. Manuscript, 1994 14. P. Wesseling, An Introduction to Multigrid 
+Methods , Pure &#38; Applied Mathematics, A Wiley-Interscience Series of Texts, Monographs &#38; Tracts, 
+John Wiley &#38; Sons, 1991  John Z. Lou received his Ph.D in applied mathematics from the University 
+of California at Berkeley in 1991, a M.S. in engineering mechanics and a B.A. in applied mathematics 
+from Shanghai Jiao-Tong University, Shanghai, China in 1985 and 1982. From 1991 to 1993, he worked as 
+a computational scientist in the Naval Com­mand, Control and Ocean Surveillance Center in San Diego. 
+He cur­rently works as a member of technical staff in the High-Performance Computing Systems and Algorithms 
+Group in the Jet Propulsion Laboratory of California Institute of Technology. His current research interests 
+include parallel numerical algorithms, parallel software technologies and implementations for scienti.c 
+applications. Robert D. Ferraro received a B.A. in physics from Cornell Univer­sity, College of Arts 
+and Sciences, in 1978, and an M.A. in 1980 and Ph. D. in 1984 in physics from the University of Rochester. 
+He did post-doctoral work in the Plasma Theory Group of the UCLA physics department before joining the 
+Jet Propulsion Laboratory in 1988 to work on the application of parallel processing to scienti.c and 
+engi­neering computations. Currently, Dr. Ferraro is the Technical Group Supervisor for the High Performance 
+Computing Systems and Algo­rithms Group, and Associate Project Manager for the NASA HPCC Earth and Space 
+Sciences project. His current research interests center around the application of parallel computing 
+technology to scienti.c applications programming. Dr. Ferraro is a member of the American Physical Society 
+Divisions of Plasma Physics and Com­putational Physics. Copyright &#38;#169; 1995 by the Association 
+for Computing Machinery, Inc. (ACM). Permission to make digital or hard copies of part or all of this 
+work for personal or classroom use is granted without fee provided that copies are not made or distributed 
+for profit or commercial advantage and that new copies bear this notice and the full citation on the 
+first page. Copyrights for components of this work owned by others than ACM must be honored. Abstracting 
+with credit is permitted. To copy otherwise, to republish, to post on servers or to redistribute to lists, 
+requires prior specific permission and/or a fee. Request permissions from Publications Dept, ACM Inc., 
+via fax at +1 (212) 869-0481, or via email at permissions@acm.org. 
+			

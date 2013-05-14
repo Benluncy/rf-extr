@@ -69,11 +69,6 @@ RM			:= rm -rf
 FLAGS			:= #-c 4.0 , -a MIRA  ... 
 
 
-PATHA			:=a/
-PATHB			:=b/
-
-PA			:=${PATHA}
-PB			:=${PATHB}
 
 TEMPALTE		:=template
 TRAINDATA		:=train.data
@@ -85,38 +80,29 @@ OUTPUT			:=output.txt
 #${SAY} "Usage:make trainA|trainB|testA|testB|checkA|checkB"
 all			:train test check
 
+nall			:ntrain ntest check
 
-train			:trainA
 
-test			:testA
+train			:
+	${LEARN} ${FLAGS} ${TEMPALTE} ${TRAINDATA} ${MODEL}
 
-check			:checkA
+ntrain			:
+	${LEARN} ${FLAGS} ${TEMPALTE} ${TESTDATA} ${MODEL}
 
-trainA			:
-	${LEARN} ${FLAGS} ${PA}${TEMPALTE} ${PA}${TRAINDATA} ${PA}${MODEL}
+test			:
+	${TEST} -m ${MODEL} ${TESTDATA} > ${OUTPUT}
+
+ntest			:
+	${TEST} -m ${MODEL} ${TRAINDATA} > ${OUTPUT}	
+
+check			:
+	${CHECK} < ${OUTPUT}
 	
-trainB			:
-	${LEARN} ${FLAGS} ${PB}${TEMPALTE} ${PB}${TRAINDATA} ${PB}${MODEL}
-
-
-testA			:
-	${TEST} -m ${PA}${MODEL} ${PA}${TESTDATA} > ${PA}${OUTPUT}
-
-testB			:
-	${TEST} -m ${PB}${MODEL} ${PB}${TESTDATA} > ${PB}${OUTPUT}
-
-checkA			:
-	${CHECK} < ${PA}${OUTPUT}
-
-checkB			:
-	${CHECK} < ${PB}${OUTPUT}
 
 clean			:
-	${RM} ${PA}${MODEL}
-	${RM} ${PB}${MODEL}
-	${RM} ${PA}${OUTPUT}
-	${RM} ${PB}${OUTPUT}
-	${RM} ${PA}*~ ${PB}*~ *~
+	${RM} ${MODEL}
+	${RM} ${OUTPUT}
+	${RM} *~  *~
 
 
 

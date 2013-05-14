@@ -29,6 +29,12 @@
 #define EXINABSDIFF(x,y) (ABSDIFF(x,y)<=exThresholdForDifferences)
 
 
+typedef struct CPINT
+{
+	int a;
+	int b;
+}CPINT;
+
 //util
 int haveDifferneces(int dest,int src);
 int haveDiffernecesE(int dest,int src);
@@ -51,4 +57,7 @@ int rateWriteW(WORD *w,int start,double rate);
 int setFtValue(WORD *w,int start,int val);
 int setFtValueF(WORD *w,int start,double val);
 
+
+CPINT getREFO();
+void storeREFO();
 #endif // __COMMON_H__
