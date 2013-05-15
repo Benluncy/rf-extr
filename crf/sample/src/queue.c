@@ -3,7 +3,7 @@
 
 void clearQueue(pCNSQ Q)
 { 
-    Q->front=Q->rear=NULL;
+    Q->front=Q->rear=0;
 }
 
 // test if the queue is empty
