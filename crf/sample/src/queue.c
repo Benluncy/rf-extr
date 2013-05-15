@@ -1,5 +1,5 @@
 #include "queue.h"
-#include <stdio.h>
+#include <stdio.h> // NULL
 
 void clearQueue(pCNSQ Q)
 { 
