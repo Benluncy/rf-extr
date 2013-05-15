@@ -50,7 +50,7 @@ int filteredTokenId(int offset)
 
 int sampleEnQueue(int *currentOffset)
 {
-	
+	return 0;
 }
 
 int genCRFSampleCtl(const char* fileName,int isDir)
