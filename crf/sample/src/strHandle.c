@@ -1,5 +1,5 @@
 #include "strHandle.h"
-
+#include <ctype.h>
 
 
 int spilitContent(char *dest,int dlen,const char *src,int len,char *predeli,char *nextdeli)
@@ -12,7 +12,19 @@ int spilitContent(char *dest,int dlen,const char *src,int len,char *predeli,char
 	int connect = 0;
 	for(i = 0 ; i < len ; i ++)
 	{
-		if(isConnectCh(src[i])) connect = 1;
+		if(isConnectCh(src[i])) {
+			connect = 1;
+			if(i>0)
+			{
+				//if(DIGITLIKE(src[i-1])&&DIGITLIKE(src[i+1]))
+				if(DIGITLIKE(src[i+1]))
+				{
+					connect = 0;
+					*nextdeli = '-';
+					break;
+				}
+			}
+		}
 		if(!flag)
 		{
 			if(!isDelimiter(src[i]))
@@ -45,7 +57,10 @@ int spilitContent(char *dest,int dlen,const char *src,int len,char *predeli,char
 				i = k;
 			}
 		}
-		if(isDelimiter(src[i]) || isConnectCh(src[i])) continue;
+		if(isDelimiter(src[i]) || isConnectCh(src[i]))
+		{
+			continue;
+		}
 		if(j>=dlen) return 0;
 		dest[j] = src[i];
 		j++;
@@ -69,5 +84,18 @@ int spilitContent(char *dest,int dlen,const char *src,int len,char *predeli,char
 	return i;
 }
 
+
+inline char* strCaseTransfer(char *s, int type)
+{
+	char *str = s;
+	char *res = s;
+	if (type == 0)
+	{
+		while(*s) *str++ = toupper(*s++);
+	}else{
+		while(*s) *str++ = tolower(*s++);
+	}
+	return res;
+}
 
 

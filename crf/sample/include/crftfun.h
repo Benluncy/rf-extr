@@ -21,5 +21,12 @@ int pagekwd(const char *str,int len);
 
 int specialFlag(const char *str,int len);
 
+int procFlag(const char *str,int len);
+
+int deptFlag(const char *str);
+
+int uniLtdFlag(const char *str);
+
+int isArticle(const char *str,int len);
 
 #endif// __CRFT_FUN_H__

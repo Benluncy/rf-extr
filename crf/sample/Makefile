@@ -42,6 +42,9 @@ DEL			:= rm -rf
 MV			:= mv
 SAY			:= @echo
 
+GADD			:= @git add 
+GCMT			:= @git commit -m 
+
 ########################COMPILE SETTINGS################################
 VPATH			:= .:include/:src/:lib/:obj/
 	export	VPATH
@@ -53,14 +56,14 @@ OBJS			:= hftctl.o hftnpse.o sqlite3.o persistence.o \
 				ini.o tokens.o virtualcontent.o \
 				minEditDistance.o dirTraversal.o\
 				eftfun.o crftctl.o strHandle.o common.o\
-				debuginfo.o myMath.o crftfun.o
+				debuginfo.o myMath.o crftfun.o dict.o queue.o
 PROGS			:= main
 
 .PHONY			: clean succ
 ########################################################################
 all			: ${PROGS} succ
 
-rebuild			: clean all
+rebuild			: gitupdate clean all
 
 
 main			: ${OBJS}
@@ -70,6 +73,10 @@ main			: ${OBJS}
 dirTraversal.o		: 
 	${CC} ${GNUFLAGS} -c -o $@ src/dirTraversal.c 
 
+	
+gitupdate		:
+	-${GADD} .
+	-${GCMT} `date "+auto:%Y%m%d%H%M%S"`
 
 
 succ			:

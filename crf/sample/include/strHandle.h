@@ -12,8 +12,14 @@
 
 #define isConnectCh(a) (a == '~' || a == '-' || a == ':')
 
+#define DIGITLIKE(x) ((x<='9'&&x>='0')||x=='l'||x=='I'||x=='i'||x=='o'||x=='O')
+
+#define VALDIG(x) ((x<='9'&&x>='0')?(x-'0'):((x=='I'||x=='i'||x=='l')?1:((x=='o'||x=='O')?0:-1)))
+
 
 int spilitContent(char *dest,int dlen,const char *src,int len,char *predeli,char *nextdeli);
 
+//type :1 low case  :0 big
+char* strCaseTransfer(char *s, int type);
 #endif // __STR_HANDLE_H__
 

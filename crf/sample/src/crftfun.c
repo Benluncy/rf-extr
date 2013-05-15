@@ -1,11 +1,9 @@
 #include "crftfun.h"
 #include "minEditDistance.h"
+#include "strHandle.h"
 #include <string.h>
 #include <strings.h>
 
-#define DIGITLIKE(x) ((x<='9'&&x>='0')||x=='l'||x=='I'||x=='i'||x=='o'||x=='O')
-
-#define VALDIG(x) ((x<='9'&&x>='0')?(x-'0'):((x=='I'||x=='i'||x=='l')?1:((x=='o'||x=='O')?0:-1)))
 
 // digits ..
 // digit base
@@ -46,7 +44,7 @@ int valofdigit(const char *str,int len)
 	int sum = 0;
 	for(i=0;i<len;i++)
 	{
-		if(VALDIG(str[i]) == -1) return sum;
+		if(VALDIG(str[i]) == -1) return 0;
 		sum = sum * 10 + VALDIG(str[i]);
 	}
 
@@ -130,6 +128,7 @@ int vollkwd(const char *str,int len)
 {
 	if(strncasecmp(str,"vol",3)==0) return 1;
 	if(strncasecmp(str,"num",3)==0) return 2;
+	if(strncasecmp(str,"No",2)==0) return 2;
 	if(len == 1 && str[0] == 'n') return 2;
 	return 0;
 }
@@ -145,11 +144,22 @@ int pagekwd(const char *str,int len)
 
 int edsFlag(const char *str,int len)
 {
-	if(len < 3) return 0;
-	if(strncasecmp(str,"eds",3)==0) return 1;
+	if(strncasecmp(str,"ed",len)==0) return 1;
+	if(strncasecmp(str,"cd",len)==0) return 1;
+	if(strncasecmp(str,"eds",len)==0) return 1;
+	if(strncasecmp(str,"editor",len)==0) return 1;
+	if(strncasecmp(str,"editors",len)==0) return 1;
 	return 0;
 }
 
+int procFlag(const char *str,int len)
+{
+	if(strncasecmp(str,"in",len)==0) return 1;
+	if(strncasecmp(str,"proc",len)==0) return 2;
+	if(strncasecmp(str,"proceeding",len)==0) return 2;
+	if(strncasecmp(str,"proceedings",len)==0) return 2;
+	return 0;
+}
 
 int specialFlag(const char *str,int len)
 {
@@ -158,6 +168,7 @@ int specialFlag(const char *str,int len)
 	if(strncasecmp(str,"ACM",3)==0) return 3;
 	if(strncasecmp(str,"Inc",3)==0) return 4;
 	if(strncasecmp(str,"Proc",4)==0) return 5;
+	
 	if(strncasecmp(str,"pp",2)==0) return 6;
 	if(strncasecmp(str,"http",4)==0) return 7;
 	if(strncasecmp(str,"No",2)==0) return 8;
@@ -167,6 +178,35 @@ int specialFlag(const char *str,int len)
 	if(strncasecmp(str,"Press",5)==0) return 11;
 	if(strncasecmp(str,"PROCEEDINGS",11)==0) return 12;
 	
+	if(strncasecmp(str,"In",17)==0) return 13;
+	if(strncasecmp(str,"ISBN",11)==0) return 14;
 	return 0;
 }
+
+int deptFlag(const char *str)
+{
+	if(strncasecmp(str,"dept",4)==0) return 1;
+	return 0;
+}
+
+
+int uniLtdFlag(const char *str)
+{
+	if(strncasecmp(str,"university",10)==0) return 1;
+	if(strncasecmp(str,"ltd",3)==0) return 1;
+	if(strncasecmp(str,"lab",3)==0) return 1;
+	
+	return 0;
+}
+
+int isArticle(const char *str,int len)
+{
+	if(strcasecmp(str,"A")==0) return 1;
+	if(strcasecmp(str,"AN")==0) return 1;
+	if(strcasecmp(str,"The")==0) return 1;
+	return 0;
+}
+
+
+
 
