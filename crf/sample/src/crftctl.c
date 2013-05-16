@@ -359,7 +359,7 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		for(i=1;i < sizeQueue(&preCNSQ) ; i++)
 		{
 			pCrfNodeSnapshot tCNS = pastNElem(&nextCNSQ,i);
-			if(tCNS->->speflag == 7 && i < 4)
+			if(tCNS->speflag == 7 && i < 4)
 				httpStatus = 1;
 		}
 		
