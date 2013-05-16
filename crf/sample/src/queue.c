@@ -52,7 +52,7 @@ pCrfNodeSnapshot pastNElem(pCNSQ Q,int N)
     if((Q->front+N)%CNSQSIZE >=Q->rear || N >= CNSQSIZE || N < 1){ // no such
         return NULL;
     }else {
-        return &(Q->data[(Q->rear+CNSQSIZE-N)%CNSQSIZE]);
+        return &(Q->data[(Q->rear+CNSQSIZE-N+1)%CNSQSIZE]);
     }
 }
 
