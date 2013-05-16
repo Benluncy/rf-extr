@@ -188,7 +188,7 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		pCrfNodeSnapshot npCNS = nextNElem(&nextCNSQ,1);
 		//features write
 		// 0: string it self
-		
+		fprintf(fp,"%s\t",pCNS->str);
 		// 1: last delimiter
 		// 2: last useful delimiter
 		// 3: next delimiter		
@@ -239,6 +239,8 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		
 		
 		
+		fprintf(fp,"%d-%d\t",lpCNS!=NULL?lpCNS->token:81,
+					npCNS!=NULL?npCNS->token:81);
 		// END : token
 		if(lpCNS != NULL && npCNS != NULL)
 		{
