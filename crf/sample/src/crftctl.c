@@ -48,57 +48,13 @@ int filteredTokenId(int offset)
 }
 
 
-int sampleEnQueue(int *currentOffset)
+int ftEnQueue(pCNSQ Q,int *currentOffset,pCrfNodeSnapshot lastNode,FILE *fp)
 {
-	return 0;
-}
-
-int genCRFSampleCtl(const char* fileName,int isDir)
-{
-	static int id = 1;
-	FILE *fp; // local train
-	int trainOrTest;
-	int refAreaStart;
-	int refAreaEnd;
-	char *content;
-        if(isDir)
-        {
-                printf("ignore dir:%s\n",fileName);
-                return 1;
-        }
-	if(rand()%2) //train is 50% and test is 50%
-	{
-		// train
-		fp = fpTrain;
-		trainOrTest = 1;
-	}else
-	{
-		// test
-		fp = fpTest;
-		trainOrTest = 0;
-	}
-	
-	CNSQ preCNSQ;
-	CNSQ nextCNSQ;
-	
-	
-	//
-        printf("[%d] %s:%s",id,(trainOrTest?"train":"test"),fileName);
-        fflush(NULL);
-        
-        // parse tag or etc ,move data to RAM
- 	initContent();
-	if(!parseFile(fileName))
-	{
-		fprintf(stderr,"[[error parsing file : #%s#]]",fileName);
-		getchar();
-		return 0;
-	}
-	
+	if(isFullQueue(Q)) return 0;
 	// start and end
-	refAreaStart = getReferenceHeadOffset();
-	refAreaEnd = getReferenceEndOffset();
-	content = getPcontent();
+	int refAreaStart = getReferenceHeadOffset();
+	int refAreaEnd = getReferenceEndOffset();
+	char *content = getPcontent();
 	//char *content = getPcontent();
 	//int offend = getPclen();
 	
@@ -106,7 +62,6 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 	int offset=0;
 	int offsum = refAreaStart;
 	char predeli;
-	char mpredeli = ' ';
 	char nextdeli;
 	int nowtoken = 0;
 	int lasttoken = 0;
@@ -119,10 +74,14 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 	
 	int httpEffect = 0;
 	
+	CrfNodeSnapshot crfNodeSnapshot;
+	
 	//spilitContent(char *dest,int dlen,const char *src,int len)
-	while((offset = spilitContent(str,SINGLEWORDLEN,content+offsum,
+	if((offset = spilitContent(str,SINGLEWORDLEN,content+offsum,
 			refAreaEnd-offsum,&predeli,&nextdeli)) != 0)
 	{
+		offsum = *currentOffset;
+	
 		int slen = strlen(str);
 		int dval;
 		int tkcheck;
@@ -295,7 +254,65 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		
 		// features
 		lastdigitvalue = dval;
+		
+		*currentOffset = offsum;
+		return 1;
+	}else
+		return 0;
+}
+
+
+pCrfNodeSnapshot ftDeQueue(pCNSQ Q)
+{
+	if(isEmptyQueue(Q)) return NULL;
+	return deQueue(Q);
+}
+
+int genCRFSampleCtl(const char* fileName,int isDir)
+{
+	static int id = 1;
+	FILE *fp; // local train
+	int trainOrTest;
+	int refAreaStart;
+	int refAreaEnd;
+	char *content;
+        if(isDir)
+        {
+                printf("ignore dir:%s\n",fileName);
+                return 1;
+        }
+	if(rand()%2) //train is 50% and test is 50%
+	{
+		// train
+		fp = fpTrain;
+		trainOrTest = 1;
+	}else
+	{
+		// test
+		fp = fpTest;
+		trainOrTest = 0;
 	}
+	
+	CNSQ preCNSQ;
+	CNSQ nextCNSQ;
+	clearQueue(preCNSQ);
+	clearQueue(nextCNSQ);
+	pCrfNodeSnapshot nowShort;
+	
+	//
+        printf("[%d] %s:%s",id,(trainOrTest?"train":"test"),fileName);
+        fflush(NULL);
+        
+        // parse tag or etc ,move data to RAM
+ 	initContent();
+	if(!parseFile(fileName))
+	{
+		fprintf(stderr,"[[error parsing file : #%s#]]",fileName);
+		getchar();
+		return 0;
+	}
+	
+	//
 	
 	
 	id++;

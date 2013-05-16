@@ -7,9 +7,14 @@ void clearQueue(pCNSQ Q)
 }
 
 // test if the queue is empty
-int testQueue(pCNSQ Q)
+int isEmptyQueue(pCNSQ Q)
 {
     return Q->front==Q->rear ;
+}
+
+int isFullQueue(pCNSQ Q)
+{
+    return (Q->rear+1)%CNSQSIZE==Q->front;
 }
 
 int enQueue(pCNSQ Q,CrfNodeSnapshot e)
@@ -35,16 +40,29 @@ pCrfNodeSnapshot deQueue(pCNSQ Q)
 
 pCrfNodeSnapshot nextNElem(pCNSQ Q,int N)
 {
-    if((Q->front+N)%CNSQSIZE >=Q->rear || N >= CNSQSIZE || N < 0){ // no such
+    if((Q->front+N)%CNSQSIZE >=Q->rear || N >= CNSQSIZE || N < 1){ // no such
         return NULL;
     }else {
         return &(Q->data[(Q->front+N)%CNSQSIZE]);
     }	
 }
 
+pCrfNodeSnapshot pastNElem(pCNSQ Q,int N)
+{
+    if((Q->front+N)%CNSQSIZE >=Q->rear || N >= CNSQSIZE || N < 1){ // no such
+        return NULL;
+    }else {
+        return &(Q->data[(Q->rear+CNSQSIZE-N+1)%CNSQSIZE]);
+    }
+}
+
+
+
 int sizeQueue(pCNSQ Q)
 {
     int i=(Q->rear-Q->front+CNSQSIZE)%CNSQSIZE;
     return i;
 }
+
+
 

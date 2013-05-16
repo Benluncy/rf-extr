@@ -8,6 +8,9 @@ typedef struct
 	int offset;
 	int slen;
 	char str[1024];
+	char mpredeli;
+	char nextdeli;
+	char predeli;
 	int bf[30]; // basicfeature or basic flag
 	int token;
 }CrfNodeSnapshot,*pCrfNodeSnapshot;
@@ -21,14 +24,18 @@ typedef struct{
 
 void clearQueue(pCNSQ Q);
 
-// test if the queue is empty
-int testQueue(pCNSQ Q);
+
+int isEmptyQueue(pCNSQ Q);
+
+int isFullQueue(pCNSQ Q);
 
 int enQueue(pCNSQ Q,CrfNodeSnapshot e);
 
 pCrfNodeSnapshot deQueue(pCNSQ Q);
 
 pCrfNodeSnapshot nextNElem(pCNSQ Q,int N);
+
+pCrfNodeSnapshot pastNElem(pCNSQ Q,int N);
 
 int sizeQueue(pCNSQ Q);
 
