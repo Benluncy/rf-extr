@@ -45,7 +45,7 @@ pCrfNodeSnapshot deQueue(pCNSQ Q)
     }
 }
 
-pCrfNodeSnapshot nextNElem(pCNSQ Q,int N)
+pCrfNodeSnapshot nextNElem(pCNSQ Q,int N) // next as queue
 {
     if((Q->front+N)%CNSQSIZE >=Q->rear || N >= CNSQSIZE || N < 1){ // no such
         return NULL;
@@ -54,7 +54,7 @@ pCrfNodeSnapshot nextNElem(pCNSQ Q,int N)
     }	
 }
 
-pCrfNodeSnapshot pastNElem(pCNSQ Q,int N)
+pCrfNodeSnapshot pastNElem(pCNSQ Q,int N) // as stack
 {
     if((Q->front+N)%CNSQSIZE >=Q->rear || N >= CNSQSIZE || N < 1){ // no such
         return NULL;
