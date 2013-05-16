@@ -109,7 +109,6 @@ int ftEnQueue(pCNSQ Q,int *currentOffset,char *mpredeli)
 		crfNodeSnapshot.deptflag = deptFlag(str);
 		crfNodeSnapshot.uniflag = uniFlag(str);
 		crfNodeSnapshot.ltdflag = ltdFlag(str);
-		
 
 		if(!isBlank(crfNodeSnapshot.nextdeli)) *mpredeli = crfNodeSnapshot.nextdeli;
 		
@@ -177,12 +176,19 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 	refAreaStart = getReferenceHeadOffset();
 	refAreaEnd = getReferenceEndOffset();
 	currentOffset = refAreaStart;
-	
+
+	printf("\npre : enqueue\n"); fflush(NULL);	
 	//make queue full
 	while(ftEnQueue(&nextCNSQ,&currentOffset,&mpredeli));
 
+	printf("end : enqueue\n"); fflush(NULL);
+
+	printf("pre : real parse\n"); fflush(NULL);
+	
 	while((pCNS = ftDeQueue(&nextCNSQ)) != NULL)
 	{
+		printf("in : real parse\n"); fflush(NULL);
+	
 		//features write
 		// 0: string it self
 		// 1: last delimiter
@@ -235,6 +241,8 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		enQueueWithDrop(&preCNSQ,*pCNS);
 		ftEnQueue(&nextCNSQ,&currentOffset,&mpredeli);
 	}
+	
+	printf("end : real parse\n"); fflush(NULL);
 	//
 	id++;
         cleanContent();
