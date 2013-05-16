@@ -272,7 +272,7 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		fprintf(fp,"%d\t",pCNS->speflag == 5);
 		
 		// 18: in quot ? in/out/none
-		quotStatus = 
+		//quotStatus = 
 		
 		
 		// 19: name like?
