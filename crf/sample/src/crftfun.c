@@ -176,7 +176,7 @@ int specialFlag(const char *str,int len)
 	if(strncasecmp(str,"SIGCSE",6)==0) return 9;
 	if(strncasecmp(str,"Bulletin",8)==0) return 10;
 	if(strncasecmp(str,"Press",5)==0) return 11;
-	if(strncasecmp(str,"PROCEEDINGS",11)==0) return 12;
+	if(strncasecmp(str,"PROCEEDING",10)==0) return 12;
 	
 	if(strncasecmp(str,"In",17)==0) return 13;
 	if(strncasecmp(str,"ISBN",11)==0) return 14;

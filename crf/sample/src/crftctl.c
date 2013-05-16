@@ -70,12 +70,43 @@ int ftEnQueue(pCNSQ Q,int *currentOffset,char *mpredeli)
 		crfNodeSnapshot.slen = slen;
 		//int dval;
 		int tkcheck;
+		int hstkcheck = 0;
 		for(int i=(*currentOffset);i<crfNodeSnapshot.offset+(*currentOffset);i++)
 		{
-			if(!isDelimiter(content[i]))
+			if(!isDelimiter(content[i]) && !hstkcheck)
 			{
 				tkcheck = i;
-				break;
+				//break;
+				hstkcheck = 1;
+			}
+			switch(content[i])
+			{
+				case '\"':
+					crfNodeSnapshot.quotflag = 1;
+					break;
+				case '(':
+					crfNodeSnapshot.pareSflag = 1;
+					break;
+				case ')':
+					crfNodeSnapshot.pareEflag = 1;
+					break;
+				case '[':
+					crfNodeSnapshot.sqbSflag = 1;
+					break;
+				case ']':
+					crfNodeSnapshot.sqbEflag = 1;
+					break;
+				case '{':
+					crfNodeSnapshot.braSflag = 1;
+					break;
+				case '}':
+					crfNodeSnapshot.braEflag = 1;
+					break;
+				case '?':
+				case ',':
+				case '.':
+					crfNodeSnapshot.stopflag = 1;
+					break;
 			}
 		}
 
@@ -180,7 +211,9 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 
 	//make queue full
 	while(ftEnQueue(&nextCNSQ,&currentOffset,&mpredeli));
-
+	
+	int quotStatus = 0;
+	int quotEffect = 0;
 	
 	while((pCNS = ftDeQueue(&nextCNSQ)) != NULL)
 	{
@@ -202,24 +235,46 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		// 0: string it self
 		fprintf(fp,"%s\t",pCNS->str);
 		// 1: last delimiter
+		fprintf(fp,"%d\t",pCNS->predeli);
 		// 2: last useful delimiter
-		// 3: next delimiter		
+		fprintf(fp,"%d\t",pCNS->mpredeli);
+		// 3: next delimiter
+		fprintf(fp,"%d\t",pCNS->nextdeli);
 		// 4: len of str
+		fprintf(fp,"%d\t",pCNS->slen);
 		// 5: digit length
+		fprintf(fp,"%d\t",pCNS->digitl);
 		// 6: is pure digit ?
+		fprintf(fp,"%d\t",pCNS->puredigit);
 		// 7: value of digit
+		fprintf(fp,"%d\t",pCNS->dval);
 		// 8: which type of string ?
+		fprintf(fp,"%d\t",pCNS->strtype); // TODO may spilit into several tokens
 		// 9: year like?
+		fprintf(fp,"%d\t",pCNS->yearlike);
 		// 10: month like?
+		fprintf(fp,"%d\t",pCNS->monthlike);
 		// 11: volumn like? 
+		fprintf(fp,"%d\t",pCNS->volumnlike);
 		// 12: page like? 
+		fprintf(fp,"%d\t",pCNS->pagelike);
 		// 13: eds flag ? 
-		// 14: value of digit (value - last value)
+		fprintf(fp,"%d\t",pCNS->edsflag);
+		// 14: value of digit (value - last value > 0)
+		fprintf(fp,"%d\t",(lpCNS == NULL)?-1:(pCNS->dval > lpCNS->dval));
 		// 15: some special flag 
+		fprintf(fp,"%d\t",pCNS->speflag);
 		
 		// 16: In 
+		fprintf(fp,"%d\t",pCNS->speflag == 13);
+		
 		// 17: proc
+		fprintf(fp,"%d\t",pCNS->speflag == 5);
+		
 		// 18: in quot ? in/out/none
+		quotStatus = 
+		
+		
 		// 19: name like?
 		
 		// 20: isNameInDict
@@ -251,10 +306,6 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		
 		
 		
-		fprintf(fp,"%d-%d\t",lpCNS!=NULL?lpCNS->token:-1,
-					npCNS!=NULL?npCNS->token:-1);
-					
-		fprintf(fp,"%d\t",pCNS->token);
 		// END : token
 		if(lpCNS != NULL && npCNS != NULL)
 		{

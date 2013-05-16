@@ -34,6 +34,14 @@ typedef struct
 	int uniflag;
 	int ltdflag;
 	int token;
+	int quotflag;//Quotation marks
+	int pareSflag;//Parentheses
+	int pareEflag;
+	int sqbSflag;//Square brackets
+	int sqbEflag;
+	int braSflag;//Braces
+	int braEflag;
+	int stopflag;
 }CrfNodeSnapshot,*pCrfNodeSnapshot;
 
 
