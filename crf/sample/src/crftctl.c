@@ -81,7 +81,6 @@ int ftEnQueue(pCNSQ Q,int *currentOffset,char *mpredeli)
 
 		crfNodeSnapshot.token = filteredTokenId(tkcheck);//offsum+(offset+1)/2
 		
-		printf("offset:%d",crfNodeSnapshot.offset);
 		*currentOffset += crfNodeSnapshot.offset;
 
 		sprintf(crfNodeSnapshot.str,"%s",str);
@@ -179,17 +178,12 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 	refAreaEnd = getReferenceEndOffset();
 	currentOffset = refAreaStart;
 
-	printf("\npre : enqueue \n"); fflush(NULL);	
 	//make queue full
 	while(ftEnQueue(&nextCNSQ,&currentOffset,&mpredeli));
 
-	printf("end : enqueue\n"); fflush(NULL);
-
-	printf("pre : real parse\n"); fflush(NULL);
 	
 	while((pCNS = ftDeQueue(&nextCNSQ)) != NULL)
 	{
-		printf("in : real parse %d\n",currentOffset); fflush(NULL);
 	
 		//features write
 		// 0: string it self
@@ -244,7 +238,6 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		ftEnQueue(&nextCNSQ,&currentOffset,&mpredeli);
 	}
 	
-	printf("end : real parse\n"); fflush(NULL);
 	//
 	id++;
         cleanContent();
