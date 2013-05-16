@@ -184,8 +184,8 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 	
 	while((pCNS = ftDeQueue(&nextCNSQ)) != NULL)
 	{
-		pCrfNodeSnapshot lpCNS = pastNElem(&preCNSQ,1); 
-		pCrfNodeSnapshot npCNS = nextNElem(&nextCNSQ,1);
+		pCrfNodeSnapshot lpCNS = nextNElem(&preCNSQ,1); 
+		pCrfNodeSnapshot npCNS = pastNElem(&nextCNSQ,1);
 		//features write
 		// 0: string it self
 		fprintf(fp,"%s\t",pCNS->str);
@@ -249,6 +249,8 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 			if((lpCNS->token == 3 && npCNS->token == 3) || 
 				(lpCNS->token == 6 && npCNS->token == 6))
 				fprintf(fp,"%s\n",id2Token(lpCNS->token));
+			else
+				fprintf(fp,"%s\n",pCNS->token == 0 ? "OTH":id2Token(pCNS->token));	
 		}else
 			fprintf(fp,"%s\n",pCNS->token == 0 ? "OTH":id2Token(pCNS->token));
 		
