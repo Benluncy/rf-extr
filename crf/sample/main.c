@@ -39,7 +39,7 @@ int main(int argc,char *argv[])
 	
 	for(int i=1;i<5;i++)
 	{
-		printf("%d\n",pastNElem(&q,i).offset);
+		printf("%d\n",(pastNElem(&q,i))->offset);
 	}
 	
 	/*
