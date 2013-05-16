@@ -450,6 +450,9 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		// 42 eds status
 		fprintf(fp,"%d\t",edsFlag);
 		
+		// 43 time (month , year)
+		fprintf(fp,"%d\t",pCNS->yearlike || pCNS->monthlike);
+		
 		// END : token
 		if(lpCNS != NULL && npCNS != NULL)
 		{
