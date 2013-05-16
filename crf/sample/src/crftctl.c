@@ -76,13 +76,20 @@ int ftEnQueue(pCNSQ Q,int *currentOffset,pCrfNodeSnapshot lastNode,FILE *fp)
 	
 	CrfNodeSnapshot crfNodeSnapshot;
 	
+	offsum = *currentOffset;	
+	crfNodeSnapshot.offset = offsum;
+	
+	//TODO
+	char mpredeli = ' ';
+	char nextdeli;
+	char predeli;
 	//spilitContent(char *dest,int dlen,const char *src,int len)
 	if((offset = spilitContent(str,SINGLEWORDLEN,content+offsum,
 			refAreaEnd-offsum,&predeli,&nextdeli)) != 0)
 	{
-		offsum = *currentOffset;
-	
 		int slen = strlen(str);
+		sprintf(crfNodeSnapshot.str,"%s",str);
+		crfNodeSnapshot.slen = slen;
 		int dval;
 		int tkcheck;
 		for(int i=offsum;i<offset+offsum;i++)
@@ -93,8 +100,11 @@ int ftEnQueue(pCNSQ Q,int *currentOffset,pCrfNodeSnapshot lastNode,FILE *fp)
 				break;
 			}
 		}
-		nowtoken = filteredTokenId(tkcheck);//offsum+(offset+1)/2
+
+		crfNodeSnapshot.token = filteredTokenId(tkcheck);//offsum+(offset+1)/2
 		offsum += offset;
+		*currentOffset = offsum;
+
 
 		if(mpredeli != '/' && nextdeli != '/' && predeli != '/' &&
 			mpredeli != '.' && nextdeli != '.' && predeli != '.') httpEffect = 0;
