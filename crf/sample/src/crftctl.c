@@ -55,7 +55,6 @@ int ftEnQueue(pCNSQ Q,int *currentOffset,char *mpredeli)
 	int refAreaEnd = getReferenceEndOffset();
 	char *content = getPcontent();
 	char str[SINGLEWORDLEN];
-	int offset=0;
 	
 	CrfNodeSnapshot crfNodeSnapshot;
 	
@@ -71,7 +70,7 @@ int ftEnQueue(pCNSQ Q,int *currentOffset,char *mpredeli)
 		crfNodeSnapshot.slen = slen;
 		//int dval;
 		int tkcheck;
-		for(int i=(*currentOffset);i<offset+(*currentOffset);i++)
+		for(int i=(*currentOffset);i<crfNodeSnapshot.offset+(*currentOffset);i++)
 		{
 			if(!isDelimiter(content[i]))
 			{
@@ -82,8 +81,8 @@ int ftEnQueue(pCNSQ Q,int *currentOffset,char *mpredeli)
 
 		crfNodeSnapshot.token = filteredTokenId(tkcheck);//offsum+(offset+1)/2
 		
-		printf("offset:%d",offset);
-		*currentOffset += offset;
+		printf("offset:%d",crfNodeSnapshot.offset);
+		*currentOffset += crfNodeSnapshot.offset;
 
 		sprintf(crfNodeSnapshot.str,"%s",str);
 		
@@ -99,7 +98,9 @@ int ftEnQueue(pCNSQ Q,int *currentOffset,char *mpredeli)
 		crfNodeSnapshot.edsflag = edsFlag(str,slen);
 		crfNodeSnapshot.speflag = specialFlag(str,slen);
 		crfNodeSnapshot.procflg =  procFlag(str,slen);
-		crfNodeSnapshot.nameLike = hasNameafterTheOffset0((*currentOffset)-offset-1,offset+1);
+		crfNodeSnapshot.nameLike = hasNameafterTheOffset0((*currentOffset)
+							-crfNodeSnapshot.offset-1,
+							crfNodeSnapshot.offset+1);
 		crfNodeSnapshot.isNameDict = isNameInDict(str);
 		crfNodeSnapshot.rLastNameDict = rateLastNameInDict(str);
 		crfNodeSnapshot.isCountryDict = isCountryInDict(str);
