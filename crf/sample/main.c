@@ -20,26 +20,26 @@ int main(int argc,char *argv[])
 	//
 	CNSQ q;
 	CrfNodeSnapshot c;
-	clearQueue(q);
+	clearQueue(&q);
 	c.offset = 0;
-	enQueue(q,c);
+	enQueue(&q,c);
 	
 	c.offset++;
-	enQueue(q,c);
+	enQueue(&q,c);
 	
 	c.offset++;
-	enQueue(q,c);
+	enQueue(&q,c);
 	
 	c.offset++;
-	enQueue(q,c);
+	enQueue(&q,c);
 	
 	c.offset++;
-	enQueue(q,c);
+	enQueue(&q,c);
 	
 	
 	for(int i=1;i<5;i++)
 	{
-		printf("%d\n",pastNElem(q,i).offset);
+		printf("%d\n",pastNElem(&q,i).offset);
 	}
 	
 	/*
