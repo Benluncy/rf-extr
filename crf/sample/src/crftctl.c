@@ -241,6 +241,8 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		
 		fprintf(fp,"%d-%d\t",lpCNS!=NULL?lpCNS->token:81,
 					npCNS!=NULL?npCNS->token:81);
+					
+		fprintf(fp,"%d\t",pCNS->token);
 		// END : token
 		if(lpCNS != NULL && npCNS != NULL)
 		{
