@@ -182,6 +182,7 @@ int specialFlag(const char *str,int len)
 	if(strncasecmp(str,"ISBN",11)==0) return 14;
 	
 	if(strncasecmp(str,"technical",9) == 0 ) return 15;
+	if(strncasecmp(str,"TR",2) == 0 ) return 15;
 	if(strncasecmp(str,"report",6) == 0 ) return 16;
 	
 	return 0;
