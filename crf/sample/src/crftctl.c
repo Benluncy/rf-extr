@@ -244,7 +244,7 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		{
 			if((lpCNS->token == 3 && npCNS->token == 3) || 
 				(lpCNS->token == 6 && npCNS->token == 6))
-				fprintf(fp,"%s\n",id2Token(lnCNS->token));
+				fprintf(fp,"%s\n",id2Token(lpCNS->token));
 		}else
 			fprintf(fp,"%s\n",pCNS->token == 0 ? "OTH":id2Token(pCNS->token));
 		
