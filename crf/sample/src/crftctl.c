@@ -335,6 +335,7 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		int ltdFlag = 0;
 		int edsFlag = 0;
 		int uniFlag = 0;
+		int i;
 		for(i=1;i < sizeQueue(&nextCNSQ) ; i++)
 		{
 			pCrfNodeSnapshot tCNS = nextNElem(&nextCNSQ,i);
