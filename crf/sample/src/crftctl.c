@@ -106,7 +106,7 @@ int ftEnQueue(pCNSQ Q,int *currentOffset,char *mpredeli)
 		crfNodeSnapshot.isPlaceNameDict = isPlaceNameInDict(str);
 		crfNodeSnapshot.isPubliserDict = isPublisherInDict(str);
 		crfNodeSnapshot.isArticle = isArticle(str,slen);
-		crfNodeSnapshot.deptflag = depFlag(str);
+		crfNodeSnapshot.deptflag = deptFlag(str);
 		crfNodeSnapshot.uniflag = uniFlag(str);
 		crfNodeSnapshot.ltdflag = ltdFlag(str);
 		
