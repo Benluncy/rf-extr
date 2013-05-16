@@ -233,6 +233,19 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		
 		// 32 : http
 		
+		
+		
+		
+		
+		// END : token
+		if((nextNElem(nextCNSQ,1) == 3 && preNElem(preCNSQ,1) == 3 )||
+			(nextNElem(nextCNSQ,1) == 6 && preNElem(preCNSQ,1) == 6 )) 
+			// author and author
+		{
+			fprintf(fp,"%s\n",id2Token(3));
+		}else
+			fprintf(fp,"%s\n",pCNS->token == 0 ? "OTH":id2Token(pCNS->token));
+		
 		//enQueue && store
 		enQueueWithDrop(&preCNSQ,*pCNS);
 		ftEnQueue(&nextCNSQ,&currentOffset,&mpredeli);
