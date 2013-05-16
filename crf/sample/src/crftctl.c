@@ -133,9 +133,9 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 	FILE *fp; // local train
 	int trainOrTest;
 	int refAreaStart;
-	int refAreaEnd;
+	//int refAreaEnd;
 	int currentOffset;
-	char *content;
+	//char *content;
 	char mpredeli=' ';
         if(isDir)
         {
