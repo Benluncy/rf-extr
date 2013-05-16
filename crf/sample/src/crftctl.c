@@ -58,6 +58,8 @@ int ftEnQueue(pCNSQ Q,int *currentOffset,char *mpredeli)
 	
 	CrfNodeSnapshot crfNodeSnapshot;
 	
+	int isPublisher = 0;
+	
 	//spilitContent(char *dest,int dlen,const char *src,int len)
 	if((crfNodeSnapshot.offset = spilitContent(str,SINGLEWORDLEN,
 			content+(*currentOffset),
@@ -71,6 +73,8 @@ int ftEnQueue(pCNSQ Q,int *currentOffset,char *mpredeli)
 		//int dval;
 		int tkcheck;
 		int hstkcheck = 0;
+		char partStr[1024];
+		int psI = 0;
 		for(int i=(*currentOffset);i<crfNodeSnapshot.offset+(*currentOffset);i++)
 		{
 			if(!isDelimiter(content[i]) && !hstkcheck)
@@ -78,6 +82,16 @@ int ftEnQueue(pCNSQ Q,int *currentOffset,char *mpredeli)
 				tkcheck = i;
 				//break;
 				hstkcheck = 1;
+			}
+			if(DIGITLIKE(content[i]))
+			{
+				partStr[psI] = content[i];
+				psI++;
+				
+			}else if(psI>0)
+			{
+				partStr[psI]='\0';
+				isPublisher = isPublisher || isPubliserDict(partStr); 
 			}
 			switch(content[i])
 			{
@@ -136,7 +150,7 @@ int ftEnQueue(pCNSQ Q,int *currentOffset,char *mpredeli)
 		crfNodeSnapshot.isCountryDict = isCountryInDict(str);
 		crfNodeSnapshot.isFunWordDict = isFunWordInDict(str);
 		crfNodeSnapshot.isPlaceNameDict = isPlaceNameInDict(str);
-		crfNodeSnapshot.isPubliserDict = isPublisherInDict(str);
+		crfNodeSnapshot.isPubliserDict = isPublisherInDict(str) ||isPublisher;
 		crfNodeSnapshot.isArticle = isArticle(str,slen);
 		crfNodeSnapshot.deptflag = deptFlag(str);
 		crfNodeSnapshot.uniflag = uniFlag(str);
