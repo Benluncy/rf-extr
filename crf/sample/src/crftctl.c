@@ -191,10 +191,10 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		printf("size: %d ~ %d \n",sizeQueue(&preCNSQ),sizeQueue(&nextCNSQ));
 		for(int i=0;i<=CNSQSIZE;i++)
 		{
-			printf("past/pre %d is %s empty",i,pastNElem(&preCNSQ,i)!=NULL?"NOT":"");
-			printf("next/next %d is %s empty",i,nextNElem(&nextCNSQ,i)!=NULL?"NOT":"");
-			printf("past/next %d is %s empty",i,pastNElem(&nextCNSQ,i)!=NULL?"NOT":"");
-			printf("next/pre %d is %s empty\n",i,nextNElem(&preCNSQ,i)!=NULL?"NOT":"");
+			printf("past/pre  %d %d \t",i,pastNElem(&preCNSQ,i)!=NULL);
+			printf("next/next %d %d \t",i,nextNElem(&nextCNSQ,i)!=NULL);
+			printf("past/next %d %d \t",i,pastNElem(&nextCNSQ,i)!=NULL);
+			printf("next/pre  %d %d \n",i,nextNElem(&preCNSQ,i)!=NULL);
 		}
 		
 		//features write
