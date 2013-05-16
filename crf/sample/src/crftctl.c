@@ -367,7 +367,7 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		fprintf(fp,"%d\t",pCNS->speflag == 7);
 	
 		// 33 : http effect 
-		fprintf(fp,"%d,",httpStatus):
+		fprintf(fp,"%d\t",httpStatus);
 		
 		
 		// para
@@ -446,7 +446,9 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		
 		// 40 stop flag
 		fprintf(fp,"%d\t",pCNS->stopflag);
-			
+		
+		// 42 eds status
+		fprintf(fp,"%d\t",edsFlag);
 		
 		// END : token
 		if(lpCNS != NULL && npCNS != NULL)
