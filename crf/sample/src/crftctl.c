@@ -184,8 +184,19 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 	
 	while((pCNS = ftDeQueue(&nextCNSQ)) != NULL)
 	{
+		getchar();
 		pCrfNodeSnapshot lpCNS = pastNElem(&preCNSQ,1);  // last one CNS
 		pCrfNodeSnapshot npCNS = nextNElem(&nextCNSQ,1); // next one CNS
+		
+		printf("size: %d ~ %d \n",sizeQueue(&preCNSQ),sizeQueue(&nextCNSQ));
+		for(int i=0;i<=CNSQSIZE;i++)
+		{
+			printf("past/pre %d is %s empty",i,pastNElem(&preCNSQ,i)!=NULL?"NOT":"");
+			printf("next/next %d is %s empty",i,nextNElem(&nextCNSQ,i)!=NULL?"NOT":"");
+			printf("past/next %d is %s empty",i,pastNElem(&nextCNSQ,i)!=NULL?"NOT":"");
+			printf("next/pre %d is %s empty\n",i,nextNElem(&preCNSQ,i)!=NULL?"NOT":"");
+		}
+		
 		//features write
 		// 0: string it self
 		fprintf(fp,"%s\t",pCNS->str);
@@ -239,8 +250,8 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		
 		
 		
-		fprintf(fp,"%d-%d\t",lpCNS!=NULL?lpCNS->token:81,
-					npCNS!=NULL?npCNS->token:81);
+		fprintf(fp,"%d-%d\t",lpCNS!=NULL?lpCNS->token:-1,
+					npCNS!=NULL?npCNS->token:-1);
 					
 		fprintf(fp,"%d\t",pCNS->token);
 		// END : token

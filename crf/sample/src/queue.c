@@ -47,10 +47,10 @@ pCrfNodeSnapshot deQueue(pCNSQ Q)
 
 pCrfNodeSnapshot nextNElem(pCNSQ Q,int N) // next as queue
 {
-    if((Q->front+N)%CNSQSIZE >=Q->rear || N >= CNSQSIZE || N < 1){ // no such
+    if((Q->front+N)%CNSQSIZE >=Q->rear){ // || N >= CNSQSIZE || N < 1){ // no such
         return NULL;
     }else {
-        return &(Q->data[(Q->front+N-1)%CNSQSIZE]);
+        return &(Q->data[(Q->front+N)%CNSQSIZE]);
     }	
 }
 
