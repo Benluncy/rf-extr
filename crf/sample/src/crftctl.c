@@ -447,6 +447,9 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		// 40 stop flag
 		fprintf(fp,"%d\t",pCNS->stopflag);
 		
+		// 41 
+		fprintf(fp,"%d\t",pCNS->speflag == 15 || pCNS->speflag == 16 ? pCNS->speflag  : 0);
+		
 		// 42 eds status
 		fprintf(fp,"%d\t",edsFlag);
 		

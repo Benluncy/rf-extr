@@ -180,6 +180,10 @@ int specialFlag(const char *str,int len)
 	
 	if(strncasecmp(str,"In",17)==0) return 13;
 	if(strncasecmp(str,"ISBN",11)==0) return 14;
+	
+	if(strncasecmp(str,"technical",9) == 0 ) return 15;
+	if(strncasecmp(str,"report",6) == 0 ) return 16;
+	
 	return 0;
 }
 
@@ -215,7 +219,5 @@ int isArticle(const char *str,int len)
 	if(strcasecmp(str,"The")==0) return 1;
 	return 0;
 }
-
-
 
 
