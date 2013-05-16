@@ -306,8 +306,8 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 	
 	CNSQ preCNSQ;
 	CNSQ nextCNSQ;
-	clearQueue(preCNSQ);
-	clearQueue(nextCNSQ);
+	clearQueue(&preCNSQ);
+	clearQueue(&nextCNSQ);
 	pCrfNodeSnapshot nowShort;
 	
 	//
