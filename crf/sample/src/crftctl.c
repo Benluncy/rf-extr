@@ -61,9 +61,11 @@ int ftEnQueue(pCNSQ Q,int *currentOffset,pCrfNodeSnapshot lastNode,FILE *fp)
 	char str[SINGLEWORDLEN];
 	int offset=0;
 	int offsum = refAreaStart;
+	
 	char predeli;
 	char nextdeli;
 	int nowtoken = 0;
+	
 	int lasttoken = 0;
 	int lastdigitvalue = 0;
 
@@ -76,13 +78,12 @@ int ftEnQueue(pCNSQ Q,int *currentOffset,pCrfNodeSnapshot lastNode,FILE *fp)
 	
 	CrfNodeSnapshot crfNodeSnapshot;
 	
-	offsum = *currentOffset;	
+	offsum = (*currentOffset == 0)?offsum:*currentOffset;	
 	crfNodeSnapshot.offset = offsum;
 	
 	//TODO
 	char mpredeli = ' ';
-	char nextdeli;
-	char predeli;
+	
 	//spilitContent(char *dest,int dlen,const char *src,int len)
 	if((offset = spilitContent(str,SINGLEWORDLEN,content+offsum,
 			refAreaEnd-offsum,&predeli,&nextdeli)) != 0)
