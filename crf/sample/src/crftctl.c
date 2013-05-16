@@ -113,7 +113,7 @@ int ftEnQueue(pCNSQ Q,int *currentOffset,char *mpredeli)
 
 		if(!isBlank(crfNodeSnapshot.nextdeli)) *mpredeli = crfNodeSnapshot.nextdeli;
 		
-		*currentOffset = crfNodeSnapshot;
+		//*currentOffset = crfNodeSnapshot.offset;
 		enQueue(Q,crfNodeSnapshot);
 		return 1;
 	}else
