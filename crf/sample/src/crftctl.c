@@ -184,9 +184,11 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 	
 	while((pCNS = ftDeQueue(&nextCNSQ)) != NULL)
 	{
-	
+		pCrfNodeSnapshot lpCNS = preNElem(&preCNSQ,1); 
+		pCrfNodeSnapshot npCNS = nextNElem(&nextCNSQ,1);
 		//features write
 		// 0: string it self
+		
 		// 1: last delimiter
 		// 2: last useful delimiter
 		// 3: next delimiter		
@@ -238,11 +240,11 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		
 		
 		// END : token
-		if((nextNElem(&nextCNSQ,1)->token == 3 && preNElem(&preCNSQ,1)->token == 3 )||
-			(nextNElem(&nextCNSQ,1)->token == 6 && preNElem(&preCNSQ,1)->token == 6 )) 
-			// author and author
+		if(lpCNS != NULL && npCNS != NULL)
 		{
-			fprintf(fp,"%s\n",id2Token(3));
+			if((lnCNS->token == 3 && npCNS->token == 3) || 
+				(lnCNS->token == 6 && npCNS->token == 6))
+				fprintf(fp,"%s\n",id2Token(lnCNS->token));
 		}else
 			fprintf(fp,"%s\n",pCNS->token == 0 ? "OTH":id2Token(pCNS->token));
 		
