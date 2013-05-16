@@ -48,11 +48,10 @@ int filteredTokenId(int offset)
 }
 
 
-int ftEnQueue(pCNSQ Q,int *currentOffset,pCrfNodeSnapshot lastNode,FILE *fp)
+int ftEnQueue(pCNSQ Q,int *currentOffset)
 {
 	if(isFullQueue(Q)) return 0;
 	// start and end
-	int refAreaStart = getReferenceHeadOffset();
 	int refAreaEnd = getReferenceEndOffset();
 	char *content = getPcontent();
 	//char *content = getPcontent();
@@ -60,7 +59,6 @@ int ftEnQueue(pCNSQ Q,int *currentOffset,pCrfNodeSnapshot lastNode,FILE *fp)
 	
 	char str[SINGLEWORDLEN];
 	int offset=0;
-	int offsum = refAreaStart;
 	
 	char predeli;
 	char nextdeli;
@@ -78,15 +76,17 @@ int ftEnQueue(pCNSQ Q,int *currentOffset,pCrfNodeSnapshot lastNode,FILE *fp)
 	
 	CrfNodeSnapshot crfNodeSnapshot;
 	
-	offsum = (*currentOffset == 0)?offsum:*currentOffset;	
 	crfNodeSnapshot.offset = offsum;
 	
 	//TODO
 	char mpredeli = ' ';
 	
 	//spilitContent(char *dest,int dlen,const char *src,int len)
-	if((offset = spilitContent(str,SINGLEWORDLEN,content+offsum,
-			refAreaEnd-offsum,&predeli,&nextdeli)) != 0)
+	if((offset = spilitContent(str,SINGLEWORDLEN,
+			content+(*currentOffset),
+			refAreaEnd-(*currentOffset),
+			&(crfNodeSnapshot.predeli),
+			&(crfNodeSnapshot.nextdeli))) != 0)
 	{
 		int slen = strlen(str);
 		sprintf(crfNodeSnapshot.str,"%s",str);
@@ -113,16 +113,19 @@ int ftEnQueue(pCNSQ Q,int *currentOffset,pCrfNodeSnapshot lastNode,FILE *fp)
 
 		//printf("[%s] \t[%c,%c]  %d-%d ~\"%c\"\n",str,predeli,
 		//				nextdeli,offset,offsum,content[offsum]);
-		fprintf(fp,"%s\t",str);
+		//fprintf(fp,"%s\t",str);
+		// 0
+		sprintf(crfNodeSnapshot.str,"%s",str);
 		// features are here
 		
 		// 1: last delimiter
 		// 2: last useful delimiter
 		// 3: next delimiter
 		//fprintf(fp,"%c\t%c\t%c\t",isBlank(predeli)?'B':predeli, //last delimiter 1
-		fprintf(fp,"%d\t%d\t%d\t",isBlank(predeli)?'B':predeli, //last delimiter 1
+		//fprintf(fp,"%d\t%d\t%d\t",isBlank(predeli)?'B':predeli, //last delimiter 1
 					isBlank(predeli)?(isBlank(mpredeli)?'B':mpredeli):'B', // 2 last useful delimiter
 					isBlank(nextdeli)?'B':nextdeli); // next delimiter 3
+		
 		
 		if(!isBlank(nextdeli)&&nextdeli!='-') mpredeli = nextdeli;
 		if(isBlank(predeli)) predeli = mpredeli;
@@ -266,7 +269,8 @@ int ftEnQueue(pCNSQ Q,int *currentOffset,pCrfNodeSnapshot lastNode,FILE *fp)
 		// features
 		lastdigitvalue = dval;
 		
-		*currentOffset = offsum;
+		*currentOffset = crfNodeSnapshot;
+		enQueue(pCNSQ Q,CrfNodeSnapshot e);
 		return 1;
 	}else
 		return 0;
@@ -286,6 +290,7 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 	int trainOrTest;
 	int refAreaStart;
 	int refAreaEnd;
+	int currentOffset;
 	char *content;
         if(isDir)
         {
@@ -324,8 +329,19 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 	}
 	
 	//
+	refAreaStart = getReferenceHeadOffset();
+	refAreaEnd = getReferenceEndOffset();
+	currentOffset = refAreaStart;
 	
+	//make queue full
+	while(ftEnQueue(&nextCNSQ,&currentOffset));
+
+	while(ftDeQueue(&nextCNSQ))
+	{
 	
+		enQueueWithDrop();
+	}
+	//
 	id++;
         cleanContent();
         printf(" ok\n");

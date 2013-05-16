@@ -31,6 +31,8 @@ int isFullQueue(pCNSQ Q);
 
 int enQueue(pCNSQ Q,CrfNodeSnapshot e);
 
+int enQueueWithDrop(pCNSQ Q,CrfNodeSnapshot e);
+
 pCrfNodeSnapshot deQueue(pCNSQ Q);
 
 pCrfNodeSnapshot nextNElem(pCNSQ Q,int N);

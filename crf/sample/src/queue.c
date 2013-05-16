@@ -28,6 +28,13 @@ int enQueue(pCNSQ Q,CrfNodeSnapshot e)
     }
 }
 
+int enQueueWithDrop(pCNSQ Q,CrfNodeSnapshot e)
+{
+	if(isFullQueue(Q)) deQueue(Q);
+	enQueue(Q,e);
+	return 1;
+}
+
 pCrfNodeSnapshot deQueue(pCNSQ Q)
 {    
     if(isEmptyQueue(Q)){ // empty
