@@ -187,7 +187,7 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 	
 	while((pCNS = ftDeQueue(&nextCNSQ)) != NULL)
 	{
-		printf("in : real parse\n"); fflush(NULL);
+		printf("in : real parse %d\n",currentOffset); fflush(NULL);
 	
 		//features write
 		// 0: string it self
