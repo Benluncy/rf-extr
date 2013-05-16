@@ -128,7 +128,7 @@ int ftEnQueue(pCNSQ Q,int *currentOffset,char *mpredeli)
 		crfNodeSnapshot.edsflag = edsFlag(str,slen);
 		crfNodeSnapshot.speflag = specialFlag(str,slen);
 		crfNodeSnapshot.procflg =  procFlag(str,slen);
-		crfNodeSnapshot.nameLike = hasNameafterTheOffset0((*currentOffset)
+		crfNodeSnapshot.namelike = hasNameafterTheOffset0((*currentOffset)
 							-crfNodeSnapshot.offset-1,
 							crfNodeSnapshot.offset+1);
 		crfNodeSnapshot.isNameDict = isNameInDict(str);
@@ -212,9 +212,22 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 	//make queue full
 	while(ftEnQueue(&nextCNSQ,&currentOffset,&mpredeli));
 	
-	int quotStatus = 0;
-	int quotEffect = 0;
 	
+	int httpStatus = 0;
+	//int httpTime = 0;
+	
+	int quotStatus = 0;
+	int quotTime = 0;
+	
+	int pareStatus = 0;
+	int paraTime = 0;
+	
+	int sqbStatus = 0;
+	int sqbTime = 0;
+	
+	int braStatus = 0;
+	int braTime = 0;
+
 	while((pCNS = ftDeQueue(&nextCNSQ)) != NULL)
 	{
 		pCrfNodeSnapshot lpCNS = pastNElem(&preCNSQ,1);  // last one CNS
@@ -273,38 +286,166 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		
 		// 18: in quot ? in/out/none
 		//quotStatus = 
-		
+		quotTime--;
+		if(quotTime <= 0) quotStatus = 0;
+		if(pCNS->quotflag == 1)
+		{
+			quotStatus = !quotStatus;
+			if(quotStatus)
+				quotTime = 10;
+			else
+				quotTime = -10;
+		}
+		fprintf(fp,"%s\t",(quotTime == 10 || quotTime == -10)?
+					(quotStatus?"IN":"OUT"):
+					"NONE");	
 		
 		// 19: name like?
-		
+		fprintf(fp,"%d\t",pCNS->namelike);
 		// 20: isNameInDict
-		// 21: rLastNameDict > 0 ||isNameDict
-		// 22: rateLastNameInDict
+		fprintf(fp,"%d\t",pCNS->isNameDict);
 		
+		// 21: rLastNameDict > 0 ||isNameDict  
+		fprintf(fp,"%d\t",pCNS->isNameDict || pCNS->rLastNameDict);
+		
+		// 22: rateLastNameInDict
+		fprintf(fp,"%d\t",pCNS->rLastNameDict);
 		
 		// 23: isCountryInDict
+		fprintf(fp,"%d\t",pCNS->isCountryDict);
 		
 		// 24: isFunWordInDict
+		fprintf(fp,"%d\t",pCNS->isFunWordDict);
 		
 		// 25: isPlaceNameInDict
+		fprintf(fp,"%d\t",pCNS->isPlaceNameDict);
 		
 		// 26: isPublisherInDict
+		fprintf(fp,"%d\t",pCNS->isPubliserDict);
 		
-		// 27: isMonthInDict
+		// 27: isMonthInDict // NO NEED
+		fprintf(fp,"%d\t",pCNS->monthlike);
 		
 		// 28 : a,an,the,
+		fprintf(fp,"%d\t",pCNS->isArticle);
 		
 		// 29 : dept. xx department of ...
+		fprintf(fp,"%d\t",pCNS->deptflag);
+		
+		int ltdFlag = 0;
+		int edsFlag = 0;
+		int uniFlag = 0;
+		for(i=1;i < sizeQueue(&nextCNSQ) ; i++)
+		{
+			pCrfNodeSnapshot tCNS = nextNElem(&nextCNSQ,i);
+			if(tCNS->ltdflag == 1 && i < 4)
+				ltdFlag = 1;
+			if(tCNS->edsflag == 1)
+				edsFlag = 1;
+			if(tCNS->uniflag == 1 && i < 3)
+				uniFlag = 1;	
+			
+		}
 		
 		// 30 : university
+		fprintf(fp,"%d\t",uniFlag);
 		
-		// 31 : Inc.
+		// 31 : Inc. / Ltd
+		fprintf(fp,"%d\t",ltdFlag);
+		
+		httpStatus = 0;
+		
+		for(i=1;i < sizeQueue(&preCNSQ) ; i++)
+		{
+			pCrfNodeSnapshot tCNS = pastNElem(&nextCNSQ,i);
+			if(tCNS->->speflag == 7 && i < 4)
+				httpStatus = 1;
+		}
 		
 		// 32 : http
+		fprintf(fp,"%d\t",pCNS->speflag == 7);
+	
+		// 33 : http effect 
+		fprintf(fp,"%d,",httpStatus):
 		
 		
+		// para
+		//////////////////////////////////////////////////////////////////////
+		paraTime--;
+		if(paraTime <= 0) pareStatus = 0;
+		if(pCNS->pareSflag == 1)
+		{
+			pareStatus = 1;
+			paraTime = 10;
+		}
+		// 34
+		fprintf(fp,"%s\t",(paraTime == 10)?"IN":(pareStatus?"AT":"NA"));
+		if(pCNS->pareEflag == 1)
+		{
+			paraTime = -10;
+		}
+		// 35
+		fprintf(fp,"%s\t",(paraTime == -10)?"OUT":(pareStatus?"AT":"NA"));
+		if(paraTime == -10)
+		{
+			paraTime = 0;
+			pareStatus = 0;
+		}
 		
 		
+		//////////////////////////////////////////////////////////////////////
+		sqbTime--;
+		if(sqbTime <= 0) sqbStatus = 0;
+		if(pCNS->sqbSflag == 1)
+		{
+			sqbStatus = 1;
+			sqbTime = 10;
+		}
+		
+		// 36
+		fprintf(fp,"%s\t",(sqbTime == 10)?"IN":(sqbStatus?"AT":"NA"));
+		if(pCNS->sqbEflag == 1)
+		{
+			sqbTime = -10;
+		}
+		
+		// 37
+		fprintf(fp,"%s\t",(sqbTime == -10)?"OUT":(sqbStatus?"AT":"NA"));
+		if(sqbTime == -10)
+		{ 
+			sqbTime = 0;
+			sqbStatus = 0;
+		}
+		
+		
+		//////////////////////////////////////////////////////////////////////
+		braTime--;
+		if(braTime <= 0) braStatus = 0;
+		if(pCNS->braSflag == 1)
+		{
+			braStatus = 1;
+			braTime = 10;
+		}
+		
+		// 38
+		fprintf(fp,"%s\t",(braTime == 10)?"IN":(braStatus?"AT":"NA"));
+		if(pCNS->braEflag == 1)
+		{
+			braTime = -10;
+		}
+		
+		// 39
+		fprintf(fp,"%s\t",(braTime == -10)?"OUT":(braStatus?"AT":"NA"));
+		if(braTime == -10)
+		{ 
+			braTime = 0;
+			braStatus = 0;
+		}
+		
+		
+		// 40 stop flag
+		fprintf(fp,"%d\t",pCNS->stopflag);
+			
 		
 		// END : token
 		if(lpCNS != NULL && npCNS != NULL)

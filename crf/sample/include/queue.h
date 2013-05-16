@@ -22,7 +22,7 @@ typedef struct
 	int edsflag;
 	int speflag;
 	int procflg;
-	int nameLike;
+	int namelike;
 	int isNameDict;
 	int rLastNameDict;
 	int isCountryDict;
