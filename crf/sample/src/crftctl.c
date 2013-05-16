@@ -238,8 +238,8 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		
 		
 		// END : token
-		if((nextNElem(nextCNSQ,1) == 3 && preNElem(preCNSQ,1) == 3 )||
-			(nextNElem(nextCNSQ,1) == 6 && preNElem(preCNSQ,1) == 6 )) 
+		if((nextNElem(&nextCNSQ,1) == 3 && preNElem(&preCNSQ,1) == 3 )||
+			(nextNElem(&nextCNSQ,1) == 6 && preNElem(&preCNSQ,1) == 6 )) 
 			// author and author
 		{
 			fprintf(fp,"%s\n",id2Token(3));
