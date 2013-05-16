@@ -184,10 +184,10 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 	
 	while((pCNS = ftDeQueue(&nextCNSQ)) != NULL)
 	{
-		getchar();
 		pCrfNodeSnapshot lpCNS = pastNElem(&preCNSQ,1);  // last one CNS
 		pCrfNodeSnapshot npCNS = nextNElem(&nextCNSQ,1); // next one CNS
-		
+
+		/*		
 		printf("size: %d ~ %d \n",sizeQueue(&preCNSQ),sizeQueue(&nextCNSQ));
 		for(int i=0;i<=CNSQSIZE;i++)
 		{
@@ -196,6 +196,7 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 			printf("past/next %d %d \t",i,pastNElem(&nextCNSQ,i)!=NULL);
 			printf("next/pre  %d %d \n",i,nextNElem(&preCNSQ,i)!=NULL);
 		}
+		*/
 		
 		//features write
 		// 0: string it self
