@@ -30,7 +30,7 @@ int enQueue(pCNSQ Q,CrfNodeSnapshot e)
 
 pCrfNodeSnapshot deQueue(pCNSQ Q)
 {    
-    if(testQueue(Q)){ // empty
+    if(isEmptyQueue(Q)){ // empty
         return NULL;
     }else {
         Q->front=(Q->front+1)%CNSQSIZE;
