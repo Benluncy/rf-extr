@@ -48,41 +48,19 @@ int filteredTokenId(int offset)
 }
 
 
-int ftEnQueue(pCNSQ Q,int *currentOffset)
+int ftEnQueue(pCNSQ Q,int *currentOffset,char *mpredeli)
 {
 	if(isFullQueue(Q)) return 0;
-	// start and end
+
 	int refAreaEnd = getReferenceEndOffset();
 	char *content = getPcontent();
-	//char *content = getPcontent();
-	//int offend = getPclen();
-	
 	char str[SINGLEWORDLEN];
 	int offset=0;
 	
-	char predeli;
-	char nextdeli;
-	int nowtoken = 0;
-	
-	int lasttoken = 0;
-	int lastdigitvalue = 0;
-
-	int procflg = 0;	
-	
-	int inquot = 0;
-	int quottime = 0;
-	
-	int httpEffect = 0;
-	
 	CrfNodeSnapshot crfNodeSnapshot;
 	
-	crfNodeSnapshot.offset = offsum;
-	
-	//TODO
-	char mpredeli = ' ';
-	
 	//spilitContent(char *dest,int dlen,const char *src,int len)
-	if((offset = spilitContent(str,SINGLEWORDLEN,
+	if((crfNodeSnapshot.offset = spilitContent(str,SINGLEWORDLEN,
 			content+(*currentOffset),
 			refAreaEnd-(*currentOffset),
 			&(crfNodeSnapshot.predeli),
@@ -91,9 +69,9 @@ int ftEnQueue(pCNSQ Q,int *currentOffset)
 		int slen = strlen(str);
 		sprintf(crfNodeSnapshot.str,"%s",str);
 		crfNodeSnapshot.slen = slen;
-		int dval;
+		//int dval;
 		int tkcheck;
-		for(int i=offsum;i<offset+offsum;i++)
+		for(int i=(*currentOffset);i<offset+(*currentOffset);i++)
 		{
 			if(!isDelimiter(content[i]))
 			{
@@ -103,171 +81,37 @@ int ftEnQueue(pCNSQ Q,int *currentOffset)
 		}
 
 		crfNodeSnapshot.token = filteredTokenId(tkcheck);//offsum+(offset+1)/2
-		offsum += offset;
-		*currentOffset = offsum;
+		
+		*currentOffset += offset;
 
-
-		if(mpredeli != '/' && nextdeli != '/' && predeli != '/' &&
-			mpredeli != '.' && nextdeli != '.' && predeli != '.') httpEffect = 0;
-		/////////////////////////////////////////////////////////////////////////////////
-
-		//printf("[%s] \t[%c,%c]  %d-%d ~\"%c\"\n",str,predeli,
-		//				nextdeli,offset,offsum,content[offsum]);
-		//fprintf(fp,"%s\t",str);
-		// 0
 		sprintf(crfNodeSnapshot.str,"%s",str);
-		// features are here
 		
-		// 1: last delimiter
-		// 2: last useful delimiter
-		// 3: next delimiter
-		//fprintf(fp,"%c\t%c\t%c\t",isBlank(predeli)?'B':predeli, //last delimiter 1
-		//fprintf(fp,"%d\t%d\t%d\t",isBlank(predeli)?'B':predeli, //last delimiter 1
-					isBlank(predeli)?(isBlank(mpredeli)?'B':mpredeli):'B', // 2 last useful delimiter
-					isBlank(nextdeli)?'B':nextdeli); // next delimiter 3
-		
-		
-		if(!isBlank(nextdeli)&&nextdeli!='-') mpredeli = nextdeli;
-		if(isBlank(predeli)) predeli = mpredeli;
-		//if(mpredeli=='-') mpredeli = ' '; // '-' only effect one time
-		
-		// str itself
-		// 4: len of str
-		fprintf(fp,"%d\t",slen);// 4		
-		
-		// digit features
-		int digitl = digitlen(str,slen);
-		fprintf(fp,"%d\t",digitl); // digit length  5
-		fprintf(fp,"%d\t",puredigit(str,slen)); // is pure digit ? 6 
-		
-		dval = valofdigit(str,slen);
-		fprintf(fp,"%d\t",dval); // value of digit 7
-
-		// string features
-		fprintf(fp,"%d\t",strfeature(str,slen)); // which type of string ? 8
-				
-		fprintf(fp,"%d\t",yearlike(str,slen)); // year like? 9
+		crfNodeSnapshot.mpredeli = isBlank(crfNodeSnapshot.predeli)?(*mpredeli):' ';
+		crfNodeSnapshot.digitl = digitlen(str,slen);
+		crfNodeSnapshot.puredigit = puredigit(str,slen);
+		crfNodeSnapshot.dval = valofdigit(str,slen);
+		crfNodeSnapshot.strtype = strfeature(str,slen);
+		crfNodeSnapshot.yearlike = yearlike(str,slen);
+		crfNodeSnapshot.monthlike = monthlike(str,slen);
+		crfNodeSnapshot.volumnlike = vollkwd(str,slen);
+		crfNodeSnapshot.pagelike = pagekwd(str,slen);
+		crfNodeSnapshot.edsflag = edsFlag(str,slen);
+		crfNodeSnapshot.speflag = specialFlag(str,slen);
+		crfNodeSnapshot.procflg =  procFlag(str,slen);
+		crfNodeSnapshot.nameLike = hasNameafterTheOffset0((*currentOffset)-offset-1,offset+1);
+		crfNodeSnapshot.isNameDict = isNameInDict(str);
+		crfNodeSnapshot.rLastNameDict = rateLastNameInDict(str);
+		crfNodeSnapshot.isCountryDict = isCountryInDict(str);
+		crfNodeSnapshot.isFunWordDict = isFunWordInDict(str);
+		crfNodeSnapshot.isPlaceNameDict = isPlaceNameInDict(str);
+		crfNodeSnapshot.isPubliserDict = isPublisherInDict(str);
+		crfNodeSnapshot.isArticle = isArticle(str,slen);
+		crfNodeSnapshot.deptflag = depFlag(str);
+		crfNodeSnapshot.uniflag = uniFlag(str);
+		crfNodeSnapshot.ltdflag = ltdFlag(str);
 		
 
-		
-		fprintf(fp,"%d\t",monthlike(str,slen)); // month like? 10
-		
-		fprintf(fp,"%d\t",vollkwd(str,slen));//volumn like? 11
-		
-		fprintf(fp,"%d\t",pagekwd(str,slen)); // page like? 12
-		
-		fprintf(fp,"%d\t",edsFlag(str,slen)); // eds flag ? 13
-		
-				
-		// 14 value of digit (value - last value) 14
-		fprintf(fp,"%s\t",(dval > lastdigitvalue)?"yes":"no"); 
-		
-		int speflg = specialFlag(str,slen);
-	
-		
-		// some special flag // 15
-		fprintf(fp,"%d\t",speflg); 
-		
-		
-		// 16 In 17 proc
-		procflg =  procFlag(str,slen);
-		fprintf(fp,"%s\t",procflg==1?"in":"none");
-		fprintf(fp,"%s\t",procflg==2?"proc":"none");
-		
-		
-		if(predeli == '\"')
-		{
-			inquot = inquot==1?-1:1;
-			if(inquot==1) quottime = 1;
-		}else
-		{
-			if(quottime !=  0) quottime ++;
-			if(quottime >= 10)
-			{
-				quottime = 0;
-				inquot = 0;
-			}
-		}
-		
-		 // 18
-		fprintf(fp,"%s\t",quottime==0?"none":(inquot==1?"in":(inquot==-1?"out":"none")));
-		
-		if(inquot == -1) inquot = 0;
-
-		
-		// name like ? 
-		fprintf(fp,"%s\t",hasNameafterTheOffset0(offsum-offset-1,offset+1)==0?"no":"yes"); // 19
-		
-		int isNameDict = isNameInDict(str);
-		int rLastNameDict = rateLastNameInDict(str);
-		int isCountryDict = isCountryInDict(str);
-		int isFunWordDict = isFunWordInDict(str);
-		int isPlaceNameDict = isPlaceNameInDict(str);
-		int isPubliserDict = isPublisherInDict(str);
-		int isMonthDict = isMonthInDict(str);
-		//20,21 int isNameInDict(const char *str);
-		fprintf(fp,"%s\t",isNameDict?"yes":"no");
-		fprintf(fp,"%s\t",rLastNameDict > 0 ||isNameDict?"yes":"no");
-		//22 int rateLastNameInDict(const char *str);
-		fprintf(fp,"%d\t",rLastNameDict);
-		//23 int isCountryInDict(const char *str);
-		fprintf(fp,"%s\t",isCountryDict?"yes":"no");
-		//24 int isFunWordInDict(const char *str);
-		fprintf(fp,"%s\t",isFunWordDict?"yes":"no");
-		//25 int isPlaceNameInDict(const char *str);
-		fprintf(fp,"%s\t",isPlaceNameDict?"yes":"no");
-		//26 int isPublisherInDict(const char *str);
-		fprintf(fp,"%s\t",isPubliserDict?"yes":"no");
-		//27 int isMonthInDict(const char *str);
-		fprintf(fp,"%s\t",isMonthDict?"yes":"no");
-		
-		
-		//28 : a,an,the,
-		fprintf(fp,"%s\t",isArticle(str,slen)?"yes":"no");
-		
-		
-		//29 : dept. xx department of ...
-		fprintf(fp,"%s\t",deptFlag(str)?"yes":"no");
-		
-		//30 : university , ltd.
-		fprintf(fp,"%s\t",uniLtdFlag(str)?"yes":"no");
-		
-		//31 : Inc.
-		fprintf(fp,"%s\t",speflg==4?"yes":"no");
-		
-		if(speflg==7) httpEffect = 1;
-		//32 : http
-		fprintf(fp,"%s\t",httpEffect?"yes":"no");
-		
-		
-		////////////////////////////////////////////////////////////////////////////
-		
-		// result :
-		int tcheck;
-		for(int i=offsum;i<offsum+30;i++)
-		{
-			if(!isDelimiter(content[i]))
-			{
-				tcheck = i;
-				break;
-			}
-		}
-		if(lasttoken == 3 && (filteredTokenId(tcheck) == 3)) // author and author
-		{
-			fprintf(fp,"%s\n",id2Token(3));
-		}else if(lasttoken == 6 && (filteredTokenId(tcheck) == 6)) // editor and editor
-		{
-			fprintf(fp,"%s\n",id2Token(6));
-		}else
-			fprintf(fp,"%s\n",nowtoken == 0 ? "OTH":id2Token(nowtoken));
-		if(!isBlank(nextdeli)) mpredeli = nextdeli;
-		
-		// for next time
-		// real value
-		lasttoken = nowtoken;
-		
-		// features
-		lastdigitvalue = dval;
+		if(!isBlank(crfNodeSnapshot.nextdeli)) *mpredeli = crfNodeSnapshot.nextdeli;
 		
 		*currentOffset = crfNodeSnapshot;
 		enQueue(pCNSQ Q,CrfNodeSnapshot e);
@@ -292,6 +136,7 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 	int refAreaEnd;
 	int currentOffset;
 	char *content;
+	char mpredeli=' ';
         if(isDir)
         {
                 printf("ignore dir:%s\n",fileName);
@@ -313,7 +158,7 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 	CNSQ nextCNSQ;
 	clearQueue(&preCNSQ);
 	clearQueue(&nextCNSQ);
-	pCrfNodeSnapshot nowShort;
+	pCrfNodeSnapshot pCNS;
 	
 	//
         printf("[%d] %s:%s",id,(trainOrTest?"train":"test"),fileName);
@@ -334,12 +179,61 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 	currentOffset = refAreaStart;
 	
 	//make queue full
-	while(ftEnQueue(&nextCNSQ,&currentOffset));
+	while(ftEnQueue(&nextCNSQ,&currentOffset,&mpredeli));
 
-	while(ftDeQueue(&nextCNSQ))
+	while((pCNS = ftDeQueue(&nextCNSQ)) != NULL)
 	{
-	
-		enQueueWithDrop();
+		//features write
+		// 0: string it self
+		// 1: last delimiter
+		// 2: last useful delimiter
+		// 3: next delimiter		
+		// 4: len of str
+		// 5: digit length
+		// 6: is pure digit ?
+		// 7: value of digit
+		// 8: which type of string ?
+		// 9: year like?
+		// 10: month like?
+		// 11: volumn like? 
+		// 12: page like? 
+		// 13: eds flag ? 
+		// 14: value of digit (value - last value)
+		// 15: some special flag 
+		
+		// 16: In 
+		// 17: proc
+		// 18: in quot ? in/out/none
+		// 19: name like?
+		
+		// 20: isNameInDict
+		// 21: rLastNameDict > 0 ||isNameDict
+		// 22: rateLastNameInDict
+		
+		
+		// 23: isCountryInDict
+		
+		// 24: isFunWordInDict
+		
+		// 25: isPlaceNameInDict
+		
+		// 26: isPublisherInDict
+		
+		// 27: isMonthInDict
+		
+		// 28 : a,an,the,
+		
+		// 29 : dept. xx department of ...
+		
+		// 30 : university
+		
+		// 31 : Inc.
+		
+		// 32 : http
+		
+		//enQueue && store
+		enQueueWithDrop(&preCNSQ,*pCNS);
+		ftEnQueue(&nextCNSQ,&currentOffset,&mpredeli);
 	}
 	//
 	id++;

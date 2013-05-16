@@ -11,7 +11,28 @@ typedef struct
 	char mpredeli;
 	char nextdeli;
 	char predeli;
-	int bf[30]; // basicfeature or basic flag
+	int digitl;
+	int puredigit;
+	int dval;
+	int strtype;
+	int yearlike;
+	int monthlike;
+	int volumnlike;
+	int pagelike;
+	int edsflag;
+	int speflag;
+	int procflg;
+	int nameLike;
+	int isNameDict;
+	int rLastNameDict;
+	int isCountryDict;
+	int isFunWordDict;
+	int isPlaceNameDict;
+	int isPubliserDict;
+	int isArticle;
+	int deptflag;
+	int uniflag;
+	int ltdflag;
 	int token;
 }CrfNodeSnapshot,*pCrfNodeSnapshot;
 

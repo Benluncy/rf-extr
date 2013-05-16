@@ -25,7 +25,8 @@ int procFlag(const char *str,int len);
 
 int deptFlag(const char *str);
 
-int uniLtdFlag(const char *str);
+int uniFlag(const char *str);
+int ltdFlag(const char *str);
 
 int isArticle(const char *str,int len);
 

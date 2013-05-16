@@ -166,7 +166,7 @@ int specialFlag(const char *str,int len)
 	if(strncasecmp(str,"ISO",3)==0) return 1;
 	if(strncasecmp(str,"IEEE",4)==0) return 2;
 	if(strncasecmp(str,"ACM",3)==0) return 3;
-	if(strncasecmp(str,"Inc",3)==0) return 4;
+	//if(strncasecmp(str,"Inc",3)==0) return 4;
 	if(strncasecmp(str,"Proc",4)==0) return 5;
 	
 	if(strncasecmp(str,"pp",2)==0) return 6;
@@ -190,14 +190,23 @@ int deptFlag(const char *str)
 }
 
 
-int uniLtdFlag(const char *str)
+int uniFlag(const char *str)
 {
 	if(strncasecmp(str,"university",10)==0) return 1;
-	if(strncasecmp(str,"ltd",3)==0) return 1;
 	if(strncasecmp(str,"lab",3)==0) return 1;
 	
 	return 0;
 }
+
+int ltdFlag(const char *str)
+{
+	if(strncasecmp(str,"ltd",3)==0) return 1;
+	if(strncasecmp(str,"Itd",3)==0) return 1;
+	if(strncasecmp(str,"inc",3)==0) return 1;
+	if(strncasecmp(str,"lnc",3)==0) return 1;
+	return 0;
+}
+
 
 int isArticle(const char *str,int len)
 {
