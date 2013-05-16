@@ -175,7 +175,7 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 	
 	//
 	refAreaStart = getReferenceHeadOffset();
-	refAreaEnd = getReferenceEndOffset();
+	//refAreaEnd = getReferenceEndOffset();
 	currentOffset = refAreaStart;
 
 	//make queue full
