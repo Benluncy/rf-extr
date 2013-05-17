@@ -268,7 +268,7 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		pCrfNodeSnapshot npCNS = nextNElem(&nextCNSQ,1); // next one node
 		
 		// 0.1 TRAVERSAL ALL PAST && NEXT INFO , GET FLAGS
-		/*
+		
 		
 		
 		
@@ -292,7 +292,7 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		
 		
 		
-		
+		/*
 		
 		// combined string , combine with next string
 		char combinedStr[1024];
