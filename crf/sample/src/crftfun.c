@@ -246,7 +246,7 @@ int domainFlag(const char *str)
 	if(strcasecmp(str,"net")==0) return 1;
 	if(strcasecmp(str,"edu")==0) return 1;
 	if(strcasecmp(str,"com")==0) return 1;
-	return 0l
+	return 0;
 }
 
 
