@@ -178,9 +178,9 @@ int specialFlag(const char *str,int len)
 	if(strcasecmp(str,"Proc")==0) return 5;
 	
 	if(strncasecmp(str,"pp",2)==0) return 6;
-	if(strncasecmp(str,"p")==0) return 6;
-	if(strncasecmp(str,"pages")==0) return 6;
-	if(strncasecmp(str,"page")==0) return 6;
+	if(strcasecmp(str,"p")==0) return 6;
+	if(strcasecmp(str,"pages")==0) return 6;
+	if(strcasecmp(str,"page")==0) return 6;
 
 	if(strncasecmp(str,"http",4)==0) return 7;
 	if(strncasecmp(str,"www",4)==0) return 7;
