@@ -262,13 +262,13 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 	while((pCNS = ftDeQueue(&nextCNSQ)) != NULL)
 	{
 		// 0. PREPARE : FLAGS
-		/*
+		
 		// 0.0 PAST ONE INFO && NEXT ONE INFO
 		pCrfNodeSnapshot lpCNS = pastNElem(&preCNSQ,1);  // previous one node
 		pCrfNodeSnapshot npCNS = nextNElem(&nextCNSQ,1); // next one node
 		
 		// 0.1 TRAVERSAL ALL PAST && NEXT INFO , GET FLAGS
-		
+		/*
 		
 		
 		
