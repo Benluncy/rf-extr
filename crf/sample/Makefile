@@ -87,6 +87,7 @@ clean			:
 	${DEL} ${OBJS} 
 	${DEL} *~ include/*~ src/*~ data/*~
 	${DEL} *.swp
+	${DEL} data/fa/*~
 
 dbclean			:
 	${DEL} db/features.db

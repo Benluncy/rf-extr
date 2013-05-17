@@ -260,62 +260,19 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 
 	while((pCNS = ftDeQueue(&nextCNSQ)) != NULL)
 	{
-		pCrfNodeSnapshot lpCNS = pastNElem(&preCNSQ,1);  // last one CNS
-		pCrfNodeSnapshot npCNS = nextNElem(&nextCNSQ,1); // next one CNS
-
-		/*		
-		printf("size: %d ~ %d \n",sizeQueue(&preCNSQ),sizeQueue(&nextCNSQ));
-		for(int i=0;i<=CNSQSIZE;i++)
-		{
-			printf("past/pre  %d %d \t",i,pastNElem(&preCNSQ,i)!=NULL);
-			printf("next/next %d %d \t",i,nextNElem(&nextCNSQ,i)!=NULL);
-			printf("past/next %d %d \t",i,pastNElem(&nextCNSQ,i)!=NULL);
-			printf("next/pre  %d %d \n",i,nextNElem(&preCNSQ,i)!=NULL);
-		}
-		*/
+		// 0. PREPARE : FLAGS
 		
-		//features write
-		// 0: string it self
-		fprintf(fp,"%s\t",pCNS->str);
-		// 1: last delimiter
-		fprintf(fp,"%d\t",pCNS->predeli);
-		// 2: last useful delimiter
-		fprintf(fp,"%d\t",pCNS->mpredeli);
-		// 3: next delimiter
-		fprintf(fp,"%d\t",pCNS->nextdeli);
-		// 4: len of str
-		fprintf(fp,"%d\t",pCNS->slen);
-		// 5: digit length
-		fprintf(fp,"%d\t",pCNS->digitl>0);
-		// 6: is pure digit ?
-		fprintf(fp,"%d\t",pCNS->puredigit);
-		// 7: value of digit (>0)
-		fprintf(fp,"%d\t",pCNS->dval>0);
-		// 8: which type of string ?
-		fprintf(fp,"%d\t",pCNS->strtype); // TODO may spilit into several tokens
-		// 9: year like?
-		fprintf(fp,"%d\t",pCNS->yearlike);
-		// 10: month like?
-		fprintf(fp,"%d\t",pCNS->monthlike);
-		// 11: volumn like? 
-		fprintf(fp,"%d\t",pCNS->volumnlike);
-		// 12: page like? 
-		fprintf(fp,"%d\t",pCNS->pagelike);
-		// 13: eds flag ? 
-		fprintf(fp,"%d\t",pCNS->edsflag);
-		// 14: value of digit (value - last value > 0)
-		fprintf(fp,"%d\t",(lpCNS == NULL)?-1:(pCNS->dval > lpCNS->dval));
-		// 15: some special flag 
-		fprintf(fp,"%d\t",pCNS->speflag);
+		// 0.0 PAST ONE INFO && NEXT ONE INFO
+		pCrfNodeSnapshot lpCNS = pastNElem(&preCNSQ,1);  // previous one node
+		pCrfNodeSnapshot npCNS = nextNElem(&nextCNSQ,1); // next one node
 		
-		// 16: In 
-		fprintf(fp,"%d\t",pCNS->speflag == 13);
+		// 0.1 TRAVERSAL ALL PAST && NEXT INFO , GET FLAGS
 		
-		// 17: proc
-		fprintf(fp,"%d\t",pCNS->speflag == 5);
 		
-		// 18: in quot ? in/out/none
-		//quotStatus = 
+		
+		
+		// 0.2 SOME MIX FEATURE
+		// \"
 		quotTime--;
 		if(quotTime <= 0) quotStatus = 0;
 		if(pCNS->quotflag == 1)
@@ -326,250 +283,31 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 			else
 				quotTime = -10;
 		}
-		fprintf(fp,"%s\t",(quotTime == 10 || quotTime == -10)?
-					(quotStatus?"IN":"OUT"):
-					"NONE");	
+		//((quotTime==10||quotTime==-10)?(quotStatus?"IN":"OUT"):(quotStatus?"AT":"NA"))
 		
-		// 19: name like?
-		fprintf(fp,"%d\t",pCNS->namelike);
-		// 20: isNameInDict
-		fprintf(fp,"%d\t",pCNS->isNameDict);
 		
-		// 21: rLastNameDict > 0 ||isNameDict  
-		fprintf(fp,"%d\t",pCNS->isNameDict || pCNS->rLastNameDict);
 		
-		// 22: rateLastNameInDict
-		fprintf(fp,"%d\t",pCNS->rLastNameDict);
 		
-		// 23: isCountryInDict
-		fprintf(fp,"%d\t",pCNS->isCountryDict);
 		
-		// 24: isFunWordInDict
-		fprintf(fp,"%d\t",pCNS->isFunWordDict);
-		
+		// combined string , combine with next string
 		char combinedStr[1024];
-		if(npCNS != NULL)
-		{
-			sprintf(combinedStr,"%s%s",pCNS->str,npCNS->str);
-		}else
-		{
-			sprintf(combinedStr,"%s",pCNS->str);
-		}
-		
-		//TODO
-		pCNS->isPlaceNameDict = pCNS->isPlaceNameDict || isPlaceNameInDict(combinedStr);
-		// 25: isPlaceNameInDict
-		fprintf(fp,"%d\t",pCNS->isPlaceNameDict);
-		
-		pCNS->isPubliserDict = pCNS->isPubliserDict || isPublisherInDict(combinedStr);
-		// 26: isPublisherInDict
-		fprintf(fp,"%d\t",pCNS->isPubliserDict);
-		
-		// 27: isMonthInDict // NO NEED
-		fprintf(fp,"%d\t",pCNS->monthlike);
-		
-		// 28 : a,an,the,
-		fprintf(fp,"%d\t",pCNS->isArticle);
-		
-		// 29 : dept. xx department of ...
-		fprintf(fp,"%d\t",pCNS->deptflag);
-		
-		int ltdFlag = 0;
-		int edsFlag = 0;
-		int uniFlag = 0;
-		int groupFlag = 0;
-		int pressFlag = 0;
-		int noStopEffect = 1;
-		int nextPDigit = 0; // next pure digit
-		int domainFlag = 0;
-		int domainNoStop = 1;
-		int i;
-		// next 
-		for(i=1;i < sizeQueue(&nextCNSQ) ; i++)
-		{
-			pCrfNodeSnapshot tCNS = nextNElem(&nextCNSQ,i);
-			if(tCNS->ltdflag == 1 && i < 4)
-				ltdFlag = 1;
-			if(tCNS->edsflag == 1)
-				edsFlag = 1;
-			if(tCNS->uniflag == 1 && i < 3)
-				uniFlag = 1;
-				
-			// effect : 1: ',' 2:'.''?''!'	
-			if(tCNS->stopflag > 1 ) noStopEffect = 0; 
-			if(noStopEffect && (tCNS->speflag == 25 || tCNS->speflag == 16
-							 || tCNS->speflag == 15
-							 || tCNS->speflag == 45 )) //"Library"
-			{
-				groupFlag = 1;
-			}
-			if(noStopEffect && (tCNS->speflag == 11 )) //"Library"
-			{
-				pressFlag = 1;
-			}
-			if(tCNS->puredigit > 0 && tCNS->yearlike) nextPDigit ++ ;
-			
-			if(!isBlank(tCNS->predeli) && (tCNS->predeli !=':')
-							&& (tCNS->predeli !='/')
-							&& (tCNS->predeli !='.')
-							&& (tCNS->predeli !=',')) // for err
-			{
-				domainNoStop = 0;
-			}
-			
-			if(domainNoStop && tCNS->domainflag)
-			{
-				domainFlag = 1;
-			}
-		}
-		
-		// 30 : university
-		fprintf(fp,"%d\t",uniFlag);
-		
-		// 31 : Inc. / Ltd
-		fprintf(fp,"%d\t",ltdFlag);
-		
-		httpStatus = 0;
-		int inStatus = 0;
-		for(i=1;i < sizeQueue(&preCNSQ) ; i++)
-		{
-			pCrfNodeSnapshot tCNS = pastNElem(&preCNSQ,i);
-			if(tCNS->speflag == 7 && i < 4 && !isBlank(tCNS->nextdeli))
-				httpStatus = 1;
-			if(tCNS->speflag == 13)
-				inStatus = 1;
-		}
-		
-		// 32 : http
-		fprintf(fp,"%d\t",(pCNS->speflag == 7)&&!isBlank(pCNS->nextdeli));
-	
-		// 33 : http effect 
-		fprintf(fp,"%d\t",httpStatus);
+		sprintf(combinedStr,"%s%s",pCNS->str,((npCNS==NULL)?"":npCNS->str));
 		
 		
-		// para
-		//////////////////////////////////////////////////////////////////////
-		paraTime--;
-		if(paraTime <= 0) pareStatus = 0;
-		if(pCNS->pareSflag == 1)
-		{
-			pareStatus = 1;
-			paraTime = 10;
-		}
-		// 34
-		fprintf(fp,"%s\t",(paraTime == 10)?"IN":(pareStatus?"AT":"NA"));
-		if(pCNS->pareEflag == 1)
-		{
-			paraTime = -10;
-		}
-		// 35
-		fprintf(fp,"%s\t",(paraTime == -10)?"OUT":(pareStatus?"AT":"NA"));
-		if(paraTime == -10)
-		{
-			paraTime = 0;
-			pareStatus = 0;
-		}
+		// 1. OUTPUT : PRINT FEATURES
+		fprintf(fp,"%s\t",pCNS->str); // 0: string data
+		fprintf(fp,"%d\t",pCNS->slen); // 1: length of string data
+		
+		// 2: string type 0:AAA 1:aaa 2:Aaa 3:aAa 4:123
+		fprintf(fp,"%d\t",pCNS->strtype);
+		
+		// 3: digit value 0~10,
+		fprintf(fp,"%d\t",);
 		
 		
-		//////////////////////////////////////////////////////////////////////
-		sqbTime--;
-		if(sqbTime <= 0) sqbStatus = 0;
-		if(pCNS->sqbSflag == 1)
-		{
-			sqbStatus = 1;
-			sqbTime = 10;
-		}
-		
-		// 36
-		fprintf(fp,"%s\t",(sqbTime == 10)?"IN":(sqbStatus?"AT":"NA"));
-		if(pCNS->sqbEflag == 1)
-		{
-			sqbTime = -10;
-		}
-		
-		// 37
-		fprintf(fp,"%s\t",(sqbTime == -10)?"OUT":(sqbStatus?"AT":"NA"));
-		if(sqbTime == -10)
-		{ 
-			sqbTime = 0;
-			sqbStatus = 0;
-		}
 		
 		
-		//////////////////////////////////////////////////////////////////////
-		braTime--;
-		if(braTime <= 0) braStatus = 0;
-		if(pCNS->braSflag == 1)
-		{
-			braStatus = 1;
-			braTime = 10;
-		}
-		
-		// 38
-		fprintf(fp,"%s\t",(braTime == 10)?"IN":(braStatus?"AT":"NA"));
-		if(pCNS->braEflag == 1)
-		{
-			braTime = -10;
-		}
-		
-		// 39
-		fprintf(fp,"%s\t",(braTime == -10)?"OUT":(braStatus?"AT":"NA"));
-		if(braTime == -10)
-		{ 
-			braTime = 0;
-			braStatus = 0;
-		}
-		
-		
-		// 40 stop flag
-		fprintf(fp,"%d\t",pCNS->stopflag);
-		
-		// 41 
-		fprintf(fp,"%d\t",pCNS->speflag == 15 || pCNS->speflag == 16 ? pCNS->speflag  : 0);
-		
-		// 42 eds status
-		fprintf(fp,"%d\t",edsFlag);
-		
-		// 43 time (month , year)
-		fprintf(fp,"%d\t",pCNS->yearlike || pCNS->monthlike);
-		
-		
-		if(pCNS->speflag == 14)
-		{
-			isbnEffect = 11;
-		}
-		// 44 isbn effect 
-		fprintf(fp,"%d\t",(isbnEffect>0)&&(pCNS->digitl>0));
-		isbnEffect --;
-		
-		// 45 group
-		fprintf(fp,"%d\t",groupFlag);
-		
-		// 46 journal 后面跟着的是 volumn 比如 12,1
-		nextPDigit = nextPDigit > 2 ? 3:nextPDigit;
-		fprintf(fp,"%d\t",nextPDigit);
-		
-		
-		// 47 'In' flag
-		fprintf(fp,"%d\t",pCNS->speflag == 13);
-		
-		// 48 'In' status
-		fprintf(fp,"%d\t",inStatus);
-		
-		// 49 press flag
-		fprintf(fp,"%d\t",pressFlag);
-		
-		// 50 domain flag
-		fprintf(fp,"%d\t",domainFlag);
-		
-		// 51 improving number
-		fprintf(fp,"%d\t",pCNS->imprnum);
-		
-		// 52 suffix
-		fprintf(fp,"%c%c\t",(pCNS->slen>1)?pCNS->str[pCNS->slen-2]:' ',pCNS->str[pCNS->slen-1]);
-		
-		
-		// END : token
+		// 2. END : PRINT RESULT
 		if(lpCNS != NULL && npCNS != NULL)
 		{
 			if((lpCNS->token == 3 && npCNS->token == 3) || 
