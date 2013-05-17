@@ -558,6 +558,9 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		// 51 improving number
 		fprintf(fp,"%d\t",pCNS->imprnum);
 		
+		// 52 suffix
+		fprintf(fp,"%c%c\t",(pCNS->slen>1)?pCNS->str[pCNS->slen-2]:' ',pCNS->str[pCNS->slen-1]);
+		
 		
 		// END : token
 		if(lpCNS != NULL && npCNS != NULL)
