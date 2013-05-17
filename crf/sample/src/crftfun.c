@@ -44,7 +44,14 @@ int valofdigit(const char *str,int len)
 	int sum = 0;
 	for(i=0;i<len;i++)
 	{
-		if(VALDIG(str[i]) == -1) return 0;
+		if(VALDIG(str[i]) == -1)
+		{
+			if(len - i == 2)
+			{
+				return sum;
+			}
+			return 0;
+		}
 		sum = sum * 10 + VALDIG(str[i]);
 	}
 
@@ -194,6 +201,9 @@ int specialFlag(const char *str,int len)
 	if(strncasecmp(str,"communications",10) == 0 ) return 20;
 
 	if(strncasecmp(str,"group",5) == 0 ) return 25;
+	
+	if(strcasecmp(str,"Thesis") == 0 ) return 25;
+	if(strcasecmp(str,"pH") == 0 ) return 25;
 	
 	if(strncasecmp(str,"MIT",3)==0) return 40;
 	

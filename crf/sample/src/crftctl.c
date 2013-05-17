@@ -338,9 +338,14 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		// 24: isFunWordInDict
 		fprintf(fp,"%d\t",pCNS->isFunWordDict);
 		
+		char combinedStr[1024];
+		sprintf(combinedStr,"%s%s",pCNS->str,npCNS->str);
+		//TODO
+		pCNS->isPlaceNameDict = pCNS->isPlaceNameDict || isPlaceNameInDict(combinedStr);
 		// 25: isPlaceNameInDict
 		fprintf(fp,"%d\t",pCNS->isPlaceNameDict);
 		
+		pCNS->isPubliserDict = pCNS->isPubliserDict || isPublisherInDict(combinedStr);
 		// 26: isPublisherInDict
 		fprintf(fp,"%d\t",pCNS->isPubliserDict);
 		

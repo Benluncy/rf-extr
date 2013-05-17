@@ -1,6 +1,12 @@
 #include "strHandle.h"
 #include <ctype.h>
 
+int checkCharType(char a)
+{ // 0 , 0 1 , l o
+	if(a>'1'&&a<='9') return 1;
+	else if(!DIGITLIKE(a) && isAsciiOrDigit(a)) return 2;
+	return 0;
+}
 
 int spilitContent(char *dest,int dlen,const char *src,int len,char *predeli,char *nextdeli)
 {
@@ -10,6 +16,7 @@ int spilitContent(char *dest,int dlen,const char *src,int len,char *predeli,char
 	int flag = 0;
 	*predeli = *nextdeli = ' ';
 	int connect = 0;
+	int datatype = 0; // 0 unset 1 digit 2 ascii
 	for(i = 0 ; i < len ; i ++)
 	{
 		if(isConnectCh(src[i])) {
@@ -56,17 +63,26 @@ int spilitContent(char *dest,int dlen,const char *src,int len,char *predeli,char
 			{
 				i = k;
 			}
+		}else if(datatype != 0 && checkCharType(src[i]) != 0 && 
+			 checkCharType(src[i]) != datatype)
+		{
+			break;
 		}
+		
 		if(isDelimiter(src[i]) || isConnectCh(src[i]))
 		{
 			continue;
 		}
 		if(j>=dlen) return 0;
+
+			datatype = checkCharType(src[i]);
+		
 		dest[j] = src[i];
 		j++;
 		connect = 0;
 	}
 	if(!flag) return 0;
+	
 	dest[j] = '\0';
 	j++;
 	if(isBlank(*nextdeli))
