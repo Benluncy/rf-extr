@@ -348,7 +348,14 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		fprintf(fp,"%d\t",pCNS->isFunWordDict);
 		
 		char combinedStr[1024];
-		sprintf(combinedStr,"%s%s",pCNS->str,npCNS->str);
+		if(npCNS != NULL)
+		{
+			sprintf(combinedStr,"%s%s",pCNS->str,npCNS->str);
+		}else
+		{
+			sprintf(combinedStr,"%s",pCNS->str);
+		}
+		
 		//TODO
 		pCNS->isPlaceNameDict = pCNS->isPlaceNameDict || isPlaceNameInDict(combinedStr);
 		// 25: isPlaceNameInDict
@@ -559,7 +566,7 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		fprintf(fp,"%d\t",pCNS->imprnum);
 		
 		// 52 suffix
-		//fprintf(fp,"%c%c\t",(pCNS->slen>1)?pCNS->str[pCNS->slen-2]:' ',pCNS->str[pCNS->slen-1]);
+		fprintf(fp,"%c%c\t",(pCNS->slen>1)?pCNS->str[pCNS->slen-2]:' ',pCNS->str[pCNS->slen-1]);
 		
 		
 		// END : token
