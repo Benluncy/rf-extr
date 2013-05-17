@@ -215,12 +215,15 @@ int specialFlag(const char *str,int len)
 
 	//if(strcasecmp(str,"of") == 0 ) return 17;
 	
+	//Corporation
 	return 0;
 }
 
 int deptFlag(const char *str)
 {
+	
 	if(strncasecmp(str,"dept",4)==0) return 1;
+	if(strcasecmp(str,"Department")==0) return 1;
 	return 0;
 }
 
