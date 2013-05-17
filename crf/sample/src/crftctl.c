@@ -292,13 +292,13 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		
 		
 		
-		/*
+		
 		
 		// combined string , combine with next string
 		char combinedStr[1024];
 		sprintf(combinedStr,"%s%s",pCNS->str,((npCNS==NULL)?"":npCNS->str));
 		
-		
+		/*
 		// 1. OUTPUT : PRINT FEATURES
 		
 		// basic
