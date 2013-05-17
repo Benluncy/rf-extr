@@ -91,7 +91,7 @@ int ftEnQueue(pCNSQ Q,int *currentOffset,char *mpredeli)
 			}else if(psI>0)
 			{
 				partStr[psI]='\0';
-				isPublisher = isPublisher || isPubliserDict(partStr); 
+				isPublisher = isPublisher || isPublisherInDict(partStr); 
 			}
 			switch(content[i])
 			{
