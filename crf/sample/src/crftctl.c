@@ -298,13 +298,13 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		char combinedStr[1024];
 		sprintf(combinedStr,"%s%s",pCNS->str,((npCNS==NULL)?"":npCNS->str));
 		
-		/*
+		
 		// 1. OUTPUT : PRINT FEATURES
 		
 		// basic
 		fprintf(fp,"%s\t",pCNS->str); // 0: string data
 		fprintf(fp,"%d\t",pCNS->slen); // 1: length of string data
-		
+		/*
 		
 		// base::string
 		// 2: string type 0:AAA 1:aaa 2:Aaa 3:aAa 4:123
