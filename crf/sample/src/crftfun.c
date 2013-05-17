@@ -134,6 +134,8 @@ int monthlike(const char *str,int len)
 int vollkwd(const char *str,int len)
 {
 	if(strncasecmp(str,"vol",3)==0) return 1;
+	if(strcasecmp(str,"Article")==0) return 1;
+	
 	if(strncasecmp(str,"num",3)==0) return 2;
 	if(strncasecmp(str,"No",2)==0) return 2;
 	if(len == 1 && str[0] == 'n') return 2;
@@ -191,6 +193,8 @@ int specialFlag(const char *str,int len)
 	if(strncasecmp(str,"SIGCSE",6)==0) return 9;
 	if(strncasecmp(str,"Bulletin",8)==0) return 10;
 	if(strncasecmp(str,"Press",5)==0) return 11;
+	if(strncasecmp(str,"Publishing",10)==0) return 11;
+	
 	if(strncasecmp(str,"PROCEEDING",10)==0) return 12;
 	
 	if(strcasecmp(str,"In")==0) return 13;
@@ -215,12 +219,17 @@ int specialFlag(const char *str,int len)
 	if(strncasecmp(str,"MIT",3)==0) return 40;
 	
 	
-	
+	//institute
 	if(strcasecmp(str,"Library") == 0 ) return 45;
 	if(strcasecmp(str,"Laboratory")==0) return 45;
 	if(strcasecmp(str,"Center")==0) return 45;
 	
 	if(strcasecmp(str,"institute")==0) return 45;
+	
+	if(strcasecmp(str,"association")==0) return 45;
+	
+	
+	if(strcasecmp(str,"Corporation")==0) return 45;
 	
 	
 	if(strncasecmp(str,"Journal",7)==0) return 50;
