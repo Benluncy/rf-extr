@@ -188,7 +188,7 @@ int specialFlag(const char *str,int len)
 	if(strncasecmp(str,"TR",2) == 0 ) return 15;
 	if(strncasecmp(str,"report",6) == 0 ) return 16;
 
-	if(strcasecmp(str,"of") == 0 ) return 17;
+	//if(strcasecmp(str,"of") == 0 ) return 17;
 	
 	return 0;
 }

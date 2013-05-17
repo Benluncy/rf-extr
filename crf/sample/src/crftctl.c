@@ -241,6 +241,8 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 	
 	int braStatus = 0;
 	int braTime = 0;
+	
+	int isbnEffect = 0;
 
 	while((pCNS = ftDeQueue(&nextCNSQ)) != NULL)
 	{
@@ -270,11 +272,11 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		// 4: len of str
 		fprintf(fp,"%d\t",pCNS->slen);
 		// 5: digit length
-		fprintf(fp,"%d\t",pCNS->digitl);
+		fprintf(fp,"%d\t",pCNS->digitl>0);
 		// 6: is pure digit ?
 		fprintf(fp,"%d\t",pCNS->puredigit);
-		// 7: value of digit
-		fprintf(fp,"%d\t",pCNS->dval);
+		// 7: value of digit (>0)
+		fprintf(fp,"%d\t",pCNS->dval>0);
 		// 8: which type of string ?
 		fprintf(fp,"%d\t",pCNS->strtype); // TODO may spilit into several tokens
 		// 9: year like?
@@ -469,6 +471,15 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		
 		// 43 time (month , year)
 		fprintf(fp,"%d\t",pCNS->yearlike || pCNS->monthlike);
+		
+		// 44 isbn effect 
+		if(pCNS->speflag == 14)
+		{
+			isbnEffect = 10;
+		}
+		
+		
+		fprintf(fp,"%d\t",isbnEffect&&(pCNS->digitl>0));
 		
 		// END : token
 		if(lpCNS != NULL && npCNS != NULL)
