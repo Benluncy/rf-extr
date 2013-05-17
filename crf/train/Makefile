@@ -60,10 +60,14 @@
 #############################SYSTEM#####################################
 LEARN			:= crf_learn
 TEST			:= crf_test
-CHECK			:= conlleval -d "	"
+CHECK			:= conlleval -d "\t" -r
 
 SAY			:= @echo
-RM			:= rm -rf 
+RM			:= rm -rf
+
+
+GADD			:= @git add 
+GCMT			:= @git commit -m  
 #############################FILES######################################
 
 FLAGS			:= #-c 4.0 , -a MIRA  ... 
@@ -78,9 +82,9 @@ OUTPUT			:=output.txt
 #############################MAIN#######################################
 
 #${SAY} "Usage:make trainA|trainB|testA|testB|checkA|checkB"
-all			:train test check
+all			:gitupdate train test check
 
-nall			:ntrain ntest check
+nall			:gitupdate ntrain ntest check
 
 
 train			:
@@ -97,7 +101,11 @@ ntest			:
 
 check			:
 	${CHECK} < ${OUTPUT}
-	
+
+
+gitupdate		:
+	-${GADD} .
+	-${GCMT} `date "+auto:%Y%m%d%H%M%S"`
 
 clean			:
 	${RM} ${MODEL}
