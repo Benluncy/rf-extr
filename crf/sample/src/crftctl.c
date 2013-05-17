@@ -262,7 +262,7 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 	while((pCNS = ftDeQueue(&nextCNSQ)) != NULL)
 	{
 		// 0. PREPARE : FLAGS
-		
+		/*
 		// 0.0 PAST ONE INFO && NEXT ONE INFO
 		pCrfNodeSnapshot lpCNS = pastNElem(&preCNSQ,1);  // previous one node
 		pCrfNodeSnapshot npCNS = nextNElem(&nextCNSQ,1); // next one node
@@ -275,7 +275,11 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		// 0.2 SOME MIX FEATURE
 		// \"
 		quotTime--;
-		if(quotTime <= 0) quotStatus = 0;
+		if(quotTime <= 0)
+		{
+			quotStatus = 0;
+			quotTime = 0;
+		}
 		if(pCNS->quotflag == 1)
 		{
 			quotStatus = !quotStatus;
@@ -324,6 +328,7 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		// 7: digit a improve digit ? 123456 456 > 123
 		fprintf(fp,"%d\t",pCNS->imprnum );
 		
+		*/
 		
 		// 2. END : PRINT RESULT
 		if(lpCNS != NULL && npCNS != NULL)
@@ -332,9 +337,9 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 				(lpCNS->token == 6 && npCNS->token == 6))
 				fprintf(fp,"%s\n",id2Token(lpCNS->token));
 			else
-				fprintf(fp,"%s\n",pCNS->token == 0 ? "OTH":id2Token(pCNS->token));	
+				fprintf(fp,"%s\n",pCNS->token == 0 ? "0":id2Token(pCNS->token));	
 		}else
-			fprintf(fp,"%s\n",pCNS->token == 0 ? "OTH":id2Token(pCNS->token));
+			fprintf(fp,"%s\n",pCNS->token == 0 ? "0":id2Token(pCNS->token));
 		
 		//enQueue && store
 		enQueueWithDrop(&preCNSQ,*pCNS);
