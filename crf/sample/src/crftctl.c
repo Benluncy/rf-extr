@@ -302,7 +302,7 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		fprintf(fp,"%d\t",pCNS->strtype);
 		
 		// 3: digit value  > 0 ?
-		fprintf(fp,"%d\t",pCNS->val > 0 );
+		fprintf(fp,"%d\t",pCNS->dval > 0 );
 		
 		// 4: digit bigger than previours one
 		
