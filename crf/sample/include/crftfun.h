@@ -28,6 +28,8 @@ int deptFlag(const char *str);
 int uniFlag(const char *str);
 int ltdFlag(const char *str);
 
+int domainFlag(const char *str);
+
 int isArticle(const char *str,int len);
 
 #endif// __CRFT_FUN_H__

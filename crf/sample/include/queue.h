@@ -42,6 +42,7 @@ typedef struct
 	int braSflag;//Braces
 	int braEflag;
 	int stopflag;
+	int domainflag;
 }CrfNodeSnapshot,*pCrfNodeSnapshot;
 
 

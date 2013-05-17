@@ -158,6 +158,8 @@ int ftEnQueue(pCNSQ Q,int *currentOffset,char *mpredeli)
 		crfNodeSnapshot.deptflag = deptFlag(str);
 		crfNodeSnapshot.uniflag = uniFlag(str);
 		crfNodeSnapshot.ltdflag = ltdFlag(str);
+		crfNodeSnapshot.domainflag = domainFlag(str);
+		
 
 		if(!isBlank(crfNodeSnapshot.nextdeli)) *mpredeli = crfNodeSnapshot.nextdeli;
 		
@@ -355,9 +357,13 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		int edsFlag = 0;
 		int uniFlag = 0;
 		int groupFlag = 0;
+		int pressFlag = 0;
 		int noStopEffect = 1;
 		int nextPDigit = 0; // next pure digit
+		int domainFlag = 0;
+		int domainNoStop = 1;
 		int i;
+		// next 
 		for(i=1;i < sizeQueue(&nextCNSQ) ; i++)
 		{
 			pCrfNodeSnapshot tCNS = nextNElem(&nextCNSQ,i);
@@ -376,8 +382,24 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 			{
 				groupFlag = 1;
 			}
+			if(noStopEffect && (tCNS->speflag == 11 )) //"Library"
+			{
+				pressFlag = 1;
+			}
 			if(tCNS->puredigit > 0 && tCNS->yearlike) nextPDigit ++ ;
 			
+			if(!isBlank(tCNS->predeli) && (tCNS->predeli !=':')
+							&& (tCNS->predeli !='/')
+							&& (tCNS->predeli !='.')
+							&& (tCNS->predeli !=',')) // for err
+			{
+				domainNoStop = 0;
+			}
+			
+			if(domainNoStop && tCNS->domainflag)
+			{
+				domainFlag = 1;
+			}
 		}
 		
 		// 30 : university
@@ -387,12 +409,14 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		fprintf(fp,"%d\t",ltdFlag);
 		
 		httpStatus = 0;
-		
+		int inStatus = 0;
 		for(i=1;i < sizeQueue(&preCNSQ) ; i++)
 		{
 			pCrfNodeSnapshot tCNS = pastNElem(&preCNSQ,i);
 			if(tCNS->speflag == 7 && i < 4 && !isBlank(tCNS->nextdeli))
 				httpStatus = 1;
+			if(tCNS->speflag == 13)
+				inStatus = 1;
 		}
 		
 		// 32 : http
@@ -488,11 +512,14 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		// 43 time (month , year)
 		fprintf(fp,"%d\t",pCNS->yearlike || pCNS->monthlike);
 		
-		// 44 isbn effect 
+		
 		if(pCNS->speflag == 14)
 		{
 			isbnEffect = 6;
 		}
+		// 44 isbn effect 
+		fprintf(fp,"%d\t",(isbnEffect>0)&&(pCNS->digitl>0));
+		isbnEffect --;
 		
 		// 45 group
 		fprintf(fp,"%d\t",groupFlag);
@@ -502,8 +529,17 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		fprintf(fp,"%d\t",nextPDigit);
 		
 		
-		fprintf(fp,"%d\t",(isbnEffect>0)&&(pCNS->digitl>0));
-		isbnEffect --;
+		// 47 'In' flag
+		fprintf(fp,"%d\t",pCNS->speflag == 13);
+		
+		// 48 'In' status
+		fprintf(fp,"%d\t",inStatus);
+		
+		// 49 press flag
+		fprintf(fp,"%d\t",pressFlag);
+		
+		
+		
 		
 		// END : token
 		if(lpCNS != NULL && npCNS != NULL)

@@ -171,6 +171,8 @@ int specialFlag(const char *str,int len)
 	
 	if(strncasecmp(str,"pp",2)==0) return 6;
 	if(strncasecmp(str,"http",4)==0) return 7;
+	if(strncasecmp(str,"www",4)==0) return 7;
+
 	if(strncasecmp(str,"ftp",4)==0) return 7;
 	if(strncasecmp(str,"No",2)==0) return 8;
 	
@@ -179,7 +181,7 @@ int specialFlag(const char *str,int len)
 	if(strncasecmp(str,"Press",5)==0) return 11;
 	if(strncasecmp(str,"PROCEEDING",10)==0) return 12;
 	
-	if(strncasecmp(str,"In",17)==0) return 13;
+	if(strcasecmp(str,"In")==0) return 13;
 	if(strncasecmp(str,"ISBN",11)==0) return 14;
 	
 	if(strncasecmp(str,"technical",9) == 0 ) return 15;//
@@ -195,7 +197,11 @@ int specialFlag(const char *str,int len)
 	
 	if(strncasecmp(str,"MIT",3)==0) return 40;
 	
+	
+	
 	if(strcasecmp(str,"Library") == 0 ) return 45;
+	
+	if(strncasecmp(str,"Journal",7)==0) return 50;
 
 	//if(strcasecmp(str,"of") == 0 ) return 17;
 	
@@ -233,6 +239,14 @@ int isArticle(const char *str,int len)
 	if(strcasecmp(str,"AN")==0) return 1;
 	if(strcasecmp(str,"The")==0) return 1;
 	return 0;
+}
+
+int domainFlag(const char *str)
+{
+	if(strcasecmp(str,"net")==0) return 1;
+	if(strcasecmp(str,"edu")==0) return 1;
+	if(strcasecmp(str,"com")==0) return 1;
+	return 0l
 }
 
 
