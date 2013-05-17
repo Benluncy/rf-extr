@@ -475,11 +475,12 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		// 44 isbn effect 
 		if(pCNS->speflag == 14)
 		{
-			isbnEffect = 10;
+			isbnEffect = 6;
 		}
 		
 		
 		fprintf(fp,"%d\t",isbnEffect&&(pCNS->digitl>0));
+		isbnEffect --;
 		
 		// END : token
 		if(lpCNS != NULL && npCNS != NULL)
