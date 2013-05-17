@@ -538,7 +538,8 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		// 49 press flag
 		fprintf(fp,"%d\t",pressFlag);
 		
-		
+		// 50 domain flag
+		fprintf(fp,"%d\t",domainFlag);
 		
 		
 		// END : token
