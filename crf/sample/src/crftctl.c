@@ -301,10 +301,13 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		// 2: string type 0:AAA 1:aaa 2:Aaa 3:aAa 4:123
 		fprintf(fp,"%d\t",pCNS->strtype);
 		
-		// 3: digit value 0~10,
-		fprintf(fp,"%d\t",);
+		// 3: digit value  > 0 ?
+		fprintf(fp,"%d\t",pCNS->val > 0 );
+		
+		// 4: digit bigger than previours one
 		
 		
+		// 5: digit a improve digit ? 123456 456 > 123
 		
 		
 		// 2. END : PRINT RESULT

@@ -25,7 +25,16 @@ int main(int argc,char *argv[])
 	hmDictLoad();
 	dbFree();
 	
-	genCRFSample("data/");
+	//genCRFSample("data/");
+	char str[30];
+	int slen;
+
+	sprintf(str,"123456");
+	slen = strlen(str);
+	int vh = valofdigit(str,slen/2);
+	int vl = valofdigit(str+(slen/2),(slen+1)/2);
+	printf("%d~%d\n",vh,vl);
+
 
 	hmDictFree();
 
