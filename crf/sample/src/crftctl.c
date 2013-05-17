@@ -161,6 +161,15 @@ int ftEnQueue(pCNSQ Q,int *currentOffset,char *mpredeli)
 		crfNodeSnapshot.domainflag = domainFlag(str);
 		
 
+		if(crfNodeSnapshot.puredigit)
+		{
+			int vh = valofdigit(str,slen/2);
+			int vl = valofdigit(str+(slen/2),(slen+1)/2);
+			if(vh == 0 || vl == 0) 	crfNodeSnapshot.imprnum = 0;
+			else crfNodeSnapshot.imprnum = vl > vh ? 1 : -1;
+		}else
+			crfNodeSnapshot.imprnum = 0;
+		
 		if(!isBlank(crfNodeSnapshot.nextdeli)) *mpredeli = crfNodeSnapshot.nextdeli;
 		
 		//*currentOffset = crfNodeSnapshot.offset;
@@ -545,6 +554,9 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		
 		// 50 domain flag
 		fprintf(fp,"%d\t",domainFlag);
+		
+		// 51 improving number
+		fprintf(fp,"%d\t",pCNS->imprnum);
 		
 		
 		// END : token

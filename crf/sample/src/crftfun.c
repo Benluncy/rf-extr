@@ -143,6 +143,7 @@ int vollkwd(const char *str,int len)
 int pagekwd(const char *str,int len)
 {
 	if(strncasecmp(str,"pp",2)==0) return 1;
+	if(strcasecmp(str,"p")==0) return 1;
 	if(strncasecmp(str,"page",4)==0) return 1;
 	return 0;
 }
@@ -177,6 +178,10 @@ int specialFlag(const char *str,int len)
 	if(strcasecmp(str,"Proc")==0) return 5;
 	
 	if(strncasecmp(str,"pp",2)==0) return 6;
+	if(strncasecmp(str,"p")==0) return 6;
+	if(strncasecmp(str,"pages")==0) return 6;
+	if(strncasecmp(str,"page")==0) return 6;
+
 	if(strncasecmp(str,"http",4)==0) return 7;
 	if(strncasecmp(str,"www",4)==0) return 7;
 
@@ -204,12 +209,19 @@ int specialFlag(const char *str,int len)
 	
 	if(strcasecmp(str,"Thesis") == 0 ) return 25;
 	if(strcasecmp(str,"pH") == 0 ) return 25;
+	if(strcasecmp(str,"pHD") == 0 ) return 25;
+	if(strcasecmp(str,"D") == 0 ) return 25;
 	
 	if(strncasecmp(str,"MIT",3)==0) return 40;
 	
 	
 	
 	if(strcasecmp(str,"Library") == 0 ) return 45;
+	if(strcasecmp(str,"Laboratory")==0) return 45;
+	if(strcasecmp(str,"Center")==0) return 45;
+	
+	if(strcasecmp(str,"institute")==0) return 45;
+	
 	
 	if(strncasecmp(str,"Journal",7)==0) return 50;
 
@@ -242,6 +254,8 @@ int ltdFlag(const char *str)
 	if(strncasecmp(str,"Itd",3)==0) return 1;
 	if(strncasecmp(str,"inc",3)==0) return 1;
 	if(strncasecmp(str,"lnc",3)==0) return 1;
+	if(strcasecmp(str,"Limited")==0) return 1;
+
 	return 0;
 }
 

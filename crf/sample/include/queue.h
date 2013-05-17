@@ -43,6 +43,7 @@ typedef struct
 	int braEflag;
 	int stopflag;
 	int domainflag;
+	int imprnum;// [123][456] >0 , <0 , ==0
 }CrfNodeSnapshot,*pCrfNodeSnapshot;
 
 
