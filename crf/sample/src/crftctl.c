@@ -304,7 +304,7 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		// basic
 		fprintf(fp,"%s\t",pCNS->str); // 0: string data
 		fprintf(fp,"%d\t",pCNS->slen); // 1: length of string data
-		/*
+		
 		
 		// base::string
 		// 2: string type 0:AAA 1:aaa 2:Aaa 3:aAa 4:123
@@ -323,12 +323,11 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		fprintf(fp,"%d\t",lpCNS==NULL?-1:(lpCNS->dval == 0?-1:(pCNS->dval > lpCNS->dval)));
 		
 		// 6: next one is bigger than this digit 
-		fprintf(fp,"%d\t",npCNS==NULL?-1:(npCNS->dval == 0?-1:(npCNS->dval > lpCNS->dval)));
+		fprintf(fp,"%d\t",npCNS==NULL?-1:(npCNS->dval == 0?-1:(npCNS->dval > pCNS->dval)));
 		
 		// 7: digit a improve digit ? 123456 456 > 123
 		fprintf(fp,"%d\t",pCNS->imprnum );
 		
-		*/
 		
 		// 2. END : PRINT RESULT
 		if(lpCNS != NULL && npCNS != NULL)
