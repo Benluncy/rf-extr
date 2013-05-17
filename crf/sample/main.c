@@ -29,7 +29,7 @@ int main(int argc,char *argv[])
 	char str[30];
 	int slen;
 
-	sprintf(str,"123456");
+	sprintf(str,"12345");
 	slen = strlen(str);
 	int vh = valofdigit(str,slen/2);
 	int vl = valofdigit(str+(slen/2),(slen+1)/2);
