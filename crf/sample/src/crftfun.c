@@ -167,10 +167,11 @@ int specialFlag(const char *str,int len)
 	if(strncasecmp(str,"IEEE",4)==0) return 2;
 	if(strncasecmp(str,"ACM",3)==0) return 3;
 	//if(strncasecmp(str,"Inc",3)==0) return 4;
-	if(strncasecmp(str,"Proc",4)==0) return 5;
+	if(strcasecmp(str,"Proc")==0) return 5;
 	
 	if(strncasecmp(str,"pp",2)==0) return 6;
 	if(strncasecmp(str,"http",4)==0) return 7;
+	if(strncasecmp(str,"ftp",4)==0) return 7;
 	if(strncasecmp(str,"No",2)==0) return 8;
 	
 	if(strncasecmp(str,"SIGCSE",6)==0) return 9;
@@ -187,6 +188,14 @@ int specialFlag(const char *str,int len)
 	if(strcasecmp(str,"RFC") == 0 ) return 15;
 	if(strncasecmp(str,"TR",2) == 0 ) return 15;
 	if(strncasecmp(str,"report",6) == 0 ) return 16;
+
+	if(strncasecmp(str,"communications",10) == 0 ) return 20;
+
+	if(strncasecmp(str,"group",5) == 0 ) return 25;
+	
+	if(strncasecmp(str,"MIT",3)==0) return 40;
+	
+	if(strcasecmp(str,"Library") == 0 ) return 45;
 
 	//if(strcasecmp(str,"of") == 0 ) return 17;
 	

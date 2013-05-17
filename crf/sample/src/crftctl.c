@@ -117,9 +117,12 @@ int ftEnQueue(pCNSQ Q,int *currentOffset,char *mpredeli)
 					crfNodeSnapshot.braEflag = 1;
 					break;
 				case '?':
-				case ',':
 				case '.':
+				case '!':
 					crfNodeSnapshot.stopflag = 1;
+					break;
+				case ',':
+					crfNodeSnapshot.stopflag = 2;
 					break;
 			}
 		}
@@ -351,6 +354,9 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		int ltdFlag = 0;
 		int edsFlag = 0;
 		int uniFlag = 0;
+		int groupFlag = 0;
+		int noStopEffect = 1;
+		int nextPDigit = 0; // next pure digit
 		int i;
 		for(i=1;i < sizeQueue(&nextCNSQ) ; i++)
 		{
@@ -360,7 +366,17 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 			if(tCNS->edsflag == 1)
 				edsFlag = 1;
 			if(tCNS->uniflag == 1 && i < 3)
-				uniFlag = 1;	
+				uniFlag = 1;
+				
+			// effect : 1: ',' 2:'.''?''!'	
+			if(tCNS->stopflag > 1 ) noStopEffect = 0; 
+			if(noStopEffect && (tCNS->speflag == 25 || tCNS->speflag == 16
+							 || tCNS->speflag == 15
+							 || tCNS->speflag == 45 )) //"Library"
+			{
+				groupFlag = 1;
+			}
+			if(tCNS->puredigit > 0 && tCNS->yearlike) nextPDigit ++ ;
 			
 		}
 		
@@ -375,12 +391,12 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		for(i=1;i < sizeQueue(&preCNSQ) ; i++)
 		{
 			pCrfNodeSnapshot tCNS = pastNElem(&preCNSQ,i);
-			if(tCNS->speflag == 7 && i < 4)
+			if(tCNS->speflag == 7 && i < 4 && !isBlank(tCNS->nextdeli))
 				httpStatus = 1;
 		}
 		
 		// 32 : http
-		fprintf(fp,"%d\t",pCNS->speflag == 7);
+		fprintf(fp,"%d\t",(pCNS->speflag == 7)&&!isBlank(pCNS->nextdeli));
 	
 		// 33 : http effect 
 		fprintf(fp,"%d\t",httpStatus);
@@ -478,8 +494,15 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 			isbnEffect = 6;
 		}
 		
+		// 45 group
+		fprintf(fp,"%d\t",groupFlag);
 		
-		fprintf(fp,"%d\t",isbnEffect&&(pCNS->digitl>0));
+		// 46 journal 后面跟着的是 volumn 比如 12,1
+		nextPDigit = nextPDigit > 2 ? 3:nextPDigit;
+		fprintf(fp,"%d\t",nextPDigit);
+		
+		
+		fprintf(fp,"%d\t",(isbnEffect>0)&&(pCNS->digitl>0));
 		isbnEffect --;
 		
 		// END : token
