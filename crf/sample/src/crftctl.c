@@ -295,19 +295,33 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		
 		
 		// 1. OUTPUT : PRINT FEATURES
+		
+		// basic
 		fprintf(fp,"%s\t",pCNS->str); // 0: string data
 		fprintf(fp,"%d\t",pCNS->slen); // 1: length of string data
 		
+		
+		// base::string
 		// 2: string type 0:AAA 1:aaa 2:Aaa 3:aAa 4:123
 		fprintf(fp,"%d\t",pCNS->strtype);
 		
-		// 3: digit value  > 0 ?
+		// 3: sufix 
+		fprintf(fp,"%c%c\t",(pCNS->slen>1)?tolower(pCNS->str[pCNS->slen-2]):'X',
+					tolower(pCNS->str[pCNS->slen-1]));
+		
+		
+		// base::digit
+		// 4: digit value  > 0 ?
 		fprintf(fp,"%d\t",pCNS->dval > 0 );
 		
-		// 4: digit bigger than previours one
+		// 5: digit bigger than previours one
+		fprintf(fp,"%d\t",lpCNS==NULL?-1:(lpCNS->dval == 0?-1:(pCNS->dval > lpCNS->dval)));
 		
+		// 6: next one is bigger than this digit 
+		fprintf(fp,"%d\t",npCNS==NULL?-1:(npCNS->dval == 0?-1:(npCNS->dval > lpCNS->dval)));
 		
-		// 5: digit a improve digit ? 123456 456 > 123
+		// 7: digit a improve digit ? 123456 456 > 123
+		fprintf(fp,"%d\t",pCNS->imprnum );
 		
 		
 		// 2. END : PRINT RESULT
