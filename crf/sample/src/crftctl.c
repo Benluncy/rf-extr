@@ -302,7 +302,7 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 				
 			// effect : 1: ',' 2:'.''?''!'	
 			if(tCNS->stopflag  == 1 ) stopEffect = 1; 
-			if(tCNS->stopflag  == 2 ) stopEffect (stopEffect == 1) ? 1 : 2;
+			if(tCNS->stopflag  == 2 ) stopEffect = (stopEffect == 1) ? 1 : 2;
 			
 			
 			if(stopEffect == 0 && (tCNS->speflag == 25 || tCNS->speflag == 16
