@@ -94,7 +94,7 @@ int ftEnQueue(pCNSQ Q,int *currentOffset,char *mpredeli)
 				partStr[psI]='\0';
 				isPublisher = isPublisher || isPublisherInDict(partStr); 
 			}
-			crfNodeSnapshot.quotflag = 0
+			crfNodeSnapshot.quotflag = 0;
 			switch(content[i])
 			{
 				case '\"':
