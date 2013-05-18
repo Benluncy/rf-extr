@@ -509,70 +509,73 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		
 		
 		// base::delimiter
-		// 9: last delimiter
+		// 10: last delimiter
 		fprintf(fp,"%d\t",pCNS->predeli);
 		
-		// 10: last useful delimiter
+		// 11: last useful delimiter
 		fprintf(fp,"%d\t",pCNS->mpredeli);
 		
-		// 11: next delimiter
+		// 12: next delimiter
 		fprintf(fp,"%d\t",pCNS->nextdeli);
 		
 		
 		
 		// base::string orthographic
-		// 12: year like || month like >> time like
+		// 13: year like || month like >> time like
 		fprintf(fp,"%d\t",(pCNS->yearlike > 0 )|| (pCNS->monthlike > 0 ));
-		// 13: volume like  start of volume ?  vol. X num. no. number
-		fprintf(fp,"%d\t",pCNS->volumnlike);
-		// 14: page like
+		// 14: volume like  start of volume ?  vol. X num. no. number
+		if(pCNS->volumnlike < 3) fprintf(fp,"%d\t",pCNS->volumnlike);
+		else if(!isBlank(pCNS->nextdeli)) fprintf(fp,"%d\t",pCNS->volumnlike-2);
+		else fprintf(fp,"0\t");
+			
+		// 15: page like
 		fprintf(fp,"%d\t",pCNS->pagelike);
 		
 		
 		// base::dict
-		// 15: name in dict
+		// 16: name in dict
 		fprintf(fp,"%d\t",pCNS->isNameDict || pCNS->rLastNameDict > 0);
 		
-		// 16: place in dict
+		// 17: place in dict
 		pCNS->isPlaceNameDict = pCNS->isPlaceNameDict || isPlaceNameInDict(combinedStr);		
 		pCNS->isCountryDict = pCNS->isCountryDict || isCountryInDict(combinedStr);
 		fprintf(fp,"%d\t",pCNS->isPlaceNameDict>0 || pCNS->isCountryDict > 0);
 		
-		// 17: publisher in dict
+		// 18: publisher in dict
 		pCNS->isPubliserDict = pCNS->isPubliserDict || isPublisherInDict(combinedStr);
 		fprintf(fp,"%d\t",pCNS->isPubliserDict);
 		
-		// 18: fun word in dict 
+		// 19: fun word in dict 
 		fprintf(fp,"%d\t",pCNS->isFunWordDict);
 
 		// base::couple flag ststus
 		
-		// 19,20,21 quots AT IN OUT
+		// 20,21,22 quots AT IN OUT
 		fprintf(fp,"%d\t",quotStatus[0]);
 		fprintf(fp,"%d\t",quotStatus[1]);
 		fprintf(fp,"%d\t",quotStatus[2]);
 		
 		
-		// 22,23,24 Parentheses AT IN OUT
+		// 23,24,25 Parentheses AT IN OUT
 		fprintf(fp,"%d\t",pareStatus[0]);
 		fprintf(fp,"%d\t",pareStatus[1]);
 		fprintf(fp,"%d\t",pareStatus[2]);
 		
-		// 25,26,27 Square brackets AT IN OUT
+		// 26,27,28 Square brackets AT IN OUT
 		fprintf(fp,"%d\t",sqbStatus[0]);
 		fprintf(fp,"%d\t",sqbStatus[1]);
 		fprintf(fp,"%d\t",sqbStatus[2]);
 		
-		// 28,29,30 Braces AT IN OUT
+		// 29,30,31 Braces AT IN OUT
 		fprintf(fp,"%d\t",braStatus[0]);
 		fprintf(fp,"%d\t",braStatus[1]);
 		fprintf(fp,"%d\t",braStatus[2]);
 		
 		// base::flags
 		
-		// 31 basic flags
+		// 32 basic flags
 		fprintf(fp,"%d\t",pCNS->speflag);
-		
+		fprintf(fp,"%d\t",pCNS->stopflag);
 		
 		
 		
@@ -604,11 +607,11 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 			fprintf(fp,"0\t");
 		
 		
-		// ph D 
+		// ph D  str cmp
 		
-		// xxx thesis
+		// xxx thesis thesis : 25
 		
-		// inc ltd limited 
+		// inc ltd limited  : ltdflag 1 2 3
 		
 		// conference 
 		
