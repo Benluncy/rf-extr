@@ -347,10 +347,15 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		sqbCache = 0;
 		braCache = 0;
 		
-		noStopEffect = 2;
+		stopEffect = 0;
 		for(i=1;i < sizeQueue(&preCNSQ) ; i++)
 		{
 			pCrfNodeSnapshot tCNS = pastNElem(&preCNSQ,i);
+			
+			if(tCNS->stopflag  == 1 ) stopEffect = 1; 
+			if(tCNS->stopflag  == 2 ) stopEffect = (stopEffect == 1) ? 1 : 2;
+			
+			
 			if(tCNS->speflag == 7 && i < 4 && !isBlank(tCNS->nextdeli))
 				httpStatus = 1;
 			if(tCNS->stopflag  == 2 ) noStopEffect = 0; 
