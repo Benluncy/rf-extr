@@ -21,7 +21,7 @@ typedef struct
 	int pagelike;
 	int edsflag;
 	int speflag;
-	int procflg;
+	int procflag;
 	int namelike;
 	int isNameDict;
 	int rLastNameDict;

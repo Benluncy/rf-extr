@@ -146,7 +146,7 @@ int ftEnQueue(pCNSQ Q,int *currentOffset,char *mpredeli)
 		crfNodeSnapshot.pagelike = pagekwd(str,slen);
 		crfNodeSnapshot.edsflag = edsFlag(str,slen);
 		crfNodeSnapshot.speflag = specialFlag(str,slen);
-		crfNodeSnapshot.procflg =  procFlag(str,slen);
+		crfNodeSnapshot.procflag =  procFlag(str,slen);
 		crfNodeSnapshot.namelike = hasNameafterTheOffset0((*currentOffset)
 							-crfNodeSnapshot.offset-1,
 							crfNodeSnapshot.offset+1);
