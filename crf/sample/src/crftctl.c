@@ -676,7 +676,7 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		fprintf(fp,"%d|%d\t",pCNS->isArticle,pCNS->nextdeli);
 		
 		// ph D  str cmp
-		if((strcasecmp("ph",pCNS->str)== 0 && npCNS->str[0] == D)
+		if((strcasecmp("ph",pCNS->str)== 0 && npCNS->str[0] == 'D')
 			|| strcasecmp("phD",pCNS->str)== 0)
 			fprintf(fp,"1\t");
 		else
