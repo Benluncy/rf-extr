@@ -218,7 +218,7 @@ int specialFlag(const char *str,int len)
 	
 	if(strncasecmp(str,"request",9) == 0 ) return 52;
 	if(strcasecmp(str,"rfc") == 0 ) return 53;
-	if(strcasecmp(str,"tr") == 0 ) return 54; // INSTITUTION , xxxx tr
+	if(strcmp(str,"TR") == 0 ) return 54; // tech tech report
 	if(strncasecmp(str,"report",6) == 0 ) return 55; // technical report
 	if(strcasecmp(str,"Thesis") == 0 ) return 25;
 	

@@ -16,6 +16,8 @@
 #include <time.h>
 #include <ctype.h>
 
+#include <strings.h>
+
 #define SINGLEWORDLEN 256
 
 
@@ -274,20 +276,28 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		pCrfNodeSnapshot npCNS = nextNElem(&nextCNSQ,1); // next one node
 		
 		// 0.1 TRAVERSAL ALL PAST && NEXT INFO , GET FLAGS
+		int thesisFlag = 0;
 		int ltdFlag = 0;
 		int edsFlag = 0;
 		int uniFlag = 0;
+		int mitFlag = 0;
 		int groupFlag = 0;
 		int pressFlag = 0;
+		int confFlag = 0;
+		int orgFlag = 0;
+		
 		
 		int nextPDigit = 0; // next pure digit
 		int domainFlag = 0;
 		int domainNoStop = 1;
 		int i;
 		
-		int stopEffect = 0; //
+		int 
+		
+		int stopEffect = 0; // XXXX XXXX XXXX
 			// 2:  ',' 
 			// 1:  '.','?','!'..  
+		int stopEffectEA = 0;// ExceptAbbreviation
 		
 		// 0.1.1 NEXT 
 		for(i=1;i < sizeQueue(&nextCNSQ) ; i++)
@@ -300,25 +310,40 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 			if(tCNS->uniflag == 1 && i < 3)
 				uniFlag = 1;
 				
-			// effect : 1: ',' 2:'.''?''!'	
+			// effect : 1:'.''?''!'  2:','	
+			if(tCNS->stopflag  == 1) stopEffectEA = 1; 
+			if(tCNS->stopflag  == 2 && tCNS->slen > 4) stopEffectEA = (stopEffectEA == 1) ? 1 : 2;
+			
 			if(tCNS->stopflag  == 1 ) stopEffect = 1; 
 			if(tCNS->stopflag  == 2 ) stopEffect = (stopEffect == 1) ? 1 : 2;
 			
-			
-			if(stopEffect == 0 && (tCNS->speflag == 25 || tCNS->speflag == 16
-							 || tCNS->speflag == 15
-							 || tCNS->speflag == 45 )) //"Library"
+			if(stopEffectEA == 0 && (tCNS->speflag == 56)) //"group"
 			{
-				groupFlag = 1;
+				groupFlag = 1; // institute
 			}
-			if(stopEffect == 0 && (tCNS->speflag == 11 )) //"Library"
+			
+			
+			if(stopEffectEA == 0 && (tCNS->speflag == 90)) //"conference(s)"
+			{
+				confFlag = 1; // institute
+			}
+			
+			if(stopEffectEA == 0 && (tCNS->speflag == 30 )
+						|| (tCNS->speflag == 31 )
+						|| (tCNS->speflag == 32 )) // publisher
 			{
 				pressFlag = 1;
 			}
 			
+			if(stopEffectEA == 0 && (tCNS->speflag == 25)) thesisFlag = 1;
+			
 			
 			// number of pure digit except 19xx/20xx
 			if(tCNS->puredigit > 0 && tCNS->yearlike) nextPDigit ++ ;
+			
+			if(stopEffectEA == 0 && (tCNS->speflag == 70)) mitFlag = 1;
+			
+			if((stopEffectEA == 0 ||  stopEffectEA == 2)&& tCNS->ltdflag) ltdFlag = 1;
 			
 			
 			if(!isBlank(tCNS->predeli) && (tCNS->predeli !=':')
@@ -340,6 +365,8 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		int inStatus = 0;
 		int seqFlag = 0;
 		
+		int puredata = 1;
+		
 		paraFlag = 0;
 		sqbFlag = 0;
 		braFlag = 0;
@@ -348,6 +375,8 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		braCache = 0;
 		
 		stopEffect = 0;
+		stopEffectEA = 0;
+		domainNoStop = 1;
 		for(i=1;i < sizeQueue(&preCNSQ) ; i++)
 		{
 			pCrfNodeSnapshot tCNS = pastNElem(&preCNSQ,i);
@@ -355,9 +384,20 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 			if(tCNS->stopflag  == 1 ) stopEffect = 1; 
 			if(tCNS->stopflag  == 2 ) stopEffect = (stopEffect == 1) ? 1 : 2;
 			
+			if(tCNS->stopflag  == 1) stopEffectEA = 1; 
+			if(tCNS->stopflag  == 2 && tCNS->slen > 4) stopEffectEA = (stopEffectEA == 1) ? 1 : 2;
 			
-			if(tCNS->speflag == 7 && i < 4 && !isBlank(tCNS->nextdeli)) httpStatus = 1;
-			if(tCNS->procflag == 1) inStatus = 1;
+			if(!isBlank(tCNS->predeli) && (tCNS->predeli !=':')
+							&& (tCNS->predeli !='/')
+							&& (tCNS->predeli !='.')
+							&& (tCNS->predeli !=',')) // for err
+			{
+				domainNoStop = 0;
+			}
+
+			if(tCNS->speflag == 20 && domainNoStop ) httpStatus = 1;
+			if(tCNS->procflag == 1 ) inStatus = 1;			
+
 			
 			// couple delimiter
 			if(tCNS->pareEflag) paraCache++;
@@ -463,6 +503,23 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 			braStatus[2] = 1;
 		}
 		
+		// xxxx ( abcd )  or xxxx , (abcd)
+		// in template
+		int contentConnect = 0;
+		if(pareStatus[0] == 1)
+		{
+			for(i=1;i < sizeQueue(&preCNSQ) ; i++)
+			{
+				pCrfNodeSnapshot tCNS = pastNElem(&preCNSQ,i);
+				if(tCNS->predeli == '(')
+				{
+					tCNS = pastNElem(&preCNSQ,i+1);
+					if(tCNS->nextdeli == '(') contentConnect = 1;
+					break;
+				}
+			}
+		}
+		
 		
 		// combined string , combine with next string
 		char combinedStr[1024];
@@ -530,7 +587,7 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 			
 		// 15: page like
 		fprintf(fp,"%d\t",pCNS->pagelike);
-		
+
 		
 		// base::dict
 		// 16: name in dict
@@ -574,20 +631,29 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		// base::flags
 		
 		// 32 basic flags
+		// special flag (mixed)
 		fprintf(fp,"%d\t",pCNS->speflag);
+		
+		// 33 stop flag 1:'.','!','?' 2:',' 
 		fprintf(fp,"%d\t",pCNS->stopflag);
 		
+		// 34 eds flag
+		fprintf(fp,"%d\t",edsFlag);
 		
-		
+		// 35: name like
+		fprintf(fp,"%d\t",pCNS->namelike);
 		
 		
 		// extend::flags effect
+		// 36 number of next pure digit
+		fprintf(fp,"%d\t",nextPDigit);
+		
 		
 		// http effect
+		fprintf(fp,"%d\t",httpStatus);
 		
 		
-		
-		
+		fprintf(fp,"%d\t",domainFlag);
 		
 		
 		// extend::mix effect
@@ -606,43 +672,79 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		}else
 			fprintf(fp,"0\t");
 		
+		// article xxxx, A process of ...
+		fprintf(fp,"%d|%d\t",pCNS->isArticle,pCNS->nextdeli);
 		
 		// ph D  str cmp
+		if((strcasecmp("ph",pCNS->str)== 0 && npCNS->str[0] == D)
+			|| strcasecmp("phD",pCNS->str)== 0)
+			fprintf(fp,"1\t");
+		else
+			fprintf(fp,"0\t");
 		
 		// xxx thesis thesis : 25
+		fprintf(fp,"%d\t",thesisFlag);
 		
 		// inc ltd limited  : ltdflag 1 2 3
+		fprintf(fp,"%d\t",ltdFlag);
 		
 		// conference 
 		
 		// ACM / ICPC / IEEE
+		fprintf(fp,"%d\t",pCNS->speflag == 1); // ISO
+		fprintf(fp,"%d\t",pCNS->speflag == 2); // IEEE
+		fprintf(fp,"%d\t",pCNS->speflag == 3); // ACM
 		
 		// CNAC AECSA SRCD ... 
+		fprintf(fp,"%d\t",pCNS->strtype == 0 &&  pCNS->slen < 6 && pCNS->slen > 2);
 		
 		// rfc || request 
 		
 		
 		// MIT
+		fprintf(fp,"%d\t",mitFlag);
 		
 		// university of 
+		fprintf(fp,"%d\t",uniFlag);
+		
+		fprintf(fp,"%d\t",pCNS->uniflag);
+		
+		fprintf(fp,"%d|%d\t",pCNS->predeli,pCNS->uniflag);
 		
 		// (August 1-2 2013)
+		// how about ?
 		
 		// xxxx , (adfadf) or xxxx (adfasf)
+		fprintf(fp,"%d\t",contentConnect);
 		
 		//technical report
 		
 		// in proceedings of
+		fprintf(fp,"%d\t",pCNS->procflag == 1); // In
+		fprintf(fp,"%d\t",(pCNS->procflag == 1) && ((npCNS->namelike)||(npCNS->isNameDict )
+									|| (npCNS->rLastNameDict > 0)));
+		
+		fprintf(fp,"%d\t",inStatus);
+		fprintf(fp,"%d\t",inStatus && ((pCNS->namelike)||(pCNS->isNameDict ) || (pCNS->rLastNameDict > 0)));
+		
+		// department of / dept. of 
+		fprintf(fp,"%d\t",pCNS->deptflag);
+		
+		// press
+		fprintf(fp,"%d\t",pressFlag);
 		
 		
+		// conf / journal
+
 		
+		// org
 		
+		// group
+		fprintf(fp,"%d\t",groupFlag);
 		
+		// lib ins/pub
 		
-		
-		
-		
-		
+		// isbn
 		
 		
 		
