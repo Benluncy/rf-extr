@@ -356,12 +356,8 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 			if(tCNS->stopflag  == 2 ) stopEffect = (stopEffect == 1) ? 1 : 2;
 			
 			
-			if(tCNS->speflag == 7 && i < 4 && !isBlank(tCNS->nextdeli))
-				httpStatus = 1;
-			if(tCNS->stopflag  == 2 ) noStopEffect = 0; 
-			
-			if(tCNS->procflag == 1)
-				inStatus = 1;
+			if(tCNS->speflag == 7 && i < 4 && !isBlank(tCNS->nextdeli)) httpStatus = 1;
+			if(tCNS->procflag == 1) inStatus = 1;
 			
 			// couple delimiter
 			if(tCNS->pareEflag) paraCache++;
