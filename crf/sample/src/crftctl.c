@@ -413,7 +413,7 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 				quotTime = 10;
 			else
 				quotTime = -10;
-		}else(pCNS->quotflag > 0 && pCNS->quotflag%2 == 0)
+		}else if(pCNS->quotflag > 0 && pCNS->quotflag%2 == 0)
 		{
 			quotStatus[1] = quotStatus[2] = 1;
 			quotTime = 0;
