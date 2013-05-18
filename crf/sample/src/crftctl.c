@@ -538,7 +538,8 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		fprintf(fp,"%d\t",pCNS->isNameDict || pCNS->rLastNameDict > 0);
 		
 		// 16: place in dict
-		pCNS->isPlaceNameDict = pCNS->isPlaceNameDict || isPlaceNameInDict(combinedStr);		pCNS->isCountryDict = pCNS->isCountryDict || isCountryNameInDict(combinedStr);
+		pCNS->isPlaceNameDict = pCNS->isPlaceNameDict || isPlaceNameInDict(combinedStr);		
+		pCNS->isCountryDict = pCNS->isCountryDict || isCountryInDict(combinedStr);
 		fprintf(fp,"%d\t",pCNS->isPlaceNameDict>0 || pCNS->isCountryDict > 0);
 		
 		// 17: publisher in dict
