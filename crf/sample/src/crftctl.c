@@ -288,6 +288,7 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		int labFlag = 0; // 
 		int techFlag = 0;
 		int repFlag = 0;
+		//int resFlag = 0; // research
 		
 		int nextPDigit = 0; // next pure digit
 		int domainFlag = 0;
@@ -325,9 +326,10 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 			}
 			
 			
-			if((stopEffectEA == 0 )&& (tCNS->speflag == 90)) //"conference(s)"
+			if((stopEffectEA == 0 )&& ((tCNS->speflag == 90)||
+							(tCNS->speflag == 79))) //"conference(s)"
 			{
-				confFlag = 1; // institute
+				confFlag = 1; // journal
 			}
 			
 			if((stopEffectEA == 0) && ((tCNS->speflag == 30 )
@@ -335,6 +337,30 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 						|| (tCNS->speflag == 32 ))) // publisher
 			{
 				pressFlag = 1;
+			}
+			
+			if((stopEffectEA == 0) && ((tCNS->speflag == 77 )
+						|| (tCNS->speflag == 78 ))) // publisher||institute
+			{
+				orgFlag = 1;
+			}
+			
+			if((stopEffectEA == 0) && (((tCNS->speflag >= 71 )
+						&&(tCNS->speflag <= 75 ))) // institute
+			{
+				labFlag = 1;
+			}
+			
+			if((stopEffectEA == 0) && ((tCNS->speflag == 50 )
+						|| (tCNS->speflag == 53 )
+						|| (tCNS->speflag == 54 ))) // publisher
+			{
+				techFlag = 1;
+			}
+			
+			if((stopEffectEA == 0) && ((tCNS->speflag == 55 ))) // publisher
+			{
+				repFlag = 1;
 			}
 			
 			if(stopEffectEA == 0 && (tCNS->speflag == 25)) thesisFlag = 1;
@@ -398,7 +424,52 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 			}
 
 			if(tCNS->speflag == 20 && domainNoStop ) httpStatus = 1;
-			if(tCNS->procflag == 1 ) inStatus = 1;			
+			if(tCNS->procflag == 1 ) inStatus = 1;
+			
+			////////////////////////////////////////////////////////////////////
+			if(stopEffectEA == 0 && (tCNS->speflag == 56)) //"group"
+			{
+				groupFlag = 1; // institute
+			}
+			
+			
+			if((stopEffectEA == 0 )&& ((tCNS->speflag == 90)||
+							(tCNS->speflag == 79))) //"conference(s)"
+			{
+				confFlag = 1; // journal
+			}
+			
+			if((stopEffectEA == 0) && ((tCNS->speflag == 30 )
+						|| (tCNS->speflag == 31 )
+						|| (tCNS->speflag == 32 ))) // publisher
+			{
+				pressFlag = 1;
+			}
+			
+			if((stopEffectEA == 0) && ((tCNS->speflag == 77 )
+						|| (tCNS->speflag == 78 ))) // publisher||institute
+			{
+				orgFlag = 1;
+			}
+			
+			if((stopEffectEA == 0) && (((tCNS->speflag >= 71 )
+						&&(tCNS->speflag <= 75 ))) // institute
+			{
+				labFlag = 1;
+			}
+			
+			if((stopEffectEA == 0) && ((tCNS->speflag == 50 )
+						|| (tCNS->speflag == 53 )
+						|| (tCNS->speflag == 54 ))) // publisher
+			{
+				techFlag = 1;
+			}
+			
+			if((stopEffectEA == 0) && ((tCNS->speflag == 55 ))) // publisher
+			{
+				repFlag = 1;
+			}
+			////////////////////////////////////////////////////////////////////		
 
 			
 			// couple delimiter
