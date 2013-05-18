@@ -325,14 +325,14 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 			}
 			
 			
-			if(stopEffectEA == 0 && (tCNS->speflag == 90)) //"conference(s)"
+			if((stopEffectEA == 0 )&& (tCNS->speflag == 90)) //"conference(s)"
 			{
 				confFlag = 1; // institute
 			}
 			
-			if(stopEffectEA == 0 && (tCNS->speflag == 30 )
+			if((stopEffectEA == 0) && ((tCNS->speflag == 30 )
 						|| (tCNS->speflag == 31 )
-						|| (tCNS->speflag == 32 )) // publisher
+						|| (tCNS->speflag == 32 ))) // publisher
 			{
 				pressFlag = 1;
 			}
