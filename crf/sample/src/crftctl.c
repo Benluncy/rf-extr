@@ -345,7 +345,7 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 				orgFlag = 1;
 			}
 			
-			if((stopEffectEA == 0) && (((tCNS->speflag >= 71 )
+			if((stopEffectEA == 0) && ((tCNS->speflag >= 71 )
 						&&(tCNS->speflag <= 75 ))) // institute
 			{
 				labFlag = 1;
@@ -452,7 +452,7 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 				orgFlag = 1;
 			}
 			
-			if((stopEffectEA == 0) && (((tCNS->speflag >= 71 )
+			if((stopEffectEA == 0) && ((tCNS->speflag >= 71 )
 						&&(tCNS->speflag <= 75 ))) // institute
 			{
 				labFlag = 1;
