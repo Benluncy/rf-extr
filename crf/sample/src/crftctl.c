@@ -367,7 +367,7 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		int inStatus = 0;
 		int seqFlag = 0;
 		
-		int puredata = 1;
+		//int puredata = 1;
 		
 		paraFlag = 0;
 		sqbFlag = 0;
