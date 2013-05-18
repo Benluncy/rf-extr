@@ -283,16 +283,18 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		int mitFlag = 0;
 		int groupFlag = 0;
 		int pressFlag = 0;
-		int confFlag = 0;
-		int orgFlag = 0;
-		
+		int confFlag = 0; // conferences
+		int orgFlag = 0; // organization (as,etc.)
+		int labFlag = 0; // 
+		int techFlag = 0;
+		int repFlag = 0;
 		
 		int nextPDigit = 0; // next pure digit
 		int domainFlag = 0;
 		int domainNoStop = 1;
 		int i;
 		
-		int 
+		
 		
 		int stopEffect = 0; // XXXX XXXX XXXX
 			// 2:  ',' 
