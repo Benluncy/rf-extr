@@ -690,8 +690,6 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		// inc ltd limited  : ltdflag 1 2 3
 		fprintf(fp,"%d\t",ltdFlag);
 		
-		// conference 
-		
 		// ACM / ICPC / IEEE
 		fprintf(fp,"%d\t",pCNS->speflag == 1); // ISO
 		fprintf(fp,"%d\t",pCNS->speflag == 2); // IEEE
@@ -701,6 +699,8 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		fprintf(fp,"%d\t",pCNS->strtype == 0 &&  pCNS->slen < 6 && pCNS->slen > 2);
 		
 		// rfc || request 
+		fprintf(fp,"%d\t",techFlag);
+		fprintf(fp,"%d\t",repFlag);
 		
 		
 		// MIT
@@ -737,17 +737,20 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		
 		
 		// conf / journal
+		fprintf(fp,"%d\t",confFlag);
 
 		
 		// org
+		fprintf(fp,"%d\t",orgFlag);
 		
 		// group
 		fprintf(fp,"%d\t",groupFlag);
 		
 		// lib ins/pub
+		fprintf(fp,"%d\t",labFlag);
 		
 		// isbn
-		
+		fprintf(fp,"%d\t",isbnEffect);
 		
 		
 		
