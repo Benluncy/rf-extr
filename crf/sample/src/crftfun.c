@@ -141,8 +141,9 @@ int vollkwd(const char *str,int len)
 	if(strcasecmp(str,"voI")==0) return 1;
 	if(strncasecmp(str,"volume",6)==0) return 1;
 	
-	if(strncasecmp(str,"num",3)==0) return 2;
-	if(strncasecmp(str,"No",2)==0) return 2;
+	if(strcasecmp(str,"number")==0) return 2;
+	if(strcasecmp(str,"num")==0) return 2;
+	if(strcasecmp(str,"No")==0) return 2;
 	if(len == 1 && str[0] == 'n') return 2;
 	
 	if(strcasecmp(str,"article")==0) return 3;

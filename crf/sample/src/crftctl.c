@@ -40,7 +40,7 @@ int filteredTokenId(int offset)
 		// RefA 1
 		// SinRef 2
 		// tech 13
-		if(nowTag != 1 && nowTag != 2 && nowTag != 10 ) // ingore RefA && SinRef
+		if(nowTag != 1 && nowTag != 2 && nowTag != 10 ) // ingore RefA , SinRef , note
 		{
 			finalTag =  nowTag;
 		}	
@@ -94,10 +94,11 @@ int ftEnQueue(pCNSQ Q,int *currentOffset,char *mpredeli)
 				partStr[psI]='\0';
 				isPublisher = isPublisher || isPublisherInDict(partStr); 
 			}
+			crfNodeSnapshot.quotflag = 0
 			switch(content[i])
 			{
 				case '\"':
-					crfNodeSnapshot.quotflag = 1;
+					crfNodeSnapshot.quotflag ++;
 					break;
 				case '(':
 					crfNodeSnapshot.pareSflag = 1;
@@ -123,7 +124,7 @@ int ftEnQueue(pCNSQ Q,int *currentOffset,char *mpredeli)
 					crfNodeSnapshot.stopflag = 1;
 					break;
 				case ',':
-					crfNodeSnapshot.stopflag = 2;
+					crfNodeSnapshot.stopflag = crfNodeSnapshot.stopflag == 1 ? 1: 2;
 					break;
 			}
 		}
@@ -228,8 +229,7 @@ int genCRFSampleCtl(const char* fileName,int isDir)
  	initContent();
 	if(!parseFile(fileName))
 	{
-		fprintf(stderr,"[[error parsing file : #%s#]]",fileName);
-		getchar();
+		fprintf(stderr,"[E] error parsing file : #%s#%s\n",fileName,__FILE__);
 		return 0;
 	}
 	
@@ -245,17 +245,23 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 	int httpStatus = 0;
 	//int httpTime = 0;
 	
-	int quotStatus = 0;
+	int quotStatus[2];//  AT/NA IN/NIN OUT/NOUT
 	int quotTime = 0;
 	
-	int pareStatus = 0;
-	int paraTime = 0;
+	int pareStatus[3];// AT/NA IN/NIN OUT/NOUT 
+	int paraFlag = 0;
 	
-	int sqbStatus = 0;
-	int sqbTime = 0;
+	int sqbStatus[3];// AT/NAT IN/NIN OUT/NOUT 
+	int sqbFlag = 0;
 	
-	int braStatus = 0;
-	int braTime = 0;
+	int braStatus[3];// AT/NAT IN/NIN OUT/NOUT
+	int braFlag = 0;
+	
+	
+	// to make sure data is like this : )<<ignore this |from here to calculate>> ((()))
+	int paraCache = 0; 
+	int sqbCache = 0;
+	int braCache = 0;
 	
 	int isbnEffect = 0;
 
@@ -268,30 +274,193 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		pCrfNodeSnapshot npCNS = nextNElem(&nextCNSQ,1); // next one node
 		
 		// 0.1 TRAVERSAL ALL PAST && NEXT INFO , GET FLAGS
+		int ltdFlag = 0;
+		int edsFlag = 0;
+		int uniFlag = 0;
+		int groupFlag = 0;
+		int pressFlag = 0;
 		
+		int nextPDigit = 0; // next pure digit
+		int domainFlag = 0;
+		int domainNoStop = 1;
+		int i;
+		
+		int stopEffect = 0; //
+			// 2:  ',' 
+			// 1:  '.','?','!'..  
+		
+		// 0.1.1 NEXT 
+		for(i=1;i < sizeQueue(&nextCNSQ) ; i++)
+		{
+			pCrfNodeSnapshot tCNS = nextNElem(&nextCNSQ,i);
+			if(tCNS->ltdflag == 1 && i < 4)
+				ltdFlag = 1;
+			if(tCNS->edsflag == 1)
+				edsFlag = 1;
+			if(tCNS->uniflag == 1 && i < 3)
+				uniFlag = 1;
+				
+			// effect : 1: ',' 2:'.''?''!'	
+			if(tCNS->stopflag  == 1 ) stopEffect = 1; 
+			if(tCNS->stopflag  == 2 ) stopEffect (stopEffect == 1) ? 1 : 2;
+			
+			
+			if(stopEffect == 0 && (tCNS->speflag == 25 || tCNS->speflag == 16
+							 || tCNS->speflag == 15
+							 || tCNS->speflag == 45 )) //"Library"
+			{
+				groupFlag = 1;
+			}
+			if(stopEffect == 0 && (tCNS->speflag == 11 )) //"Library"
+			{
+				pressFlag = 1;
+			}
+			
+			
+			// number of pure digit except 19xx/20xx
+			if(tCNS->puredigit > 0 && tCNS->yearlike) nextPDigit ++ ;
+			
+			
+			if(!isBlank(tCNS->predeli) && (tCNS->predeli !=':')
+							&& (tCNS->predeli !='/')
+							&& (tCNS->predeli !='.')
+							&& (tCNS->predeli !=',')) // for err
+			{
+				domainNoStop = 0;
+			}
+			
+			if(domainNoStop && tCNS->domainflag)
+			{
+				domainFlag = 1;
+			}
+		}
+		
+		// 0.1.2 PREVIOUS
+		httpStatus = 0;
+		int inStatus = 0;
+		int seqFlag = 0;
+		
+		paraFlag = 0;
+		sqbFlag = 0;
+		braFlag = 0;
+		paraCache = 0; 
+		sqbCache = 0;
+		braCache = 0;
+		
+		noStopEffect = 2;
+		for(i=1;i < sizeQueue(&preCNSQ) ; i++)
+		{
+			pCrfNodeSnapshot tCNS = pastNElem(&preCNSQ,i);
+			if(tCNS->speflag == 7 && i < 4 && !isBlank(tCNS->nextdeli))
+				httpStatus = 1;
+			if(tCNS->stopflag  == 2 ) noStopEffect = 0; 
+			
+			if(tCNS->procflag == 1)
+				inStatus = 1;
+			
+			// couple delimiter
+			if(tCNS->pareEflag) paraCache++;
+			if(tCNS->pareSflag)
+			{
+				paraFlag = paraFlag + 1 - paraCache;
+				paraCache = 0;
+			}
+			if(tCNS->sqbEflag) sqbCache++;
+			if(tCNS->sqbSflag)
+			{
+				sqbFlag = sqbFlag + 1 - sqbCache;
+				sqbCache = 0;
+			}
+			if(tCNS->braEflag) braCache++;
+			if(tCNS->braSflag)
+			{
+				braFlag = braFlag + 1 - braCache;
+				braCache = 0;
+			}
+			
+			if(i<3 && tCNS->sqbEflag)
+			{
+				seqFlag = 1;
+			}
+		}
+
+		pareStatus[0] = paraFlag > 0 ;
+		sqbStatus[0] = sqbFlag > 0;
+		braStatus[0] = braFlag > 0;
+
 		
 		
 		
 		// 0.2 SOME MIX FEATURE
 		// \"
 		quotTime--;
+		
 		if(quotTime <= 0)
 		{
-			quotStatus = 0;
+			quotStatus[0] = 0;
 			quotTime = 0;
-		}
-		if(pCNS->quotflag == 1)
+		}else
 		{
-			quotStatus = !quotStatus;
-			if(quotStatus)
+			quotStatus[0] = 1;
+		}
+		quotStatus[1] = 0;
+		quotStatus[2] = 0;
+		if(pCNS->quotflag%2 == 1)
+		{
+			quotStatus[0] = !quotStatus[0];
+			if(quotStatus[0])
 				quotTime = 10;
 			else
 				quotTime = -10;
+		}else(pCNS->quotflag > 0 && pCNS->quotflag%2 == 0)
+		{
+			quotStatus[1] = quotStatus[2] = 1;
+			quotTime = 0;
 		}
+		if(quotTime == 10) quotStatus[1] =  1;
+		else if(quotTime == -10) quotStatus[2] = 1;
 		//((quotTime==10||quotTime==-10)?(quotStatus?"IN":"OUT"):(quotStatus?"AT":"NA"))
 		
 		
+		//////////////////////////////////////////////////////////////////////
 		
+		pareStatus[1] = pareStatus[2] = 0;
+		// para
+		if(pCNS->pareSflag == 1)
+		{
+			pareStatus[1] = 1;
+		}
+		if(pCNS->pareEflag == 1)
+		{
+			pareStatus[2] = 1;
+		}
+		
+		//////////////////////////////////////////////////////////////////////
+		// sqb
+		sqbStatus[1] = sqbStatus[2] = 0;
+		if(pCNS->sqbSflag == 1)
+		{
+			sqbStatus[1] = 1;
+		}
+		
+		if(pCNS->sqbEflag == 1)
+		{
+			sqbStatus[2] = 0;
+		}
+		
+		
+		//////////////////////////////////////////////////////////////////////
+		// bra
+		braStatus[1] = braStatus[2] = 0;
+		if(pCNS->braSflag == 1)
+		{
+			braStatus[1] = 1;
+		}
+		
+		if(pCNS->braEflag == 1)
+		{
+			braStatus[2] = 1;
+		}
 		
 		
 		// combined string , combine with next string
@@ -302,31 +471,193 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		// 1. OUTPUT : PRINT FEATURES
 		
 		// basic
-		fprintf(fp,"%s\t",pCNS->str); // 0: string data
-		fprintf(fp,"%d\t",pCNS->slen); // 1: length of string data
+		// 0: string data
+		fprintf(fp,"%s\t",pCNS->str); 
 		
+		// 1: length of string data 0,1,2,3,4,5,6 >6
+		fprintf(fp,"%d\t",pCNS->slen<7?pCNS->slen:9); 
+
 		
 		// base::string
 		// 2: string type 0:AAA 1:aaa 2:Aaa 3:aAa 4:123
 		fprintf(fp,"%d\t",pCNS->strtype);
 		
-		// 3: sufix 
+		// 3: prefix 
+		fprintf(fp,"%c%c\t",tolower(pCNS->str[0]),(pCNS->slen>1)?tolower(pCNS->str[1]):'X');
+		
+		// 4: sufix 
 		fprintf(fp,"%c%c\t",(pCNS->slen>1)?tolower(pCNS->str[pCNS->slen-2]):'X',
 					tolower(pCNS->str[pCNS->slen-1]));
 		
 		
 		// base::digit
-		// 4: digit value  > 0 ?
+		// 5: digit value  > 0 ?
 		fprintf(fp,"%d\t",pCNS->dval > 0 );
 		
-		// 5: digit bigger than previours one
+		// 6: digit bigger than previours one
 		fprintf(fp,"%d\t",lpCNS==NULL?-1:(lpCNS->dval == 0?-1:(pCNS->dval > lpCNS->dval)));
 		
-		// 6: next one is bigger than this digit 
+		// 7: next one is bigger than this digit 
 		fprintf(fp,"%d\t",npCNS==NULL?-1:(npCNS->dval == 0?-1:(npCNS->dval > pCNS->dval)));
 		
-		// 7: digit a improve digit ? 123456 456 > 123
+		// 8: digit a improve digit ? 123456 456 > 123
 		fprintf(fp,"%d\t",pCNS->imprnum );
+		
+		// 9: is pure digit ? see 'I' 'l' 'O' etc. as digit
+		fprintf(fp,"%d\t",pCNS->puredigit);
+		
+		
+		// base::delimiter
+		// 9: last delimiter
+		fprintf(fp,"%d\t",pCNS->predeli);
+		
+		// 10: last useful delimiter
+		fprintf(fp,"%d\t",pCNS->mpredeli);
+		
+		// 11: next delimiter
+		fprintf(fp,"%d\t",pCNS->nextdeli);
+		
+		
+		
+		// base::string orthographic
+		// 12: year like || month like >> time like
+		fprintf(fp,"%d\t",(pCNS->yearlike > 0 )|| (pCNS->monthlike > 0 ));
+		// 13: volume like  start of volume ?  vol. X num. no. number
+		fprintf(fp,"%d\t",pCNS->volumnlike);
+		// 14: page like
+		fprintf(fp,"%d\t",pCNS->pagelike);
+		
+		
+		// base::dict
+		// 15: name in dict
+		fprintf(fp,"%d\t",pCNS->isNameDict || pCNS->rLastNameDict > 0);
+		
+		// 16: place in dict
+		pCNS->isPlaceNameDict = pCNS->isPlaceNameDict || isPlaceNameInDict(combinedStr);		pCNS->isCountryDict = pCNS->isCountryDict || isCountryNameInDict(combinedStr);
+		fprintf(fp,"%d\t",pCNS->isPlaceNameDict>0 || pCNS->isCountryDict > 0);
+		
+		// 17: publisher in dict
+		pCNS->isPubliserDict = pCNS->isPubliserDict || isPublisherInDict(combinedStr);
+		fprintf(fp,"%d\t",pCNS->isPubliserDict);
+		
+		// 18: fun word in dict 
+		fprintf(fp,"%d\t",pCNS->isFunWordDict);
+
+		// base::couple flag ststus
+		
+		// 19,20,21 quots AT IN OUT
+		fprintf(fp,"%d\t",quotStatus[0]);
+		fprintf(fp,"%d\t",quotStatus[1]);
+		fprintf(fp,"%d\t",quotStatus[2]);
+		
+		
+		// 22,23,24 Parentheses AT IN OUT
+		fprintf(fp,"%d\t",pareStatus[0]);
+		fprintf(fp,"%d\t",pareStatus[1]);
+		fprintf(fp,"%d\t",pareStatus[2]);
+		
+		// 25,26,27 Square brackets AT IN OUT
+		fprintf(fp,"%d\t",sqbStatus[0]);
+		fprintf(fp,"%d\t",sqbStatus[1]);
+		fprintf(fp,"%d\t",sqbStatus[2]);
+		
+		// 28,29,30 Braces AT IN OUT
+		fprintf(fp,"%d\t",braStatus[0]);
+		fprintf(fp,"%d\t",braStatus[1]);
+		fprintf(fp,"%d\t",braStatus[2]);
+		
+		// base::flags
+		
+		// 31 basic flags
+		fprintf(fp,"%d\t",pCNS->speflag);
+		
+		
+		
+		
+		
+		
+		// extend::flags effect
+		
+		// http effect
+		
+		
+		
+		
+		
+		
+		// extend::mix effect
+		// [abc def] author @ abc
+		if(pCNS->mpredeli == '[' && npCNS != NULL)
+		{
+			if(npCNS->nextdeli == ']') fprintf(fp,"1\t");
+			else fprintf(fp,"0\t");
+		}else
+			fprintf(fp,"0\t");
+		
+		// [abc def] author @ def
+		if(pCNS->nextdeli == ']' && seqFlag == 1)
+		{
+			fprintf(fp,"1\t");
+		}else
+			fprintf(fp,"0\t");
+		
+		
+		// ph D 
+		
+		// xxx thesis
+		
+		// inc ltd limited 
+		
+		// conference 
+		
+		// ACM / ICPC / IEEE
+		
+		// CNAC AECSA SRCD ... 
+		
+		// rfc || request 
+		
+		
+		// MIT
+		
+		// university of 
+		
+		// (August 1-2 2013)
+		
+		// xxxx , (adfadf) or xxxx (adfasf)
+		
+		//technical report
+		
+		// in proceedings of
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
 		
 		
 		// 2. END : PRINT RESULT
@@ -336,9 +667,9 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 				(lpCNS->token == 6 && npCNS->token == 6))
 				fprintf(fp,"%s\n",id2Token(lpCNS->token));
 			else
-				fprintf(fp,"%s\n",pCNS->token == 0 ? "0":id2Token(pCNS->token));	
+				fprintf(fp,"%s\n",pCNS->token == 0 ? "other":id2Token(pCNS->token));	
 		}else
-			fprintf(fp,"%s\n",pCNS->token == 0 ? "0":id2Token(pCNS->token));
+			fprintf(fp,"%s\n",pCNS->token == 0 ? "other":id2Token(pCNS->token));
 		
 		//enQueue && store
 		enQueueWithDrop(&preCNSQ,*pCNS);

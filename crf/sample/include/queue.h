@@ -41,7 +41,7 @@ typedef struct
 	int sqbEflag;
 	int braSflag;//Braces
 	int braEflag;
-	int stopflag;
+	int stopflag; //  :2 ','   :1'.''!''?' 
 	int domainflag;
 	int imprnum;// [123][456] >0 , <0 , ==0
 }CrfNodeSnapshot,*pCrfNodeSnapshot;
