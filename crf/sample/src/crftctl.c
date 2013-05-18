@@ -429,45 +429,45 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 			////////////////////////////////////////////////////////////////////
 			if(stopEffectEA == 0 && (tCNS->speflag == 56)) //"group"
 			{
-				groupFlag = 1; // institute
+				groupFlag = 2; // institute
 			}
 			
 			
 			if((stopEffectEA == 0 )&& ((tCNS->speflag == 90)||
 							(tCNS->speflag == 79))) //"conference(s)"
 			{
-				confFlag = 1; // journal
+				confFlag = 2; // journal
 			}
 			
 			if((stopEffectEA == 0) && ((tCNS->speflag == 30 )
 						|| (tCNS->speflag == 31 )
 						|| (tCNS->speflag == 32 ))) // publisher
 			{
-				pressFlag = 1;
+				pressFlag = 2;
 			}
 			
 			if((stopEffectEA == 0) && ((tCNS->speflag == 77 )
 						|| (tCNS->speflag == 78 ))) // publisher||institute
 			{
-				orgFlag = 1;
+				orgFlag = 2;
 			}
 			
 			if((stopEffectEA == 0) && ((tCNS->speflag >= 71 )
 						&&(tCNS->speflag <= 75 ))) // institute
 			{
-				labFlag = 1;
+				labFlag = 2;
 			}
 			
 			if((stopEffectEA == 0) && ((tCNS->speflag == 50 )
 						|| (tCNS->speflag == 53 )
 						|| (tCNS->speflag == 54 ))) // publisher
 			{
-				techFlag = 1;
+				techFlag = 2;
 			}
 			
 			if((stopEffectEA == 0) && ((tCNS->speflag == 55 ))) // publisher
 			{
-				repFlag = 1;
+				repFlag = 2;
 			}
 			////////////////////////////////////////////////////////////////////		
 
