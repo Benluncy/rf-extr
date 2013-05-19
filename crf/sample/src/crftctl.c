@@ -119,10 +119,12 @@ int ftEnQueue(pCNSQ Q,int *currentOffset,char *mpredeli)
 					break;
 				case '}':
 					crfNodeSnapshot.braEflag = 1;
-					break;
-				case '?':
+					break;	
 				case '.':
+					if(slen < 5 && str[0]>='A' && str[0] <='Z') break; 
+					// filter Abbreviation
 				case '!':
+				case '?':
 					crfNodeSnapshot.stopflag = 1;
 					break;
 				case ',':
@@ -315,9 +317,16 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 			// effect : 1:'.''?''!'  2:','	
 			if(i>0)
 			{
-				if(tCNS->stopflag  == 1) stopEffectEA = 1; 
-				if(tCNS->stopflag  == 2 && tCNS->slen > 4) stopEffectEA = (stopEffectEA == 1) ? 1 : 2;
-			
+				if(tCNS->stopflag  == 1)
+				{
+					if(!((tCNS->slen <=4) && (tCNS[0]>='A')&&(tCNS[0]<='Z'))
+						stopEffectEA = 1;
+				} 
+				if(tCNS->stopflag  == 2)
+				{
+					if(!((tCNS->slen <=4) && (tCNS[0]>='A')&&(tCNS[0]<='Z'))
+						stopEffectEA = (stopEffectEA == 1) ? 1 : 2;
+				}
 				if(tCNS->stopflag  == 1 ) stopEffect = 1; 
 				if(tCNS->stopflag  == 2 ) stopEffect = (stopEffect == 1) ? 1 : 2;
 			}
@@ -426,8 +435,16 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 				if(tCNS->stopflag  == 1 ) stopEffect = 1; 
 				if(tCNS->stopflag  == 2 ) stopEffect = (stopEffect == 1) ? 1 : 2;
 			
-				if(tCNS->stopflag  == 1) stopEffectEA = 1; 
-				if(tCNS->stopflag  == 2 && tCNS->slen > 4) stopEffectEA = (stopEffectEA == 1) ? 1 : 2;
+				if(tCNS->stopflag  == 1)
+				{
+					if(!((tCNS->slen <=4) && (tCNS[0]>='A')&&(tCNS[0]<='Z'))
+						stopEffectEA = 1;
+				} 
+				if(tCNS->stopflag  == 2)
+				{
+					if(!((tCNS->slen <=4) && (tCNS[0]>='A')&&(tCNS[0]<='Z'))
+						stopEffectEA = (stopEffectEA == 1) ? 1 : 2;
+				}
 			}
 	
 			if(tCNS->edsflag == 1) edsFlag = 1;
