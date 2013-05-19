@@ -423,11 +423,11 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 			
 			if(i>0)
 			{
-			if(tCNS->stopflag  == 1 ) stopEffect = 1; 
-			if(tCNS->stopflag  == 2 ) stopEffect = (stopEffect == 1) ? 1 : 2;
+				if(tCNS->stopflag  == 1 ) stopEffect = 1; 
+				if(tCNS->stopflag  == 2 ) stopEffect = (stopEffect == 1) ? 1 : 2;
 			
-			if(tCNS->stopflag  == 1) stopEffectEA = 1; 
-			if(tCNS->stopflag  == 2 && tCNS->slen > 4) stopEffectEA = (stopEffectEA == 1) ? 1 : 2;
+				if(tCNS->stopflag  == 1) stopEffectEA = 1; 
+				if(tCNS->stopflag  == 2 && tCNS->slen > 4) stopEffectEA = (stopEffectEA == 1) ? 1 : 2;
 			}
 	
 			if(tCNS->edsflag == 1) edsFlag = 1;
@@ -858,7 +858,7 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		fprintf(fp,"%d\t",isbnEffect);
 		
 		// 67 group lab or dept
-		fprintf(fp,"%d\t",labFlag||groupFlag);
+		fprintf(fp,"%d\t",labFlag > 0 ||groupFlag > 0 || groupFlag > 0);
 		
 		
 		// 68 eds point

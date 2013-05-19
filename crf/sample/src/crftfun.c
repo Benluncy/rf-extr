@@ -280,7 +280,8 @@ int deptFlag(const char *str)
 
 int uniFlag(const char *str)
 {
-	if(strncasecmp(str,"university",10)==0) return 1;
+	if(strncasecmp(str,"universit",9)==0) return 1;
+	if(strcasecmp(str,"univ")==0) return 1;
 	return 0;
 }
 
