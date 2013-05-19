@@ -277,6 +277,7 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		fexp = fopen(exportFileName,"a");
 		fseek(fexp, 0L, SEEK_END);
 		fprintf(fexp,"%s\n",fileName);
+		fflush(NULL);
 		fclose(fexp);
 	}
 	
@@ -285,8 +286,8 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		sprintf(exportFileName,"res/%s",id2Token(pCNS->token));
 		fexp = fopen(exportFileName,"a");
 		fseek(fexp, 0L, SEEK_END);
-		fprintf(fexp,"%s ~ ",pCNS->str);
-		fprintf(fexp,"[%d]::[%d]\n",pCNS->isPubliserDict,pCNS->isPlaceNameDict|| pCNS->isCountryDict);
+		fprintf(fexp,"%s ~ [%d]::[%d]\n",pCNS->str,pCNS->isPubliserDict,pCNS->isPlaceNameDict|| pCNS->isCountryDict);
+		fflush(NULL);
 		fclose(fexp);
 		// 0. PREPARE : FLAGS
 		

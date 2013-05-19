@@ -310,9 +310,14 @@ int isArticle(const char *str,int len)
 
 int domainFlag(const char *str)
 {
-	if(strcasecmp(str,"net")==0) return 1;
-	if(strcasecmp(str,"edu")==0) return 1;
-	if(strcasecmp(str,"com")==0) return 1;
+	if(strcmp(str,"net")==0) return 1;
+	if(strcmp(str,"edu")==0) return 1;
+	if(strcmp(str,"com")==0) return 1;
+	if(strcmp(str,"uk")==0) return 1;
+	if(strcmp(str,"ac")==0) return 1;
+	if(strcmp(str,"html")==0) return 1;
+	if(strcmp(str,"gov")==0) return 1;
+	
 	return 0;
 }
 
