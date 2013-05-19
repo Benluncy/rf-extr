@@ -910,7 +910,7 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		
 		
 		// et , al
-		fprintf(fp,"%d\t",strcmp(pCNS->str,"et"),strcmp(pCNS->str,"al"));
+		fprintf(fp,"%d\t",(strcmp(pCNS->str,"et")==0)||(strcmp(pCNS->str,"al") ==0 ));
 		
 		
 		
