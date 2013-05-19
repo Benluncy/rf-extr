@@ -422,7 +422,7 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 			if(tCNS->stopflag  == 1) stopEffectEA = 1; 
 			if(tCNS->stopflag  == 2 && tCNS->slen > 4) stopEffectEA = (stopEffectEA == 1) ? 1 : 2;
 	
-			if(!puredigit && strtype!=4) puredata = 0;
+			if(!tCNS->puredigit && strtype!=4) puredata = 0;
 			
 			if(puredata && tCNS->specflag == 40) isbnEffect = 1;
 				
