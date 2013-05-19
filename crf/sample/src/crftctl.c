@@ -276,7 +276,7 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		sprintf(exportFileName,"res/%s",id2Token(z));
 		fexp = fopen(exportFileName,"a");
 		fseek(fexp, 0L, SEEK_END);
-		fprintf(fexp,"%s\n",fileName);
+		fprintf(fexp,">>%s\n",fileName);
 		fflush(NULL);
 		fclose(fexp);
 	}
@@ -909,8 +909,13 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		fprintf(fp,"%d\t",uniFlag||labFlag); // university , 
 		
 		
-		// et , al
-		fprintf(fp,"%d\t",(strcmp(pCNS->str,"et")==0)||(strcmp(pCNS->str,"al") ==0 ));
+		// 70 et , al
+		if(strcmp(pCNS->str,"et")==0)
+			fprintf(fp,"1\t");
+		else if(strcmp(pCNS->str,"al")
+			fprintf(fp,"2\t");
+		else 
+			fprintf(fp,"0\t");
 		
 		
 		
