@@ -310,15 +310,20 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 			//if(tCNS->ltdflag == 1 && i < 4) ltdFlag = 1;
 			if(tCNS->edsflag == 1)
 				edsFlag = 1;
-			if(tCNS->uniflag == 1 && i < 3)
-				uniFlag = 1;
+			
 				
 			// effect : 1:'.''?''!'  2:','	
-			if(tCNS->stopflag  == 1) stopEffectEA = 1; 
-			if(tCNS->stopflag  == 2 && tCNS->slen > 4) stopEffectEA = (stopEffectEA == 1) ? 1 : 2;
+			if(i>0)
+			{
+				if(tCNS->stopflag  == 1) stopEffectEA = 1; 
+				if(tCNS->stopflag  == 2 && tCNS->slen > 4) stopEffectEA = (stopEffectEA == 1) ? 1 : 2;
 			
-			if(tCNS->stopflag  == 1 ) stopEffect = 1; 
-			if(tCNS->stopflag  == 2 ) stopEffect = (stopEffect == 1) ? 1 : 2;
+				if(tCNS->stopflag  == 1 ) stopEffect = 1; 
+				if(tCNS->stopflag  == 2 ) stopEffect = (stopEffect == 1) ? 1 : 2;
+			}
+			
+			if(tCNS->uniflag == 1 && ((stopEffectEA == 2)||(stopEffectEA == 0)))
+				uniFlag = 1;
 			
 			if(stopEffectEA == 0 && (tCNS->speflag == 56)) //"group"
 			{
@@ -415,11 +420,17 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		for(i=0;i < sizeQueue(&preCNSQ) ; i++)
 		{
 			pCrfNodeSnapshot tCNS = (i==0) ? pCNS : pastNElem(&preCNSQ,i);
+			
+			if(i>0)
+			{
 			if(tCNS->stopflag  == 1 ) stopEffect = 1; 
 			if(tCNS->stopflag  == 2 ) stopEffect = (stopEffect == 1) ? 1 : 2;
 			
 			if(tCNS->stopflag  == 1) stopEffectEA = 1; 
 			if(tCNS->stopflag  == 2 && tCNS->slen > 4) stopEffectEA = (stopEffectEA == 1) ? 1 : 2;
+			}
+	
+			if(tCNS->edsflag == 1) edsFlag = 1;
 	
 			if(!tCNS->puredigit && tCNS->strtype!=4) puredata = 0;
 			
@@ -791,9 +802,9 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		fprintf(fp,"%d\t",mitFlag);
 		
 		// 50 51 52 university of 
-		fprintf(fp,"%d\t",uniFlag);
-		
 		fprintf(fp,"%d\t",pCNS->uniflag);
+		
+		fprintf(fp,"%d\t",uniFlag);
 		
 		//fprintf(fp,"%d/%d\t",pCNS->predeli,pCNS->uniflag);
 		fprintf(fp,"%d/%d\t",lpCNS == NULL ? 0 : lpCNS->stopflag,pCNS->uniflag);
@@ -850,11 +861,12 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		fprintf(fp,"%d\t",labFlag||groupFlag);
 		
 		
+		// 68 eds point
+		fprintf(fp,"%d/%d\t",pCNS->edsflag,pCNS->nextdeli);// 
 		
 		
-		
-		
-		
+		// 69
+		fprintf(fp,"%d\t",uniFlag||labFlag); // university , 
 		
 		
 		
