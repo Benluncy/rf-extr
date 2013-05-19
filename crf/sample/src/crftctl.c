@@ -319,14 +319,15 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 			{
 				if(tCNS->stopflag  == 1)
 				{
-					if(!((tCNS->slen <=4) && (tCNS[0]>='A')&&(tCNS[0]<='Z'))
+					if(!((tCNS->slen <=4) && (tCNS[0]>='A')&&(tCNS[0]<='Z')))
 						stopEffectEA = 1;
 				} 
 				if(tCNS->stopflag  == 2)
 				{
-					if(!((tCNS->slen <=4) && (tCNS[0]>='A')&&(tCNS[0]<='Z'))
+					if(!((tCNS->slen <=4) && (tCNS[0]>='A')&&(tCNS[0]<='Z')))
 						stopEffectEA = (stopEffectEA == 1) ? 1 : 2;
 				}
+				
 				if(tCNS->stopflag  == 1 ) stopEffect = 1; 
 				if(tCNS->stopflag  == 2 ) stopEffect = (stopEffect == 1) ? 1 : 2;
 			}
@@ -437,12 +438,12 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 			
 				if(tCNS->stopflag  == 1)
 				{
-					if(!((tCNS->slen <=4) && (tCNS[0]>='A')&&(tCNS[0]<='Z'))
+					if(!((tCNS->slen <=4) && (tCNS[0]>='A')&&(tCNS[0]<='Z')))
 						stopEffectEA = 1;
 				} 
 				if(tCNS->stopflag  == 2)
 				{
-					if(!((tCNS->slen <=4) && (tCNS[0]>='A')&&(tCNS[0]<='Z'))
+					if(!((tCNS->slen <=4) && (tCNS[0]>='A')&&(tCNS[0]<='Z')))
 						stopEffectEA = (stopEffectEA == 1) ? 1 : 2;
 				}
 			}
