@@ -909,7 +909,8 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		fprintf(fp,"%d\t",uniFlag||labFlag); // university , 
 		
 		
-		
+		// et , al
+		fprintf(fp,"%d\t",strcmp(pCNS->str,"et"),strcmp(pCNS->str,"al"));
 		
 		
 		
