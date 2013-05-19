@@ -306,7 +306,8 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		// 0.1.1 NEXT 
 		for(i=1;i < sizeQueue(&nextCNSQ) ; i++)
 		{
-			pCrfNodeSnapshot tCNS = nextNElem(&nextCNSQ,i);
+			if(i==0) pCrfNodeSnapshot tCNS = pCNS;
+			else pCrfNodeSnapshot tCNS = nextNElem(&nextCNSQ,i);
 			if(tCNS->ltdflag == 1 && i < 4)
 				ltdFlag = 1;
 			if(tCNS->edsflag == 1)
@@ -328,7 +329,8 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 			
 			
 			if((stopEffectEA == 0 )&& ((tCNS->speflag == 90)||
-							(tCNS->speflag == 79))) //"conference(s)"
+							(tCNS->speflag == 79)||
+							(tCNS->speflag == 60))) //"conference(s)"
 			{
 				confFlag = 1; // journal
 			}
@@ -412,10 +414,10 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		stopEffect = 0;
 		stopEffectEA = 0;
 		domainNoStop = 1;
-		for(i=1;i < sizeQueue(&preCNSQ) ; i++)
+		for(i=0;i < sizeQueue(&preCNSQ) ; i++)
 		{
-			pCrfNodeSnapshot tCNS = pastNElem(&preCNSQ,i);
-			
+			if(i==0) pCrfNodeSnapshot tCNS = pCNS;
+			else pCrfNodeSnapshot tCNS = pastNElem(&preCNSQ,i);
 			if(tCNS->stopflag  == 1 ) stopEffect = 1; 
 			if(tCNS->stopflag  == 2 ) stopEffect = (stopEffect == 1) ? 1 : 2;
 			
@@ -445,7 +447,8 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 			
 			
 			if((stopEffectEA == 0 )&& ((tCNS->speflag == 90)||
-							(tCNS->speflag == 79))) //"conference(s)"
+							(tCNS->speflag == 79)||
+							(tCNS->speflag == 60))) //"conference(s)"
 			{
 				confFlag = 2; // journal
 			}
