@@ -207,6 +207,8 @@ int specialFlag(const char *str,int len)
 	if(strncasecmp(str,"Press",5)==0) return 30;
 	if(strncasecmp(str,"Publishing",10)==0) return 31;
 	if(strncasecmp(str,"Publisher",9)==0) return 32;
+	if(strcmp(str,"Pub")==0) return 32;
+	
 
 
 	// isbn	
@@ -252,6 +254,7 @@ int specialFlag(const char *str,int len)
 	
 	
 	if(strcasecmp(str,"Corporation")==0) return 77;
+	if(strcmp(str,"Co")==0) return 77;
 	if(strcasecmp(str,"Organiza­tion")==0) return 78;
 	
 	if(strncasecmp(str,"Journal",7)==0) return 79;
