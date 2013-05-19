@@ -307,8 +307,7 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		for(i=1;i < sizeQueue(&nextCNSQ) ; i++)
 		{
 			pCrfNodeSnapshot tCNS = (i==0)? pCNS : nextNElem(&nextCNSQ,i);
-			if(tCNS->ltdflag == 1 && i < 4)
-				ltdFlag = 1;
+			//if(tCNS->ltdflag == 1 && i < 4) ltdFlag = 1;
 			if(tCNS->edsflag == 1)
 				edsFlag = 1;
 			if(tCNS->uniflag == 1 && i < 3)
@@ -438,7 +437,8 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 			if(tCNS->procflag == 1 ) inStatus = 1;
 			
 			////////////////////////////////////////////////////////////////////
-			if(stopEffectEA == 0 && (tCNS->speflag == 56)) //"group" institute
+			if(stopEffectEA == 0 && ((tCNS->deptflag == 1) 
+						||(tCNS->speflag == 56))) //"group" institute
 			{
 				groupFlag = 2; // institute
 			}
@@ -819,7 +819,7 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		fprintf(fp,"%d\t",inStatus && ((pCNS->namelike)||(pCNS->isNameDict ) || (pCNS->rLastNameDict > 0)));
 		
 		// 58
-		fprintf(fp,"%d\t",(pCNS->procflag == 1) && procFlag);
+		fprintf(fp,"%d\t",(pCNS->procflag == 1) || procFlag);
 		// 59
 		fprintf(fp,"%d\t",procFlag);
 		
@@ -846,8 +846,8 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		// 66 isbn
 		fprintf(fp,"%d\t",isbnEffect);
 		
-		
-		
+		// 67 group lab or dept
+		fprintf(fp,"%d\t",labFlag||groupFlag);
 		
 		
 		

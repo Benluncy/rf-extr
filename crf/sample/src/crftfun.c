@@ -215,11 +215,15 @@ int specialFlag(const char *str,int len)
 	
 	// tech
 	if(strncasecmp(str,"technical",9) == 0 ) return 50;
+	if(strcasecmp(str,"tech") == 0 ) return 50;
 	
 	if(strncasecmp(str,"request",9) == 0 ) return 52;
 	if(strcasecmp(str,"rfc") == 0 ) return 53;
 	if(strcmp(str,"TR") == 0 ) return 54; // tech tech report
 	if(strncasecmp(str,"report",6) == 0 ) return 55; // technical report
+	if(strcasecmp(str,"rept") == 0 ) return 55;
+	if(strcasecmp(str,"rpt") == 0 ) return 55;
+	
 	if(strcasecmp(str,"Thesis") == 0 ) return 25;
 	
 	if(strncasecmp(str,"group",5) == 0 ) return 56; // INSTITUTION xxx group
