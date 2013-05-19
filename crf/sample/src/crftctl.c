@@ -269,8 +269,22 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 	
 	int isbnEffect = 0;
 
+	FILE *fexp;
+	char exportFileName[1024];
+	for(int z=3;z<18;z++)
+	{
+		sprintf(exportFileName,"res/%s",id2token(z));
+		fexp = fopen(exportFileName,"w+");
+		fprintf(fexp,"%s\n",fileName);
+		fclose(fexp);
+	}
+	
 	while((pCNS = ftDeQueue(&nextCNSQ)) != NULL)
 	{
+		sprintf(exportFileName,"res/%s",id2token(z));
+		fexp = fopen(exportFileName,"w+");
+		fprintf(fexp,"%s\n",pCNS->str);
+		fclose(fexp);
 		// 0. PREPARE : FLAGS
 		
 		// 0.0 PAST ONE INFO && NEXT ONE INFO
