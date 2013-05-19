@@ -288,6 +288,7 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		int labFlag = 0; // 
 		int techFlag = 0;
 		int repFlag = 0;
+		int procFlag = 0;
 		//int resFlag = 0; // research
 		
 		int nextPDigit = 0; // next pure digit
@@ -363,6 +364,11 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 				repFlag = 1;
 			}
 			
+			if((stopEffectEA == 0) && ((tCNS->procflag > 1))) // publisher
+			{
+				procFlag = 1;
+			}
+			
 			if(stopEffectEA == 0 && (tCNS->speflag == 25)) thesisFlag = 1;
 			
 			
@@ -386,6 +392,7 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 			{
 				domainFlag = 1;
 			}
+			
 		}
 		
 		// 0.1.2 PREVIOUS
@@ -393,7 +400,7 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		int inStatus = 0;
 		int seqFlag = 0;
 		
-		//int puredata = 1;
+		int puredata = 1;
 		
 		paraFlag = 0;
 		sqbFlag = 0;
@@ -414,7 +421,11 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 			
 			if(tCNS->stopflag  == 1) stopEffectEA = 1; 
 			if(tCNS->stopflag  == 2 && tCNS->slen > 4) stopEffectEA = (stopEffectEA == 1) ? 1 : 2;
+	
+			if(!puredigit && strtype!=4) puredata = 0;
 			
+			if(puredata && tCNS->specflag == 40) isbnEffect = 1;
+				
 			if(!isBlank(tCNS->predeli) && (tCNS->predeli !=':')
 							&& (tCNS->predeli !='/')
 							&& (tCNS->predeli !='.')
@@ -427,7 +438,7 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 			if(tCNS->procflag == 1 ) inStatus = 1;
 			
 			////////////////////////////////////////////////////////////////////
-			if(stopEffectEA == 0 && (tCNS->speflag == 56)) //"group"
+			if(stopEffectEA == 0 && (tCNS->speflag == 56)) //"group" institute
 			{
 				groupFlag = 2; // institute
 			}
@@ -559,7 +570,7 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		
 		if(pCNS->sqbEflag == 1)
 		{
-			sqbStatus[2] = 0;
+			sqbStatus[2] = 1;
 		}
 		
 		
@@ -722,15 +733,15 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		fprintf(fp,"%d\t",nextPDigit);
 		
 		
-		// http effect
+		// 37 http effect
 		fprintf(fp,"%d\t",httpStatus);
 		
-		
+		// 38
 		fprintf(fp,"%d\t",domainFlag);
 		
 		
 		// extend::mix effect
-		// [abc def] author @ abc
+		// 39 [abc def] author @ abc
 		if(pCNS->mpredeli == '[' && npCNS != NULL)
 		{
 			if(npCNS->nextdeli == ']') fprintf(fp,"1\t");
@@ -745,82 +756,93 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		}else
 			fprintf(fp,"0\t");
 		
-		// article xxxx, A process of ...
-		fprintf(fp,"%d|%d\t",pCNS->isArticle,pCNS->nextdeli);
+		// 40 article xxxx, A process of ...
+		fprintf(fp,"%d/%d\t",pCNS->isArticle,pCNS->stopflag);
 		
-		// ph D  str cmp
+		// 41 ph D  str cmp
 		if((strcasecmp("ph",pCNS->str)== 0 && npCNS->str[0] == 'D')
 			|| strcasecmp("phD",pCNS->str)== 0)
 			fprintf(fp,"1\t");
 		else
 			fprintf(fp,"0\t");
 		
-		// xxx thesis thesis : 25
+		// 42 xxx thesis thesis : 25
 		fprintf(fp,"%d\t",thesisFlag);
 		
-		// inc ltd limited  : ltdflag 1 2 3
+		// 43 inc ltd limited  : ltdflag 1 2 3
 		fprintf(fp,"%d\t",ltdFlag);
 		
-		// ACM / ICPC / IEEE
+		// 44 45 46 ACM / ICPC / IEEE
 		fprintf(fp,"%d\t",pCNS->speflag == 1); // ISO
 		fprintf(fp,"%d\t",pCNS->speflag == 2); // IEEE
 		fprintf(fp,"%d\t",pCNS->speflag == 3); // ACM
 		
-		// CNAC AECSA SRCD ... 
+		// 47 CNAC AECSA SRCD ... 
 		fprintf(fp,"%d\t",pCNS->strtype == 0 &&  pCNS->slen < 6 && pCNS->slen > 2);
 		
-		// rfc || request 
+		
+		// 48 technical report
 		fprintf(fp,"%d\t",techFlag);
 		fprintf(fp,"%d\t",repFlag);
 		
 		
-		// MIT
+		// 49 MIT
 		fprintf(fp,"%d\t",mitFlag);
 		
-		// university of 
+		// 50 51 52 university of 
 		fprintf(fp,"%d\t",uniFlag);
 		
 		fprintf(fp,"%d\t",pCNS->uniflag);
 		
-		fprintf(fp,"%d|%d\t",pCNS->predeli,pCNS->uniflag);
+		//fprintf(fp,"%d/%d\t",pCNS->predeli,pCNS->uniflag);
+		fprintf(fp,"%d/%d\t",lpCNS == NULL ? 0 : lpCNS->stopflag,pCNS->uniflag);
 		
 		// (August 1-2 2013)
 		// how about ?
 		
-		// xxxx , (adfadf) or xxxx (adfasf)
+		// 53 xxxx , (adfadf) or xxxx (adfasf)
 		fprintf(fp,"%d\t",contentConnect);
 		
-		//technical report
+		// rfc || request (in tr) 
+		//fprintf(fp,"%d\t",rfc);
 		
-		// in proceedings of
+		// 54 55 56 57 58 59 in proceedings of
+		// 54
 		fprintf(fp,"%d\t",pCNS->procflag == 1); // In
+		// 55
 		fprintf(fp,"%d\t",(pCNS->procflag == 1) && ((npCNS->namelike)||(npCNS->isNameDict )
 									|| (npCNS->rLastNameDict > 0)));
-		
+		// 56
 		fprintf(fp,"%d\t",inStatus);
+		// 57
 		fprintf(fp,"%d\t",inStatus && ((pCNS->namelike)||(pCNS->isNameDict ) || (pCNS->rLastNameDict > 0)));
 		
-		// department of / dept. of 
+		// 58
+		fprintf(fp,"%d\t",(pCNS->procflag == 1) && procFlag);
+		// 59
+		fprintf(fp,"%d\t",procFlag);
+		
+		// 60  department of / dept. of 
 		fprintf(fp,"%d\t",pCNS->deptflag);
 		
-		// press
+		// 61 press
 		fprintf(fp,"%d\t",pressFlag);
 		
 		
-		// conf / journal
+		// 62 conf / journal
 		fprintf(fp,"%d\t",confFlag);
 
 		
-		// org
+		// 63 org
 		fprintf(fp,"%d\t",orgFlag);
 		
-		// group
+		// 64 group
 		fprintf(fp,"%d\t",groupFlag);
 		
-		// lib ins/pub
+		// 65 lib ins/pub
 		fprintf(fp,"%d\t",labFlag);
 		
-		// isbn
+		// 66 isbn
 		fprintf(fp,"%d\t",isbnEffect);
 		
 		
