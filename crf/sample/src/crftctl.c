@@ -275,6 +275,7 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 	{
 		sprintf(exportFileName,"res/%s",id2Token(z));
 		fexp = fopen(exportFileName,"w+");
+		fseek(fexp, 0L, SEEK_END);
 		fprintf(fexp,"%s\n",fileName);
 		fclose(fexp);
 	}
@@ -283,6 +284,7 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 	{
 		sprintf(exportFileName,"res/%s",id2Token(pCNS->token));
 		fexp = fopen(exportFileName,"w+");
+		fseek(fexp, 0L, SEEK_END);
 		fprintf(fexp,"%s\n",pCNS->str);
 		fclose(fexp);
 		// 0. PREPARE : FLAGS
