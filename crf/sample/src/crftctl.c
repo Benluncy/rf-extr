@@ -424,7 +424,7 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 	
 			if(!tCNS->puredigit && tCNS->strtype!=4) puredata = 0;
 			
-			if(puredata && tCNS->specflag == 40) isbnEffect = 1;
+			if(puredata && tCNS->speflag == 40) isbnEffect = 1;
 				
 			if(!isBlank(tCNS->predeli) && (tCNS->predeli !=':')
 							&& (tCNS->predeli !='/')
