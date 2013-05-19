@@ -281,7 +281,7 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 	
 	while((pCNS = ftDeQueue(&nextCNSQ)) != NULL)
 	{
-		sprintf(exportFileName,"res/%s",id2token(z));
+		sprintf(exportFileName,"res/%s",id2token(pCNS->token));
 		fexp = fopen(exportFileName,"w+");
 		fprintf(fexp,"%s\n",pCNS->str);
 		fclose(fexp);
