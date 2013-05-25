@@ -32,4 +32,6 @@ int domainFlag(const char *str);
 
 int isArticle(const char *str,int len);
 
+int namelike(const char *str,int len,char next,int type);
+
 #endif// __CRFT_FUN_H__

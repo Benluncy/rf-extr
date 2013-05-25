@@ -4,7 +4,7 @@
 #include "persistence.h"
 //definitions
 
-#define FEATURE_SIZE 5
+#define FEATURE_SIZE 2
 #define MAX_STACK 2000
 
 #ifndef MIDDLEOF

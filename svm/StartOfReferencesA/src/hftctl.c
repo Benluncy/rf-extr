@@ -113,7 +113,8 @@ int isAccpted(const char *str,int threshold,int *fitLen)
 		tmpMin = threshold + 1;
 		for(i=minLen;i<=maxLen;i++)
 		{
-			if((ed = editDistanceS(p->cmpStr,p->cmpLen,str,i)) <= threshold)
+			//if((ed = editDistanceS(p->cmpStr,p->cmpLen,str,i)) <= threshold)//TODO ADV
+			if((ed = editDistanceT(p->cmpStr,p->cmpLen,str,i,threshold))!= -1)
 			{
 				if(tmpMin > ed)
 				{
@@ -419,8 +420,13 @@ int genStartSampleCtl(const char* fileName,int isDir)
 		int threshold;
 		unsigned int refOffset;
 		StackInfo info[FEATURE_SIZE];
-		for(threshold=0;threshold<FEATURE_SIZE;threshold++) 
-			stackData(&info[threshold],isAccpted,getPcontent(),getPclen(),threshold);
+		//for(threshold=0;threshold<FEATURE_SIZE;threshold++) 
+		//	stackData(&info[threshold],isAccpted,getPcontent(),getPclen(),threshold);
+		
+		threshold = 2;
+		stackData(&info[0],isAccpted,getPcontent(),getPclen(),threshold);
+		threshold = 4;
+		stackData(&info[1],isAccpted,getPcontent(),getPclen(),threshold);
 			
 		unsigned int count[FEATURE_SIZE];
 		//unsigned int status[FEATURE_SIZE];

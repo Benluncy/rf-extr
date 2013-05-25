@@ -113,7 +113,8 @@ int isAccpted(const char *str,int threshold,int *fitLen)
 		tmpMin = threshold + 1;
 		for(i=minLen;i<=maxLen;i++)
 		{
-			if((ed = editDistanceS(p->cmpStr,p->cmpLen,str,i)) <= threshold)
+			//if((ed = editDistanceS(p->cmpStr,p->cmpLen,str,i)) <= threshold)
+			if((ed = editDistanceT(p->cmpStr,p->cmpLen,str,i,threshold))!= -1)
 			{
 				if(tmpMin > ed)
 				{

@@ -247,4 +247,34 @@ int main(int argc ,char *argv[])
 }
 */
 
+inline int editDistanceT(const char *cs1,int s1len,const char * cs2,int s2len,int threshold) 
+{
+	if (s1len-s2len>threshold||s2len-s1len>threshold) return -1;
+	int st, en;
+	int flag;
+	int d[s1len+1][s2len+1];
+	char s1[s1len+1];
+	char s2[s2len+1];
+	memset(d,0,sizeof(int)*((s1len+1)*(s2len+1)));
+	for(int i=0;i<s1len;i++) s1[i] = (cs1[i] >='A' && cs1[i] <= 'Z') ? (cs1[i] + 32) : cs1[i];
+	for(int i=0;i<s2len;i++) s2[i] = (cs2[i] >='A' && cs2[i] <= 'Z') ? (cs2[i] + 32) : cs2[i];
+	for (int i = 1; i <= s1len; i++) 
+	{
+		st = MAX2(1, i - threshold);
+		en = MIN2(s2len, i + threshold);
+		for (int j = st; j <= en; j++) 
+		{
+			d[i][j] = 500;
+			if (j - i + 1 <= threshold && d[i - 1][j] + 1 < d[i][j]) d[i][j] = d[i - 1][j] + 1;
+			if (i - j + 1 <= threshold && d[i][j - 1] + 1 < d[i][j]) d[i][j] = d[i][j - 1] + 1;
+			d[i][j] = MIN2(d[i][j], d[i - 1][j - 1] + (int)(s1[i - 1] != s2[j - 1]));
+			if (d[i][j] <= threshold) flag = 0;
+		}
+		if (flag && i > threshold) return -1;
+	}
+	if (d[s1len][s2len] > threshold) return -1;
+	else return d[s1len][s2len];
+}
+
+
 

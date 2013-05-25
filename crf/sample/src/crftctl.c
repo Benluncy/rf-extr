@@ -151,9 +151,12 @@ int ftEnQueue(pCNSQ Q,int *currentOffset,char *mpredeli)
 		crfNodeSnapshot.edsflag = edsFlag(str,slen);
 		crfNodeSnapshot.speflag = specialFlag(str,slen);
 		crfNodeSnapshot.procflag =  procFlag(str,slen);
-		crfNodeSnapshot.namelike = hasNameafterTheOffset0((*currentOffset)
-							-crfNodeSnapshot.offset-1,
-							crfNodeSnapshot.offset+1);
+		//crfNodeSnapshot.namelike = hasNameafterTheOffset0((*currentOffset)
+		//					-crfNodeSnapshot.offset-1,
+		//					crfNodeSnapshot.offset+1);
+		crfNodeSnapshot.namelike = namelike(str,slen,crfNodeSnapshot.nextdeli,
+						crfNodeSnapshot.strtype);
+		
 		crfNodeSnapshot.isNameDict = isNameInDict(str);
 		crfNodeSnapshot.rLastNameDict = rateLastNameInDict(str);
 		crfNodeSnapshot.isCountryDict = isCountryInDict(str);
@@ -350,6 +353,8 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 				
 				if(tCNS->stopflag  == 1 ) stopEffect = 1; 
 				if(tCNS->stopflag  == 2 ) stopEffect = (stopEffect == 1) ? 1 : 2;
+				
+				stopEffectEA = stopEffect;
 			}
 			
 			if(tCNS->uniflag == 1 && ((stopEffectEA == 2)||(stopEffectEA == 0)))
@@ -484,51 +489,57 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 				domainNoStop = 0;
 			}
 
-			if(tCNS->speflag == 20 && domainNoStop ) httpStatus = 1;
+			if((tCNS->speflag == 20|| tCNS->speflag == 21)
+					&&!isBlank(tCNS->nextdeli) 
+						&& domainNoStop ) 
+				httpStatus = 1;
+			if((tCNS->speflag == 22)&(tCNS->nextdeli !=':')&&domainNoStop)
+				httpStatus = 1;
+			
 			if(tCNS->procflag == 1 ) inStatus = 1;
 			
 			////////////////////////////////////////////////////////////////////
-			if(stopEffectEA == 0 && ((tCNS->deptflag == 1) 
+			if(stopEffect == 0 && ((tCNS->deptflag == 1) 
 						||(tCNS->speflag == 56))) //"group" institute
 			{
 				groupFlag = 2; // institute
 			}
 			
 			
-			if((stopEffectEA == 0 )&& ((tCNS->speflag == 90)||
+			if((stopEffect == 0 )&& ((tCNS->speflag == 90)||
 							(tCNS->speflag == 79)||
 							(tCNS->speflag == 60))) //"conference(s)"
 			{
 				confFlag = 2; // journal
 			}
 			
-			if((stopEffectEA == 0) && ((tCNS->speflag == 30 )
+			if((stopEffect == 0) && ((tCNS->speflag == 30 )
 						|| (tCNS->speflag == 31 )
 						|| (tCNS->speflag == 32 ))) // publisher
 			{
 				pressFlag = 2;
 			}
 			
-			if((stopEffectEA == 0) && ((tCNS->speflag == 77 )
+			if((stopEffect == 0) && ((tCNS->speflag == 77 )
 						|| (tCNS->speflag == 78 ))) // publisher||institute
 			{
 				orgFlag = 2;
 			}
 			
-			if((stopEffectEA == 0) && ((tCNS->speflag >= 71 )
+			if((stopEffect == 0) && ((tCNS->speflag >= 71 )
 						&&(tCNS->speflag <= 75 ))) // institute
 			{
 				labFlag = 2;
 			}
 			
-			if((stopEffectEA == 0) && ((tCNS->speflag == 50 )
+			if((stopEffect == 0) && ((tCNS->speflag == 50 )
 						|| (tCNS->speflag == 53 )
 						|| (tCNS->speflag == 54 ))) // publisher
 			{
 				techFlag = 2;
 			}
 			
-			if((stopEffectEA == 0) && ((tCNS->speflag == 55 ))) // publisher
+			if((stopEffect == 0) && ((tCNS->speflag == 55 ))) // publisher
 			{
 				repFlag = 2;
 			}

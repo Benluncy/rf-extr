@@ -46,7 +46,7 @@ int valofdigit(const char *str,int len)
 	{
 		if(VALDIG(str[i]) == -1)
 		{
-			if(len - i == 2)
+			if(len - i <= 2)
 			{
 				return sum;
 			}
@@ -275,7 +275,7 @@ int specialFlag(const char *str,int len)
 int deptFlag(const char *str)
 {
 	
-	if(strncasecmp(str,"dept",4)==0) return 1;
+	if(strcmp(str,"Dept")==0) return 2;
 	if(strcasecmp(str,"Department")==0) return 1;
 	return 0;
 }
@@ -318,6 +318,15 @@ int domainFlag(const char *str)
 	if(strcmp(str,"html")==0) return 1;
 	if(strcmp(str,"gov")==0) return 1;
 	
+	return 0;
+}
+
+int namelike(const char *str,int len,char next,int type)
+{
+	if((len==1) && (str[0]>='A' && str[0]<='Z') && (next=='.'||next==',')) return 1;
+	if((len>1) && (type==2)) return 1;
+	
+	if(strcasecmp(str,"and") == 0) return 2;
 	return 0;
 }
 
