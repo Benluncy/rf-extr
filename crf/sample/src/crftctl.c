@@ -130,16 +130,18 @@ int ftEnQueue(pCNSQ Q,int *currentOffset,char *mpredeli)
 					break;	
 				
 				case '.':
+				case ',':
 					// filter Abbreviation
 					//if(!(abbrc && abbrl < 5 && abbrs))
 					if(!(abbrc && abbrl < 5))
-						crfNodeSnapshot.stopflag = 2;
-					break;
-				case ',':
-					crfNodeSnapshot.stopflag = crfNodeSnapshot.stopflag == 2 ? 
+					//	crfNodeSnapshot.stopflag = 2;
+						crfNodeSnapshot.stopflag = crfNodeSnapshot.stopflag == 2 ? 
 										2: 
 										1;
 					break;
+				
+					
+					//break;
 				case '!':
 				case '?':
 					crfNodeSnapshot.stopflag = 2;
@@ -822,8 +824,11 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		// special flag (mixed)
 		fprintf(fp,"%d\t",pCNS->speflag);
 		
-		// 33 stop flag 1:'.','!','?' 2:',' 
-		fprintf(fp,"%d\t",pCNS->stopflag);
+		// 33 stop flag  && effect  
+		fprintf(fp,"%d/%d/%d/%d\t",pCNS->stopflag,
+					(quotStatus[0]||pareStatus[0]||sqbStatus[0]||braStatus[0]),
+					(quotStatus[1]||pareStatus[1]||sqbStatus[1]||braStatus[1]),
+					(quotStatus[2]||pareStatus[2]||sqbStatus[2]||braStatus[2]));
 		
 		// 34 eds flag
 		fprintf(fp,"%d\t",edsFlag);
@@ -962,12 +967,17 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		
 		
 		// 70 et , al
-		if((strcmp(lpCNS->str,"et")==0) && (strcmp(pCNS->str,"al")==0))
-			fprintf(fp,"1\t");
-		else if((strcmp(pCNS->str,"et")==0) && (strcmp(npCNS->str,"al")==0))
-			fprintf(fp,"2\t");
-		else 
+		if(lpCNS != NULL && npCNS != NULL)
+		{
+			if((strcmp(lpCNS->str,"et")==0) && (strcmp(pCNS->str,"al")==0))
+				fprintf(fp,"1\t");
+			else if((strcmp(pCNS->str,"et")==0) && (strcmp(npCNS->str,"al")==0))
+				fprintf(fp,"2\t");
+			else 
+				fprintf(fp,"0\t");
+		}else
 			fprintf(fp,"0\t");
+		
 
 		// note start
 		
