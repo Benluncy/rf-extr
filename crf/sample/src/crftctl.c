@@ -133,7 +133,7 @@ int ftEnQueue(pCNSQ Q,int *currentOffset,char *mpredeli)
 				case ',':
 					// filter Abbreviation
 					//if(!(abbrc && abbrl < 5 && abbrs))
-					if(!(abbrc && abbrl < 5))
+					if(!(abbrc && abbrl < 6))
 					//	crfNodeSnapshot.stopflag = 2;
 						crfNodeSnapshot.stopflag = crfNodeSnapshot.stopflag == 2 ? 
 										2: 
@@ -978,7 +978,24 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		}else
 			fprintf(fp,"0\t");
 		
-
+		
+		
+		// 71
+		// jump to note : Available ... Submitted Unpublished
+		if(lpCNS != NULL && npCNS != NULL)
+		{
+			if(((strcmp(pCNS->str,"Available") == 0)||
+				(strcmp(pCNS->str,"Submitted")== 0)||
+				(strcmp(pCNS->str,"Unpublished")== 0)||
+				((strcmp(pCNS->str,"To")== 0) && (strcmp(npCNS->str,"appear")== 0)))
+				&& lpCNS->stopflag != 0)
+			{
+				fprintf(fp,"1\t");
+			}else
+				fprintf(fp,"0\t");
+			
+		}else
+			fprintf(fp,"0\t");
 		// note start
 		
 		
