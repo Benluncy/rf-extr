@@ -58,13 +58,14 @@ int main(int argc, char **argv) {
     std::cout << tagger->y2(i) << '\t';
     std::cout << std::endl;
 
+ /*
     std::cout << "Details";
     for (size_t j = 0; j < tagger->ysize(); ++j) {
       std::cout << '\t' << tagger->yname(j) << "/prob=" << tagger->prob(i,j)
-               ;// << "/alpha=" << tagger->alpha(i, j)
-                //<< "/beta=" << tagger->beta(i, j);
+               ;<< "/alpha=" << tagger->alpha(i, j)
+                << "/beta=" << tagger->beta(i, j);
     }
-    std::cout << std::endl;
+    std::cout << std::endl;*/
   }
 
   // when -n20 is specified, you can access nbest outputs
