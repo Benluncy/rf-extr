@@ -20,23 +20,21 @@ int main(int argc, char **argv) {
   tagger->clear();
 
   // add context
-  tagger->add("Confidence NN");
-  tagger->add("in IN");
-  tagger->add("the DT");
-  tagger->add("pound NN");
-  tagger->add("is VBZ");
-  tagger->add("widely RB");
-  tagger->add("expected VBN");
-  tagger->add("to TO");
-  tagger->add("take VB");
-  tagger->add("another DT");
-  tagger->add("sharp JJ");
-  tagger->add("dive NN");
-  tagger->add("if IN");
-  tagger->add("trade NN");
-  tagger->add("figures NNS");
-  tagger->add("for IN");
-  tagger->add("September NNP");
+  tagger->add("B	N	Z");
+  tagger->add("F	V	A");
+  tagger->add("A	N	B");
+  tagger->add(".	D	E");
+  tagger->add("B	N	Z");
+  tagger->add("F	V	A");
+  tagger->add("C	N	B");
+  tagger->add(".	D	E");
+  tagger->add("H	H	A");
+  tagger->add("C	N	B");
+  tagger->add(".	D	E");
+  
+
+
+
 
   std::cout << "column size: " << tagger->xsize() << std::endl;
   std::cout << "token size: " << tagger->size() << std::endl;
