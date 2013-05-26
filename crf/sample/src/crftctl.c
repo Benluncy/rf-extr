@@ -962,14 +962,14 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		
 		
 		// 70 et , al
-		if(strcmp(pCNS->str,"et")==0)
+		if((strcmp(lpCNS->str,"et")==0) && (strcmp(pCNS->str,"al")==0))
 			fprintf(fp,"1\t");
-		else if(strcmp(pCNS->str,"al") == 0)
+		else if((strcmp(pCNS->str,"et")==0) && (strcmp(npCNS->str,"al")==0))
 			fprintf(fp,"2\t");
 		else 
 			fprintf(fp,"0\t");
-		
-		
+
+		// note start
 		
 		
 		
