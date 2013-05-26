@@ -23,12 +23,12 @@ int specialFlag(const char *str,int len);
 
 int procFlag(const char *str,int len);
 
-int deptFlag(const char *str);
+int deptFlag(const char *str,int len);
 
-int uniFlag(const char *str);
-int ltdFlag(const char *str);
+int uniFlag(const char *str,int len);
+int ltdFlag(const char *str,int len);
 
-int domainFlag(const char *str);
+int domainFlag(const char *str,int len);
 
 int isArticle(const char *str,int len);
 

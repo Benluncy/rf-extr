@@ -27,6 +27,9 @@
 
 int spilitContent(char *dest,int dlen,const char *src,int len,char *predeli,char *nextdeli);
 
+// 
+int spilitStr(const char *str,int slen,int *flg,int *flen);
+
 //type :1 low case  :0 big
 char* strCaseTransfer(char *s, int type);
 #endif // __STR_HANDLE_H__

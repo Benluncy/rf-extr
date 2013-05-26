@@ -82,7 +82,7 @@ int ftEnQueue(pCNSQ Q,int *currentOffset,char *mpredeli)
 		// abbr
 		int abbrc = 0; // in Connect status
 		int abbrl = 0; // abbr length
-		int abbrs = 0 ; // abbr start type
+		//int abbrs = 0 ; // abbr start type
 		
 		
 		for(int i=(*currentOffset);i<crfNodeSnapshot.offset+(*currentOffset);i++)
@@ -156,12 +156,12 @@ int ftEnQueue(pCNSQ Q,int *currentOffset,char *mpredeli)
 				{
 					abbrl = 0;
 					abbrc = 1;
-					abbrs = isUppercaseCode(content[i]) ? 1 : 0 ;
+					//abbrs = isUppercaseCode(content[i]) ? 1 : 0 ;
 				}
 			}else if(!isAsciiOrDigit(content[i-1]) && isAsciiCode(content[i])){
 				abbrc = 1;
 				abbrl = 0;
-				abbrs = isUppercaseCode(content[i]) ? 1 : 0 ;
+				//abbrs = isUppercaseCode(content[i]) ? 1 : 0 ;
 			}else if(abbrc && (content[i]>='a' || content[i] <= 'z')){
 				abbrl ++;
 			}else
@@ -174,6 +174,11 @@ int ftEnQueue(pCNSQ Q,int *currentOffset,char *mpredeli)
 		crfNodeSnapshot.token = filteredTokenId(tkcheck);//offsum+(offset+1)/2
 		
 		*currentOffset += crfNodeSnapshot.offset;
+
+		int spstr[10];
+		int splen = 0;
+		
+		spilitStr(str,slen,spstr,&splen); // spilit
 
 		sprintf(crfNodeSnapshot.str,"%s",str);
 		
@@ -188,24 +193,114 @@ int ftEnQueue(pCNSQ Q,int *currentOffset,char *mpredeli)
 		crfNodeSnapshot.pagelike = pagekwd(str,slen);
 		crfNodeSnapshot.edsflag = edsFlag(str,slen);
 		crfNodeSnapshot.speflag = specialFlag(str,slen);
-		crfNodeSnapshot.procflag =  procFlag(str,slen);
+		crfNodeSnapshot.procflag =  procFlag(str,slen);		
+		for(int z=0;z<splen && (crfNodeSnapshot.procflag != 0);z++)
+		{
+			//str+flag[i],flag[i+1]-flag[i]
+			for(int k=0;k<splen;k++)
+			{
+				crfNodeSnapshot.procflag = procFlag(str+spstr[k],
+								spstr[k+1]-spstr[k]);	
+			}
+			
+		}
 		//crfNodeSnapshot.namelike = hasNameafterTheOffset0((*currentOffset)
 		//					-crfNodeSnapshot.offset-1,
 		//					crfNodeSnapshot.offset+1);
 		crfNodeSnapshot.namelike = namelike(str,slen,crfNodeSnapshot.nextdeli,
 						crfNodeSnapshot.strtype);
 		
-		crfNodeSnapshot.isNameDict = isNameInDict(str);
-		crfNodeSnapshot.rLastNameDict = rateLastNameInDict(str);
-		crfNodeSnapshot.isCountryDict = isCountryInDict(str);
-		crfNodeSnapshot.isFunWordDict = isFunWordInDict(str);
-		crfNodeSnapshot.isPlaceNameDict = isPlaceNameInDict(str);
-		crfNodeSnapshot.isPubliserDict = isPublisherInDict(str) ||isPublisher;
+		crfNodeSnapshot.isNameDict = isNameInDict(str,slen);
+		for(int z=0;z<splen && (crfNodeSnapshot.isNameDict != 0);z++)
+		{
+			//str+flag[i],flag[i+1]-flag[i]
+			for(int k=0;k<splen;k++)
+			{
+				crfNodeSnapshot.isNameDict = isNameInDict(str+spstr[k],
+								spstr[k+1]-spstr[k]);	
+			}
+			
+		}
+		
+		crfNodeSnapshot.rLastNameDict = rateLastNameInDict(str,slen);
+		for(int z=0;z<splen && (crfNodeSnapshot.rLastNameDict != 0);z++)
+		{
+			//str+flag[i],flag[i+1]-flag[i]
+			for(int k=0;k<splen;k++)
+			{
+				crfNodeSnapshot.rLastNameDict = rateLastNameInDict(str+spstr[k],
+									spstr[k+1]-spstr[k]);	
+			}
+			
+		}
+		
+		crfNodeSnapshot.isCountryDict = isCountryInDict(str,slen);
+		for(int z=0;z<splen && (crfNodeSnapshot.isCountryDict != 0);z++)
+		{
+			//str+flag[i],flag[i+1]-flag[i]
+			for(int k=0;k<splen;k++)
+			{
+				crfNodeSnapshot.isCountryDict = isCountryInDict(str+spstr[k],
+									spstr[k+1]-spstr[k]);	
+			}
+			
+		}
+		
+		crfNodeSnapshot.isFunWordDict = isFunWordInDict(str,slen);
+
+		crfNodeSnapshot.isPlaceNameDict = isPlaceNameInDict(str,slen);
+		for(int z=0;z<splen && (crfNodeSnapshot.isPlaceNameDict != 0);z++)
+		{
+			//str+flag[i],flag[i+1]-flag[i]
+			for(int k=0;k<splen;k++)
+			{
+				crfNodeSnapshot.isPlaceNameDict = isPlaceNameInDict(str+spstr[k],
+									spstr[k+1]-spstr[k]);	
+			}
+			
+		}
+		
+		crfNodeSnapshot.isPubliserDict = isPublisherInDict(str,slen) ||isPublisher;
+		
+		for(int z=0;z<splen && (crfNodeSnapshot.isPubliserDict != 0);z++)
+		{
+			//str+flag[i],flag[i+1]-flag[i]
+			for(int k=0;k<splen;k++)
+			{
+				crfNodeSnapshot.isPubliserDict = isPublisherInDict(str+spstr[k],
+									spstr[k+1]-spstr[k]);	
+			}
+			
+		}
+		
 		crfNodeSnapshot.isArticle = isArticle(str,slen);
-		crfNodeSnapshot.deptflag = deptFlag(str);
-		crfNodeSnapshot.uniflag = uniFlag(str);
+		crfNodeSnapshot.deptflag = deptFlag(str,slen);
+		crfNodeSnapshot.uniflag = uniFlag(str,slen);
+		for(int z=0;z<splen && (crfNodeSnapshot.uniflag != 0);z++)
+		{
+			//str+flag[i],flag[i+1]-flag[i]
+			for(int k=0;k<splen;k++)
+			{
+				crfNodeSnapshot.uniflag = uniFlag(str+spstr[k],
+									spstr[k+1]-spstr[k]);	
+			}
+			
+		}
+		
 		crfNodeSnapshot.ltdflag = ltdFlag(str);
+		for(int z=0;z<splen && (crfNodeSnapshot.ltdflag != 0);z++)
+		{
+			//str+flag[i],flag[i+1]-flag[i]
+			for(int k=0;k<splen;k++)
+			{
+				crfNodeSnapshot.ltdflag = ltdFlag(str+spstr[k],
+									spstr[k+1]-spstr[k]);	
+			}
+			
+		}
+		
 		crfNodeSnapshot.domainflag = domainFlag(str);
+		
 		
 
 		if(crfNodeSnapshot.puredigit)

@@ -100,6 +100,37 @@ int spilitContent(char *dest,int dlen,const char *src,int len,char *predeli,char
 	return i;
 }
 
+int charType(char ch)
+{
+	if(ch >='A' && ch <= 'Z') return 1;
+	if(ch >='a' && ch <= 'z') return 2;
+	if(ch >='0' && ch <= '9') return 3;
+	return 0;
+}
+
+int spilitStr(const char *str,int slen,int *flg,int *flen)
+{
+	int i;
+	int mlen = 0 ;
+	int ntype;
+	int ltype = -1;
+	if(slen <= 0) return 0;
+	char ch = str[0];
+	*flen = 0;
+	for(i=0;i<slen;i++)
+	{
+		ntype = charType(str[i]);
+		//if((ntype != ltype)&&!((i==1)&&(ltype==1)))
+		if((ntype != ltype)&&(ltype!=1))
+		{
+			flg[*flen] = i;
+			(*flen) ++;
+		}
+		ltype = ntype;
+	}
+	flg[*flen] = slen;
+	return 1;
+}
 
 inline char* strCaseTransfer(char *s, int type)
 {
@@ -113,5 +144,32 @@ inline char* strCaseTransfer(char *s, int type)
 	}
 	return res;
 }
+
+/*
+int printStr(const char *str,int len)
+{
+	int i;
+	for(i=0;i<len;i++) putchar(str[i]);
+	putchar('\n');
+	return 1;
+}
+
+int main(int argc , char * argv[])
+{
+	char str[1024] = "aaAaAAAaaAa";
+	int flag[10];
+	int flagLen;
+	int i;
+	printf("%s|%d\n",str,strlen(str));
+	spilitStr(str,strlen(str),flag,&flagLen);
+	for(i=0;i<flagLen;i++)
+	{
+		printf("%d->%d\t",flag[i],flag[i+1]);
+		printStr(str+flag[i],flag[i+1]-flag[i]);
+	}
+	return 0;
+}
+*/
+
 
 

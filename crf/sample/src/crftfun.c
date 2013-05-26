@@ -175,6 +175,13 @@ int edsFlag(const char *str,int len)
 int procFlag(const char *str,int len)
 {
 	if(strncasecmp(str,"in",len)==0) return 1;
+	/*
+	if(len > 2) 
+		if(str[1]<='z'&&str[1]>='a' && 
+			str[2]<='Z' && str[2]>='A' && (strncasecmp(str,"in",2)==0))
+				return 1;
+	*/
+	
 	if(strncasecmp(str,"proc",len)==0) return 2;
 	if(strncasecmp(str,"proceeding",len)==0) return 3;
 	if(strncasecmp(str,"proceedings",len)==0) return 4;
@@ -272,23 +279,23 @@ int specialFlag(const char *str,int len)
 	return 0;
 }
 
-int deptFlag(const char *str)
+int deptFlag(const char *str,int len)
 {
 	
-	if(strcmp(str,"Dept")==0) return 2;
-	if(strcasecmp(str,"Department")==0) return 1;
+	if(strncmp(str,"Dept",len)==0) return 2;
+	if(strncasecmp(str,"Department",len)==0) return 1;
 	return 0;
 }
 
 
-int uniFlag(const char *str)
+int uniFlag(const char *str,int len)
 {
 	if(strncasecmp(str,"universit",9)==0) return 1;
-	if(strcasecmp(str,"univ")==0) return 1;
+	if(strncasecmp(str,"univ",len)==0) return 1;
 	return 0;
 }
 
-int ltdFlag(const char *str)
+int ltdFlag(const char *str,int len)
 {
 	if(strncasecmp(str,"ltd",3)==0) return 1;
 	if(strncasecmp(str,"Itd",3)==0) return 1;
@@ -301,14 +308,14 @@ int ltdFlag(const char *str)
 
 int isArticle(const char *str,int len)
 {
-	if(strcasecmp(str,"A")==0) return 1;
-	if(strcasecmp(str,"AN")==0) return 1;
-	if(strcasecmp(str,"The")==0) return 1;
-	if(strcasecmp(str,"On")==0) return 2; // simial function
+	if(strncasecmp(str,"A",len)==0) return 1;
+	if(strncasecmp(str,"AN",len)==0) return 1;
+	if(strncasecmp(str,"The",len)==0) return 1;
+	if(strncasecmp(str,"On",len)==0) return 2; // simial function
 	return 0;
 }
 
-int domainFlag(const char *str)
+int domainFlag(const char *str,int len)
 {
 	if(strcmp(str,"net")==0) return 1;
 	if(strcmp(str,"edu")==0) return 1;
