@@ -63,7 +63,7 @@ all			: ${PROGS} succ
 rebuild			: gitupdate clean all
 
 run			: all
-	LD_LIBRARY_PATH=lib/ && ./${PROGS}
+	LD_LIBRARY_PATH=$LD_LIBRARY_PATH:lib/ && ./${PROGS}
 
 demo			: ${OBJS}
 	${CC} ${CFLAGS} $@.cc -o $@ ${OBJS} ${LIBS}
