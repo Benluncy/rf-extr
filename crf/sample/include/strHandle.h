@@ -11,7 +11,12 @@
 			
 #define isBlank(a) (a==' '|| a=='\n' || a=='\t' || a=='\r')
 
-#define isAsciiOrDigit(a) ((a>='A' && a<='Z') || (a>='a'&&a<='z') || (a>='0'&&a<='9'))
+#define isAsciiOrDigit(a) ((a>='A' && a<='Z') || (a>='a' && a<='z') || (a>='0' && a<='9'))
+
+#define isAsciiCode(a) ((a>='A' && a<='Z') || (a>='a' && a<='z'))
+
+#define isUppercaseCode(a) (a>='A' && a<='Z')
+#define isLowercaseCode(a) (a>='a' && a<='z')
 
 #define isConnectCh(a) (a == '~' || a == '-' || a == ':')
 

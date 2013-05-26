@@ -78,6 +78,13 @@ int ftEnQueue(pCNSQ Q,int *currentOffset,char *mpredeli)
 		int hstkcheck = 0;
 		char partStr[1024];
 		int psI = 0;
+		
+		// abbr
+		int abbrc = 0; // in Connect status
+		int abbrl = 0; // abbr length
+		int abbrs = 0 ; // abbr start type
+		
+		
 		for(int i=(*currentOffset);i<crfNodeSnapshot.offset+(*currentOffset);i++)
 		{
 			if(!isDelimiter(content[i]) && !hstkcheck)
@@ -97,6 +104,7 @@ int ftEnQueue(pCNSQ Q,int *currentOffset,char *mpredeli)
 				isPublisher = isPublisher || isPublisherInDict(partStr); 
 			}
 			crfNodeSnapshot.quotflag = 0;
+			
 			switch(content[i])
 			{
 				case '\"':
@@ -120,16 +128,44 @@ int ftEnQueue(pCNSQ Q,int *currentOffset,char *mpredeli)
 				case '}':
 					crfNodeSnapshot.braEflag = 1;
 					break;	
+				
 				case '.':
-					if(slen < 5 && str[0]>='A' && str[0] <='Z') break; 
 					// filter Abbreviation
-				case '!':
-				case '?':
-					crfNodeSnapshot.stopflag = 1;
+					//if(!(abbrc && abbrl < 5 && abbrs))
+					if(!(abbrc && abbrl < 5))
+						crfNodeSnapshot.stopflag = 2;
 					break;
 				case ',':
-					crfNodeSnapshot.stopflag = crfNodeSnapshot.stopflag == 1 ? 1: 2;
+					crfNodeSnapshot.stopflag = crfNodeSnapshot.stopflag == 2 ? 
+										2: 
+										1;
 					break;
+				case '!':
+				case '?':
+					crfNodeSnapshot.stopflag = 2;
+					break;
+				
+					
+			}
+			
+			if(i == (*currentOffset)) // xxx. Aaa.
+			{
+				if(isAsciiCode(content[i]))
+				{
+					abbrl = 0;
+					abbrc = 1;
+					abbrs = isUppercaseCode(content[i]) ? 1 : 0 ;
+				}
+			}else if(!isAsciiOrDigit(content[i-1]) && isAsciiCode(content[i])){
+				abbrc = 1;
+				abbrl = 0;
+				abbrs = isUppercaseCode(content[i]) ? 1 : 0 ;
+			}else if(abbrc && (content[i]>='a' || content[i] <= 'z')){
+				abbrl ++;
+			}else
+			{
+				abbrc = 0;
+				abbrl = 0;
 			}
 		}
 
@@ -340,21 +376,14 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 			{
 				if(tCNS->stopflag  == 1)
 				{
-					if(!((tCNS->slen <=4) && (tCNS->str[0]>='A')
-							&&(tCNS->str[0]<='Z')))
-						stopEffectEA = 1;
-				} 
+					stopEffectEA = (stopEffectEA == 2) ? 2 : 1;
+					stopEffect = (stopEffect == 2) ? 2 : 1;
+				}
 				if(tCNS->stopflag  == 2)
 				{
-					if(!((tCNS->slen <=4) && (tCNS->str[0]>='A')
-							&&(tCNS->str[0]<='Z')))
-						stopEffectEA = (stopEffectEA == 1) ? 1 : 2;
+					stopEffect = 2;
+					stopEffect = 2;
 				}
-				
-				if(tCNS->stopflag  == 1 ) stopEffect = 1; 
-				if(tCNS->stopflag  == 2 ) stopEffect = (stopEffect == 1) ? 1 : 2;
-				
-				stopEffectEA = stopEffect;
 			}
 			
 			if(tCNS->uniflag == 1 && ((stopEffectEA == 2)||(stopEffectEA == 0)))
@@ -458,6 +487,7 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 			
 			if(i>0)
 			{
+				/*
 				if(tCNS->stopflag  == 1 ) stopEffect = 1; 
 				if(tCNS->stopflag  == 2 ) stopEffect = (stopEffect == 1) ? 1 : 2;
 			
@@ -472,7 +502,18 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 					if(!((tCNS->slen <=4) && (tCNS->str[0]>='A')
 							&&(tCNS->str[0]<='Z')))
 						stopEffectEA = (stopEffectEA == 1) ? 1 : 2;
+				}*/
+				if(tCNS->stopflag  == 1)
+				{
+					stopEffectEA = (stopEffectEA == 2) ? 2 : 1;
+					stopEffect = (stopEffect == 2) ? 2 : 1;
 				}
+				if(tCNS->stopflag  == 2)
+				{
+					stopEffect = 2;
+					stopEffect = 2;
+				}
+				
 			}
 	
 			if(tCNS->edsflag == 1) edsFlag = 1;
