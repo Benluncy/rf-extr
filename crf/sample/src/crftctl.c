@@ -197,10 +197,10 @@ int ftEnQueue(pCNSQ Q,int *currentOffset,char *mpredeli)
 		for(int z=0;z<splen && (crfNodeSnapshot.procflag != 0);z++)
 		{
 			//str+flag[i],flag[i+1]-flag[i]
-			for(int k=0;k<splen;k++)
+			for(int k=z;k<splen;k++)
 			{
-				crfNodeSnapshot.procflag = procFlag(str+spstr[k],
-								spstr[k+1]-spstr[k]);	
+				crfNodeSnapshot.procflag = procFlag(str+spstr[z],
+								spstr[k+1]-spstr[z]);	
 			}
 			
 		}
@@ -209,68 +209,59 @@ int ftEnQueue(pCNSQ Q,int *currentOffset,char *mpredeli)
 		//					crfNodeSnapshot.offset+1);
 		crfNodeSnapshot.namelike = namelike(str,slen,crfNodeSnapshot.nextdeli,
 						crfNodeSnapshot.strtype);
+						
+		for(int z=0;z<splen && (crfNodeSnapshot.namelike != 0);z++)
+		{
+			//str+flag[i],flag[i+1]-flag[i]
+			for(int k=z;k<splen;k++)
+			{
+				crfNodeSnapshot.namelike = namelike(str+spstr[z],
+								spstr[k+1]-spstr[z],
+								k==splen-1?crfNodeSnapshot.nextdeli:' ',
+								strfeature(str+spstr[z],spstr[k+1]-spstr[z]));	
+			}
+			
+		}
 		
-		crfNodeSnapshot.isNameDict = isNameInDict(str,slen);
+		
+		crfNodeSnapshot.isNameDict = isNameInDict(str);
 		for(int z=0;z<splen && (crfNodeSnapshot.isNameDict != 0);z++)
 		{
 			//str+flag[i],flag[i+1]-flag[i]
-			for(int k=0;k<splen;k++)
-			{
-				crfNodeSnapshot.isNameDict = isNameInDict(str+spstr[k],
-								spstr[k+1]-spstr[k]);	
-			}
-			
+			crfNodeSnapshot.isNameDict = isNameInDict(str+spstr[z]);
 		}
 		
-		crfNodeSnapshot.rLastNameDict = rateLastNameInDict(str,slen);
+		crfNodeSnapshot.rLastNameDict = rateLastNameInDict(str);
 		for(int z=0;z<splen && (crfNodeSnapshot.rLastNameDict != 0);z++)
 		{
 			//str+flag[i],flag[i+1]-flag[i]
-			for(int k=0;k<splen;k++)
-			{
-				crfNodeSnapshot.rLastNameDict = rateLastNameInDict(str+spstr[k],
-									spstr[k+1]-spstr[k]);	
-			}
-			
+			crfNodeSnapshot.rLastNameDict = rateLastNameInDict(str+spstr[z]);
 		}
 		
-		crfNodeSnapshot.isCountryDict = isCountryInDict(str,slen);
+		
+		crfNodeSnapshot.isCountryDict = isCountryInDict(str);
 		for(int z=0;z<splen && (crfNodeSnapshot.isCountryDict != 0);z++)
 		{
 			//str+flag[i],flag[i+1]-flag[i]
-			for(int k=0;k<splen;k++)
-			{
-				crfNodeSnapshot.isCountryDict = isCountryInDict(str+spstr[k],
-									spstr[k+1]-spstr[k]);	
-			}
-			
+			crfNodeSnapshot.isCountryDict = isCountryInDict(str+spstr[z]);
 		}
 		
-		crfNodeSnapshot.isFunWordDict = isFunWordInDict(str,slen);
+		
+		crfNodeSnapshot.isFunWordDict = isFunWordInDict(str);
 
-		crfNodeSnapshot.isPlaceNameDict = isPlaceNameInDict(str,slen);
+		crfNodeSnapshot.isPlaceNameDict = isPlaceNameInDict(str);
 		for(int z=0;z<splen && (crfNodeSnapshot.isPlaceNameDict != 0);z++)
 		{
 			//str+flag[i],flag[i+1]-flag[i]
-			for(int k=0;k<splen;k++)
-			{
-				crfNodeSnapshot.isPlaceNameDict = isPlaceNameInDict(str+spstr[k],
-									spstr[k+1]-spstr[k]);	
-			}
-			
+			crfNodeSnapshot.isPlaceNameDict = isPlaceNameInDict(str+spstr[z]);
 		}
 		
-		crfNodeSnapshot.isPubliserDict = isPublisherInDict(str,slen) ||isPublisher;
+		crfNodeSnapshot.isPubliserDict = isPublisherInDict(str) ||isPublisher;
 		
 		for(int z=0;z<splen && (crfNodeSnapshot.isPubliserDict != 0);z++)
 		{
 			//str+flag[i],flag[i+1]-flag[i]
-			for(int k=0;k<splen;k++)
-			{
-				crfNodeSnapshot.isPubliserDict = isPublisherInDict(str+spstr[k],
-									spstr[k+1]-spstr[k]);	
-			}
-			
+			crfNodeSnapshot.isPubliserDict = isPublisherInDict(str+spstr[z]);
 		}
 		
 		crfNodeSnapshot.isArticle = isArticle(str,slen);
@@ -279,27 +270,27 @@ int ftEnQueue(pCNSQ Q,int *currentOffset,char *mpredeli)
 		for(int z=0;z<splen && (crfNodeSnapshot.uniflag != 0);z++)
 		{
 			//str+flag[i],flag[i+1]-flag[i]
-			for(int k=0;k<splen;k++)
+			for(int k=z;k<splen;k++)
 			{
-				crfNodeSnapshot.uniflag = uniFlag(str+spstr[k],
-									spstr[k+1]-spstr[k]);	
+				crfNodeSnapshot.uniflag = uniFlag(str+spstr[z],
+								spstr[k+1]-spstr[z]);	
 			}
 			
 		}
 		
-		crfNodeSnapshot.ltdflag = ltdFlag(str);
+		crfNodeSnapshot.ltdflag = ltdFlag(str,slen);
 		for(int z=0;z<splen && (crfNodeSnapshot.ltdflag != 0);z++)
 		{
 			//str+flag[i],flag[i+1]-flag[i]
-			for(int k=0;k<splen;k++)
+			for(int k=z;k<splen;k++)
 			{
-				crfNodeSnapshot.ltdflag = ltdFlag(str+spstr[k],
-									spstr[k+1]-spstr[k]);	
+				crfNodeSnapshot.ltdflag = ltdFlag(str+spstr[z],
+								spstr[k+1]-spstr[z]);	
 			}
 			
 		}
 		
-		crfNodeSnapshot.domainflag = domainFlag(str);
+		crfNodeSnapshot.domainflag = domainFlag(str,slen);
 		
 		
 
@@ -929,7 +920,7 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 					(quotStatus[2]||pareStatus[2]||sqbStatus[2]||braStatus[2]));
 		
 		// 34 eds flag
-		fprintf(fp,"编辑标记");
+		fprintf(fp,"编辑标记/");
 		fprintf(fp,"%d\t",edsFlag);
 		
 		// 35: name like

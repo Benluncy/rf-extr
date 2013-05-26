@@ -111,11 +111,9 @@ int charType(char ch)
 int spilitStr(const char *str,int slen,int *flg,int *flen)
 {
 	int i;
-	int mlen = 0 ;
 	int ntype;
 	int ltype = -1;
 	if(slen <= 0) return 0;
-	char ch = str[0];
 	*flen = 0;
 	for(i=0;i<slen;i++)
 	{

@@ -25,7 +25,8 @@ int main(int argc,char *argv[])
 	hmDictLoad();
 	dbFree();
 	
-	genCRFSample("data/");
+	//genCRFSample("data/");
+	printf("JeanJeetest: %d",isNameInDict("JeanSee"));
 
 	hmDictFree();
 
