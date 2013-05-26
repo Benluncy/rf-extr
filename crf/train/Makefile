@@ -70,7 +70,7 @@ GADD			:= @git add
 GCMT			:= @git commit -m  
 #############################FILES######################################
 
-FLAGS			:= #-c 4.0 , -a MIRA  ... 
+FLAGS			:= -c 10.0  #, -a MIRA  ... 
 
 
 
