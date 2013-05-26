@@ -723,134 +723,143 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		fprintf(fp,"%s\t",pCNS->str); 
 		
 		// 1: length of string data 0,1,2,3,4,5,6 >6
-		fprintf(fp,"%d\t",pCNS->slen<7?pCNS->slen:9); 
+		fprintf(fp,"串长/%d\t",pCNS->slen<7?pCNS->slen:9); 
 
 		
 		// base::string
 		// 2: string type 0:AAA 1:aaa 2:Aaa 3:aAa 4:123
-		fprintf(fp,"%d\t",pCNS->strtype);
+		fprintf(fp,"类型/%d\t",pCNS->strtype);
 		
 		// 3: prefix 
-		fprintf(fp,"%c%c\t",tolower(pCNS->str[0]),(pCNS->slen>1)?tolower(pCNS->str[1]):'X');
+		fprintf(fp,"前缀/%c/%c\t",tolower(pCNS->str[0]),(pCNS->slen>1)?tolower(pCNS->str[1]):'X');
 		
 		// 4: sufix 
-		fprintf(fp,"%c%c\t",(pCNS->slen>1)?tolower(pCNS->str[pCNS->slen-2]):'X',
+		fprintf(fp,"后缀/%c/%c\t",(pCNS->slen>1)?tolower(pCNS->str[pCNS->slen-2]):'X',
 					tolower(pCNS->str[pCNS->slen-1]));
 		
 		
 		// base::digit
 		// 5: digit value  > 0 ?
-		fprintf(fp,"%d\t",pCNS->dval > 0 );
+		fprintf(fp,"数值/%d\t",pCNS->dval > 0 );
 		
 		// 6: digit bigger than previours one
-		fprintf(fp,"%d\t",lpCNS==NULL?-1:(lpCNS->dval == 0?-1:(pCNS->dval > lpCNS->dval)));
+		fprintf(fp,"比前值长/%d\t",lpCNS==NULL?-1:(lpCNS->dval == 0?-1:(pCNS->dval > lpCNS->dval)));
 		
 		// 7: next one is bigger than this digit 
-		fprintf(fp,"%d\t",npCNS==NULL?-1:(npCNS->dval == 0?-1:(npCNS->dval > pCNS->dval)));
+		fprintf(fp,"比后值短/%d\t",npCNS==NULL?-1:(npCNS->dval == 0?-1:(npCNS->dval > pCNS->dval)));
 		
 		// 8: digit a improve digit ? 123456 456 > 123
-		fprintf(fp,"%d\t",pCNS->imprnum );
+		fprintf(fp,"升数/%d\t",pCNS->imprnum );
 		
 		// 9: is pure digit ? see 'I' 'l' 'O' etc. as digit
-		fprintf(fp,"%d\t",pCNS->puredigit);
+		fprintf(fp,"纯数/%d\t",pCNS->puredigit);
 		
 		
 		// base::delimiter
 		// 10: last delimiter
-		fprintf(fp,"%d\t",pCNS->predeli);
+		fprintf(fp,"前分隔符/%d\t",pCNS->predeli);
 		
 		// 11: last useful delimiter
-		fprintf(fp,"%d\t",pCNS->mpredeli);
+		fprintf(fp,"前有用分隔符/%d\t",pCNS->mpredeli);
 		
 		// 12: next delimiter
-		fprintf(fp,"%d\t",pCNS->nextdeli);
+		fprintf(fp,"后分隔符/%d\t",pCNS->nextdeli);
 		
 		
 		
 		// base::string orthographic
 		// 13: year like || month like >> time like
-		fprintf(fp,"%d\t",(pCNS->yearlike > 0 )|| (pCNS->monthlike > 0 ));
+		fprintf(fp,"似年/%d\t",(pCNS->yearlike > 0 )|| (pCNS->monthlike > 0 ));
 		// 14: volume like  start of volume ?  vol. X num. no. number
+		fprintf(fp,"似卷/");
 		if(pCNS->volumnlike < 3) fprintf(fp,"%d\t",pCNS->volumnlike);
 		else if(!isBlank(pCNS->nextdeli)) fprintf(fp,"%d\t",pCNS->volumnlike-2);
 		else fprintf(fp,"0\t");
 			
 		// 15: page like
-		fprintf(fp,"%d\t",pCNS->pagelike);
+		fprintf(fp,"似页/%d\t",pCNS->pagelike);
 
 		
 		// base::dict
 		// 16: name in dict
-		fprintf(fp,"%d\t",pCNS->isNameDict || pCNS->rLastNameDict > 0);
+		fprintf(fp,"名/%d\t",pCNS->isNameDict || pCNS->rLastNameDict > 0);
 		
 		// 17: place in dict
 		pCNS->isPlaceNameDict = pCNS->isPlaceNameDict || isPlaceNameInDict(combinedStr);		
 		pCNS->isCountryDict = pCNS->isCountryDict || isCountryInDict(combinedStr);
-		fprintf(fp,"%d\t",pCNS->isPlaceNameDict>0 || pCNS->isCountryDict > 0);
+		
+		fprintf(fp,"地/%d\t",pCNS->isPlaceNameDict>0 || pCNS->isCountryDict > 0);
 		
 		// 18: publisher in dict
 		pCNS->isPubliserDict = pCNS->isPubliserDict || isPublisherInDict(combinedStr);
-		fprintf(fp,"%d\t",pCNS->isPubliserDict);
+		fprintf(fp,"出版社/%d\t",pCNS->isPubliserDict);
 		
 		// 19: fun word in dict 
-		fprintf(fp,"%d\t",pCNS->isFunWordDict);
+		fprintf(fp,"功能词汇/%d\t",pCNS->isFunWordDict);
 
 		// base::couple flag ststus
 		
 		// 20,21,22 quots AT IN OUT
-		fprintf(fp,"%d\t",quotStatus[0]);
-		fprintf(fp,"%d\t",quotStatus[1]);
-		fprintf(fp,"%d\t",quotStatus[2]);
+		fprintf(fp,"引号1/%d\t",quotStatus[0]);
+		fprintf(fp,"引号2/%d\t",quotStatus[1]);
+		fprintf(fp,"引号3/%d\t",quotStatus[2]);
 		
 		
 		// 23,24,25 Parentheses AT IN OUT
-		fprintf(fp,"%d\t",pareStatus[0]);
-		fprintf(fp,"%d\t",pareStatus[1]);
-		fprintf(fp,"%d\t",pareStatus[2]);
+		fprintf(fp,"花括号1/%d\t",pareStatus[0]);
+		fprintf(fp,"花括号2/%d\t",pareStatus[1]);
+		fprintf(fp,"花括号3/%d\t",pareStatus[2]);
 		
 		// 26,27,28 Square brackets AT IN OUT
-		fprintf(fp,"%d\t",sqbStatus[0]);
-		fprintf(fp,"%d\t",sqbStatus[1]);
-		fprintf(fp,"%d\t",sqbStatus[2]);
+		fprintf(fp,"方括号1/%d\t",sqbStatus[0]);
+		fprintf(fp,"方括号2/%d\t",sqbStatus[1]);
+		fprintf(fp,"方括号3/%d\t",sqbStatus[2]);
 		
 		// 29,30,31 Braces AT IN OUT
-		fprintf(fp,"%d\t",braStatus[0]);
-		fprintf(fp,"%d\t",braStatus[1]);
-		fprintf(fp,"%d\t",braStatus[2]);
+		fprintf(fp,"括号1/%d\t",braStatus[0]);
+		fprintf(fp,"括号2/%d\t",braStatus[1]);
+		fprintf(fp,"括号3/%d\t",braStatus[2]);
 		
 		// base::flags
 		
 		// 32 basic flags
 		// special flag (mixed)
-		fprintf(fp,"%d\t",pCNS->speflag);
+		fprintf(fp,"特殊标记/%d\t",pCNS->speflag);
 		
-		// 33 stop flag  && effect  
+		// 33 stop flag  && effect
+		fprintf(fp,"停止/括号1/括号2/括号3/");  
 		fprintf(fp,"%d/%d/%d/%d\t",pCNS->stopflag,
 					(quotStatus[0]||pareStatus[0]||sqbStatus[0]||braStatus[0]),
 					(quotStatus[1]||pareStatus[1]||sqbStatus[1]||braStatus[1]),
 					(quotStatus[2]||pareStatus[2]||sqbStatus[2]||braStatus[2]));
 		
 		// 34 eds flag
+		fprintf(fp,"编辑标记");
 		fprintf(fp,"%d\t",edsFlag);
 		
 		// 35: name like
+		fprintf(fp,"似名/");
 		fprintf(fp,"%d\t",pCNS->namelike);
 		
 		
 		// extend::flags effect
 		// 36 number of next pure digit
+		fprintf(fp,"随后之数/");
 		fprintf(fp,"%d\t",nextPDigit);
 		
 		
 		// 37 http effect
+		fprintf(fp,"URL态/");
 		fprintf(fp,"%d\t",httpStatus);
 		
 		// 38
+		fprintf(fp,"DOM态/");
 		fprintf(fp,"%d\t",domainFlag);
 		
 		
 		// extend::mix effect
 		// 39 [abc def] author @ abc
+		fprintf(fp,"组合顺序前/");
 		if(pCNS->mpredeli == '[' && npCNS != NULL)
 		{
 			if(npCNS->nextdeli == ']') fprintf(fp,"1\t");
@@ -859,6 +868,7 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 			fprintf(fp,"0\t");
 		
 		// [abc def] author @ def
+		fprintf(fp,"组合顺序后/");
 		if(pCNS->nextdeli == ']' && seqFlag == 1)
 		{
 			fprintf(fp,"1\t");
@@ -866,9 +876,11 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 			fprintf(fp,"0\t");
 		
 		// 40 article xxxx, A process of ...
+		fprintf(fp,"A终/");
 		fprintf(fp,"%d/%d\t",pCNS->isArticle,pCNS->stopflag);
 		
 		// 41 ph D  str cmp
+		fprintf(fp,"PhD/");
 		if((strcasecmp("ph",pCNS->str)== 0 && npCNS->str[0] == 'D')
 			|| strcasecmp("phD",pCNS->str)== 0)
 			fprintf(fp,"1\t");
@@ -876,40 +888,50 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 			fprintf(fp,"0\t");
 		
 		// 42 xxx thesis thesis : 25
+		fprintf(fp,"Thesis/");
 		fprintf(fp,"%d\t",thesisFlag);
 		
 		// 43 inc ltd limited  : ltdflag 1 2 3
+		fprintf(fp,"Inc_Ltd_Limit/");
 		fprintf(fp,"%d\t",ltdFlag);
 		
 		// 44 45 46 ACM / ICPC / IEEE
+		fprintf(fp,"ACM_ICPC_IEEE/");
 		fprintf(fp,"%d\t",pCNS->speflag == 1); // ISO
 		fprintf(fp,"%d\t",pCNS->speflag == 2); // IEEE
 		fprintf(fp,"%d\t",pCNS->speflag == 3); // ACM
 		
-		// 47 CNAC AECSA SRCD ... 
+		// 47 CNAC AECSA SRCD ...
+		fprintf(fp,"CNAC/"); 
 		fprintf(fp,"%d\t",pCNS->strtype == 0 &&  pCNS->slen < 6 && pCNS->slen > 2);
 		
 		
 		// 48 technical report
+		fprintf(fp,"TR/");
 		fprintf(fp,"%d\t",techFlag);
 		fprintf(fp,"%d\t",repFlag);
 		
 		
 		// 49 MIT
+		fprintf(fp,"MIT/");
 		fprintf(fp,"%d\t",mitFlag);
 		
 		// 50 51 52 university of 
+		fprintf(fp,"UNIVERSITY/");
 		fprintf(fp,"%d\t",pCNS->uniflag);
 		
+		fprintf(fp,"UNI_EFFECT/");
 		fprintf(fp,"%d\t",uniFlag);
 		
 		//fprintf(fp,"%d/%d\t",pCNS->predeli,pCNS->uniflag);
+		fprintf(fp,"前终/");
 		fprintf(fp,"%d/%d\t",lpCNS == NULL ? 0 : lpCNS->stopflag,pCNS->uniflag);
 		
 		// (August 1-2 2013)
 		// how about ?
 		
 		// 53 xxxx , (adfadf) or xxxx (adfasf)
+		fprintf(fp,"内连/");
 		fprintf(fp,"%d\t",contentConnect);
 		
 		// rfc || request (in tr) 
@@ -917,56 +939,74 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		
 		// 54 55 56 57 58 59 in proceedings of
 		// 54
+		fprintf(fp,"pIN/");
 		fprintf(fp,"%d\t",pCNS->procflag == 1); // In point
 		// 55
-		fprintf(fp,"%d\t",(pCNS->procflag == 1) && ((npCNS->namelike)||(npCNS->isNameDict )
-									|| (npCNS->rLastNameDict > 0)));
+		fprintf(fp,"pIn/name/");
+		fprintf(fp,"%d\t",(pCNS->procflag == 1) && 
+				((npCNS->namelike)||(npCNS->isNameDict )
+					|| (npCNS->rLastNameDict > 0)));
 		// 56
+		fprintf(fp,"sIN/");
 		fprintf(fp,"%d\t",inStatus);
 		// 57
+		fprintf(fp,"In/Name/");
 		fprintf(fp,"%d\t",inStatus && ((pCNS->namelike)||(pCNS->isNameDict ) || (pCNS->rLastNameDict > 0)));
 		
 		// 58
+		fprintf(fp,"InEffect/");
 		fprintf(fp,"%d\t",(pCNS->procflag == 1) || procFlag);
 		// 59
+		fprintf(fp,"InEffect/ExIn/");
 		fprintf(fp,"%d\t",procFlag);
 		
-		// 60  department of / dept. of 
+		// 60  department of / dept. of
+		fprintf(fp,"DeptOf/"); 
 		fprintf(fp,"%d\t",pCNS->deptflag);
 		
 		// 61 press
+		fprintf(fp,"Press/");
 		fprintf(fp,"%d\t",pressFlag);
 		
 		
 		// 62 conf / journal
+		fprintf(fp,"Journal/");
 		fprintf(fp,"%d\t",confFlag);
 
 		
 		// 63 org
+		fprintf(fp,"org/");
 		fprintf(fp,"%d\t",orgFlag);
 		
 		// 64 group
+		fprintf(fp,"group/");
 		fprintf(fp,"%d\t",groupFlag);
 		
 		// 65 lib ins/pub
+		fprintf(fp,"lib/");
 		fprintf(fp,"%d\t",labFlag);
 		
 		// 66 isbn
+		fprintf(fp,"eIsbn/");
 		fprintf(fp,"%d\t",isbnEffect);
 		
 		// 67 group lab or dept
+		fprintf(fp,"GLD/");
 		fprintf(fp,"%d\t",labFlag > 0 ||groupFlag > 0 || groupFlag > 0);
 		
 		
 		// 68 eds point
+		fprintf(fp,"pED/");
 		fprintf(fp,"%d/%d\t",pCNS->edsflag,pCNS->nextdeli);// 
 		
 		
 		// 69
+		fprintf(fp,"univ/lab/");
 		fprintf(fp,"%d\t",uniFlag||labFlag); // university , 
 		
 		
 		// 70 et , al
+		fprintf(fp,"et/al/");
 		if(lpCNS != NULL && npCNS != NULL)
 		{
 			if((strcmp(lpCNS->str,"et")==0) && (strcmp(pCNS->str,"al")==0))
@@ -982,6 +1022,7 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		
 		// 71
 		// jump to note : Available ... Submitted Unpublished
+		fprintf(fp,"Available/");
 		if(lpCNS != NULL && npCNS != NULL)
 		{
 			if(((strcmp(pCNS->str,"Available") == 0)||
