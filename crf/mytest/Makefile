@@ -60,20 +60,19 @@
 #############################SYSTEM#####################################
 LEARN			:= crf_learn
 TEST			:= crf_test
-CHECK			:= conlleval -d "	"
+CHECK			:= conlleval -d "\t" -r
 
 SAY			:= @echo
-RM			:= rm -rf 
+RM			:= rm -rf
+
+
+GADD			:= @git add 
+GCMT			:= @git commit -m  
 #############################FILES######################################
 
 FLAGS			:= #-c 4.0 , -a MIRA  ... 
 
 
-PATHA			:=
-PATHB			:=b/
-
-PA			:=${PATHA}
-PB			:=${PATHB}
 
 TEMPALTE		:=template
 TRAINDATA		:=train.data
@@ -83,40 +82,35 @@ OUTPUT			:=output.txt
 #############################MAIN#######################################
 
 #${SAY} "Usage:make trainA|trainB|testA|testB|checkA|checkB"
-all			:train test check
+all			:gitupdate train test check
+
+nall			:gitupdate ntrain ntest check
 
 
-train			:trainA
+train			:
+	${LEARN} ${FLAGS} ${TEMPALTE} ${TRAINDATA} ${MODEL}
 
-test			:testA
+ntrain			:
+	${LEARN} ${FLAGS} ${TEMPALTE} ${TESTDATA} ${MODEL}
 
-check			:checkA
+test			:
+	${TEST} -m ${MODEL} ${TESTDATA} > ${OUTPUT}
 
-trainA			:
-	${LEARN} ${FLAGS} ${PA}${TEMPALTE} ${PA}${TRAINDATA} ${PA}${MODEL}
-	
-trainB			:
-	${LEARN} ${FLAGS} ${PB}${TEMPALTE} ${PB}${TRAINDATA} ${PB}${MODEL}
+ntest			:
+	${TEST} -m ${MODEL} ${TRAINDATA} > ${OUTPUT}	
+
+check			:
+	${CHECK} < ${OUTPUT}
 
 
-testA			:
-	${TEST} -m ${PA}${MODEL} ${PA}${TESTDATA} > ${PA}${OUTPUT}
-
-testB			:
-	${TEST} -m ${PB}${MODEL} ${PB}${TESTDATA} > ${PB}${OUTPUT}
-
-checkA			:
-	${CHECK} < ${PA}${OUTPUT}
-
-checkB			:
-	${CHECK} < ${PB}${OUTPUT}
+gitupdate		:
+	-${GADD} .
+	-${GCMT} `date "+auto:%Y%m%d%H%M%S"`
 
 clean			:
-	${RM} ${PA}${MODEL}
-	${RM} ${PB}${MODEL}
-	${RM} ${PA}${OUTPUT}
-	${RM} ${PB}${OUTPUT}
-	${RM} ${PA}*~ ${PB}*~ *~
+	${RM} ${MODEL}
+	${RM} ${OUTPUT}
+	${RM} *~  *~
 
 
 
