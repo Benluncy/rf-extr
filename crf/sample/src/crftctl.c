@@ -539,7 +539,7 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 			if((tCNS->speflag == 22)&(tCNS->nextdeli !=':')&&domainNoStop)
 				httpStatus = 1;
 			
-			if(tCNS->procflag == 1 ) inStatus = 1;
+			if(tCNS->procflag == 1 && (stopEffect < 2 )) inStatus = 1; // In xxx , xx
 			
 			////////////////////////////////////////////////////////////////////
 			if(stopEffect == 0 && ((tCNS->deptflag == 1) 
@@ -917,7 +917,7 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		
 		// 54 55 56 57 58 59 in proceedings of
 		// 54
-		fprintf(fp,"%d\t",pCNS->procflag == 1); // In
+		fprintf(fp,"%d\t",pCNS->procflag == 1); // In point
 		// 55
 		fprintf(fp,"%d\t",(pCNS->procflag == 1) && ((npCNS->namelike)||(npCNS->isNameDict )
 									|| (npCNS->rLastNameDict > 0)));
