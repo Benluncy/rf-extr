@@ -20,17 +20,17 @@ int main(int argc, char **argv) {
   tagger->clear();
 
   // add context
-  tagger->add("B	N	Z");
-  tagger->add("F	V	A");
-  tagger->add("A	N	B");
-  tagger->add(".	D	E");
-  tagger->add("B	N	Z");
-  tagger->add("F	V	A");
-  tagger->add("C	N	B");
-  tagger->add(".	D	E");
-  tagger->add("H	H	A");
-  tagger->add("C	N	B");
-  tagger->add(".	D	E");
+  tagger->add("B N");
+  tagger->add("F V");
+  tagger->add("A N");
+  tagger->add(". D");
+  tagger->add("B N");
+  tagger->add("F V");
+  tagger->add("C N");
+  tagger->add(". D");
+  tagger->add("H H");
+  tagger->add("C N");
+  tagger->add(". D");
   
 
 
