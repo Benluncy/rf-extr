@@ -235,9 +235,9 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 					procFlag = 1;
 				}
 				
-				if(tCNS->edsflag == 1) edsFlag = 2;
+				if(tCNS->edsflag == 1) edsFlag = 1;
 				
-				if(tCNS->uniflag == 1) uniFlag = 2; // un of xxx in
+				if(tCNS->uniflag == 1) uniFlag = 1; // un of xxx in
 									// un of ... press 
 				
 				if(tCNS->speflag == 25) thesisFlag = 1;
