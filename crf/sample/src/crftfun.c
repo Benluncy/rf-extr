@@ -474,7 +474,8 @@ int ftEnQueue(pCNSQ Q,int *currentOffset,char *mpredeli)
 				case ',':
 					// filter Abbreviation
 					//if(!(abbrc && abbrl < 5 && abbrs))
-					if(!(abbrc && abbrl < 6) && abbrs)
+					// Dept. 		et. al.
+					if((!(abbrc && abbrl < 6) && abbrs) && !(abbrc && abbrl < 3))
 					//	crfNodeSnapshot.stopflag = 2;
 						crfNodeSnapshot.stopflag = crfNodeSnapshot.stopflag == 2 ? 
 										2: 
