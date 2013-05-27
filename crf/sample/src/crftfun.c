@@ -400,7 +400,7 @@ int ftEnQueue(pCNSQ Q,int *currentOffset,char *mpredeli)
 			content+(*currentOffset),
 			refAreaEnd-(*currentOffset),
 			&(crfNodeSnapshot.predeli),
-			&(crfNodeSnapshot.nextdeli)
+			&(crfNodeSnapshot.nextdeli),
 			&nextpre)) != 0)
 	{
 		int slen = strlen(str);
