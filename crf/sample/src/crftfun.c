@@ -450,6 +450,14 @@ int ftEnQueue(pCNSQ Q,int *currentOffset,char *mpredeli)
 				case ']':
 					crfNodeSnapshot.sqbEflag = 1;
 					break;
+				case 'I':
+				case 'l':
+					if(!isData(content[i+1]))
+					{
+						crfNodeSnapshot.sqbEflag = 1;
+					}
+					break;
+				
 				case '{':
 					crfNodeSnapshot.braSflag = 1;
 					break;

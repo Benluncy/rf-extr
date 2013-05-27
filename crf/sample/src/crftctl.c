@@ -102,6 +102,7 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 	
 	int isbnEffect = 0;
 
+	/*
 	FILE *fexp;
 	char exportFileName[1024];
 	for(int z=3;z<18;z++)
@@ -113,16 +114,23 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		fflush(NULL);
 		fclose(fexp);
 	}
+	*/
+	
+	
 	
 	while((pCNS = ftDeQueue(&nextCNSQ)) != NULL)
 	{
+		/*
 		sprintf(exportFileName,"res/%s",id2Token(pCNS->token));
 		fexp = fopen(exportFileName,"a");
 		fseek(fexp, 0L, SEEK_END);
 		fprintf(fexp,"%s ~ [%d]::[%d]\n",pCNS->str,pCNS->isPubliserDict,pCNS->isPlaceNameDict|| pCNS->isCountryDict);
 		fflush(NULL);
 		fclose(fexp);
+		*/
+		
 		// 0. PREPARE : FLAGS
+		
 		
 		// 0.0 PAST ONE INFO && NEXT ONE INFO
 		pCrfNodeSnapshot lpCNS = pastNElem(&preCNSQ,1);  // previous one node
@@ -154,94 +162,94 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		int stopEffect = 0; // XXXX XXXX XXXX
 			// 2:  ',' 
 			// 1:  '.','?','!'..  
-		int stopEffectEA = 0;// ExceptAbbreviation
 		
 		// 0.1.1 NEXT 
 		for(i=1;i < sizeQueue(&nextCNSQ) ; i++)
 		{
 			pCrfNodeSnapshot tCNS = (i==0)? pCNS : nextNElem(&nextCNSQ,i);
-			//if(tCNS->ltdflag == 1 && i < 4) ltdFlag = 1;
-			if(tCNS->edsflag == 1)
-				edsFlag = 1;
-			
 				
 			// effect : 1:'.''?''!'  2:','	
 			if(i>0)
 			{
-				if(tCNS->stopflag  == 1)
+				if(tCNS->stopflag  == 1) stopEffect = (stopEffect == 2) ? 2 : 1;
+				if(tCNS->stopflag  == 2) stopEffect = 2;
+			}
+			
+			///////////////////////////////////////////////////////////////////////
+			if(stopEffect < 2) // 0 , 1
+			{
+				if(tCNS->speflag == 55 ) // rep/rept == report
 				{
-					stopEffectEA = (stopEffectEA == 2) ? 2 : 1;
-					stopEffect = (stopEffect == 2) ? 2 : 1;
+					repFlag = 1;
 				}
-				if(tCNS->stopflag  == 2)
+				if((tCNS->speflag == 50 ) // tech
+					|| (tCNS->speflag == 53 ) // rfc 
+					|| (tCNS->speflag == 54 )) // tr
 				{
-					stopEffect = 2;
-					stopEffect = 2;
+					techFlag = 1;
 				}
+				
+				// 71: lab
+				// 72: Library
+				// 73: Laboratory
+				// 74: Center
+				// 75: institute [X?]
+				if(((tCNS->speflag >= 71 )&&(tCNS->speflag <= 75 ))
+					|| 0) // institute
+				{
+					labFlag = 1;
+				}
+				if((tCNS->speflag == 77 ) //Corporation / Co.
+					|| (tCNS->speflag == 78 )) // Organiza­tion
+				{
+					orgFlag = 1;
+				}
+				
+				if((tCNS->speflag == 30 ) // Press
+					|| (tCNS->speflag == 31 ) // Publishing
+					|| (tCNS->speflag == 32 ))  // Publisher/Pub.
+				{
+					pressFlag = 1;
+				}
+				
+				if((tCNS->speflag == 90) // conference
+					|| (tCNS->speflag == 79) // Journal
+					|| (tCNS->speflag == 60)) // communications
+				{
+					confFlag = 1; // journal
+				}
+				
+				if((tCNS->deptflag == 1)  // dept.
+					||(tCNS->speflag == 56)) // group
+				{
+					groupFlag = 1; // institute
+				}
+				
+				if(tCNS->procflag == 1) // In xxx
+				{
+					inStatus = 1;
+				}
+				if(tCNS->procflag > 1) // Proc.
+				{
+					procFlag = 1;
+				}
+				
+				if(tCNS->edsflag == 1) edsFlag = 2;
+				
+				if(tCNS->uniflag == 1) uniFlag = 2; // un of xxx in
+									// un of ... press 
+				
+				if(tCNS->speflag == 25) thesisFlag = 1;
+				
+				if(tCNS->speflag == 70) mitFlag = 1;
+				
+				if(tCNS->ltdflag) ltdFlag = 1;
 			}
-			
-			if(tCNS->uniflag == 1 && ((stopEffectEA == 2)||(stopEffectEA == 0)))
-				uniFlag = 1;
-			
-			if(stopEffectEA == 0 && (tCNS->speflag == 56)) //"group"
+			if(stopEffect < 1) // 0
 			{
-				groupFlag = 1; // institute
+			
 			}
-			
-			
-			if((stopEffectEA == 0 )&& ((tCNS->speflag == 90)||
-							(tCNS->speflag == 79)||
-							(tCNS->speflag == 60))) //"conference(s)"
-			{
-				confFlag = 1; // journal
-			}
-			
-			if((stopEffectEA == 0) && ((tCNS->speflag == 30 )
-						|| (tCNS->speflag == 31 )
-						|| (tCNS->speflag == 32 ))) // publisher
-			{
-				pressFlag = 1;
-			}
-			
-			if((stopEffectEA == 0) && ((tCNS->speflag == 77 )
-						|| (tCNS->speflag == 78 ))) // publisher||institute
-			{
-				orgFlag = 1;
-			}
-			
-			if((stopEffectEA == 0) && ((tCNS->speflag >= 71 )
-						&&(tCNS->speflag <= 75 ))) // institute
-			{
-				labFlag = 1;
-			}
-			
-			if((stopEffectEA == 0) && ((tCNS->speflag == 50 )
-						|| (tCNS->speflag == 53 )
-						|| (tCNS->speflag == 54 ))) // publisher
-			{
-				techFlag = 1;
-			}
-			
-			if((stopEffectEA == 0) && ((tCNS->speflag == 55 ))) // publisher
-			{
-				repFlag = 1;
-			}
-			
-			if((stopEffectEA == 0) && ((tCNS->procflag > 1))) // publisher
-			{
-				procFlag = 1;
-			}
-			
-			if(stopEffectEA == 0 && (tCNS->speflag == 25)) thesisFlag = 1;
-			
-			
-			// number of pure digit except 19xx/20xx
-			if(tCNS->puredigit > 0 && tCNS->yearlike) nextPDigit ++ ;
-			
-			if(stopEffectEA == 0 && (tCNS->speflag == 70)) mitFlag = 1;
-			
-			if((stopEffectEA == 0 ||  stopEffectEA == 2)&& tCNS->ltdflag) ltdFlag = 1;
-			
+			///////////////////////////////////////////////////////////////////////
 			
 			if(!isBlank(tCNS->predeli) && (tCNS->predeli !=':')
 							&& (tCNS->predeli !='/')
@@ -251,10 +259,18 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 				domainNoStop = 0;
 			}
 			
-			if(domainNoStop && tCNS->domainflag)
+			if(domainNoStop)
 			{
-				domainFlag = 1;
+				if((tCNS->speflag == 20 || tCNS->speflag == 21) 
+					&&!isBlank(tCNS->nextdeli))
+					httpStatus = 1;
+				if(tCNS->speflag == 22)&(tCNS->nextdeli !=':') httpStatus = 1;
+				if(tCNS->domainflag)
+					domainFlag = 1;
 			}
+			
+			if(tCNS->puredigit > 0 && tCNS->yearlike) nextPDigit ++ ;
+			
 			
 		}
 		
@@ -273,7 +289,6 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		braCache = 0;
 		
 		stopEffect = 0;
-		stopEffectEA = 0;
 		domainNoStop = 1;
 		for(i=0;i < sizeQueue(&preCNSQ) ; i++)
 		{
@@ -281,40 +296,12 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 			
 			if(i>0)
 			{
-				/*
-				if(tCNS->stopflag  == 1 ) stopEffect = 1; 
-				if(tCNS->stopflag  == 2 ) stopEffect = (stopEffect == 1) ? 1 : 2;
-			
-				if(tCNS->stopflag  == 1)
-				{
-					if(!((tCNS->slen <=4) && (tCNS->str[0]>='A')
-							&&(tCNS->str[0]<='Z')))
-						stopEffectEA = 1;
-				} 
-				if(tCNS->stopflag  == 2)
-				{
-					if(!((tCNS->slen <=4) && (tCNS->str[0]>='A')
-							&&(tCNS->str[0]<='Z')))
-						stopEffectEA = (stopEffectEA == 1) ? 1 : 2;
-				}*/
-				if(tCNS->stopflag  == 1)
-				{
-					stopEffectEA = (stopEffectEA == 2) ? 2 : 1;
-					stopEffect = (stopEffect == 2) ? 2 : 1;
-				}
-				if(tCNS->stopflag  == 2)
-				{
-					stopEffect = 2;
-					stopEffect = 2;
-				}
-				
+				if(tCNS->stopflag  == 1) stopEffect = (stopEffect == 2) ? 2 : 1;
+				if(tCNS->stopflag  == 2) stopEffect = 2;
 			}
 	
-			if(tCNS->edsflag == 1) edsFlag = 1;
-	
 			if(!tCNS->puredigit && tCNS->strtype!=4) puredata = 0;
-			
-			if(puredata && tCNS->speflag == 40) isbnEffect = 1;
+			if( puredata && tCNS->speflag == 40) isbnEffect = 1;
 				
 			if(!isBlank(tCNS->predeli) && (tCNS->predeli !=':')
 							&& (tCNS->predeli !='/')
@@ -323,61 +310,94 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 			{
 				domainNoStop = 0;
 			}
-
-			if((tCNS->speflag == 20|| tCNS->speflag == 21)
-					&&!isBlank(tCNS->nextdeli) 
-						&& domainNoStop ) 
-				httpStatus = 1;
-			if((tCNS->speflag == 22)&(tCNS->nextdeli !=':')&&domainNoStop)
-				httpStatus = 1;
+				
 			
-			if(tCNS->procflag == 1 && (stopEffect < 2 )) inStatus = 1; // In xxx , xx
+			if(domainNoStop)
+			{
+				if((tCNS->speflag == 20 || tCNS->speflag == 21) 
+					&&!isBlank(tCNS->nextdeli))
+					httpStatus = 2;
+				if(tCNS->speflag == 22)&(tCNS->nextdeli !=':') httpStatus = 2;
+			}
+	
 			
 			////////////////////////////////////////////////////////////////////
-			if(stopEffect == 0 && ((tCNS->deptflag == 1) 
-						||(tCNS->speflag == 56))) //"group" institute
-			{
-				groupFlag = 2; // institute
-			}
 			
 			
-			if((stopEffect == 0 )&& ((tCNS->speflag == 90)||
-							(tCNS->speflag == 79)||
-							(tCNS->speflag == 60))) //"conference(s)"
+			if(stopEffect < 2) // 0 , 1
 			{
-				confFlag = 2; // journal
+				if(tCNS->speflag == 55 ) // rep/rept == report
+				{
+					repFlag = 2;
+				}
+				if((tCNS->speflag == 50 ) // tech
+					|| (tCNS->speflag == 53 ) // rfc 
+					|| (tCNS->speflag == 54 )) // tr
+				{
+					techFlag = 2;
+				}
+				
+				// 71: lab
+				// 72: Library
+				// 73: Laboratory
+				// 74: Center
+				// 75: institute [X?]
+				if(((tCNS->speflag >= 71 )&&(tCNS->speflag <= 75 ))
+					|| 0) // institute
+				{
+					labFlag = 2;
+				}
+				if((tCNS->speflag == 77 ) //Corporation / Co.
+					|| (tCNS->speflag == 78 )) // Organiza­tion
+				{
+					orgFlag = 2;
+				}
+				
+				if((tCNS->speflag == 30 ) // Press
+					|| (tCNS->speflag == 31 ) // Publishing
+					|| (tCNS->speflag == 32 ))  // Publisher/Pub.
+				{
+					pressFlag = 2;
+				}
+				
+				if((tCNS->speflag == 90) // conference
+					|| (tCNS->speflag == 79) // Journal
+					|| (tCNS->speflag == 60)) // communications
+				{
+					confFlag = 2; // journal
+				}
+				
+				if((tCNS->deptflag == 1)  // dept.
+					||(tCNS->speflag == 56)) // group
+				{
+					groupFlag = 2; // institute
+				}
+				
+				if(tCNS->procflag == 1) // In xxx
+				{
+					inStatus = 2;
+				}
+				if(tCNS->edsflag == 1) edsFlag = 2;
+				
+				if(tCNS->uniflag == 1) uniFlag = 2; // un of xxx in
+									// un of ... press 
+			
+				if(tCNS->procflag > 1) // Proc.
+				{
+					procFlag = 2;
+				}
+				
+				if(tCNS->speflag == 25) thesisFlag = 2;
+				
+				if(tCNS->speflag == 70) mitFlag = 2;
+				
+				if(tCNS->ltdflag) ltdFlag = 2;
+			}
+			if(stopEffect < 1) // 0
+			{
+			
 			}
 			
-			if((stopEffect == 0) && ((tCNS->speflag == 30 )
-						|| (tCNS->speflag == 31 )
-						|| (tCNS->speflag == 32 ))) // publisher
-			{
-				pressFlag = 2;
-			}
-			
-			if((stopEffect == 0) && ((tCNS->speflag == 77 )
-						|| (tCNS->speflag == 78 ))) // publisher||institute
-			{
-				orgFlag = 2;
-			}
-			
-			if((stopEffect == 0) && ((tCNS->speflag >= 71 )
-						&&(tCNS->speflag <= 75 ))) // institute
-			{
-				labFlag = 2;
-			}
-			
-			if((stopEffect == 0) && ((tCNS->speflag == 50 )
-						|| (tCNS->speflag == 53 )
-						|| (tCNS->speflag == 54 ))) // publisher
-			{
-				techFlag = 2;
-			}
-			
-			if((stopEffect == 0) && ((tCNS->speflag == 55 ))) // publisher
-			{
-				repFlag = 2;
-			}
 			////////////////////////////////////////////////////////////////////		
 
 			
