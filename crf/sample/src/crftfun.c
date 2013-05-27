@@ -8,6 +8,8 @@
 #include "queue.h"
 #include "dict.h"
 #include "tokens.h"
+#include "strHandle.h"
+#include "virtualcontent.h"
 
 
 // digits ..
