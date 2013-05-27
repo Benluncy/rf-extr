@@ -12,9 +12,10 @@
 #include "virtualcontent.h"
 #include "hftnpse.h"
 #include "common.h"
+#include "crftctl.h"
+
 #include "hftctl.h" // int getReferenceHeadOffset(void);
 #include "eftfun.h" // int getReferenceEndOffset(void);
-
 
 // digits ..
 // digit base
