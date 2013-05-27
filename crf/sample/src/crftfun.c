@@ -410,7 +410,7 @@ int ftEnQueue(pCNSQ Q,int *currentOffset,char *mpredeli)
 		// abbr
 		int abbrc = 0; // in Connect status
 		int abbrl = 0; // abbr length
-		//int abbrs = 0 ; // abbr start type
+		int abbrs = 0 ; // abbr start type
 		
 		
 		for(int i=(*currentOffset);i<crfNodeSnapshot.offset+(*currentOffset);i++)
@@ -469,7 +469,7 @@ int ftEnQueue(pCNSQ Q,int *currentOffset,char *mpredeli)
 				case ',':
 					// filter Abbreviation
 					//if(!(abbrc && abbrl < 5 && abbrs))
-					if(!(abbrc && abbrl < 6))
+					if(!(abbrc && abbrl < 6) && abbrs)
 					//	crfNodeSnapshot.stopflag = 2;
 						crfNodeSnapshot.stopflag = crfNodeSnapshot.stopflag == 2 ? 
 										2: 
@@ -492,12 +492,12 @@ int ftEnQueue(pCNSQ Q,int *currentOffset,char *mpredeli)
 				{
 					abbrl = 0;
 					abbrc = 1;
-					//abbrs = isUppercaseCode(content[i]) ? 1 : 0 ;
+					abbrs = isUppercaseCode(content[i]) ? 1 : 0 ;
 				}
 			}else if(!isAsciiOrDigit(content[i-1]) && isAsciiCode(content[i])){
 				abbrc = 1;
 				abbrl = 0;
-				//abbrs = isUppercaseCode(content[i]) ? 1 : 0 ;
+				abbrs = isUppercaseCode(content[i]) ? 1 : 0 ;
 			}else if(abbrc && (content[i]>='a' || content[i] <= 'z')){
 				abbrl ++;
 			}else
