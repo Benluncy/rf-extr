@@ -405,7 +405,7 @@ int ftEnQueue(pCNSQ Q,int *currentOffset,char *mpredeli)
 		sprintf(crfNodeSnapshot.str,"%s",str);
 		crfNodeSnapshot.slen = slen;
 		//int dval;
-		int tkcheck;
+		int tkcheck; // get offset of token
 		int hstkcheck = 0;
 		char partStr[1024];
 		int psI = 0;
@@ -533,7 +533,7 @@ int ftEnQueue(pCNSQ Q,int *currentOffset,char *mpredeli)
 		crfNodeSnapshot.edsflag = edsFlag(str,slen);
 		crfNodeSnapshot.speflag = specialFlag(str,slen);
 		crfNodeSnapshot.procflag =  procFlag(str,slen);		
-		for(int z=0;z<splen && (crfNodeSnapshot.procflag != 0);z++)
+		for(int z=0;z<splen && (crfNodeSnapshot.procflag == 0);z++)
 		{
 			//str+flag[i],flag[i+1]-flag[i]
 			for(int k=z;k<splen;k++)
@@ -549,7 +549,7 @@ int ftEnQueue(pCNSQ Q,int *currentOffset,char *mpredeli)
 		crfNodeSnapshot.namelike = namelike(str,slen,crfNodeSnapshot.nextdeli,
 						crfNodeSnapshot.strtype);
 						
-		for(int z=0;z<splen && (crfNodeSnapshot.namelike != 0);z++)
+		for(int z=0;z<splen && (crfNodeSnapshot.namelike == 0);z++)
 		{
 			//str+flag[i],flag[i+1]-flag[i]
 			for(int k=z;k<splen;k++)
@@ -564,14 +564,14 @@ int ftEnQueue(pCNSQ Q,int *currentOffset,char *mpredeli)
 		
 		
 		crfNodeSnapshot.isNameDict = isNameInDict(str);
-		for(int z=0;z<splen && (crfNodeSnapshot.isNameDict != 0);z++)
+		for(int z=0;z<splen && (crfNodeSnapshot.isNameDict == 0);z++)
 		{
 			//str+flag[i],flag[i+1]-flag[i]
 			crfNodeSnapshot.isNameDict = isNameInDict(str+spstr[z]);
 		}
 		
 		crfNodeSnapshot.rLastNameDict = rateLastNameInDict(str);
-		for(int z=0;z<splen && (crfNodeSnapshot.rLastNameDict != 0);z++)
+		for(int z=0;z<splen && (crfNodeSnapshot.rLastNameDict == 0);z++)
 		{
 			//str+flag[i],flag[i+1]-flag[i]
 			crfNodeSnapshot.rLastNameDict = rateLastNameInDict(str+spstr[z]);
@@ -579,7 +579,7 @@ int ftEnQueue(pCNSQ Q,int *currentOffset,char *mpredeli)
 		
 		
 		crfNodeSnapshot.isCountryDict = isCountryInDict(str);
-		for(int z=0;z<splen && (crfNodeSnapshot.isCountryDict != 0);z++)
+		for(int z=0;z<splen && (crfNodeSnapshot.isCountryDict == 0);z++)
 		{
 			//str+flag[i],flag[i+1]-flag[i]
 			crfNodeSnapshot.isCountryDict = isCountryInDict(str+spstr[z]);
@@ -589,7 +589,7 @@ int ftEnQueue(pCNSQ Q,int *currentOffset,char *mpredeli)
 		crfNodeSnapshot.isFunWordDict = isFunWordInDict(str);
 
 		crfNodeSnapshot.isPlaceNameDict = isPlaceNameInDict(str);
-		for(int z=0;z<splen && (crfNodeSnapshot.isPlaceNameDict != 0);z++)
+		for(int z=0;z<splen && (crfNodeSnapshot.isPlaceNameDict == 0);z++)
 		{
 			//str+flag[i],flag[i+1]-flag[i]
 			crfNodeSnapshot.isPlaceNameDict = isPlaceNameInDict(str+spstr[z]);
@@ -597,7 +597,7 @@ int ftEnQueue(pCNSQ Q,int *currentOffset,char *mpredeli)
 		
 		crfNodeSnapshot.isPubliserDict = isPublisherInDict(str) ||isPublisher;
 		
-		for(int z=0;z<splen && (crfNodeSnapshot.isPubliserDict != 0);z++)
+		for(int z=0;z<splen && (crfNodeSnapshot.isPubliserDict == 0);z++)
 		{
 			//str+flag[i],flag[i+1]-flag[i]
 			crfNodeSnapshot.isPubliserDict = isPublisherInDict(str+spstr[z]);
@@ -606,7 +606,7 @@ int ftEnQueue(pCNSQ Q,int *currentOffset,char *mpredeli)
 		crfNodeSnapshot.isArticle = isArticle(str,slen);
 		crfNodeSnapshot.deptflag = deptFlag(str,slen);
 		crfNodeSnapshot.uniflag = uniFlag(str,slen);
-		for(int z=0;z<splen && (crfNodeSnapshot.uniflag != 0);z++)
+		for(int z=0;z<splen && (crfNodeSnapshot.uniflag == 0);z++)
 		{
 			//str+flag[i],flag[i+1]-flag[i]
 			for(int k=z;k<splen;k++)
@@ -618,7 +618,7 @@ int ftEnQueue(pCNSQ Q,int *currentOffset,char *mpredeli)
 		}
 		
 		crfNodeSnapshot.ltdflag = ltdFlag(str,slen);
-		for(int z=0;z<splen && (crfNodeSnapshot.ltdflag != 0);z++)
+		for(int z=0;z<splen && (crfNodeSnapshot.ltdflag == 0);z++)
 		{
 			//str+flag[i],flag[i+1]-flag[i]
 			for(int k=z;k<splen;k++)
