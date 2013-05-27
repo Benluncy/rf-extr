@@ -18,7 +18,7 @@
 #define isUppercaseCode(a) (a>='A' && a<='Z')
 #define isLowercaseCode(a) (a>='a' && a<='z')
 
-#define isConnectCh(a) (a == '~' || a == '-' || a == ':')
+#define isConnectCh(a) (a == '~' || a == '-')
 
 #define DIGITLIKE(x) ((x<='9'&&x>='0')||x=='l'||x=='I'||x=='i'||x=='o'||x=='O')
 
