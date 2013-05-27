@@ -25,7 +25,8 @@
 #define VALDIG(x) ((x<='9'&&x>='0')?(x-'0'):((x=='I'||x=='i'||x=='l'||x=='['||x==']')?1:((x=='o'||x=='O')?0:-1)))
 
 
-int spilitContent(char *dest,int dlen,const char *src,int len,char *predeli,char *nextdeli);
+//int spilitContent(char *dest,int dlen,const char *src,int len,char *predeli,char *nextdeli);
+int spilitContent(char *dest,int dlen,const char *src,int len,char *predeli,char *nextdeli,char *np);
 
 // 
 int spilitStr(const char *str,int slen,int *flg,int *flen);

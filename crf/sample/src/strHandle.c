@@ -8,7 +8,7 @@ int checkCharType(char a)
 	return 0;
 }
 
-int spilitContent(char *dest,int dlen,const char *src,int len,char *predeli,char *nextdeli)
+int spilitContent(char *dest,int dlen,const char *src,int len,char *predeli,char *nextdeli,char *np)
 {
 	int i;
 	int j = 0;
@@ -96,6 +96,11 @@ int spilitContent(char *dest,int dlen,const char *src,int len,char *predeli,char
 				break;
 			}
 		}
+	}
+	while(i<len){ 
+		if(!isDelimiter(src[i])) break; 
+		else if(!isBlank(src[i])) *np = src[i];
+		i++;
 	}
 	return i;
 }

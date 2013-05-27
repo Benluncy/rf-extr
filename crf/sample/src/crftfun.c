@@ -389,6 +389,7 @@ int ftEnQueue(pCNSQ Q,int *currentOffset,char *mpredeli)
 	int refAreaEnd = getReferenceEndOffset();
 	char *content = getPcontent();
 	char str[SINGLEWORDLEN];
+	char nextpre;
 	
 	CrfNodeSnapshot crfNodeSnapshot;
 	
@@ -399,7 +400,8 @@ int ftEnQueue(pCNSQ Q,int *currentOffset,char *mpredeli)
 			content+(*currentOffset),
 			refAreaEnd-(*currentOffset),
 			&(crfNodeSnapshot.predeli),
-			&(crfNodeSnapshot.nextdeli))) != 0)
+			&(crfNodeSnapshot.nextdeli)
+			&nextpre)) != 0)
 	{
 		int slen = strlen(str);
 		sprintf(crfNodeSnapshot.str,"%s",str);
@@ -415,9 +417,9 @@ int ftEnQueue(pCNSQ Q,int *currentOffset,char *mpredeli)
 		int abbrl = 0; // abbr length
 		int abbrs = 0 ; // abbr start type
 		
-		
-		for(int i=(*currentOffset);i<crfNodeSnapshot.offset+(*currentOffset);i++)
+		for(int i=(*currentOffset);i<=crfNodeSnapshot.offset+(*currentOffset);i++)
 		{
+			if(i>=refAreaEnd) break;
 			if(!isDelimiter(content[i]) && !hstkcheck)
 			{
 				tkcheck = i;
@@ -521,7 +523,10 @@ int ftEnQueue(pCNSQ Q,int *currentOffset,char *mpredeli)
 
 		sprintf(crfNodeSnapshot.str,"%s",str);
 		
-		crfNodeSnapshot.mpredeli = isBlank(crfNodeSnapshot.predeli)?(*mpredeli):' ';
+		// = isBlank(crfNodeSnapshot.predeli)?(*mpredeli):' ';
+		crfNodeSnapshot.predeli = *mpredeli;
+		crfNodeSnapshot.mpredeli = *mpredeli;
+		
 		crfNodeSnapshot.digitl = digitlen(str,slen);
 		crfNodeSnapshot.puredigit = puredigit(str,slen);
 		crfNodeSnapshot.dval = valofdigit(str,slen);
@@ -642,7 +647,7 @@ int ftEnQueue(pCNSQ Q,int *currentOffset,char *mpredeli)
 		}else
 			crfNodeSnapshot.imprnum = 0;
 		
-		if(!isBlank(crfNodeSnapshot.nextdeli)) *mpredeli = crfNodeSnapshot.nextdeli;
+		if(!isBlank(crfNodeSnapshot.nextdeli)) *mpredeli = nextpre;
 		
 		//*currentOffset = crfNodeSnapshot.offset;
 		enQueue(Q,crfNodeSnapshot);
