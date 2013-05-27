@@ -155,6 +155,7 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		int nextPDigit = 0; // next pure digit
 		int domainFlag = 0;
 		int domainNoStop = 1;
+		int inStatus = 0;
 		int i;
 		
 		
@@ -276,7 +277,6 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		
 		// 0.1.2 PREVIOUS
 		httpStatus = 0;
-		int inStatus = 0;
 		int seqFlag = 0;
 		
 		int puredata = 1;
