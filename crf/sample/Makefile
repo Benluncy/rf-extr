@@ -50,8 +50,8 @@ VPATH			:= .:include/:src/:lib/:obj/
 	export	VPATH
 LIBS			:= -L lib/ -ldl -lpthread  -lm 
 INCFLAG			:= -I include/
-CFLAGS			:= -Wall ${INCFLAG} -std=c99
-GNUFLAGS		:= -Wall ${INCFLAG} -std=gnu99
+CFLAGS			:= -Wall ${INCFLAG} -std=c99 -g
+GNUFLAGS		:= -Wall ${INCFLAG} -std=gnu99 -g
 OBJS			:= hftctl.o hftnpse.o sqlite3.o persistence.o \
 				ini.o tokens.o virtualcontent.o \
 				minEditDistance.o dirTraversal.o\
