@@ -35,7 +35,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/dir.h>
-#else // for windows 
+#else // for windows
 #include <io.h>
 #endif //WIN32
 
@@ -62,7 +62,7 @@ int doTraversal(const char *path, int recursive,file_callback xCallback)
 		while((pdirent = readdir(pdir)) != 0)
 		{
 			//ignore "." && ".."
-			if(!strcmp(pdirent->d_name, ".")|| 
+			if(!strcmp(pdirent->d_name, ".")||
 				!strcmp(pdirent->d_name, "..")) continue;
 			sprintf(tmp, "%s/%s", path, pdirent->d_name);
 			xCallback(tmp,isDir(tmp));
@@ -104,27 +104,21 @@ int dirTraversal(const char *path, int recursive,file_callback xCallback)
 
 #else //for windows
 /**
- * dir traversal , for windows , references: 
- * http://wenku.baidu.com/view/9a321f23ccbff121dd368399.html
- * 
- * SIGH: unsigned
  *
  */
-/*
- * TODO FIX IT
- */ 
 
 //int dirTraversal(const char *path, int recursive,file_callback xCallback)
 int dirTraversal(const char *path, int recursive,file_callback xCallback)
 {
 	int len = strlen(path)+3;
-	long handle;//用于查找的句柄
-	char mypath[len+3];
-	char tmppath[len];
-	char nxtpath[len+1024];
-	char sp = 0;
+	long handle;
+	char mypath[1024];
+	char searchpath[1024];
+	char tmppath[1024];
+	char nxtpath[1024];
+	char sp = '/';
 	int i;
-	struct _finddata_t fileinfo;//文件信息的结构体
+	struct _finddata_t fileinfo;
 	sprintf(mypath,"%s",path);
 	switch(mypath[len-1])
 	{
@@ -150,43 +144,29 @@ int dirTraversal(const char *path, int recursive,file_callback xCallback)
 			}
 	}
 	sprintf(tmppath,"%s",mypath);
-	printf("path:%s - %s \n",tmppath, mypath);
-	sprintf(mypath,"%s%c%s",mypath,sp,"*");
-	printf("%s\n",mypath);
-	system("pause");
-	handle=_findfirst(mypath,&fileinfo);//第一次查找
-	if(-1==handle) return -1;
-	do
+	sprintf(searchpath,"%s%c%s",mypath,sp,"*");
+
+	for(handle=_findfirst(searchpath,&fileinfo);!_findnext(handle,&fileinfo);)
 	{
-		//TODO printf -> xCallback
-		xCallback(fileinfo.name,((fileinfo.attrib & _A_SUBDIR)!=0));
-		printf("%s\n",fileinfo.name);
-		//if(!strcmp(pdirent->d_name, ".")|| !strcmp(pdirent->d_name, "..")) continue;
-		if(((fileinfo.attrib & _A_SUBDIR)!=0) && recursive && !strcmp(fileinfo.name,".")
-				&& !strcmp(fileinfo.name,".."))
-		{
-			printf("0:%c1:%c2:%c\n",fileinfo.name[0],fileinfo.name[1],fileinfo.name[2]);
-			if(getchar() == 'q') return 1;
-			printf("-->\n");
-			sprintf(nxtpath,"%s%c%s",tmppath,sp,fileinfo.name);
-			printf("[%s]\n",nxtpath);
-			dirTraversal(nxtpath,1);
-			printf("<--\n");
-		}
-		
-	}while(!_findnext(handle,&fileinfo));//循环查找其他符合的文件,知道找不到其他的为止
-	_findclose(handle);//关闭句柄
+		if(-1==handle) return -1;
+		//
+		sprintf(nxtpath,"%s%c%s",tmppath,sp,fileinfo.name);
+
+		// call back
+		if((0 != strcmp(fileinfo.name,"."))
+				&& (0 != strcmp(fileinfo.name,"..")))
+			xCallback(nxtpath,((fileinfo.attrib & _A_SUBDIR)!=0));
+
+		if(((fileinfo.attrib & _A_SUBDIR)!=0)
+				&& recursive
+				&& 0 != strcmp(fileinfo.name,".")
+				&& 0 != strcmp(fileinfo.name,".."))
+			dirTraversal(nxtpath,recursive,xCallback);
+
+	}
+	_findclose(handle);
 	return 1;
 }
 
 #endif //end of linux/windows
 
-/**
-int main(int argc, char** argv)
-{
-//	const char *dir = "E:\\tmp\\dir\\win\\";
-	const char *dir = ".";
-	dirTraversal(dir, 1);
-	return 0;
-}
-*/
