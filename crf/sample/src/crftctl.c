@@ -177,7 +177,7 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 				if(tCNS->stopflag  == 1) stopEffect = (stopEffect == 2) ? 2 : 1;
 				if(tCNS->stopflag  == 2) stopEffect = 2;
 			}
-			if(tCNS->puredigit == 2 )
+			if(tCNS->puredigit == 2 || tCNS->procflag == 1)
 			{
 				edNoStop = 0;
 			}
