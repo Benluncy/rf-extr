@@ -185,7 +185,7 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 			///////////////////////////////////////////////////////////////////////
 			if(stopEffect < 2) // 0 , 1
 			{
-				int sw = 1+stopEffect; // stop weight 0,1
+				int sw = 1+stopEffect; // stop weight 1,2
 				if(tCNS->speflag == 55 ) // rep/rept == report
 				{
 					repFlag = sw;
@@ -346,7 +346,7 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 			
 			if(stopEffect < 2) // 0 , 1
 			{
-				int sw = 2+stopEffect; // stop weight 2,3
+				int sw = 3+stopEffect; // stop weight 3,4
 				
 				if(tCNS->speflag == 55 ) // rep/rept == report
 				{

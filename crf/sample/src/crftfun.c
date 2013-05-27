@@ -177,9 +177,12 @@ int pagekwd(const char *str,int len)
 
 int edsFlag(const char *str,int len)
 {
+	if(len < 2 ) return 0;
 	if(strncasecmp(str,"ed",len)==0) return 1;
 	if(strncasecmp(str,"cd",len)==0) return 1;
+	if(len < 3 ) return 0;
 	if(strncasecmp(str,"eds",len)==0) return 1;
+	if(len < 6 ) return 0;
 	if(strncasecmp(str,"editor",len)==0) return 1;
 	if(strncasecmp(str,"editors",len)==0) return 1;
 	return 0;
