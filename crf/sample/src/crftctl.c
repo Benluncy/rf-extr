@@ -898,7 +898,7 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		
 		// 72 and
 		fprintf(fp,"和/");
-		fprintf(fp,"%d",andFlag);
+		fprintf(fp,"%d\0",andFlag);
 		
 		
 		
