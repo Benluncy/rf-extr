@@ -18,8 +18,6 @@
 
 #include <strings.h>
 
-#define SINGLEWORDLEN 256
-
 
 
 FILE *fpTrain; // train.txt

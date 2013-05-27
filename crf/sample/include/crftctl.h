@@ -1,7 +1,7 @@
 #ifndef __CRFT_CTL_H__
 #define __CRFT_CTL_H__
 #include <stdio.h>
-
+#define SINGLEWORDLEN 256
 
 int genCRFSample(const char *path);
 int genCRFSampleCtl(const char* fileName,int isDir);
