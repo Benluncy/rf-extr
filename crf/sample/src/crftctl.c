@@ -178,8 +178,8 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 				if(tCNS->stopflag  == 2) stopEffect = 2;
 			}
 			if((tCNS->puredigit >0 || tCNS->procflag == 1) &&
-				!(tCNS->slen==1 && (tCNS->nextdeli == '.' 
-						|| tCNS->nextdeli == ',' )))
+				!((tCNS->slen==1)&&(tCNS->strtype == 2)) &&
+				!(strcmp(tCNS->str,"and") == 0))
 			{
 				edNoStop = 0;
 			}
