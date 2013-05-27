@@ -4,6 +4,11 @@
 #include <string.h>
 #include <strings.h>
 
+//queue
+#include "queue.h"
+#include "dict.h"
+#include "tokens.h"
+
 
 // digits ..
 // digit base
@@ -340,5 +345,298 @@ int namelike(const char *str,int len,char next,int type)
 
 
 
+// enqueue and dequeue
+
+int filteredTokenId(int offset)
+{
+	int mypclen = getPclen();
+	unsigned int myTags;
+	unsigned int nowTag;
+	if(offset >= mypclen) return 0;
+	myTags = *(getTags()+offset);
+	int finalTag = 0;
+	while((nowTag=tokenPop(&myTags)) > 0)
+	{
+		//ignored: 
+		// note 10
+		// RefA 1
+		// SinRef 2
+		// tech 13
+		if(nowTag != 1 && nowTag != 2 && nowTag != 10 ) // ingore RefA , SinRef , note
+		{
+			finalTag =  nowTag;
+		}	
+	}		
+	return finalTag;
+}
+
+
+int ftEnQueue(pCNSQ Q,int *currentOffset,char *mpredeli)
+{
+	if(isFullQueue(Q)) return 0;
+
+	int refAreaEnd = getReferenceEndOffset();
+	char *content = getPcontent();
+	char str[SINGLEWORDLEN];
+	
+	CrfNodeSnapshot crfNodeSnapshot;
+	
+	int isPublisher = 0;
+	
+	//spilitContent(char *dest,int dlen,const char *src,int len)
+	if((crfNodeSnapshot.offset = spilitContent(str,SINGLEWORDLEN,
+			content+(*currentOffset),
+			refAreaEnd-(*currentOffset),
+			&(crfNodeSnapshot.predeli),
+			&(crfNodeSnapshot.nextdeli))) != 0)
+	{
+		int slen = strlen(str);
+		sprintf(crfNodeSnapshot.str,"%s",str);
+		crfNodeSnapshot.slen = slen;
+		//int dval;
+		int tkcheck;
+		int hstkcheck = 0;
+		char partStr[1024];
+		int psI = 0;
+		
+		// abbr
+		int abbrc = 0; // in Connect status
+		int abbrl = 0; // abbr length
+		//int abbrs = 0 ; // abbr start type
+		
+		
+		for(int i=(*currentOffset);i<crfNodeSnapshot.offset+(*currentOffset);i++)
+		{
+			if(!isDelimiter(content[i]) && !hstkcheck)
+			{
+				tkcheck = i;
+				//break;
+				hstkcheck = 1;
+			}
+			if(DIGITLIKE(content[i]))
+			{
+				partStr[psI] = content[i];
+				psI++;
+				
+			}else if(psI>0)
+			{
+				partStr[psI]='\0';
+				isPublisher = isPublisher || isPublisherInDict(partStr); 
+			}
+			crfNodeSnapshot.quotflag = 0;
+			
+			switch(content[i])
+			{
+				case '\"':
+					crfNodeSnapshot.quotflag ++;
+					break;
+				case '(':
+					crfNodeSnapshot.pareSflag = 1;
+					break;
+				case ')':
+					crfNodeSnapshot.pareEflag = 1;
+					break;
+				case '[':
+					crfNodeSnapshot.sqbSflag = 1;
+					break;
+				case ']':
+					crfNodeSnapshot.sqbEflag = 1;
+					break;
+				case '{':
+					crfNodeSnapshot.braSflag = 1;
+					break;
+				case '}':
+					crfNodeSnapshot.braEflag = 1;
+					break;	
+				
+				case '.':
+				case ',':
+					// filter Abbreviation
+					//if(!(abbrc && abbrl < 5 && abbrs))
+					if(!(abbrc && abbrl < 6))
+					//	crfNodeSnapshot.stopflag = 2;
+						crfNodeSnapshot.stopflag = crfNodeSnapshot.stopflag == 2 ? 
+										2: 
+										1;
+					break;
+				
+					
+					//break;
+				case '!':
+				case '?':
+					crfNodeSnapshot.stopflag = 2;
+					break;
+				
+					
+			}
+			
+			if(i == (*currentOffset)) // xxx. Aaa.
+			{
+				if(isAsciiCode(content[i]))
+				{
+					abbrl = 0;
+					abbrc = 1;
+					//abbrs = isUppercaseCode(content[i]) ? 1 : 0 ;
+				}
+			}else if(!isAsciiOrDigit(content[i-1]) && isAsciiCode(content[i])){
+				abbrc = 1;
+				abbrl = 0;
+				//abbrs = isUppercaseCode(content[i]) ? 1 : 0 ;
+			}else if(abbrc && (content[i]>='a' || content[i] <= 'z')){
+				abbrl ++;
+			}else
+			{
+				abbrc = 0;
+				abbrl = 0;
+			}
+		}
+
+		crfNodeSnapshot.token = filteredTokenId(tkcheck);//offsum+(offset+1)/2
+		
+		*currentOffset += crfNodeSnapshot.offset;
+
+		int spstr[10];
+		int splen = 0;
+		
+		spilitStr(str,slen,spstr,&splen); // spilit
+
+		sprintf(crfNodeSnapshot.str,"%s",str);
+		
+		crfNodeSnapshot.mpredeli = isBlank(crfNodeSnapshot.predeli)?(*mpredeli):' ';
+		crfNodeSnapshot.digitl = digitlen(str,slen);
+		crfNodeSnapshot.puredigit = puredigit(str,slen);
+		crfNodeSnapshot.dval = valofdigit(str,slen);
+		crfNodeSnapshot.strtype = strfeature(str,slen);
+		crfNodeSnapshot.yearlike = yearlike(str,slen);
+		crfNodeSnapshot.monthlike = monthlike(str,slen);
+		crfNodeSnapshot.volumnlike = vollkwd(str,slen);
+		crfNodeSnapshot.pagelike = pagekwd(str,slen);
+		crfNodeSnapshot.edsflag = edsFlag(str,slen);
+		crfNodeSnapshot.speflag = specialFlag(str,slen);
+		crfNodeSnapshot.procflag =  procFlag(str,slen);		
+		for(int z=0;z<splen && (crfNodeSnapshot.procflag != 0);z++)
+		{
+			//str+flag[i],flag[i+1]-flag[i]
+			for(int k=z;k<splen;k++)
+			{
+				crfNodeSnapshot.procflag = procFlag(str+spstr[z],
+								spstr[k+1]-spstr[z]);	
+			}
+			
+		}
+		//crfNodeSnapshot.namelike = hasNameafterTheOffset0((*currentOffset)
+		//					-crfNodeSnapshot.offset-1,
+		//					crfNodeSnapshot.offset+1);
+		crfNodeSnapshot.namelike = namelike(str,slen,crfNodeSnapshot.nextdeli,
+						crfNodeSnapshot.strtype);
+						
+		for(int z=0;z<splen && (crfNodeSnapshot.namelike != 0);z++)
+		{
+			//str+flag[i],flag[i+1]-flag[i]
+			for(int k=z;k<splen;k++)
+			{
+				crfNodeSnapshot.namelike = namelike(str+spstr[z],
+								spstr[k+1]-spstr[z],
+								k==splen-1?crfNodeSnapshot.nextdeli:' ',
+								strfeature(str+spstr[z],spstr[k+1]-spstr[z]));	
+			}
+			
+		}
+		
+		
+		crfNodeSnapshot.isNameDict = isNameInDict(str);
+		for(int z=0;z<splen && (crfNodeSnapshot.isNameDict != 0);z++)
+		{
+			//str+flag[i],flag[i+1]-flag[i]
+			crfNodeSnapshot.isNameDict = isNameInDict(str+spstr[z]);
+		}
+		
+		crfNodeSnapshot.rLastNameDict = rateLastNameInDict(str);
+		for(int z=0;z<splen && (crfNodeSnapshot.rLastNameDict != 0);z++)
+		{
+			//str+flag[i],flag[i+1]-flag[i]
+			crfNodeSnapshot.rLastNameDict = rateLastNameInDict(str+spstr[z]);
+		}
+		
+		
+		crfNodeSnapshot.isCountryDict = isCountryInDict(str);
+		for(int z=0;z<splen && (crfNodeSnapshot.isCountryDict != 0);z++)
+		{
+			//str+flag[i],flag[i+1]-flag[i]
+			crfNodeSnapshot.isCountryDict = isCountryInDict(str+spstr[z]);
+		}
+		
+		
+		crfNodeSnapshot.isFunWordDict = isFunWordInDict(str);
+
+		crfNodeSnapshot.isPlaceNameDict = isPlaceNameInDict(str);
+		for(int z=0;z<splen && (crfNodeSnapshot.isPlaceNameDict != 0);z++)
+		{
+			//str+flag[i],flag[i+1]-flag[i]
+			crfNodeSnapshot.isPlaceNameDict = isPlaceNameInDict(str+spstr[z]);
+		}
+		
+		crfNodeSnapshot.isPubliserDict = isPublisherInDict(str) ||isPublisher;
+		
+		for(int z=0;z<splen && (crfNodeSnapshot.isPubliserDict != 0);z++)
+		{
+			//str+flag[i],flag[i+1]-flag[i]
+			crfNodeSnapshot.isPubliserDict = isPublisherInDict(str+spstr[z]);
+		}
+		
+		crfNodeSnapshot.isArticle = isArticle(str,slen);
+		crfNodeSnapshot.deptflag = deptFlag(str,slen);
+		crfNodeSnapshot.uniflag = uniFlag(str,slen);
+		for(int z=0;z<splen && (crfNodeSnapshot.uniflag != 0);z++)
+		{
+			//str+flag[i],flag[i+1]-flag[i]
+			for(int k=z;k<splen;k++)
+			{
+				crfNodeSnapshot.uniflag = uniFlag(str+spstr[z],
+								spstr[k+1]-spstr[z]);	
+			}
+			
+		}
+		
+		crfNodeSnapshot.ltdflag = ltdFlag(str,slen);
+		for(int z=0;z<splen && (crfNodeSnapshot.ltdflag != 0);z++)
+		{
+			//str+flag[i],flag[i+1]-flag[i]
+			for(int k=z;k<splen;k++)
+			{
+				crfNodeSnapshot.ltdflag = ltdFlag(str+spstr[z],
+								spstr[k+1]-spstr[z]);	
+			}
+			
+		}
+		
+		crfNodeSnapshot.domainflag = domainFlag(str,slen);
+		
+		
+
+		if(crfNodeSnapshot.puredigit)
+		{
+			int vh = valofdigit(str,slen/2);
+			int vl = valofdigit(str+(slen/2),(slen+1)/2);
+			if(vh == 0 || vl == 0) 	crfNodeSnapshot.imprnum = 0;
+			else crfNodeSnapshot.imprnum = vl > vh ? 1 : -1;
+		}else
+			crfNodeSnapshot.imprnum = 0;
+		
+		if(!isBlank(crfNodeSnapshot.nextdeli)) *mpredeli = crfNodeSnapshot.nextdeli;
+		
+		//*currentOffset = crfNodeSnapshot.offset;
+		enQueue(Q,crfNodeSnapshot);
+		return 1;
+	}else
+		return 0;
+}
+
+
+pCrfNodeSnapshot ftDeQueue(pCNSQ Q)
+{
+	if(isEmptyQueue(Q)) return NULL;
+	return deQueue(Q);
+}
 
 

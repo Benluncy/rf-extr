@@ -1,5 +1,6 @@
 #ifndef __CRFT_FUN_H__
 #define __CRFT_FUN_H__
+#include "queue.h"
 
 int digitlen(const char *str,int len);
 
@@ -33,5 +34,11 @@ int domainFlag(const char *str,int len);
 int isArticle(const char *str,int len);
 
 int namelike(const char *str,int len,char next,int type);
+
+
+// enqueue and dequeue
+int filteredTokenId(int offset);
+int ftEnQueue(pCNSQ Q,int *currentOffset,char *mpredeli);
+pCrfNodeSnapshot ftDeQueue(pCNSQ Q);
 
 #endif// __CRFT_FUN_H__
