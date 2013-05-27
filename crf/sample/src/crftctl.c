@@ -317,7 +317,7 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 				if((tCNS->speflag == 20 || tCNS->speflag == 21) 
 					&&!isBlank(tCNS->nextdeli))
 					httpStatus = 2;
-				if(tCNS->speflag == 22)&(tCNS->nextdeli !=':') httpStatus = 2;
+				if((tCNS->speflag == 22)&&(tCNS->nextdeli !=':')) httpStatus = 2;
 			}
 	
 			
