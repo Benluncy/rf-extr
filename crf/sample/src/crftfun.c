@@ -10,6 +10,9 @@
 #include "tokens.h"
 #include "strHandle.h"
 #include "virtualcontent.h"
+#include "hftnpse.h"
+#include "hftctl.h" // int getReferenceHeadOffset(void);
+#include "eftfun.h" // int getReferenceEndOffset(void);
 
 
 // digits ..
