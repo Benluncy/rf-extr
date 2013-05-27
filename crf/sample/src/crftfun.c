@@ -11,6 +11,7 @@
 #include "strHandle.h"
 #include "virtualcontent.h"
 #include "hftnpse.h"
+#include "common.h"
 #include "hftctl.h" // int getReferenceHeadOffset(void);
 #include "eftfun.h" // int getReferenceEndOffset(void);
 
