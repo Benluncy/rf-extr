@@ -417,6 +417,15 @@ int ftEnQueue(pCNSQ Q,int *currentOffset,char *mpredeli)
 		int abbrl = 0; // abbr length
 		int abbrs = 0 ; // abbr start type
 		
+		crfNodeSnapshot.quotflag = 0;
+		crfNodeSnapshot.pareSflag = 0;
+		crfNodeSnapshot.pareEflag = 0;
+		crfNodeSnapshot.sqbSflag = 0;
+		crfNodeSnapshot.sqbEflag = 0;
+		crfNodeSnapshot.braSflag = 0;
+		crfNodeSnapshot.braEflag = 0;
+		crfNodeSnapshot.stopflag = 0;
+		
 		for(int i=(*currentOffset);i<=crfNodeSnapshot.offset+(*currentOffset);i++)
 		{
 			if(i>=refAreaEnd) break;
@@ -436,9 +445,6 @@ int ftEnQueue(pCNSQ Q,int *currentOffset,char *mpredeli)
 				partStr[psI]='\0';
 				isPublisher = isPublisher || isPublisherInDict(partStr); 
 			}
-			crfNodeSnapshot.quotflag = 0;
-			
-			crfNodeSnapshot.stopflag = 0;
 			switch(content[i])
 			{
 				case '\"':
@@ -458,7 +464,7 @@ int ftEnQueue(pCNSQ Q,int *currentOffset,char *mpredeli)
 					break;
 				case 'I':
 				case 'l':
-					if(!isData(content[i+1]))
+					if(isBlank(content[i+1]) && crfNodeSnapshot.sqbSflag)
 					{
 						crfNodeSnapshot.sqbEflag = 1;
 					}
