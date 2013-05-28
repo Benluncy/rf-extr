@@ -82,7 +82,7 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 	int httpStatus = 0;
 	//int httpTime = 0;
 	
-	int quotStatus[2];//  AT/NA IN/NIN OUT/NOUT
+	int quotStatus[3];//  AT/NA IN/NIN OUT/NOUT
 	int quotTime = 0;
 	
 	int pareStatus[3];// AT/NA IN/NIN OUT/NOUT 
@@ -904,6 +904,9 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		
 		
 		
+		// 73 endSign
+		fprintf(fp,"终止/");
+		fprintf(fp,"%d\t",pCNS->stopflag);
 		
 		
 		// 2. END : PRINT RESULT
