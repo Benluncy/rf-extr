@@ -438,6 +438,7 @@ int ftEnQueue(pCNSQ Q,int *currentOffset,char *mpredeli)
 			}
 			crfNodeSnapshot.quotflag = 0;
 			
+			crfNodeSnapshot.stopflag = 0;
 			switch(content[i])
 			{
 				case '\"':
@@ -469,23 +470,32 @@ int ftEnQueue(pCNSQ Q,int *currentOffset,char *mpredeli)
 				case '}':
 					crfNodeSnapshot.braEflag = 1;
 					break;	
-				
-				case '.':
+					
 				case ',':
 					// filter Abbreviation
 					//if(!(abbrc && abbrl < 5 && abbrs))
 					// Dept. 		et. al.
-					// break: A A.
-					if(slen == 1 && (strfeature(str,slen) == 2)) break;
-					if((!(abbrc && abbrl < 6) && abbrs) && !(abbrc && abbrl < 3))
-					//	crfNodeSnapshot.stopflag = 2;
-						crfNodeSnapshot.stopflag = crfNodeSnapshot.stopflag == 2 ? 
-										2: 
-										1;
+					// break: A A. ?
+					if(abbrc)
+					{
+						if(abbrl < 6 && abbrs) break;
+						if(abbrl < 3) break;
+					}
+					if(crfNodeSnapshot.stopflag == 2)
+						crfNodeSnapshot.stopflag = 2;
+					else
+						crfNodeSnapshot.stopflag = 1;
 					break;
 				
+				case '.':
+					if(abbrc)
+					{
+						if(abbrl < 6 && abbrs) break;
+						if(abbrl < 3) break;
+					}
+					crfNodeSnapshot.stopflag = 2;
 					
-					//break;
+					break;
 				case '!':
 				case '?':
 					crfNodeSnapshot.stopflag = 2;
