@@ -158,7 +158,7 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		int domainNoStop = 1;
 		int inStatus = 0;
 		int i;
-		int edNoStop = 1;
+		//int edNoStop = 1;
 		
 		
 		
@@ -167,22 +167,18 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 			// 1:  '.','?','!'..  
 		
 		// 0.1.1 NEXT 
-		for(i=1;i < sizeQueue(&nextCNSQ) ; i++)
+		for(i=1;i < sizeQueue(&nextCNSQ); i++)
 		{
 			pCrfNodeSnapshot tCNS = (i==0)? pCNS : nextNElem(&nextCNSQ,i);
 				
-			// effect : 1:'.''?''!'  2:','	
-			if(i>0)
-			{
-				if(tCNS->stopflag  == 1) stopEffect = (stopEffect == 2) ? 2 : 1;
-				if(tCNS->stopflag  == 2) stopEffect = 2;
-			}
+			
+			/*
 			if((tCNS->puredigit >0 || tCNS->procflag == 1) &&
 				!((tCNS->slen==1)&&(tCNS->strtype == 2)) &&
 				!(strcmp(tCNS->str,"and") == 0))
 			{
 				edNoStop = 0;
-			}
+			}*/
 			
 			///////////////////////////////////////////////////////////////////////
 			if(stopEffect < 2) // 0 , 1
@@ -246,7 +242,8 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 					procFlag = sw;
 				}
 				
-				if(tCNS->edsflag == 1 && edNoStop) edsFlag = sw;
+				if(tCNS->edsflag == 1 ) edsFlag = sw;
+				//if(tCNS->edsflag == 1 && edNoStop) edsFlag = sw;
 				
 				if(tCNS->uniflag == 1) uniFlag = sw; // un of xxx in
 									// un of ... press 
@@ -287,7 +284,12 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 			
 			if(tCNS->puredigit > 0 && tCNS->yearlike) nextPDigit ++ ;
 			
-			
+			// stop effect
+			if(i>0)
+			{
+				if(tCNS->stopflag  == 1) stopEffect = (stopEffect == 2) ? 2 : 1;
+				if(tCNS->stopflag  == 2) stopEffect = 2;
+			}
 		}
 		
 		// 0.1.2 PREVIOUS
@@ -305,8 +307,9 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		
 		stopEffect = 0;
 		domainNoStop = 1;
-		edNoStop = 1;
+		//edNoStop = 1;
 		
+		// << -- | 
 		for(i=0;i < sizeQueue(&preCNSQ) ; i++)
 		{
 			pCrfNodeSnapshot tCNS = (i==0) ? pCNS : pastNElem(&preCNSQ,i);
@@ -327,10 +330,11 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 			{
 				domainNoStop = 0;
 			}
+			/*
 			if(tCNS->puredigit == 2 )
 			{
 				edNoStop = 0;
-			}
+			}*/
 			
 				
 			
@@ -403,7 +407,9 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 				{
 					inStatus = sw;
 				}
-				if(tCNS->edsflag == 1  && edNoStop) edsFlag = sw;
+				
+				//if(tCNS->edsflag == 1  && edNoStop) edsFlag = sw;
+				if(tCNS->edsflag == 1 ) edsFlag = sw;
 				
 				if(tCNS->uniflag == 1) uniFlag = sw; // un of xxx in
 									// un of ... press 
