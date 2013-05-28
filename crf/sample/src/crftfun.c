@@ -190,6 +190,7 @@ int edsFlag(const char *str,int len)
 
 int procFlag(const char *str,int len)
 {
+	if(len < 2) return 0; 
 	if(strncasecmp(str,"in",len)==0) return 1;
 	/*
 	if(len > 2) 
@@ -197,7 +198,7 @@ int procFlag(const char *str,int len)
 			str[2]<='Z' && str[2]>='A' && (strncasecmp(str,"in",2)==0))
 				return 1;
 	*/
-	
+	if(len < 4) return 0;
 	if(strncasecmp(str,"proc",len)==0) return 2;
 	if(strncasecmp(str,"proceeding",len)==0) return 3;
 	if(strncasecmp(str,"proceedings",len)==0) return 4;
@@ -353,6 +354,20 @@ int namelike(const char *str,int len,char next,int type)
 	return 0;
 }
 
+int conferencelike(const char *str,int len)
+{
+	int i;
+	int containC = 0;
+	int WC = 0; // wrong character
+	if(len < 3 || len > 6) return 0;
+	for(i=0;i<len;i++)
+	{
+		if(str[i] == 'C') containC = 1;
+		if(str[i]>'Z' || str[i] < 'A') WC ++ ;
+		if(WC > 1) return 0;
+	}
+	return containC;
+}
 
 
 

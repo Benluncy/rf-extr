@@ -35,6 +35,8 @@ int isArticle(const char *str,int len);
 
 int namelike(const char *str,int len,char next,int type);
 
+int conferencelike(const char *str,int len);
+
 
 // enqueue and dequeue
 int filteredTokenId(int offset);
