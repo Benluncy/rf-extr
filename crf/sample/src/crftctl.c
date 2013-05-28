@@ -404,8 +404,8 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 					inStatus = sw;
 				}
 				
-				//if(tCNS->edsflag == 1  && edNoStop) edsFlag = sw;
-				if(tCNS->edsflag == 1 ) edsFlag = sw;
+				if(tCNS->edsflag == 1  && edNoStop) edsFlag = sw;
+				//if(tCNS->edsflag == 1 ) edsFlag = sw;
 				
 				if(tCNS->uniflag == 1) uniFlag = sw; // un of xxx in
 									// un of ... press 
@@ -463,6 +463,8 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 			{
 				edNoStop = 0;
 			}
+			// [In] xxx
+			if(tCNS->procflag == 1) edNoStop = 0;
 		}
 
 		pareStatus[0] = paraFlag > 0 ;
@@ -903,12 +905,13 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		fprintf(fp,"其他/");
 		if(lpCNS != NULL && npCNS != NULL)
 		{
-			if(((strcmp(pCNS->str,"Available") == 0)||
-				((strcmp(pCNS->str,"Submitted")== 0)&&(strcmp(npCNS->str,"to")||
-				(strcmp(pCNS->str,"Unpublished")== 0)||
-				((strcmp(pCNS->str,"Published")== 0)||
-				((strcmp(pCNS->str,"To")== 0) && (strcmp(npCNS->str,"appear")== 0)))
-				&& lpCNS->stopflag != 0)
+			if ( (strcmp(pCNS->str,"Available") == 0)
+				|| ((strcmp(pCNS->str,"Submitted")== 0)&&(strcmp(npCNS->str,"to")))
+				|| (strcmp(pCNS->str,"Unpublished")== 0)
+				|| (strcmp(pCNS->str,"Published")== 0)
+				|| ((strcmp(pCNS->str,"To")== 0) 
+					&& (strcmp(npCNS->str,"appear")== 0))
+				)
 			{
 				fprintf(fp,"1\t");
 			}else
