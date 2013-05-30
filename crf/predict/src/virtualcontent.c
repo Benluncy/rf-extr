@@ -42,12 +42,23 @@ static char *pcontent; // pure content
 static unsigned int *offset; // offset is for pcontent 
 static unsigned int *tags; // record the tag
 
-char *getContent(){ return content;}
-char *getPcontent(){ return pcontent;}
+static int contentType ;  // 0:inited and not setted content  1:getFrom setted file 2:getFrom file
+static int noparse;
+
+char *getContent()
+{
+	return contentType==0?NULL:content;
+}
+
 unsigned int *getOffset(){ return offset; }
 unsigned int *getTags(){ return tags; }
 int getClen() { return clen;}
 int getPclen() { return pclen; }
+
+char *getPcontent()
+{ 
+	return contentType==0?NULL:pcontent;
+}
 
 
 int readFileToParse(const char * fileName)
@@ -68,13 +79,22 @@ int readFileToParse(const char * fileName)
 	//init space 
 	clen = flen;
 	content = (char *)calloc(flen+1,sizeof(char)); // +1 for '\0'
-	pcontent = (char *)calloc(flen+1,sizeof(char));
-	offset = (unsigned int *)calloc(flen,sizeof(unsigned int));
-	tags = (unsigned int *)calloc(flen,sizeof(unsigned int));
 	memset(content,0,flen);
-	memset(pcontent,0,flen);
-	memset(offset,0,flen*sizeof(unsigned int));
-	memset(tags,0,flen*sizeof(unsigned int));
+	
+	if(!noparse)
+	{
+		pcontent = (char *)calloc(flen+1,sizeof(char));
+		offset = (unsigned int *)calloc(flen,sizeof(unsigned int));
+		tags = (unsigned int *)calloc(flen,sizeof(unsigned int));
+		memset(pcontent,0,flen);
+		memset(offset,0,flen*sizeof(unsigned int));
+		memset(tags,0,flen*sizeof(unsigned int));
+	}else
+	{
+		pcontent = content;
+		plen = clen;
+	}
+	
 
 	fread(content,flen,1,fp);//read content
 	
@@ -82,12 +102,25 @@ int readFileToParse(const char * fileName)
 	return 1;
 }
 
+int setContent(const char *str)
+{
+	if(str == NULL ) return 0;
+	contentType = 1;
+	pcontent = str;
+	content = str;
+	pclen = clen = strlen(str);
+	return 1;
+}
+
+int setNoParse(int np)
+{
+	noparse = np;
+	return 1;
+}
+
 inline int getTokenId(char *tkname,unsigned int len)
 {
 	int i;
-	//printf("[");
-	//for(i=0;i<len;i++) putchar(tkname[i]);
-	//printf("]\n");
 	for(i = 0 ; i < tkRepo.max ; i++)
 	{
 		if(tkRepo.ac[i])
@@ -115,9 +148,7 @@ int listStack(unsigned int repo)
 	return 1;
 }
 
-// unsigned int tt = 0;
-// tokenPush(&tt,(unsigned int)i);
-// tokenPop(&tt);
+
 int parseFile(const char * fileName)
 {
 	unsigned int flen;
@@ -129,31 +160,24 @@ int parseFile(const char * fileName)
 	int tmp2;
 	int fcontinue;
 	tokenInit();
-	readFileToParse(fileName);
-	flen = clen;
-	
-	//int mark = strcmp("data/A correspondence matching technique of dense checkerboard pattern for one-shot geometry acquisition.txt",fileName) == 0;
-	
-	/*
-	if(mark)
+	if(contentType == 1)
 	{
-	printf("\n!!be careful!!\n");
-	printf("\n=====================================================================================\n");
-	getchar();
+		clen = 0;
+		plen = 0;
+		free(pcontent);
+		pcontent = content = NULL;	
 	}
-	*/
+	readFileToParse(fileName);
+	if(noparse == 1) return 1;
+	
+	flen = clen;
+
+	contentType = 2;
 	
 	nowTag = 0;
 	for(i=0;i<flen;i++)
 	{
 		fcontinue = 0;
-		/*
-		if(mark)
-		{
-			putchar(content[i]);
-		}
-		*/
-		//putchar(*(content+i));
 		if(content[i] == '<')
 		{
 			if(content[i+1] == '/')
@@ -245,15 +269,6 @@ int parseFile(const char * fileName)
 		//putchar(pcontent[k]);
 		k++;
 	}
-	/*
-	if(mark)
-	{
-	printf("\n=====================================================================================\n");
-	printf("\n=====================================================================================\n");
-	getchar();getchar();getchar();
-	getchar();
-	}
-	*/
 	pclen = k+1;
 	
 	return 1;
@@ -267,6 +282,8 @@ int initContent()
 	tags = NULL;
 	clen = 0;
 	pclen = 0;
+	noparse = 0;
+	contentType = 0;
 	return 1;
 }
 
@@ -276,6 +293,8 @@ int cleanContent()
 	doClean(content);
 	clen = 0;
 	pclen = 0;
+	noparse = 0;
+	contentType = 0;
 	doClean(pcontent);
 	doClean(offset);
 	doClean(tags);

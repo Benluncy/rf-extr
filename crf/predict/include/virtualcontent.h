@@ -1,6 +1,10 @@
 #ifndef __VD_H__
 #define __VD_H__
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif // __cplusplus
 
 int parseFile(const char * fileName);
 int initContent(void);
@@ -16,6 +20,13 @@ int getPclen(void);
 
 //inline
 int getTokenId(char *tkname,unsigned int len);
+
+int setContent(const char *str);
+int setNoParse(int np);
+
+#ifdef __cplusplus
+}
+#endif // __cplusplus
 
 #endif // __VD_H__
 

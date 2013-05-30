@@ -1,10 +1,6 @@
 #include "crftfun.h"
 #include "minEditDistance.h"
 #include "strHandle.h"
-#include <string.h>
-#include <strings.h>
-
-//queue
 #include "queue.h"
 #include "dict.h"
 #include "tokens.h"
@@ -12,11 +8,14 @@
 #include "virtualcontent.h"
 #include "hftnpse.h"
 #include "common.h"
-
 #include "crftctl.h"
-
 #include "hftctl.h" // int getReferenceHeadOffset(void);
 #include "eftfun.h" // int getReferenceEndOffset(void);
+#include <string.h>
+#ifndef WIN32
+#include <strings.h>
+#endif // WIN32
+
 
 // digits ..
 // digit base

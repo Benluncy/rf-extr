@@ -16,8 +16,9 @@
 #include <time.h>
 #include <ctype.h>
 
+#ifndef WIN32
 #include <strings.h>
-
+#endif // WIN32
 
 
 FILE *fpTrain; // train.txt

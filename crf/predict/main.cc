@@ -10,16 +10,8 @@
 
 
 int main(int argc,char *argv[])
-{
-	//testStrSpilit();
-	//dbConnect();
-	//dbLock();
-	//dbUnlock();
-	//dbFree();
-	//
-	
-
-	// load hashmap 	
+{	
+	/*
 	dbConnect();
 	hmDictLoad();
 	dbFree();
@@ -27,7 +19,8 @@ int main(int argc,char *argv[])
 	genCRFSample("data/");
 	
 	hmDictFree();
-
+	*/
+	std::cout << "hello world !"<<std::endl;
 
 	return 0;
 }
