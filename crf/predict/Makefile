@@ -71,8 +71,8 @@ rebuild			: gitupdate clean all
 
 
 main			: ${OBJS}
-	${CPP} ${CFLAGS} $@.cc -o $@ ${OBJS} ${LIBS}
-
+	${CPP} ${CPPFLAGS} $@.cc -o $@ ${OBJS} ${LIBS}
+#	${CC} ${CFLAGS} $@.c -o $@ ${OBJS} ${LIBS}
 
 
 dirTraversal.o		: 

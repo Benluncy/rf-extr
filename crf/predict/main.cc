@@ -6,6 +6,7 @@
 #include "crftctl.h"
 #include "khash.h"
 #include "queue.h"
+#include "citpred.h"
 
 
 int main(int argc,char *argv[])
