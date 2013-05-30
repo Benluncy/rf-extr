@@ -672,8 +672,8 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		// 20,21,22 quots AT IN OUT
 		fprintf(fp,"引号123/");
 		fprintf(fp,"%d\t",quotStatus[0]);
-		fprintf(fp,"引号2/%d\t",quotStatus[1]);
-		fprintf(fp,"引号3/%d\t",quotStatus[2]);
+		fprintf(fp,"%d\t",quotStatus[1]);
+		fprintf(fp,"%d\t",quotStatus[2]);
 		
 		
 		// 23,24,25 Parentheses AT IN OUT
@@ -925,16 +925,12 @@ int genCRFSampleCtl(const char* fileName,int isDir)
 		// 72 and
 		fprintf(fp,"和/");
 		fprintf(fp,"%d\t",andFlag);
-		
-		
-		
+	
 		// 73 endSign
 		fprintf(fp,"终止/");
 		fprintf(fp,"%d\t",pCNS->stopflag);
-		
-		
-		
-		
+
+	
 		// 2. END : PRINT RESULT
 		if(lpCNS != NULL && npCNS != NULL)
 		{

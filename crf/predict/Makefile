@@ -85,7 +85,11 @@ dirTraversal.o		:
 (%.o) : %.cc
 	${CPP} ${CPPFLAGS} -c $< -o $*.o
 
-	
+
+run			: all
+	LD_LIBRARY_PATH=$LD_LIBRARY_PATH:lib/ && ./${PROGS}
+
+
 gitupdate		:
 	-${GADD} .
 	-${GCMT} `date "+auto:%Y%m%d%H%M%S"`

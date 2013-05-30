@@ -7,7 +7,7 @@ int main(int argc, char **argv)
 {
 
 	// -v 3: access deep information like alpha,beta,prob
-	// -nN: enable nbest output. N should be >= 2
+    // -nN: enable nbest output. N should be >= 2
 	CRFPP::Tagger *tagger = CRFPP::createTagger("-m model -v 3 -n2");
 	//  CRFPP::createTagger("-m model -v 3 -n2");
 	
