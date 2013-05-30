@@ -23,6 +23,10 @@
 #define INABSDIFF(x,y) (ABSDIFF(x,y)<=thresholdForDifferneces)
 #define EXINABSDIFF(x,y) (ABSDIFF(x,y)<=exThresholdForDifferences)
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif // __cplusplus
 
 //util
 int haveDifferneces(int dest,int src);
@@ -37,5 +41,8 @@ int powerWriteNoMore(FILE *fp,int start,int value,int len);
 int rankWriteNoMore(FILE *fp,int start,int rank,int len);
 
 
+#ifdef __cplusplus
+}
+#endif // __cplusplus
 
 #endif // __COMMON_H__

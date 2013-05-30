@@ -4,6 +4,13 @@
 #include "khash.h"
 KHASH_MAP_INIT_STR(dict,double)
 
+ #ifdef __cplusplus
+extern "C"
+{
+#endif // __cplusplus
+
+
+
 // DB part
 int dbConnect(void);
 void dbFree(void);
@@ -48,5 +55,8 @@ int isMonthInDict(const char *str);
 
 void freeDict();
 
+#ifdef __cplusplus
+}
+#endif // __cpluseplus
 
 #endif //  __DICT_H__

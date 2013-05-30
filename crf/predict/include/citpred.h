@@ -14,8 +14,17 @@ typedef struct _CitationNode
 typedef CitationNode * pCitationNode;
 
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif // __cplusplus
+
 int initCitationNode(pCitationNode node);
 
+
+#ifdef __cplusplus
+}
+#endif // __cplusplus
 
 
 #endif // __CIT_PREDICT_H__
