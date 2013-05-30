@@ -1,0 +1,385 @@
+
+ Proceedings of the 1996 Winter Simulation Conference ed. J. M. Charnes, D. J. Morrice, D. T. Brunner, 
+amd J. J. Swain ADAPTIVE PROTOCOLS FOR PARALLEL DISCRETE EVENT SIMULATION Samir R. Das Division of Computer 
+Science The University of Texas at San Antonio San Antonio, TX 78213-0667, USA ABSTRACT This paper reviews 
+issues concerning the design of adaptive protocols for parallel discrete event simu­lation (PDES). The 
+need for adaptive protocols are motivated in the background of the synchronization problem that has driven 
+much of the research in this field. Traditional conservative and optimistic pro­tocols and their hybrid 
+variants are also discussed. Adaptive synchronization protocols are reviewed with special reference to 
+their characteristics regarding the aspects of the simulation st ate that influence the adap­tive decisions 
+and the control parameters used. Fi­ nally, adaptive load management and scheduling stra­ tegies and 
+their relationship to the synchronization protocol are discussed. INTRODUCTION Parallel discrete event 
+simulation or PDES refers to parallel execution of discrete event simulation pro­grams on a multiprocessor 
+system or on a network of workstations. Over the past decade, there has been a considerable amount of 
+activity in this field. There are several motivating factors. First, with the advent of technology, many 
+application areas (e.g., simulations of computer architecture, VLSI circuits, communication networks) 
+are getting larger and more complex. Thus speeding up simulations of such sys­tems has become more important 
+so that a sufficiently large design parameter space can be explored. The interest is also fueled by the 
+common availability of multiprocessor systems (especially symmetric multi­ processors) and high-speed 
+network based computing platforms (e.g., a cluster of workstations connected by high-speed networking 
+hardware such as ATM or Myrinet switches). Second, it has been observed that many real simulations indeed 
+contain a significant amount of parallelism. Third, the synchronization problem inherent in PDES is traditionally 
+considered a challenging problem. Unlike many other areas of parallel computing (e.g., scientific computing) 
+most discrete event simulation models are asynchronous and possess irregular, random or data dependent 
+be­ havior. Thus, most of the research in PDES so far is centered around design and evaluation of synchro­ 
+nizat ion protocols. For a review of the current state­ of-the-art in PDES research see (Fujimoto 1990; 
+Nicol and Fujimoto 1994; Ferscha 1995a). There are two major classes of synchronization protocols that 
+evolved: conservative and optimistic. The conservative protocols often rely on certain infor­mation on 
+the behavior of the simulation model, such as the communication topology, or Zookahead (i.e., the model 
+s ability to predict the future course of events) (Fujimoto 1990) to determine which events are safe 
+to process. They may also require certain implements such as message delivery in t imest amp order, as 
+in (Chandy and Misra 1979), or periodic global syn­chronizations as in (Lubachevsky 1989; Nicol 1993). 
+All these make it difficult to develop general-purpose parallel simulators that can perform efficiently 
+with little or no knowledge of the behavior of the under­lying simulation model. Even if such knowledge 
+is available, conservative mechanisms, being based on blocking, may fail to exploit much of the parallelism 
+in the simulation model (Fujimoto 1989). On the other hand, optimistic synchronization pro­tocols such 
+as Time Warp (Jefferson 1985) take a very different approach to resolve dependence between sim­ulation 
+events. They try to resolve dependence a pos­terior by letting dependence violations to occur. If such 
+violation is detected, erroneous y executed com­put at ions are undone) using a rollback mechanism. Time 
+Warp uses checkpointing in addition to a mes­sage cancellation mechanism (based on antimessages) to implement 
+rollback. The principal advantage of Time Warp over blocking-based, conservative proto­cols is that Time 
+Warp offers the potential for greater exploit ation of parallelism and, perhaps more impor­tantly, greater 
+transparency of the synchronization mechanism to the simulation programmer (Fujimoto 186 1990). The latter 
+is due to the fact that Time Warp is less reliant on a priori, application specific infor­mation regarding 
+which simulation events depend on which others. Time Warp, however, is prone to inefficient exe­cution 
+in many situations because of over-optimistic behavior. For example, some LPs may execute at a much higher 
+simulation time than others. This may lead to several performance problems, such as the possibility of 
+long and/or cascaded rollbacks (Lubachevsky, Shwartz, and Weiss 1991) and signif­icant memory management 
+overheads (Das and Fu­jimoto 1993; Das and Fujimoto 1994). Regardless of the over-optimistic behavior, 
+one key performance problem in Time Warp is the checkpointing related overheads. In spite of the above 
+problems, both conservative and optimistic protocols had a fair amount of success in parallelizing various 
+simulation models (Fujimoto (1993a) has a review of different PDES application areas studied). However, 
+PDES has a very limited penetration in the general simulation modeling com­munity (Fujimoto 1993b). One 
+often cited reason is the current level of sophistication required to effec­tively exploit the technology. 
+For an acceptable level of performance j ust ifying the use of parallel resources, careful attention 
+must be paid to the interplay of the synchronization mechanism with the application sim­ulation model 
+and the underlying systems architec­ture. Without an insight in all the above, it is of­ten unclear which 
+synchronization protocol will be the best or even how certain details of the proto­ col (e.g., checkpointing 
+interval in Time Warp (Fleis­ chmann and Wilsey 1995)) should be selected. Thus there is a recent interest 
+in the PDES community in investigating adaptive or dynamic mechanisms to choose an appropriate synchronization 
+protocol (con­servative, optimistic, or some hybrid variant) or pa­rameters (such as the checkpointing 
+interval in Time Warp) of a possibly statically chosen protocol. This paper reviews the state-of-the-art 
+in such adaptive mechanisms for PDES. We start with some back­ground in the traditional conservative 
+vs. optimistic debate in the next section and then introduce the hybrid protocols in Section 3. In Section 
+4, we dis­cuss the adapt ive synchronization protocols, followed by dynamic load balancing/scheduling 
+mechanisms in Section 5. Conclusions are presented in Section 6. 2 CONSERVATIVE VS. OPTIMISTIC DE- BATE 
+ The question of relative merits of conservative or opti­mistic protocols has often been raised. However, 
+it is now a widely accepted belief in the PDES community Discrete-Event Simulation that a formulation 
+of general rules of superiority of one protocol versus another is hard (Fersch a 1995a). Still, some 
+analytical results tend to favor cjptimistic mechanisms more than their conservative counter­parts. Lipton 
+and Mizell (1990) showed that opti­mistic mechanisms can arbitrarily outperform conser­vative mechanisms. 
+But conservative mechanisms can outperform the optimistic mechanisms by at most a constant factor. This 
+issue may be of purely theoreti­cal interest, as it only represents extreme case scenar­ios. Also, the 
+analysis is based on simple assurnpt ions such as constant rollback cost and zero message com­munication 
+or state saving/restoration cost, which may be biased towards optimistic mechanisms. In an unrelated 
+work, Lin and Lazowska ( 199CI)showed that Time Warp is optimal (i.e., can complete in critical path 
+time) under the assumption that no correct computation is rolled back by incorrect com­putations. This 
+study also ignores all overheads. It is also unclear how to guarantee such an assumption ex­cept in specific 
+simulation models so that an optimal performance can be expected. Without any clear choice between optimistic 
+and conservative protocols, a conventional wisdom in the PDES community has been to study hybrid varia­tions 
+that take an intermediate approach between purely conservative (block-resume) and purely opti­mistic 
+(lookahead-rollback) extremes. Intuitively, the­se protocols use a form of reasonable clr calcu­lated 
+optimism so that they can exploit the ben­efits of optimism (e.g., ability to extract more par­allelism, 
+less reliance on model-specific information) without some its liabilities (e.g., rollback overhead, large 
+memory usage). Reynolds, Jr. (1988) was one of the first to study a framework for specifying hy­brid 
+PDES protocols. He defined the notions of ag­gressiveness and risk. An aggressive PD ES proto­col may 
+process events in out-of-timestamp order and they may be required to rollback. A risky protocol, in addition 
+to being aggressive, may pass messages that have been generated based on aggressive pro­cessing. Thus 
+a message generated in a risky proto­col may need to be canceled. Time Warp exhibits the maximal form 
+of aggressiveness and risk. On the other hand, conservative protocols do not employ any aggressiveness 
+or risk. According to Reynolds, Jr. (1988), aggressiveness and risk may be considered two important design 
+variables that may influence the performance of a PDES protocols. 3 HYBRID PROTOCOLS Hybrid protocols 
+belong to primarily two categories: those that impart optimism to conservative protocols and those that 
+introduce blocking to optimistic proto­ COIS.Indeed some of them is able to seamlessly switch between 
+conservative and optimistic extremes with appropriate tuning of one or more control parameters (Rajaei, 
+Ayani, and Thorelli 1993), and thus maybe difficult to classify. The classification followed below is 
+based more on the spirit of the protocol, rather than its ability to move seamlessly between two extremes. 
+3.1 Adding Optimism to Conservative Pro­ tocols In the speculative execution protocol proposed by Mehl 
+ (1991) logical processes compute future events in their idle time, however such speculative computation 
+does not modify the local state or the event queues. A scratchpad area in the memory is used as state 
+and the events generated are stored in a private buffer. If it turns out later that the speculative execution 
+is correct, local state can be quickly updated and the events are sent to the appropriate destinations. 
+Thus support for rollback is not required. Dickens and Reynolds, Jr. (1990) earlier presented a similar, 
+al­beit more aggressive approach, where local state and local event queues can be modified by such specula­tive 
+execution. However, events destined to remote processors are not sent out until they are determined to 
+be correct. Thus antimessages are not required. Rollbacks are possible, but they are only local in the 
+sense that there cannot be any cascades. Steinman (1992a) proposed the Breathing Time Bucket algorithm, 
+which also has similar, aggressive, but risky-free approach. Here, logical processes pro­cess events 
+in cycles. In each cycle the maximum number of independent events are processed in the following way. 
+Each LP processes events in times­tamp order until the timestamp (called the local event horizon ) of 
+the earliest new event it generates in the current cycle. New events generated are accu­mulated in local 
+buffers and are not actually passed to the destination processes. The LPs synchronize (at least implicitly) 
+at the end of the cycle to compute the minimum of all local event horizons, This minimum is the global 
+event horizon. The messages generated by events with timestamp less than or equal to the global event 
+horizon are then sent to their appropriate destinations. This may cause rollbacks, which, how­ever, are 
+only local. AnalYt ical modeling as well as experimental results showed that this approach can be quite 
+efficient if enough events can be processed in each cycle. Lubachevsky, Shwartz, and Weiss (1989) proposed 
+an extension to the bounded lag protocol (Lubachevsky 1989) to incorporate optimism to a purely conserva­tive 
+mechanism. The bounded lag protocol is a con­servative protocol that relies on a conservative esti- Das 
+mate of the minimum simulation time distance (called Zag) between a pair of logical processes as a basis 
+for determining events safe to process. In the extension, called jiltered rollback, the simulation time 
+distance is more aggressively estimated and the protocol runs the risk of overestimation (possibly rarely). 
+Thus de­pendence violations are possible which are taken care of by rollbacks and event cancellation 
+just like Time Warp. The protocol is thus both aggressive and risky. 3.2 Throttling Optimistic Protocols 
+Many protocols try to control the optimism in Time Warp. One key technique often used is to limit all 
+event computations within a window of simulated time beyond the global virtual time or GVT (GVT in Time 
+Warp denotes a lower bound on the times­tamps of all future rollbacks and thus defines a com­mitment 
+horizon (Jefferson 1985)). This limits length of rollbacks, thus preventing long cascades. This also 
+bounds memory usage, a major concern in Time Warp simulations. The original work exploiting this idea 
+was by Sokol, Briscoe, and Wieland (1988), where they proposed the moving time window (MTW) pro­tocol. 
+A key problem here is the determination of the appropriate size of the time window (as observed by Reiher, 
+Wieland, and Jefferson (1989)) Too nar­row a window will reduce rollbacks, but will admit only a small 
+amount of parallelism. Too large a win­dow can potentially exploit more parallelism, but roll­backs may 
+increase as well. A similar idea is also ex­plored by Turner and Xu (1992) in the bounded Time Warp (BTW) 
+protocol, where no events are processed beyond a bound in simulation time until all processes have reached 
+that bound, when a new bound is es­tablished. In the MIMDIX system Madisetti, Hardaker, and Fujimoto 
+(1993) explored the idea of probabilistic re­synchronization. All processes in the simulation are rolled 
+back to close to GVT at probabilistically cho­sen intervals of real time. Special processes, called genies, 
+broadcast special SYNC messages with times­tamp slightly larger than the current GVT to in­duce such 
+rollbacks. This scheme was shown to ef­fectively eliminate over-optimistic behavior for a suit­able choice 
+of the resynchronizat ion interval. Steknnan (1993) proposed an extension to his bre­athing time bucket 
+algorithm by allowing it to take risks. The resulting protocol is called breathing Time Warp and is essentially 
+a mixture of Time Warp and breathing time bucket. The idea is to release the events generated by the 
+first N (say) events beyond GVT in each cycle. This is similar to Time Warp, as these messages may need 
+to be canceled later. The protocol switches back to the risk-free breathing time bucket from the N + 
+1 event in the cycle. In Composite ELSA protocol (Arvind and Smart 1992) a node can switch between conservative 
+and optimistic modes by using additional information re­garding whether an event is safe. Both local 
+and cascaded rollbacks are allowed. Raj aei, Ayani, and Thorelli (1993) explored a local Time Warp approach, 
+where logical processes use Time Warp within clus­ters and use a synchronous, time window based con­servat 
+ive protocol across clusters. This hierarchical, cluster-based approach limits the progress of erro­neous 
+comput at ions within a cluster. All inter-cluster messages are correct messages. Several protocols have 
+also been suggested to stop the spread of incorrect computation as soon as possi­ble. Examples include 
+Wolf calls (Madisetti, Wal­rand, and Messerschmitt 1988) and (Filter (Prakash and Subramanian 1991). 
+They broadcast or multi­cast special correction messages as soon there is a rollback in any LP. These 
+correction messages stop the spread of incorrect computation in remote pro­cesses quicker than regular 
+antimessages as they are sent directly instead of an indirect, recursive fashion as antimessages. However, 
+these techniques are re­active, rather than proactive as action is taken only after the primary rollback 
+(an observation made by Srinivasan and Reynolds (1996)). ADAPTIVE PROTOCOLS Many of the hybrid protocols 
+can be adjusted in the continuum between the conservative and optimistic extremes. For example, the width 
+of the time win­dow in the MTW protocol can be tightened to equal to the lag and MTW will behave as the 
+conservative bounded lag protocol. On the other hand if the width is infinite, MTW is equivalent to Time 
+Warp, Sim­ilarly, the resynchronization interval in MIMDIX or the value of N in breathing Time Warp can 
+be con­trolled to impart some form of extreme nature to the protocol. Not unexpectedly, experiment al 
+results in­dicate that overall performance of the protocol is sen­sitive to the choice of such control 
+parameters. Best performance usually is obtained by setting such pa­ramet ers somewhere between its extremes. 
+However, it is difficult for a simulation modeler, who is not intimately familiar with PDES protocols 
+and the underlying parallel architecture, to set these parameters appropriately for an optimal performance. 
+Furthermore, many simulation models are very dy­namic in their runtime characteristics. The synchro­nization 
+mechanism must adapt itself to a change in the model characteristics to optimize performance. This observation 
+triggered a recent emergence of hy­brid protocols that automatically adapt themselves Discrete-Event 
+Simulation in the continuum between purely conservative and purely optimistic strategies. The key idea 
+is to mon­itor the state of the parallel simulation to estimate the appropriate trade-off between the 
+conservatism (blocking or lost opportunity cost) and optimism (roll­back and memory management costs) 
+anti accord­ingly adjust the control parameters. The initial ideas about the usefulness of such adap­tive 
+protocols date back to the work by Reynolds, Jr. (1988), where he defined adaptability as the abil­ity 
+of logical processes to dynamically change one or more control parameters based on knowleclge of se­lected 
+aspects of the state of the simulaticm. The objective is to minimize the execution time of the par­allel 
+simulation. The key issues are, of course, what control parameter(s) is (are) appropriate, and which 
+aspects of the simulation state influence the binding of such control parameter(s) and how. Any adaptive 
+protocol must take appropriate design decisions that address the above issues. As predicted by Reynolds, 
+Jr. (1988), there are indeed quite a few very rea­sonable design choices. In the following we describe 
+the adaptive protocols described in recent literature by broadly classifying them according to whether 
+the adaptive decisions are taken based on purely the local state of the each LP or the global state of 
+all LPs. 4.1 Protocols Based on Local State One of the earliest attempts to develop adaptive pro­ tocols 
+was made by Reiher, Wieland, and Jefferson (1989), where they proposed a penalty based throttling mechanism, 
+where the logical processes that experi­ enced rollbacks in the recent past are penalized. The penalty 
+is represented by reduced scheduling quanta. This method was implemented in the JPL Time Warp Operating 
+System (TWOS) but failed to produce any significant performance gain over Time Warp. In the Adaptive 
+Time Warp or ATW (Ball and Hoyt 1990) a logical process waits for an interval of real time (called blocking 
+window or BW) between processing successive events. The B W is adjusted such that the sum total of the 
+CPU time spent in blocked state and in faulted state (i.e., undoing in­correct computation) is minimized. 
+The ti]me spent in blocked state in directly proportional to the width the BW. The time spent in faulted 
+state is modeled by a logistic response function. A numerically effi­cient approximate method is used 
+to compute the minima. Ferscha and Luthi (1995) proposed a similar, but more sophisticated method based 
+on probabdtstic cost expectation junction or PCEF. An explicit cost model involving the probability and 
+cost of rollback is used instead of a logistic response function. The probability of rollback is assumed 
+to be dependent on both real time and simulation time difference between the next scheduled event and 
+the last message arrival. In order to compute this probability each LP moni­tors the timestamp and real 
+time instants of arrival of every message as well as the rollback behavior. The cost model is used to 
+evaluate the optimal real time blocking window. This method was shown to outper­form Time Warp in experiments 
+involving simulation of stochastic petri nets. Similar cost model has also been proposed for evaluating 
+an optimal simulation time window rather than a real time blocking win­dow (Das 1996). Here, simulation 
+time distance from GVT is used as a parameter for evaluating the prob­abilityy of rollback. This, however, 
+depends on global state as GVT is needed. In the conservative-optimistic or CO-OP protocol, (Steinman 
+1992b) LP scheduling on a processor uses some knowledge of the probability of the next event being correct. 
+He also suggested a local CO-OP pro­tocol where conditions on the input channels of the LPs control a 
+variable that influence the LP schedul­ing decisions on a processor. (Ferscha and Chiola 1994) proposed 
+a probabilistic distributed simulation protocol where Time Warp delays event computation artificially 
+event computations based on the proba­bility of an external message arrival inducing a roll­back. Hamnes 
+and Tripathi (1994b) proposed a local adaptive protocol or LAP, which uses input channel specific information 
+for each LP to determine a real time blocking window. An LP blocks if it estimates that an event arriving 
+later in one of the empty in­put channels will cause a rollback. This estimate is based on average inter-arrival 
+times (both in simula­tion time and real time) of messages in each input channel in recent past. Null 
+messages are used to prevent deadlock and to preempt unnecessary block­ing. LAP was shown to outperform 
+both conservative and optimistic methods in a performance study with closed queuing systems simulations 
+(Hamnes and Tri­pathi 1994a). Ferscha (1995b) presented a probabilistic adaptive direct optimism control 
+or PADOC protocol, which is similar in spirit, but adds a probabilistic compo­nent and computes the blocking 
+window incremen­tally. Each logical process maintains a history record of the simulation time differences 
+of the arriving mes­sages in the recent past. This record is used to fore­cast the timest amps of forthcoming 
+messages. Sev­eral forecasting methods have been explored, such as methods based on central tendencies 
+as well as au­toregressive moving average (ARMA) models. Other models, such as neural networks, are also 
+deemed pos­sible. In addition to the forecast about the times­tamp of the next arriving message, a confidence 
+(~) in the forecast is also computed. The LP is blocked Das for a small predetermined period (same as 
+the aver­age event granularity) with probability y P(f) and ad­vances to the next event in the event 
+list with proba­bility 1 P(f). Then a new forecast is computed (in case there are new message arrivals 
+in between) and this cycle continues. P(t) was assumed to be a sig­moid function dependent on [ as well 
+as the difference between the local simulation time and the timestamp forecast for the next arriving 
+message. PADOC was shown to outperform Time Warp for stochastic petri net simulations, especially under 
+load imbalance. Palaniswamy and Wilsey (1993) exploited an adap­tive bounded time window approach where 
+width of the time window (similar to MTW) is controlled dy­namically, based on the concept of useful 
+work done by an LP. Useful work is a measure of the productive work done by the LP and is a function 
+of a number of parameters such as the ratio of the number of events commit ted to the number of events 
+executed, num­ber of rollbacks, average rollback length, number of antimessages sent etc. Each LP has 
+its own value of window which is increased or decreased periodically depending on the change in useful 
+work. Experiments with digit al logic simulations demonstrated superior­ity of this method over ordinary 
+Time Warp.  4.2 Protocols Based on Global State Some protocols rely primarily on some aspects of the 
+global state of the simulation for making adaptive de­cisions. Import ant examples are the Adaptive Mem­ory 
+Management protocol by Das and Fujimoto ( 1994) and the Near Perfect State Information (NPSI) pro­tocols 
+by Srinivasan and Reynolds (1995). In the adaptive memory management protocol an indirect approach is 
+used for adaptation. It has been observed that over-optimistic Time Warp not only incurs high rollback 
+costs, but also high memory management costs, because of loss of locality and possibly other virtual 
+memory management overheads. Also, artifi­cial memory limitation automatically restricts Time Warp s 
+optimism. Thus the total amount of memory used by the simulation is used as the control param­eter, by 
+exploiting Time Warp s ability to cent inue simulation using any amount of memory larger than a lower 
+bound. The cancelback protocol (Jefferson 1990) is used to restrict Time Warp within the allo­cated amount 
+of memory. T,his scheme reduces both rollback and memory related costs and attempts to run Time Warp 
+with just the sufficient amount of memory required for the best overall performance. Several monitored 
+information about the rollback be­havior, frequency of fossil collection and cancelback is used to decide 
+the right amount of memory to be allocated. NPSI protocols are a class of adaptive protocols relying 
+on the availability of near-perfect informa­tion on the global state of the simulation. NPSI prc­tocols 
+use a quantity called error potential EP~ asso­ciated with each LPi. The value of EPi is used to control 
+LP~ s optimism by, for example, introducing art ificial blocking. Note that an inherent assump­tion in 
+NPSI protocols is that the NPSI is available with minimal cost. This limits the use of such proto­cols 
+to shared memory multiprocessors or distributed memory systems with parallel reduction network sup port. 
+The usefulness of the latter for PDES has been demonstrated in (Reynolds, Jr., Pancerella, and Srini­vasan 
+1993). Different NPSI protocols can be envisaged for dif­ferent choices for EP and different mechanisms 
+to control optimism. A specific NPSI protocol called the Elastm Time Algorithm or ETA is described in 
+(Srinivasan and Reynolds 1995). In ETA, the dif­ference between the next event time of LPi and the GVT 
+is used as EPi. More recently, the definition of EPi is refined to replace GVT by the minimum of the 
+next event time of all LPs that can send events to LP~ and timestamps of any messages in transit that 
+are destined to LPi (Srinivasan and Reynolds 1996). Op timism is controlled by blocking for an amount 
+of real time proportional to EPi between processing of suc­cessive events. The proportionality constant 
+s (called the scale factor) requires some tuning for the optimal performance, which can also be adapted 
+(Srinivasan and Reynolds 1996). 5 DYNAMIC LOAD BALANCING AND SCHEDULING It is interesting to note how 
+dynamic load balancing can interact with the synchronization mechanism. In particular, optimistic mechanisms 
+introduce a new wrinkle to dynamic load balancing: high processor utilization may not imply good performance 
+as pro­cessor may be busy incorrect computation that will be undone later (Nicol and Fujimoto 1994). 
+Several load balancing algorithms have been proposed for Time Warp. (Reiher and Jefferson 1990) used 
+a metric called effectwe processor utilization which is defined as the fraction of time a processor is 
+executing cor­rect computations (which are not later rolled back). Based on this metric, processes are 
+migrated from processors with high effective utilization to processors with low utilization. Glazer and 
+Tropper (1993) pro­posed an allocating virtual time slices to LPs based on their observed rate of progress 
+in simulation time. It is conceivable that a load distribution strategy that targets equalization of 
+simulation clocks thus im­ parting some form of temporal (in the sense of simu­lation time) locality 
+in the simulation system will po­tentially reduce rollbacks (Jefferson 1985). One (ex­treme) way of doing 
+it is to migrate LPs to processors in such a way that the n (n being the numbler of pro­cessors) slowest 
+(in simulation time) LPs in the sys­tem are all assigned to different processors (Ahmed, Ronngren, and 
+Ayani 1994). If the above condition is strict, then there is a possibility of LP migration after processing 
+each simulation event. Such strict condi­tion on LP scheduling improves temporal locality at the expense 
+of spatial locality, as different events on an LP is processed at different processors. Also, use of 
+a centralized scheduling queue may introduce bot­tlenecks. A milder technique was explored by Burdorf 
+and Marti (1993) that may improve spatial locality. It is expected for most systems a tradeoff between 
+temporal and spatial locality will yield the best per­formance. However, in our knowledge no such trade­off 
+has been evaluated for PDES systems. 6 CONCLUSIONS Even though the adaptive protocols differ in many 
+details, they all (i) use some aspect of the simula­tion state, local or global, for making adaptive 
+deci­sions, (ii) use one or more control parameters to tune the dynamics of the simulation, and (iii) 
+provide a mapping that specifies the binding of the ccmtrol pa­rameter depending on the state. Past rollback 
+be­havior or past message arrival pattern is frequently used as the state information if the protocol 
+relies on local state alone. Availability of global state infor­mation (as in NPSI protocols) yields 
+more complete knowledge about the dynamics of the simulation as the relative progress of all LPs or overall 
+memory us­age can be known. The control parameters commonly used are scheduling quanta, real time bloclking 
+win­dow, simulation time window, or amount of allocated memory. The sole use of the control parameters 
+is to selectively reduce the simulation time progress of some LPs per unit real time by starving it of 
+proces­sor or memory resources. The mapping between the state information and the control parameter is 
+often linear, but may be non-linear (as in the PADOC pro­tocol). Some protocols (such as the ETA) even 
+use tuning of the parameters of the mapping function. One view of any adaptive protocol is that of a 
+feedback based control system (Palaniswamy and Wilsey 1994), and there is an inherent possibility of 
+instability in such systems, as the feedback is al­ways applied with a lag in real time. Instability 
+is very probable if the characteristics of the simulation model (e.g., model parallelism) changes too 
+fast thus not giving the protocol sufficient time to react to the changes. Study of stability properties 
+is impor­tant because of the dynamic nature of many simu­ lation models. With the initial success in 
+develop­ ing performance-efficient adaptive PDES protocols, we feel that this is one area that needs 
+to be explored in future. REFERENCES <RefA><SinRef><author>Ahmed, H., </author><author>R. Ronngren</author>, and <author>R. Ayani </author><date>1994</date>. <title>Impact of event scheduling 
+on performance of Time Warp parallel simulations</title>. <booktitle>In Proceedings of the .27th Annual Hawaii Intl. Conf. 
+on Sys­tem Sciences</booktitle></SinRef>. <SinRef><author>Arvind, K. </author>and <author>C. Smart </author><date>1992</date>. <title>Hierarchical par­allel discrete event simulation in 
+composite ELSA</title>. <booktitle>In 6th Workshop on Parallel and Dis­tributed Simulation</booktitle>, <pages>pp. 147 158</pages></SinRef>. <SinRef><author>Ball, D.</author> and <author>S. 
+Hoyt </author><date>1990</date>. <title>The adaptive Time-Warp concurrency control algorithm</title>.<booktitle> Proceed­ings of the SCS Multiconference 
+on Distributed Simulation </booktitle><volume>22(1), </volume><pages>174-177</pages></SinRef>. <SinRef><author>Burdorf, C. </author>and <author>J. Marti </author><date>1993</date>. <title>Load balancing strategies for 
+Time Warp on multi-user work­stations</title>. <journal>The Computer Journal </journal><volume>36(2)</volume>, <pages>168 176</pages></SinRef>. <SinRef><author>Chandy, K. M. </author>and <author>J. Misra </author>
+<date>1979</date>. <title>Distributed sim­ulation: A case study in design and verification of distributed programs</title>. <title>IEEE 
+Transactions on Software Engineering SE-</title><volume>5(5)</volume>, <pages>440-452</pages></SinRef>. <SinRef><author>Das, S. R. </author><date>1996</date>. <title>Estimating the cost of throt­tled 
+execution in Time Warp</title>. <booktitle>In Proceedings of the 10th Workshop on Parallel and Distributed Simulation</booktitle>, <pages>pp. 
+186-189</pages></SinRef>. <SinRef><author>Das, S. R. </author>and<author> R. M. Fujimoto </author><date>1993</date>. <title>A perfor­mance study of the cancelback protocol for Time 
+Warp</title>. <booktitle>Proceedings of the 7th Workshop on Parallel and Distributed Simulation </booktitle><volume>23(1)</volume>, <pages>135-142</pages></SinRef>. <SinRef><author>Das, S. 
+R. </author>and <author>R. M. Fujimoto </author><date>1994</date>. <title>An adaptive memory management protocol for Time Warp parallel simulation</title>. 
+<booktitle>In Proceedings of the 1994 ACM SIGMETRICS Conference on Measure­ment and Modeltng of Computer Systems</booktitle>, 
+<pages>pp. 201-210</pages></SinRef>. <SinRef><author>Dickens, P. M. </author>and P. <author>F. Reynolds, Jr. </author><date>1990</date>. <title>SRADS with local rollback</title>. <booktitle>Proceedings of the 
+SCS Multiconference on Distributed Simula­ tion </booktitle><volume>22(l)</volume>, <pages>161 164</pages></SinRef>. <SinRef><author>Ferscha, A. </author><date>1995</date><title>a. Parallel and distributed 
+simu­ation of discrete event systems</title>. In <editor>A. Y. H. Zomaya </editor>(Ed.), <booktitle>Paralle! and Distributed Com­puting Handbook</booktitle>, 
+Chapter <volume>35</volume>. <publisher>McGraw-Hill</publisher></SinRef>. <SinRef><author>Ferscha, A. </author><date>1995</date><title>b. Probabilistic adaptive direct op­timism control in Time Warp</title>. 
+<booktitle>In Proceedings of the 9th Workshop on Parallel and Distributed Simulation</booktitle>, <pages>pp. 120-129</pages></SinRef>.<SinRef> <author>Ferscha, A. </author>and 
+<author>G. Chiola </author><date>1994</date>. <title>Self adaptive log­ical processes: The probabilistic distributed simulation protocol</title>. 
+<booktitle>In Proceedings of the 27th Annual Simulation Symposium</booktitle>, <pages>pp. 78-88</pages></SinRef>. <SinRef><author>Ferscha, A. </author>and <author>J. Luthi </author><date>1995</date>.<title> Estimating 
+rollback overhead for optimism control in Time Warp</title>. <booktitle>In Proceedings of the 28th Annual Simulation Symposium</booktitle></SinRef>. 
+<SinRef><author>Fleischmann, J. </author>and <author>P. A. Wilsey </author><date>1995</date>. <title>Compara­tive analysis of periodic state saving techniques in Time 
+Warp simulators</title>. <booktitle>In Proceedings of the 9th Workshop on Parallel and Distributed Sim­ ulation</booktitle>, <pages>pp. 50 
+58</pages></SinRef>. <SinRef><author>Fujimoto, R. M. </author><date>1989</date>. <title>Performance measurements of distributed simulation strat egies</title>. <journal>Transac­tions 
+of the Society for Computer Simula­tion </journal><volume>6(2)</volume>, <pages>89 132</pages></SinRef>. <SinRef><author>Fujimoto, R. M. </author><date>1990</date>. <title>Parallel discrete event sim­ulation</title>. 
+<journal>Communications of the ACM</journal> <volume>33(10)</volume>, <pages>30-53</pages></SinRef>. <SinRef><author>Fujimoto, R. M. </author><date>1993</date><title>a. Parallel and distributed simulation: 
+Algorithms and applications</title>. <booktitle>In 1993 Winter Simulation Conference Proceed­ings</booktitle>, <pages>pp. 106 114</pages>. </SinRef><SinRef><author>Fujimoto, 
+R. M. </author><date>1993</date><title>b. Parallel discrete event sim­ulation: Will the field survive? </title><journal>ORSA Journal of Computmg </journal><volume>5(3), </volume>
+<pages>213 230</pages></SinRef>. <SinRef><author>Glazer, D. W. </author>and <author>C. Tropper </author><date>1993</date>. <title>On process migration and load balancing in Time Warp</title>. <journal>IEEE 
+Transactions on Parallel and Distributed Systems </journal><volume>3(4)</volume>, <pages>318-327</pages></SinRef>. <SinRef><author>Hamnes, D. O. </author>and <author>A. Tripathi </author><date>1994</date><title>a. 
+Evaluation of a local adaptive protocol for distributed dis­crete event simulation</title>. <booktitle>In Proceedings of 
+the 1994 International Conference on Parallel Pro­cessing</booktitle>, pp. III: <pages>127 134</pages></SinRef>. <SinRef><author>Hamnes, D. O. </author>and <author>A. Tripathi </author>
+<date>1994</date>b. <title>Investiga­tions in adaptive distributed simulation</title>. <booktitle>In Pro­ceedings of the 8th Workshop on Parallel 
+and Distributed Simulation</booktitle>, <pages>pp. 20-23</pages></SinRef>. <SinRef><author>Jefferson, D. R. </author><date>1985</date>. <title>Virtual time</title>. <journal>ACM Trans­actions on Programming 
+Languages and Sys­tems </journal><volume>7(3)</volume>, <pages>404-425</pages></SinRef>. <SinRef><author>Jefferson, D. R.</author> <date>1990</date>. <title>Virtual time II: The cancel­back protocol 
+for storage management in dis­tributed simulation</title>. <booktitle>In Proc. 9th Annual ACM Symposium on Principles of 
+Distributed Com­puting</booktitle>, <pages>pp. 75 90</pages></SinRef>. <SinRef><author>Lin, Y.-B.</author> and <author>E. D. Lazowska </author><date>1990</date>. <title>Optimality considerations of Time 
+Warp parallel simu­lation</title>. <booktitle>Proceedings of the SCS Multiconference on Distributed Simulation </booktitle><volume>22(1)</volume>, <pages>29 
+34</pages></SinRef>. <SinRef><author>Lipton, R. J. </author>and <author>D. W. Mizell </author><date>1990</date>. <title>Time Warp vs. Chandy-Misra: A worst-case comparison</title>. <booktitle>Proceedings 
+of the SCS Mtdticonference on Dis­ tributed Simulation</booktitle> <volume>22(l), </volume><pages>137-143</pages></SinRef>.<SinRef> <author>Lubachevsky, B. D. </author><date>1989</date>.<title> Efficient 
+distributed event-driven simulations of multiple-loop net­works</title>. <journal>Communications of the ACM </journal><volume>32(1)</volume>, <pages>111-123</pages></SinRef>. 
+<SinRef><author>Lubachevsky, B. D., </author><author>A. Shwartz</author>, and <author>A. Weiss </author><date>1989</date>. <title>Rollback sometimes works ... if filtered</title>. <booktitle>In 1989 
+Winter Simulation Conference Proceed­ings</booktitle>, <pages>pp. 630 639</pages></SinRef>. <SinRef><author>Lubachevsky, B. D., </author><author>A. Shwartz</author>, and <author>A. Weiss </author>
+<date>1991</date>. <title>An analysis of rollback-based simulation</title>. <journal>ACM Transaction on Modeling and Computer Simulation </journal><volume>1 
+(2), </volume><pages>154-193</pages></SinRef>. <SinRef><author>Madisetti, V., </author><author>J. Walrand</author>, and <author>D. Messerschmitt </author><date>1988</date>. <title>Wolf A rollback algorithm for optimistic 
+distributed simulation systems</title>. <booktitle>In 1988 Winter Simulation Conference Proceedings</booktitle>, <pages>pp. 296­ 305</pages></SinRef>. <SinRef><author>Madisetti, 
+V. K., </author><author>D. A. Hardaker</author>, and <author>R. M. Fujimoto </author><date>1993</date>. <title>The MIMDIX operating sys­tem for parallel simulation 
+and supercomput­ing</title>. <journal>Journal of Parallel and Distributed Com­puting </journal><volume>18(4), </volume><pages>473-483</pages></SinRef>.<SinRef> <author>Mehl, H. </author><date>1991</date>. <title>Speedup 
+of conservative distributed discrete-event simulation methods by specula­tive computing</title>. <booktitle>Proceedings 
+of the Multiconfer­ence on Advances in Parallel and Distributed Simulation</booktitle> <volume>23(l)</volume>, <pages>163-166</pages></SinRef>.<SinRef> <author>Nicol, D. 
+M. </author><date>1993</date>. <title>The cost of conservative syn­chronization in parallel discrete event simula­tions</title>. <journal>Journal of 
+ACM </journal><volume>1O(2)</volume>, <pages>304-333</pages></SinRef>. <SinRef><author>Nicol, D. M. </author>and <author>R. M. Fujimoto </author><date>1994</date>. <title>Paral­lel simulation today</title>. <journal>Annals of Operations 
+Re­search </journal><volume>53</volume>,<pages> 249 286</pages></SinRef>. <SinRef><author>Palaniswamy, A. C. </author>and<author> P. A. Wilsey </author><date>1993</date>. <title>Adap­tive bounded time windows in an 
+optimistically synchronized simulator</title>. <booktitle>In Great Lakes VLSI Conference</booktitle>, <pages>pp. 114-118</pages></SinRef>. <SinRef><author>Palaniswamy, A. C. 
+</author>and <author>P. A. Wilsey </author><date>1994</date>. <title>Scheduling time warp processes using adaptive control techniques</title>. <booktitle>In Proceedings 
+of the 1994 Winter Simulation Conference</booktitle>, <pages>pp. 731-738</pages>.</SinRef> <SinRef><author>Prakash, A. </author>and <author>R. Subramanian </author><date>1991</date>. <title>Optimistic 
+distributed simulations</title>. <booktitle>In Proceedings of the 2Jth Annunal Simulation Symposium</booktitle>, <pages>pp. 123­ 132</pages></SinRef>. <SinRef><author>Rajaei, 
+H., </author><author>R. Ayani,</author> and <author>L.-E. Thorelli </author><date>1993</date>. <title>The local Time Warp approach to parallel simula­tion</title>. <booktitle>In Proceedings 
+of the 7th Workshop on Parallel and Distributed Simulation</booktitle>, <pages>pp. 119 126</pages></SinRef>. <SinRef><author>Reiher, P. L.</author> and <author>D. Jefferson </author>
+<date>1990</date>. <title>Dynamic load management in the Time Warp Operating Sys­tem</title>. <journal>Transactions of the Society for Computer 
+Simulation </journal><volume>7(2), </volume><pages>91-120</pages></SinRef>. <SinRef><author>Reiher, P. L., </author><author>F. Wieland</author>, and <author>D. R. Jefferson </author><date>1989</date>. <title>Limitation of optimism 
+in the Time Warp Op­erating System</title>. <booktitle>In Proceedings of the 1:989 Win­ter Szmtdation Conference</booktitle>, <pages>pp. 765-770</pages></SinRef>. 
+<SinRef><author>Reynolds, Jr., </author><author>P. F. </author><date>1988</date>. <title>A spectrum of options for parallel simulation</title>. <booktitle>In 1988 Winter Simulation Conference 
+Proceedings</booktitle>, <pages>pp. 325-332</pages></SinRef>. <SinRef><author>Reynolds, Jr., </author><author>P. F., </author><author>C. M. Pancerella, </author>and <author>S. Srini­vasan </author><date>1993</date>. <title>Design and 
+performance analysis of hardware support for parallel simulation</title>. <journal>Journal of Parallel and Distributed 
+Comput­ing </journal><volume>18(4), </volume><pages>435 453</pages></SinRef>. <SinRef><author>Sokol, L. M., </author><author>D. P. Briscoe</author>, and <author>A. P. Wieland </author><date>1988</date>. <title>MTW: a strategy for scheduling 
+dis­crete simulation events for concurrent execu­tion</title>. <booktitle>Proceedings of the SCS Multiconference on Distributed 
+Simulation </booktitle><volume>19(3), </volume><pages>34-42</pages></SinRef>. <SinRef><author>Srinivasan, S. </author>and <author>P. F. Reynolds </author><date>1995</date>. <title>NF SI adap­tive synchronization algorithms 
+for F DES</title>. <booktitle>In 1995 Winter Simulation Proceedings</booktitle>, <pages>pp. 658­ 665</pages></SinRef>. <SinRef><author>Srinivasan, S. </author>and <author>P. F. Reynolds</author> <date>1996</date>. 
+<title>Elas­tic time. ACM Transactions on Modeling and Computer Simulation</title></SinRef>. Submitted. <SinRef><author>Steinman, J. </author><date>1992</date><title>a. SPEEDES: 
+A multiple­synchronization environment for parallel dis­crete event simulation</title>. <journal>International Journal 
+of Computer Simulation </journal><volume>2(3), </volume><pages>251-286</pages></SinRef>. <SinRef><author>Steinman, J. </author><date>1992</date><title>b. SPEEDES: A unified approach to parallel simulation</title>. 
+<booktitle>In 6th Workshop on Par­allel and Distributed Simulation</booktitle>, <pages>pp. 75 84</pages></SinRef>. <SinRef><author>Steinman, J. S. </author><date>1993</date>. <title>Breathing Time 
+Warp</title>. <booktitle>In Proceedings of the 7th Workshop on Parallel and Distributed Simulation</booktitle>, <pages>pp. 109 118</pages></SinRef>. <SinRef><author>Turner, 
+S. J. </author>and <author>M. Q. Xu</author> <date>1992</date>. <title>Per~formance evaluation of the bounded Time Wiirp algo­rithm</title>. <booktitle>Proceedings of 
+the SCS Multicanference on Parallel and Distributed Simulaticm </booktitle><volume>21 (3), </volume><pages>117-126</pages></SinRef></RefA>. AUTHOR BIOGRAPHY SAMIR 
+R. DAS is an assistant professor in the Division of Computer Science at The University of Texas at San 
+Antonio. He received his ME in com­ puter science and engineering from the Indian Insti­ tute of Science, 
+Bangalore, in 1988 and PhD in com­ puter science from the Georgia Institute of Technol­ ogy, Atlanta, 
+in 1994. His research interests include parallel and distributed systems, performance eval­ uation and 
+discrete event simulation. In tlhe recent past he worked on performance aspects of Time Warp based parallel 
+simulation systems. 
+			

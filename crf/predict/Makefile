@@ -36,7 +36,8 @@
 
 
 ########################SYSTEM SETTINGS#################################
-CC			:= g++
+CC			:= gcc
+CPP			:= g++
 CP			:= cp
 DEL			:= rm -rf
 MV			:= mv
@@ -48,13 +49,19 @@ GCMT			:= @git commit -m
 ########################COMPILE SETTINGS################################
 VPATH			:= .:include/:src/:lib/:obj/
 	export	VPATH
-LIBS			:= -L lib/ -lcrfpp -lm 
+LIBS			:= -L lib/ -ldl -lpthread  -lm -lcrfpp
 INCFLAG			:= -I include/
-CFLAGS			:= -Wall ${INCFLAG} -O3
-GNUFLAGS		:= -Wall ${INCFLAG} -std=gnu99
-OBJS			:= 
-
-PROGS			:= demo
+WAFLAG			:= -Wall -g
+CFLAGS			:= ${WAFLAG} ${INCFLAG} -std=c99
+GNUFLAGS		:= ${WAFLAG} ${INCFLAG} -std=gnu99
+CPPFLAGS		:= ${WAFLAG} ${INCFLAG}
+OBJS			:= hftctl.o hftnpse.o sqlite3.o persistence.o \
+				ini.o tokens.o virtualcontent.o \
+				minEditDistance.o dirTraversal.o\
+				eftfun.o crftctl.o strHandle.o common.o\
+				debuginfo.o myMath.o crftfun.o dict.o queue.o\
+				citpred.o
+PROGS			:= main
 
 .PHONY			: clean succ
 ########################################################################
@@ -62,13 +69,23 @@ all			: ${PROGS} succ
 
 rebuild			: gitupdate clean all
 
-run			: all
-	LD_LIBRARY_PATH=$LD_LIBRARY_PATH:lib/ && ./${PROGS}
 
-demo			: ${OBJS}
-	${CC} ${CFLAGS} $@.cc -o $@ ${OBJS} ${LIBS}
+main			: ${OBJS}
+	${CPP} ${CFLAGS} $@.cc -o $@ ${OBJS} ${LIBS}
 
 
+
+dirTraversal.o		: 
+	${CC} ${GNUFLAGS} -c -o $@ src/dirTraversal.c 
+
+(%.o) : %.c
+	${C} ${CFLAGS} -c $< -o $*.o
+	
+	
+(%.o) : %.cc
+	${CPP} ${CPPFLAGS} -c $< -o $*.o
+
+	
 gitupdate		:
 	-${GADD} .
 	-${GCMT} `date "+auto:%Y%m%d%H%M%S"`
