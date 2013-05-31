@@ -3,6 +3,10 @@
 #include <stdio.h>
 #include "persistence.h"
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif // __cplusplus
 
 
 // data set
@@ -40,6 +44,10 @@ int prepareDensityData(void);
 
 void setNextElemOffset(int neo);
 int chkSpecialFlag(void);
+
+#ifdef __cplusplus
+}
+#endif // __cplusplus
 
 //int getMaxLen(void);
 #endif // __EFTFUN_H__

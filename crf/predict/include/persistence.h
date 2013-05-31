@@ -72,6 +72,11 @@ typedef struct
 	endFeatureData data[ENDCTNMAX]; // now max is ENDCTNMAX ~ 1024
 } endFeatureDataContainer;
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif // __cplusplus
+
 //init
 int dbInit(void);
 int doCreateTable(void);
@@ -87,5 +92,8 @@ int getFeature(const char *fileName,featureDataContainer *data);
 
 char *queryEscape(const char *str);
 
+#ifdef __cplusplus
+}
+#endif // __cplusplus
 #endif // __PERSISTENCE_H__
 

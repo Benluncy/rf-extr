@@ -1,12 +1,10 @@
 #ifndef __DIR_TRAVERSAL_H__
 #define __DIR_TRAVERSAL_H__
-/*
-struct _fileList
+
+#ifdef __cplusplus
+extern "C"
 {
-	struct _fileList *
-};
-typedef _fileList * fileList;
-*/
+#endif // __cplusplus
 
 #ifndef WIN32 // for linux
 int isDir(const char* path);
@@ -19,5 +17,8 @@ typedef int (*file_callback)(const char* fileName,int isDir);
 //int dirTraversal(const char *path, int recursive,int file_callback);
 int dirTraversal(const char *path, int recursive,int (*callback)(const char* fileName,int isDir));
 
+#ifdef __cplusplus
+}
+#endif // __cplusplus
 
 #endif //__DIR_TRAVERSAL_H__

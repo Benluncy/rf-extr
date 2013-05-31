@@ -45,6 +45,11 @@ typedef FilterData * _FilterData;
 typedef int (*AcceptStr)(const char *str,int threshold,int *fitLen); // for stack data , callback
 typedef int (*OffsetCallback)(int offset,int limit); // for offset callback
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif // __cplusplus
+
 int offsetStat(int nowOffset,int *totalData,int *beforeData,OffsetCallback offsetFunction);
 int offsetBetweenStat(int offsetEnd,int offsetStart,int *dataBetween,OffsetCallback offsetFunction);
 
@@ -91,6 +96,10 @@ FILE * getTrainFile(void);
 FILE * getTestFile(void);
 
 void selfAddFileNum();
+
+#ifdef __cplusplus
+}
+#endif // __cplusplus
 
 #endif //__HFTCTL_H__
 

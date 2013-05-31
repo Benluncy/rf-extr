@@ -1,6 +1,10 @@
 #ifndef __CRFT_FUN_H__
 #define __CRFT_FUN_H__
 #include "queue.h"
+#ifdef __cplusplus
+extern "C"
+{
+#endif // __cplusplus
 
 int digitlen(const char *str,int len);
 
@@ -43,4 +47,7 @@ int filteredTokenId(int offset);
 int ftEnQueue(pCNSQ Q,int *currentOffset,char *mpredeli);
 pCrfNodeSnapshot ftDeQueue(pCNSQ Q);
 
+#ifdef __cplusplus
+}
+#endif // __cplusplus
 #endif// __CRFT_FUN_H__

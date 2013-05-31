@@ -52,6 +52,10 @@ typedef struct{
     int front,rear;          //队头，队尾指针
 }CNSQ,*pCNSQ; // CrfNodeSnapshotQueue
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif // __cplusplus
 
 void clearQueue(pCNSQ Q);
 
@@ -71,6 +75,8 @@ pCrfNodeSnapshot nextNElem(pCNSQ Q,int N);
 pCrfNodeSnapshot pastNElem(pCNSQ Q,int N);
 
 int sizeQueue(pCNSQ Q);
-
+#ifdef __cplusplus
+}
+#endif // __cplusplus
 
 #endif // 

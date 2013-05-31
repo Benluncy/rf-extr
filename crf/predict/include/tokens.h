@@ -14,6 +14,11 @@ struct tokens
 };
 struct tokens tkRepo;
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif // __cplusplus
+
 int tokenInit();
 char *id2Token(int id);
 int token2Id(const char *token);
@@ -21,5 +26,8 @@ int token2Id(const char *token);
 int tokenPush(unsigned int *tp,unsigned int id);
 unsigned int tokenPop(unsigned int *tp);
 
+#ifdef __cplusplus
+}
+#endif // __cplusplus
 #endif // __TOKENS_H__
 

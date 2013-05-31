@@ -11,6 +11,10 @@ typedef struct
 	int next[10];
 }CloseKWD;
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif // __cplusplus
 
 //for debug
 void setContent(const char * content);
@@ -53,5 +57,9 @@ int keysNumber(int offset,int limit,int (*keyFind)(int,int));
 typedef int (*CKWDfun)(int offset,int limit);
 
 int getCloseKWD(int offset,CloseKWD *closeKWD,int (*callback)(int offset,int limit));
+
+#ifdef __cplusplus
+}
+#endif // __cplusplus
 
 #endif //__HFTNPSE_H__

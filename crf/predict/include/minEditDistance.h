@@ -40,6 +40,10 @@ enum true_or_false{false,true};
 #define MIDDLEOF(a,b,c)  (a >= b && a <= c) // a is at the range of  [b,c]
 #endif 
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif // __cplusplus
 
 
 //inline int editDistance(const char *t,const char * s);
@@ -78,6 +82,10 @@ int isData(char ch);
  * : s Space
  */
 int fitPattern(char a,char b);
+
+#ifdef __cplusplus
+}
+#endif // __cplusplus
 
 #endif // __MINIMUM_EDIT_DISTANCE_H__
 
