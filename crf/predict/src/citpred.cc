@@ -50,6 +50,20 @@ int initCitationNode(pCitationNode node)
 	return 1;	
 }
 
+int cnIsEmpty(pCitationNode node)
+{
+	if(node == NULL) return 1;
+	if((node->author[0][0] != 0) ||(node->editor[0][0] != 0) 
+		|| node->title[0] != 0 || node->journal[0] != 0
+		|| node->booktitle[0] != 0 || node->publisher[0] != 0
+		|| node->institution[0] != 0 || node->volume[0] != 0
+		|| node->location[0] != 0 || node->pages[0] != 0
+		|| node->date[0] != 0 || node->url[0] != 0
+		|| node->isbn[0] != 0 || node->tech[0] != 0
+		|| node->other[0] != 0 ) return 0;
+	return 1;
+}
+
 pCitationNode addCitationNode(pCitationNode *node)// node , token id
 {
 	pCitationNode p = *node;
@@ -57,6 +71,9 @@ pCitationNode addCitationNode(pCitationNode *node)// node , token id
 	{
 		p = new CitationNode;
 		*node = p;
+	}else if(cnIsEmpty(p))
+	{
+		return p;
 	}else
 	{
 		while(p->next != NULL) p = p->next;
@@ -67,6 +84,21 @@ pCitationNode addCitationNode(pCitationNode *node)// node , token id
 	return p;
 }
 
+void freeCitationNode(pCitationNode *node)
+{
+	pCitationNode p1 = *node;
+	pCitationNode p2 = p1;
+	while(p2 != NULL)
+	{
+		p2 = p2 -> next;
+		free(p1);
+		p1 = p2;
+		
+	}
+	
+	*node = NULL;
+}
+
 pCitationNode addCitationInfo(pCitationNode *node,const char *str,int len,int id)
 {
 	pCitationNode p = *node;
@@ -75,35 +107,75 @@ pCitationNode addCitationInfo(pCitationNode *node,const char *str,int len,int id
 	src[len] = '\0';
 	
 	printf("%s[%s]\n",src,id2Token(id));
+	
+	int page[2];
+	int pn ;
+	
+	int vol[2];
+	int vn ;
+	
 	switch(id)
 	{
+		case 0:
+			int lnum;
+			int ev[2];
+			for(lnum = 0; lnum < len; lnum++)
+			{
+				if(DIGITLIKE(src[lnum])) ev[0] = 1;
+				if(src[lnum]=='['||src[lnum]==']') ev[1] = 1;
+			}
+			if(ev[0] && ev[1]) addCitationNode(&p);
+			break;
 		case 3: // author
+			addCitationNode(&p);
+			snprintf(p->author[0],50,"%s",src);
 			break;
 		case 4: // booktitle
+			snprintf(p->booktitle,50,"%s",src);
 			break;
 		case 5: // date
+			snprintf(p->date,50,"%s",src);
 			break;
 		case 6: // editor
+			snprintf(p->editor[0],50,"%s",src);
 			break;
 		case 7: // institution
+			snprintf(p->institution,50,"%s",src);
 			break;
 		case 8: // journal
+			snprintf(p->journal,50,"%s",src);
 			break;
 		case 9: // location
+			snprintf(p->location,50,"%s",src);
 			break;
 		case 11: // pages
+			pn= twovalue(src,len,&page[0],&page[1]);
+			if(pn == 2)
+				snprintf(p->volume,50,"%d,%d",page[0],page[1]);
+			else
+				snprintf(p->volume,50,"%d",page[0]);
 			break;
 		case 12: // publisher
+			snprintf(p->date,50,"%s",src);
 			break;
 		case 13: // tech
+			snprintf(p->tech,50,"%s",src);
 			break;
 		case 14: // title
+			snprintf(p->title,50,"%s",src);
 			break;
 		case 15: // volume
+			vn = twovalue(src,len,&vol[0],&vol[1]);
+			if(vn == 2)
+				snprintf(p->volume,50,"%d,%d",vol[0],vol[1]);
+			else
+				snprintf(p->volume,50,"%d",vol[0]);
 			break;
 		case 16: // url
+			snprintf(p->url,50,"%s",src);
 			break;
 		case 17: // isbn
+			snprintf(p->isbn,50,"%s",src);
 			break;
 	}
 	return p;	
@@ -1330,7 +1402,7 @@ pCitationNode CitationInfoPredictFile(const char *fileName,int startOffset,int e
 	pCitationNode p;
 	initContent();
 	if(!DEBUGFLAG) setNoParse(1); //for release
-	parseFile(fileName);
+	if(!parseFile(fileName)) return NULL;
 	p = CitationInfoPredict(startOffset,endOffset);
 	cleanContent();
 	return p;

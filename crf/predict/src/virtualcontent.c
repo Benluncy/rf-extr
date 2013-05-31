@@ -171,7 +171,7 @@ int parseFile(const char * fileName)
 		free(pcontent);
 		pcontent = content = NULL;	
 	}
-	readFileToParse(fileName);
+	if(!readFileToParse(fileName)) return 0;;
 	contentType = 2;
 	if(noparse == 1) return 1;
 	flen = clen;
@@ -308,81 +308,3 @@ int cleanContent()
 	contentType = 0;
 	return 1;
 }
-
-
-/*
-
-int main(int argc,char *argv[])
-{
-	initContent();
-	parseFile(test_file);
-	FILE *fp = fopen("output.txt","w");
-	int i;
-	char info[1024];
-	unsigned int tmp;
-	char *mycontent;
-	int myclen; //content's length
-	int mypclen; // pure content's length
-	char *mypcontent; // pure content
-	unsigned int *myoffset; // offset is for pcontent 
-	unsigned int *mytags; // record the tag
-	unsigned int nowTag;
-	
-	unsigned int z = 0;
-	
-	// environment
-	mycontent = getContent();
-	myclen = getClen();
-	mypcontent = getPcontent();
-	myoffset = getOffset();
-	mytags = getTags();
-	mypclen = getPclen();
-	
-	//
-	for(i=0;i<myclen;i++)
-	{
-		fprintf(fp,"%c",mycontent[i],i);
-		
-	}
-	fprintf(fp,"\n\n\n\n===================================================\n\n");
-
-	printf("fine");
-	fflush(NULL);
-	//int z;
-	unsigned int z2;
-	int utg = 1;
-	for(i=0;i<mypclen;i++)
-	{
-		//memset(info,0,sizeof(info));
-		nowTag = mytags[i];
-		if(nowTag > 0 && utg)
-		{
-			z = myoffset[i];
-			z2 = i;
-			utg = 0;
-		}
-		putchar(pcontent[i]);
-		//printf("now tag: %d\n",nowTag);
-		//while((tmp = tokenPop(&nowTag)) > 0 )
-		//{
-		//	sprintf(info,"%s:%s",info,id2Token(tmp));
-		//}
-		//fprintf(fp,"[%c:%d:%s]",mypcontent[i],myoffset[i],info);
-	}	
-	
-	printf("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
-	fflush(NULL);
-
-	printf("~%d:~%d",z,z2);
-	for(i=z;i<z+100;i++) putchar(mycontent[i]);
-	fflush(NULL);
-	printf("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
-	for(i=z2;i<z2+100;i++) putchar(mypcontent[i]);
-	
-	cleanContent();
-	printf("it works\n");
-	fclose(fp);
-	return 0;
-}
-
-*/

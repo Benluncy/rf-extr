@@ -47,6 +47,9 @@ int filteredTokenId(int offset);
 int ftEnQueue(pCNSQ Q,int *currentOffset,char *mpredeli);
 pCrfNodeSnapshot ftDeQueue(pCNSQ Q);
 
+
+int twovalue(const char *str,int len,int *a,int *b);
+
 #ifdef __cplusplus
 }
 #endif // __cplusplus

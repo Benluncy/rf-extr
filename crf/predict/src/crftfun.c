@@ -70,6 +70,31 @@ int valofdigit(const char *str,int len)
 	return sum;
 }
 
+int twovalue(const char *str,int len,int *a,int *b)
+{
+	int i;
+	int sum = 0;
+	int num = 0;
+	for(i=0;i<len;i++)
+	{
+		if(VALDIG(str[i]) == -1)
+		{
+			if((num == 1)&&(sum>0))
+			{
+				num = 2;
+				*a = sum;
+				sum = 0;
+			}
+		}else
+		{
+			sum = sum * 10 + VALDIG(str[i]);
+		}
+	}
+	if(sum == 0 ) num = 1;
+	else *b = sum;
+	return num;
+}
+
 // digit special
 int yearlike(const char *str,int len)
 {

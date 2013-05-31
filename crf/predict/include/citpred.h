@@ -39,6 +39,7 @@ extern "C"
 
 int initCitationNode(pCitationNode node);
 pCitationNode addCitationNode(pCitationNode *node);
+void freeCitationNode(pCitationNode *node);
 pCitationNode addCitationInfo(pCitationNode *node,const char *str,int len,int id);
 //int predftEnQueue(pCNSQ Q,int *currentOffset,char *mpredeli,int refAreaEnd);
 pCitationNode CitationInfoPredict(int startOffset,int endOffset);
