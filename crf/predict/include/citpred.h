@@ -5,12 +5,12 @@
 typedef struct _CitationNode
 {
 	char author[10][50];
-	char title[50];
+	char title[150];
 	char editor[10][50];
-	char journal[50];
-	char booktitle[50];
-	char publisher[50];
-	char institution[50];
+	char journal[150];
+	char booktitle[150];
+	char publisher[150];
+	char institution[150];
 	char volume[50];
 	char location[50];
 	char pages[50]; // TODO : may int pages[2];?

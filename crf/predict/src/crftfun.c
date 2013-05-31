@@ -74,7 +74,7 @@ int twovalue(const char *str,int len,int *a,int *b)
 {
 	int i;
 	int sum = 0;
-	int num = 0;
+	int num = 1;
 	for(i=0;i<len;i++)
 	{
 		if(VALDIG(str[i]) == -1)

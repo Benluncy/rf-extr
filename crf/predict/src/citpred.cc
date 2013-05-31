@@ -115,6 +115,61 @@ void tagFinishing(char *str)
 	}
 }
 
+void spilitName(char name[10][50],const char *src)
+{
+	int len = strlen(src);
+	int line = 0;
+	int j=0;
+	int i;
+	for(i=0;i<len;i++)
+	{
+		if(line >= 10 ) return;
+		if(src[i] == ',')
+		{
+			name[line][j] = '\0';
+			line++;
+			j = 0;
+			continue;
+		}
+		else if((strncmp(src+i,"and",3) == 0) && i > 0)
+		{
+			if(!isAsciiOrDigit(src[i-1]))
+			{
+				i+=3;
+				name[line][j] = '\0';
+				line++;
+				j = 0;
+				continue;
+			}
+		}
+		else if(strncmp(src+i,"et",2)==0)
+		{
+			int k;
+			for(k=i+2;k<len;k++)
+			{
+				if(isAsciiOrDigit(src[k]))
+				{
+					if(strncmp(src+k,"al",2)==0)
+					{
+						name[line][j] = '\0';
+						line++;
+						if(line < 10 ) sprintf(name[line],"et. al.");
+						return;
+					}
+				}
+			}
+		}
+		else
+		{
+			if(!(j==0 && !isAsciiOrDigit(src[i])))
+			{
+				name[line][j] = src[i];
+				j++;
+			}
+		}
+	}
+}
+
 pCitationNode addCitationInfo(pCitationNode *node,const char *str,int len,int id)
 {
 	pCitationNode p = *node;
@@ -144,27 +199,29 @@ pCitationNode addCitationInfo(pCitationNode *node,const char *str,int len,int id
 			break;
 		case 3: // author
 			p = addCitationNode(&p);
-			snprintf(p->author[0],50,"%s",src);
+			//snprintf(p->author[0],50,"%s",src);
+			spilitName(p->author,src);
 			break;
 		case 4: // booktitle
 			tagFinishing(src);
-			snprintf(p->booktitle,50,"%s",src);
+			snprintf(p->booktitle,150,"%s",src);
 			break;
 		case 5: // date
 			tagFinishing(src);
 			snprintf(p->date,50,"%s",src);
 			break;
 		case 6: // editor
-			tagFinishing(src);
-			snprintf(p->editor[0],50,"%s",src);
+			//tagFinishing(src);
+			//snprintf(p->editor[0],50,"%s",src);
+			spilitName(p->author,src);
 			break;
 		case 7: // institution
 			tagFinishing(src);
-			snprintf(p->institution,50,"%s",src);
+			snprintf(p->institution,150,"%s",src);
 			break;
 		case 8: // journal
 			tagFinishing(src);
-			snprintf(p->journal,50,"%s",src);
+			snprintf(p->journal,150,"%s",src);
 			break;
 		case 9: // location
 			tagFinishing(src);
@@ -179,7 +236,7 @@ pCitationNode addCitationInfo(pCitationNode *node,const char *str,int len,int id
 			break;
 		case 12: // publisher
 			tagFinishing(src);
-			snprintf(p->date,50,"%s",src);
+			snprintf(p->date,150,"%s",src);
 			break;
 		case 13: // tech
 			tagFinishing(src);
@@ -187,7 +244,7 @@ pCitationNode addCitationInfo(pCitationNode *node,const char *str,int len,int id
 			break;
 		case 14: // title
 			tagFinishing(src);
-			snprintf(p->title,50,"%s",src);
+			snprintf(p->title,150,"%s",src);
 			break;
 		case 15: // volume
 			vn = twovalue(src,len,&vol[0],&vol[1]);
