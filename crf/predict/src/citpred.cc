@@ -414,6 +414,7 @@ pCitationNode CitationInfoPredict(int startOffset,int endOffset)
 	
 	pCrfNodeSnapshot pCNS;
 	
+	
 	//
 	refAreaStart = startOffset;
 	refAreaEnd = endOffset;
@@ -426,7 +427,6 @@ pCitationNode CitationInfoPredict(int startOffset,int endOffset)
 		std::cerr << CRFPP::getTaggerError() << std::endl;
 		return 0;
 	}
-	
 	
 	
 	int httpStatus = 0;
@@ -453,11 +453,9 @@ pCitationNode CitationInfoPredict(int startOffset,int endOffset)
 	
 	lastOffset = currentOffset;
 	//make queue full
-	printf("X\n");
 	while(predftEnQueue(&nextCNSQ,&currentOffset,&mpredeli,refAreaEnd));
 	while((pCNS = ftDeQueue(&nextCNSQ)) != NULL)
 	{
-		printf("+");fflush(NULL);
 		offsetCp.startOffset = lastOffset;
 		offsetCp.endOffset = pCNS->offset;
 		offsetCpQueue.push(offsetCp);
