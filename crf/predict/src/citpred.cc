@@ -124,10 +124,10 @@ pCitationNode addCitationInfo(pCitationNode *node,const char *str,int len,int id
 				if(DIGITLIKE(src[lnum])) ev[0] = 1;
 				if(src[lnum]=='['||src[lnum]==']') ev[1] = 1;
 			}
-			if(ev[0] && ev[1]) addCitationNode(&p);
+			if(ev[0] && ev[1]) p = addCitationNode(&p);
 			break;
 		case 3: // author
-			addCitationNode(&p);
+			p = addCitationNode(&p);
 			snprintf(p->author[0],50,"%s",src);
 			break;
 		case 4: // booktitle
