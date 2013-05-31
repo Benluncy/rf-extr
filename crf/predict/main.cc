@@ -4,11 +4,14 @@
 #include "dict.h"
 #include "strHandle.h"
 #include "crftctl.h"
+
 #include "khash.h"
 #include "queue.h"
 #include "citpred.h"
 #include <iostream>
 
+#include "hftctl.h"
+#include "eftfun.h"
 
 int main(int argc,char *argv[])
 {	
@@ -21,8 +24,19 @@ int main(int argc,char *argv[])
 	
 	hmDictFree();
 	*/
-	std::cout << "hello world !"<<std::endl;
+	const char *testfile="data/fa/A case study of file system workload in a large-scale distributed environment.txt";
+	initContent();
+	parseFile(fileName);
+	int startoffset = getReferenceHeadOffset();
+	int endoffset = getReferenceEndOffset();
+	cleanContent();
+	
+	
+	initCitationInfoPredict();
 
+	CitationInfoPredictFile(fileName,startoffset,endoffset);
+	
+	cleanCitationInfoPredict();
 	return 0;
 }
 
