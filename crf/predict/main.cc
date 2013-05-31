@@ -4,6 +4,7 @@
 #include "dict.h"
 #include "strHandle.h"
 #include "crftctl.h"
+#include "virtualcontent.h"
 
 #include "khash.h"
 #include "queue.h"
@@ -26,7 +27,7 @@ int main(int argc,char *argv[])
 	*/
 	const char *testfile="data/fa/A case study of file system workload in a large-scale distributed environment.txt";
 	initContent();
-	parseFile(fileName);
+	parseFile(testfile);
 	int startoffset = getReferenceHeadOffset();
 	int endoffset = getReferenceEndOffset();
 	cleanContent();
@@ -34,7 +35,7 @@ int main(int argc,char *argv[])
 	
 	initCitationInfoPredict();
 
-	CitationInfoPredictFile(fileName,startoffset,endoffset);
+	CitationInfoPredictFile(testfile,startoffset,endoffset);
 	
 	cleanCitationInfoPredict();
 	return 0;
