@@ -1310,6 +1310,7 @@ pCitationNode CitationInfoPredict(int startOffset,int endOffset)
 			partlen = 0;
 		}
 		offsetCpQueue.pop();
+		lastid = nowid;
 	}
 	addCitationInfo(&nowNode,strelem,partlen,nowid);
 	delete tagger;
