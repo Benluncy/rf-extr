@@ -127,7 +127,7 @@ int predftEnQueue(pCNSQ Q,int *currentOffset,char *mpredeli,int refAreaEnd)
 			refAreaEnd-(*currentOffset),
 			&(crfNodeSnapshot.predeli),
 			&(crfNodeSnapshot.nextdeli),
-			&nextpre)) != 0)
+			&nextpre)) > 0)
 	{
 		int slen = strlen(str);
 		sprintf(crfNodeSnapshot.str,"%s",str);
@@ -459,8 +459,9 @@ pCitationNode CitationInfoPredict(int startOffset,int endOffset)
 		offsetCp.startOffset = lastOffset;
 		offsetCp.endOffset = pCNS->offset == 0 ?refAreaEnd:startOffset+pCNS->offset;
 		offsetCpQueue.push(offsetCp);
+		printf("%d-%d~%d",offsetCp.startOffset,offsetCp.endOffset,pCNS->offset);
 		lastOffset = offsetCp.endOffset;
-		
+		printf("(%d)\n",lastOffset);
 		
 		memset(samplestr,0,2048); // init
 		// 0. PREPARE : FLAGS
@@ -1295,7 +1296,7 @@ pCitationNode CitationInfoPredict(int startOffset,int endOffset)
 		offsetCp = offsetCpQueue.front();
 		content = getPcontent()+offsetCp.startOffset;
 		memcpy(strelem+partlen,
-			content+offsetCp.startOffset,
+			content,
 			offsetCp.endOffset - offsetCp.startOffset);
 		partlen += offsetCp.endOffset - offsetCp.startOffset;
 		if(nowid != lastid)
@@ -1320,11 +1321,8 @@ pCitationNode CitationInfoPredictFile(const char *fileName,int startOffset,int e
 	pCitationNode p;
 	initContent();
 	if(!DEBUGFLAG) setNoParse(1); //for release
-	printf("A\n");
 	parseFile(fileName);
-	printf("B\n");
 	p = CitationInfoPredict(startOffset,endOffset);
-	printf("C\n");
 	cleanContent();
 	return p;
 }
