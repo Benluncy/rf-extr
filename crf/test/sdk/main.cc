@@ -41,9 +41,6 @@ int main(int argc, char **argv)
 
 
 	for (size_t i = 0; i < tagger->size(); ++i) {
-	//	for (size_t j = 0; j < tagger->xsize(); ++j) {
-	//		std::cout << tagger->x(i, j) << '\t';
-	//	}
 		std::cout << tagger->y2(i) << '\t';
 		std::cout << std::endl;
 

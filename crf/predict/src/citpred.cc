@@ -230,9 +230,9 @@ pCitationNode addCitationInfo(pCitationNode *node,const char *str,int len,int id
 		case 11: // pages
 			pn= twovalue(src,len,&page[0],&page[1]);
 			if(pn == 2)
-				snprintf(p->volume,50,"%d,%d",page[0],page[1]);
+				snprintf(p->pages,50,"%d,%d",page[0],page[1]);
 			else
-				snprintf(p->volume,50,"%d",page[0]);
+				snprintf(p->pages,50,"%d",page[0]);
 			break;
 		case 12: // publisher
 			tagFinishing(src);
@@ -1456,7 +1456,7 @@ pCitationNode CitationInfoPredict(int startOffset,int endOffset)
 	lastid = token2Id(tagger->y2(0));
 	memset(strelem,0,1024);
 	partlen = 0;
-	for (size_t i = 1; i < tagger->size(); i++ ) {
+	for (size_t i = 1; i <= tagger->size(); i++ ) {
 		nowid = token2Id(tagger->y2(i));
 		offsetCp = offsetCpQueue.front();
 		content = getPcontent()+offsetCp.startOffset;
