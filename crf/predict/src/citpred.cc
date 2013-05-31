@@ -467,7 +467,9 @@ pCitationNode CitationInfoPredict(int startOffset,int endOffset)
 		offsetCpQueue.push(offsetCp);
 		printf("%d-%d~%d",offsetCp.startOffset,offsetCp.endOffset,pCNS->offset);
 		lastOffset = offsetCp.endOffset;
-		printf("(%d)\n",lastOffset);
+		printf("(%d)",lastOffset);
+		
+		printf("\n");
 		
 		memset(samplestr,0,2048); // init
 		// 0. PREPARE : FLAGS
@@ -1297,7 +1299,7 @@ pCitationNode CitationInfoPredict(int startOffset,int endOffset)
 	lastid = token2Id(tagger->y2(0));
 	memset(strelem,0,1024);
 	partlen = 0;
-	for (size_t i = 0; i < tagger->size(); i++ ) {
+	for (size_t i = 1; i < tagger->size(); i++ ) {
 		nowid = token2Id(tagger->y2(i));
 		offsetCp = offsetCpQueue.front();
 		content = getPcontent()+offsetCp.startOffset;
