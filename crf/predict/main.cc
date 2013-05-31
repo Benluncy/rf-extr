@@ -25,7 +25,8 @@ int main(int argc,char *argv[])
 	
 	hmDictFree();
 	*/
-	const char *testfile="data/fa/A case study of file system workload in a large-scale distributed environment.txt";
+	//const char *testfile="data/fa/A case study of file system workload in a large-scale distributed environment.txt";
+	const char *testfile="3D gadgets for business process visualization&#8212;a case study.txt";
 	initContent();
 	parseFile(testfile);
 	int startoffset = getReferenceHeadOffset();
