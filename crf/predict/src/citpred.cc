@@ -452,6 +452,9 @@ pCitationNode CitationInfoPredict(int startOffset,int endOffset)
 	int isbnEffect = 0;
 	
 	lastOffset = refAreaStart;
+	for(int i=refAreaStart;i<refAreaEnd;i++)
+		putchar(*(getPcontent()+i));
+	printf("\n\n");
 	//make queue full
 	while(predftEnQueue(&nextCNSQ,&currentOffset,&mpredeli,refAreaEnd));
 	while((pCNS = ftDeQueue(&nextCNSQ)) != NULL)
