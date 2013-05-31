@@ -42,7 +42,7 @@ static char *pcontent; // pure content
 static unsigned int *offset; // offset is for pcontent 
 static unsigned int *tags; // record the tag
 
-static int contentType ;  // 0:inited and not setted content  1:getFrom setted file 2:getFrom file
+static int contentType ;  // 0:inited and not setted content  1:getFrom setted data 2:getFrom file
 static int noparse;
 
 char *getContent()
@@ -92,7 +92,7 @@ int readFileToParse(const char * fileName)
 	}else
 	{
 		pcontent = content;
-		plen = clen;
+		pclen = clen;
 	}
 	
 
@@ -102,13 +102,17 @@ int readFileToParse(const char * fileName)
 	return 1;
 }
 
-int setContent(const char *str)
+int setFileContent(const char *str)
 {
 	if(str == NULL ) return 0;
 	contentType = 1;
-	pcontent = str;
-	content = str;
+
 	pclen = clen = strlen(str);
+	pcontent = (char *)calloc(pclen+1,sizeof(char));
+	
+	memcpy(pcontent,str,pclen);
+	content = pcontent;
+
 	return 1;
 }
 
@@ -163,16 +167,16 @@ int parseFile(const char * fileName)
 	if(contentType == 1)
 	{
 		clen = 0;
-		plen = 0;
+		pclen = 0;
 		free(pcontent);
 		pcontent = content = NULL;	
 	}
 	readFileToParse(fileName);
+	contentType = 2;
 	if(noparse == 1) return 1;
-	
 	flen = clen;
 
-	contentType = 2;
+	
 	
 	nowTag = 0;
 	for(i=0;i<flen;i++)
@@ -294,10 +298,14 @@ int cleanContent()
 	clen = 0;
 	pclen = 0;
 	noparse = 0;
+	
+	if(contentType == 2 && noparse == 0)
+	{
+		doClean(pcontent);
+		doClean(offset);
+		doClean(tags);
+	}
 	contentType = 0;
-	doClean(pcontent);
-	doClean(offset);
-	doClean(tags);
 	return 1;
 }
 

@@ -21,7 +21,7 @@ int getPclen(void);
 //inline
 int getTokenId(char *tkname,unsigned int len);
 
-int setContent(const char *str);
+int setFileContent(const char *str);
 int setNoParse(int np);
 
 #ifdef __cplusplus

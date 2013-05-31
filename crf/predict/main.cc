@@ -7,6 +7,7 @@
 #include "khash.h"
 #include "queue.h"
 #include "citpred.h"
+#include <iostream>
 
 
 int main(int argc,char *argv[])

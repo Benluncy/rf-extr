@@ -1,4 +1,6 @@
 #include "citpred.h"
+#include "crftctl.h"
+#include "crfpp.h"
 #include "virtualcontent.h"
 #include "dirTraversal.h"
 #include "hftctl.h" // int getReferenceHeadOffset(void);
@@ -16,11 +18,14 @@
 #include <time.h>
 #include <ctype.h>
 
+#include <queue>
+
 #ifndef WIN32
 #include <strings.h>
 #endif // WIN32
 
 #include "debuginfo.h"
+#include <iostream>
 
 int initCitationNode(pCitationNode node)
 {
@@ -44,6 +49,66 @@ int initCitationNode(pCitationNode node)
 	node->next = NULL;
 	return 1;	
 }
+
+pCitationNode addCitationNode(pCitationNode *node)// node , token id
+{
+	pCitationNode p = *node;
+	if(p == NULL)
+	{
+		p = new CitationNode;
+		*node = p;
+	}else
+	{
+		while(p->next != NULL) p = p->next;
+		p->next = new CitationNode;
+		p = p->next;
+	}
+	initCitationNode(p);
+	return p;
+}
+
+pCitationNode addCitationInfo(pCitationNode *node,const char *str,int len,int id)
+{
+	pCitationNode p = *node;
+	char src[2048];
+	memcpy(src,str,len);
+	src[len] = '\0';
+	
+	printf("%s[%s]\n",src,id2Token(id));
+	switch(id)
+	{
+		case 3: // author
+			break;
+		case 4: // booktitle
+			break;
+		case 5: // date
+			break;
+		case 6: // editor
+			break;
+		case 7: // institution
+			break;
+		case 8: // journal
+			break;
+		case 9: // location
+			break;
+		case 11: // pages
+			break;
+		case 12: // publisher
+			break;
+		case 13: // tech
+			break;
+		case 14: // title
+			break;
+		case 15: // volume
+			break;
+		case 16: // url
+			break;
+		case 17: // isbn
+			break;
+	}
+	return p;	
+}
+
 
 int predftEnQueue(pCNSQ Q,int *currentOffset,char *mpredeli,int refAreaEnd)
 {
@@ -332,16 +397,20 @@ int predftEnQueue(pCNSQ Q,int *currentOffset,char *mpredeli,int refAreaEnd)
 pCitationNode CitationInfoPredict(int startOffset,int endOffset)
 {
 	char samplestr[2048];
+	char strpart[1024];
 	int refAreaStart;
 	int refAreaEnd;
 	int currentOffset;
-	//char *content;
+	int lastOffset;
 	char mpredeli=' ';
 	CNSQ preCNSQ;
 	CNSQ nextCNSQ;
 	
 	clearQueue(&preCNSQ);
 	clearQueue(&nextCNSQ);
+	
+	std::queue<OffsetCp> offsetCpQueue; // queue of start and end offset
+	OffsetCp offsetCp; //  start and end offset
 	
 	pCrfNodeSnapshot pCNS;
 	
@@ -350,12 +419,18 @@ pCitationNode CitationInfoPredict(int startOffset,int endOffset)
 	refAreaEnd = endOffset;
 	currentOffset = refAreaStart;
 
+	CRFPP::Tagger *tagger = CRFPP::createTagger("-m model/cite.model -v 3 -n2");
+	tagger->clear();
+
+	if (!tagger) {
+		std::cerr << CRFPP::getTaggerError() << std::endl;
+		return 0;
+	}
 	
 	
 	
 	int httpStatus = 0;
-	//int httpTime = 0;
-	
+
 	int quotStatus[3];//  AT/NA IN/NIN OUT/NOUT
 	int quotTime = 0;
 	
@@ -376,14 +451,18 @@ pCitationNode CitationInfoPredict(int startOffset,int endOffset)
 	
 	int isbnEffect = 0;
 	
-	CRFPP::Tagger *tagger = CRFPP::createTagger("-m model -v 3 -n2");
-
+	lastOffset = currentOffset;
 	//make queue full
 	while(predftEnQueue(&nextCNSQ,&currentOffset,&mpredeli,refAreaEnd));
 	while((pCNS = ftDeQueue(&nextCNSQ)) != NULL)
 	{
+		offsetCp.startOffset = lastOffset;
+		offsetCp.endOffset = pCNS->offset;
+		offsetCpQueue.push(offsetCp);
+		lastOffset = pCNS->offset;
 		
-		memcpy(samplestr,0,2048); // init
+		
+		memset(samplestr,0,2048); // init
 		// 0. PREPARE : FLAGS
 		
 		
@@ -816,188 +895,196 @@ pCitationNode CitationInfoPredict(int startOffset,int endOffset)
 		
 		// basic
 		// 0: string data
-		fprintf(fp,"%s\t",pCNS->str); 
+		sprintf(strpart,"%s\t",pCNS->str); 
+		strcat(samplestr,strpart);
 		
 		// 1: length of string data 0,1,2,3,4,5,6 >6
-		fprintf(fp,"串长/");
-		fprintf(fp,"%d\t",pCNS->slen<7?pCNS->slen:9); 
+		sprintf(strpart,"%d\t",pCNS->slen<7?pCNS->slen:9); 
+		strcat(samplestr,strpart);
 
 		
 		// base::string
 		// 2: string type 0:AAA 1:aaa 2:Aaa 3:aAa 4:123
-		fprintf(fp,"类型/");
-		fprintf(fp,"%d\t",pCNS->strtype);
+		sprintf(strpart,"%d\t",pCNS->strtype);
+		strcat(samplestr,strpart);
 		
 		// 3: prefix 
-		fprintf(fp,"前缀/");
-		fprintf(fp,"%c/%c\t",tolower(pCNS->str[0]),(pCNS->slen>1)?tolower(pCNS->str[1]):'X');
-		
+		sprintf(strpart,"%c/%c\t",tolower(pCNS->str[0]),(pCNS->slen>1)?tolower(pCNS->str[1]):'X');
+		strcat(samplestr,strpart);
 		// 4: sufix 
-		fprintf(fp,"后缀/");
-		fprintf(fp,"%c/%c\t",(pCNS->slen>1)?tolower(pCNS->str[pCNS->slen-2]):'X',
+		sprintf(strpart,"%c/%c\t",(pCNS->slen>1)?tolower(pCNS->str[pCNS->slen-2]):'X',
 					tolower(pCNS->str[pCNS->slen-1]));
-		
+		strcat(samplestr,strpart);
 		
 		// base::digit
 		// 5: digit value  > 0 ?
-		fprintf(fp,"数值/");
-		fprintf(fp,"%d\t",pCNS->dval > 0 );
+		sprintf(strpart,"%d\t",pCNS->dval > 0 );
+		strcat(samplestr,strpart);
 		
 		// 6: digit bigger than previours one
-		fprintf(fp,"比前值长/");
-		fprintf(fp,"%d\t",lpCNS==NULL?-1:(lpCNS->dval == 0?-1:(pCNS->dval > lpCNS->dval)));
+		sprintf(strpart,"%d\t",lpCNS==NULL?-1:(lpCNS->dval == 0?-1:(pCNS->dval > lpCNS->dval)));
+		strcat(samplestr,strpart);
 		
 		// 7: next one is bigger than this digit 
-		fprintf(fp,"比后值短/");
-		fprintf(fp,"%d\t",npCNS==NULL?-1:(npCNS->dval == 0?-1:(npCNS->dval > pCNS->dval)));
+		sprintf(strpart,"%d\t",npCNS==NULL?-1:(npCNS->dval == 0?-1:(npCNS->dval > pCNS->dval)));
+		strcat(samplestr,strpart);
 		
 		// 8: digit a improve digit ? 123456 456 > 123
-		fprintf(fp,"升数/");
-		fprintf(fp,"%d\t",pCNS->imprnum );
+		sprintf(strpart,"%d\t",pCNS->imprnum );
+		strcat(samplestr,strpart);
 		
 		// 9: is pure digit ? see 'I' 'l' 'O' etc. as digit
-		fprintf(fp,"纯数/");
-		fprintf(fp,"%d\t",pCNS->puredigit);
+		sprintf(strpart,"%d\t",pCNS->puredigit);
+		strcat(samplestr,strpart);
 		
 		
 		// base::delimiter
 		// 10: last delimiter
-		fprintf(fp,"前分隔符/");
-		fprintf(fp,"%d\t",pCNS->predeli);
+		sprintf(strpart,"%d\t",pCNS->predeli);
+		strcat(samplestr,strpart);
 		
 		// 11: last useful delimiter
-		fprintf(fp,"前有用分隔符/");
-		fprintf(fp,"%d\t",pCNS->mpredeli);
+		sprintf(strpart,"%d\t",pCNS->mpredeli);
+		strcat(samplestr,strpart);
 		
 		// 12: next delimiter
-		fprintf(fp,"后分隔符/");
-		fprintf(fp,"%d\t",pCNS->nextdeli);
+		sprintf(strpart,"%d\t",pCNS->nextdeli);
+		strcat(samplestr,strpart);
 		
 		
 		
 		// base::string orthographic
 		// 13: year like || month like >> time like
-		fprintf(fp,"似年/");
-		fprintf(fp,"%d\t",(pCNS->yearlike > 0 )|| (pCNS->monthlike > 0 ));
+		sprintf(strpart,"%d\t",(pCNS->yearlike > 0 )|| (pCNS->monthlike > 0 ));
+		strcat(samplestr,strpart);
+		
 		// 14: volume like  start of volume ?  vol. X num. no. number
-		fprintf(fp,"似卷/");
-		if(pCNS->volumnlike < 3) fprintf(fp,"%d\t",pCNS->volumnlike);
-		else if(!isBlank(pCNS->nextdeli)) fprintf(fp,"%d\t",pCNS->volumnlike-2);
-		else fprintf(fp,"0\t");
-			
+		if(pCNS->volumnlike < 3) sprintf(strpart,"%d\t",pCNS->volumnlike);
+		else if(!isBlank(pCNS->nextdeli)) sprintf(strpart,"%d\t",pCNS->volumnlike-2);
+		else sprintf(strpart,"0\t");
+		strcat(samplestr,strpart);
+		
 		// 15: page like
-		fprintf(fp,"似页/");
-		fprintf(fp,"%d\t",pCNS->pagelike);
-
+		sprintf(strpart,"%d\t",pCNS->pagelike);
+		strcat(samplestr,strpart);
 		
 		// base::dict
 		// 16: name in dict
-		fprintf(fp,"字典/名/");
-		fprintf(fp,"%d\t",pCNS->isNameDict || pCNS->rLastNameDict > 0);
+		sprintf(strpart,"%d\t",pCNS->isNameDict || pCNS->rLastNameDict > 0);
+		strcat(samplestr,strpart);
 		
 		// 17: place in dict
 		pCNS->isPlaceNameDict = pCNS->isPlaceNameDict || isPlaceNameInDict(combinedStr);		
 		pCNS->isCountryDict = pCNS->isCountryDict || isCountryInDict(combinedStr);
 		
-		fprintf(fp,"字典/地/");
-		fprintf(fp,"%d\t",pCNS->isPlaceNameDict>0 || pCNS->isCountryDict > 0);
+		sprintf(strpart,"%d\t",pCNS->isPlaceNameDict>0 || pCNS->isCountryDict > 0);
+		strcat(samplestr,strpart);
+		
 		
 		// 18: publisher in dict
 		pCNS->isPubliserDict = pCNS->isPubliserDict || isPublisherInDict(combinedStr);
-		fprintf(fp,"字典/出版社/");
-		fprintf(fp,"%d\t",pCNS->isPubliserDict);
+		sprintf(strpart,"%d\t",pCNS->isPubliserDict);
+		strcat(samplestr,strpart);
 		
 		// 19: fun word in dict 
-		fprintf(fp,"字典/功能词汇/");
-		fprintf(fp,"%d\t",pCNS->isFunWordDict);
-
+		sprintf(strpart,"%d\t",pCNS->isFunWordDict);
+		strcat(samplestr,strpart);
+		
 		// base::couple flag ststus
 		
 		// 20,21,22 quots AT IN OUT
-		fprintf(fp,"引号123/");
-		fprintf(fp,"%d\t",quotStatus[0]);
-		fprintf(fp,"%d\t",quotStatus[1]);
-		fprintf(fp,"%d\t",quotStatus[2]);
+		sprintf(strpart,"%d\t",quotStatus[0]);
+		strcat(samplestr,strpart);
+		sprintf(strpart,"%d\t",quotStatus[1]);
+		strcat(samplestr,strpart);
+		sprintf(strpart,"%d\t",quotStatus[2]);
+		strcat(samplestr,strpart);
 		
 		
 		// 23,24,25 Parentheses AT IN OUT
-		fprintf(fp,"花括号123/");
-		fprintf(fp,"%d\t",pareStatus[0]);
-		fprintf(fp,"%d\t",pareStatus[1]);
-		fprintf(fp,"%d\t",pareStatus[2]);
+		sprintf(strpart,"%d\t",pareStatus[0]);
+		strcat(samplestr,strpart);
+		sprintf(strpart,"%d\t",pareStatus[1]);
+		strcat(samplestr,strpart);
+		sprintf(strpart,"%d\t",pareStatus[2]);
+		strcat(samplestr,strpart);
+		
 		
 		// 26,27,28 Square brackets AT IN OUT
-		fprintf(fp,"方括号123/");
-		fprintf(fp,"%d\t",sqbStatus[0]);
-		fprintf(fp,"%d\t",sqbStatus[1]);
-		fprintf(fp,"%d\t",sqbStatus[2]);
+		sprintf(strpart,"%d\t",sqbStatus[0]);
+		strcat(samplestr,strpart);
+		sprintf(strpart,"%d\t",sqbStatus[1]);
+		strcat(samplestr,strpart);
+		sprintf(strpart,"%d\t",sqbStatus[2]);
+		strcat(samplestr,strpart);
 		
 		// 29,30,31 Braces AT IN OUT
-		fprintf(fp,"括号123/");
-		fprintf(fp,"%d\t",braStatus[0]);
-		fprintf(fp,"%d\t",braStatus[1]);
-		fprintf(fp,"%d\t",braStatus[2]);
+		sprintf(strpart,"%d\t",braStatus[0]);
+		strcat(samplestr,strpart);
+		sprintf(strpart,"%d\t",braStatus[1]);
+		strcat(samplestr,strpart);
+		sprintf(strpart,"%d\t",braStatus[2]);
+		strcat(samplestr,strpart);
 		
 		// base::flags
 		
 		// 32 basic flags
 		// special flag (mixed)
-		fprintf(fp,"特殊标记/");
-		fprintf(fp,"%d\t",pCNS->speflag);
+		sprintf(strpart,"%d\t",pCNS->speflag);
+		strcat(samplestr,strpart);
 		
 		// 33 stop flag  && effect
-		fprintf(fp,"停止/括号1/2/3/");  
-		fprintf(fp,"%d/%d/%d/%d\t",pCNS->stopflag,
+		sprintf(strpart,"%d/%d/%d/%d\t",pCNS->stopflag,
 					(quotStatus[0]||pareStatus[0]||sqbStatus[0]||braStatus[0]),
 					(quotStatus[1]||pareStatus[1]||sqbStatus[1]||braStatus[1]),
 					(quotStatus[2]||pareStatus[2]||sqbStatus[2]||braStatus[2]));
+		strcat(samplestr,strpart);
 		
 		// 34 eds flag
-		fprintf(fp,"编辑标记/");
-		fprintf(fp,"%d\t",edsFlag);
+		sprintf(strpart,"%d\t",edsFlag);
+		strcat(samplestr,strpart);
 		
 		// 35: name like
-		fprintf(fp,"似名/");
-		fprintf(fp,"%d\t",pCNS->namelike);
+		sprintf(strpart,"%d\t",pCNS->namelike);
+		strcat(samplestr,strpart);
 		
 		
 		// extend::flags effect
 		// 36 number of next pure digit
-		fprintf(fp,"后面数字个数/journal/");
-		fprintf(fp,"%d\t",nextPDigit);
+		sprintf(strpart,"%d\t",nextPDigit);
+		strcat(samplestr,strpart);
 		
 		
 		// 37 http effect  domain
-		fprintf(fp,"HTTP态/");
-		fprintf(fp,"DOMAIN态/");
-		fprintf(fp,"%d/%d\t",httpStatus,domainFlag);
+		sprintf(strpart,"%d/%d\t",httpStatus,domainFlag);
+		strcat(samplestr,strpart);
 		
 		// extend::mix effect
 		// 38 [abc def] author @ abc
-		fprintf(fp,"组合顺序/前/");
 		if(pCNS->mpredeli == '[' && npCNS != NULL)
 		{
-			if(npCNS->nextdeli == ']') fprintf(fp,"1\t");
-			else fprintf(fp,"0\t");
+			if(npCNS->nextdeli == ']') sprintf(strpart,"1\t");
+			else sprintf(strpart,"0\t");
 		}else
-			fprintf(fp,"0\t");
+			sprintf(strpart,"0\t");
+		strcat(samplestr,strpart);
 		
 		// [abc def] author @ def
 		// 39
-		fprintf(fp,"组合顺序/后/");
 		if(pCNS->nextdeli == ']' && seqFlag == 1)
 		{
-			fprintf(fp,"1\t");
+			sprintf(strpart,"1\t");
 		}else
-			fprintf(fp,"0\t");
+			sprintf(strpart,"0\t");
+		strcat(samplestr,strpart);
 		
 
 		// 40 article xxxx, A process of ...
-		fprintf(fp,"AAnTheOn/终/");
-		fprintf(fp,"%d/%d\t",pCNS->isArticle,pCNS->stopflag);
+		sprintf(strpart,"%d/%d\t",pCNS->isArticle,pCNS->stopflag);
+		strcat(samplestr,strpart);
+		
 		
 		// 41 tech
-		fprintf(fp,"TECH/");
 		int phdflag = 0;
 		if((strcasecmp("ph",pCNS->str)== 0 && npCNS->str[0] == 'D')
 			|| strcasecmp("phD",pCNS->str)== 0)
@@ -1005,138 +1092,148 @@ pCitationNode CitationInfoPredict(int startOffset,int endOffset)
 		else
 			phdflag = 0;
 
-		fprintf(fp,"%d\t",phdflag);
+		sprintf(strpart,"%d\t",phdflag);
+		strcat(samplestr,strpart);
+		
 		
 		// 42 xxx thesis thesis : 25
-		fprintf(fp,"Thesis/");
-		fprintf(fp,"%d\t",thesisFlag);
+		sprintf(strpart,"%d\t",thesisFlag);
+		strcat(samplestr,strpart);
 		
 		// 43 inc ltd limited  : ltdflag 1 2 3
-		fprintf(fp,"Inc/Ltd/Limit/");
-		fprintf(fp,"%d\t",ltdFlag);
+		sprintf(strpart,"%d\t",ltdFlag);
+		strcat(samplestr,strpart);
 		
 		// 44 45 46 ACM / ICPC / IEEE
-		fprintf(fp,"ACM/ICPC/IEEE/");
-		fprintf(fp,"%d\t",pCNS->speflag == 1); // ISO
-		fprintf(fp,"%d\t",pCNS->speflag == 2); // IEEE
-		fprintf(fp,"%d\t",pCNS->speflag == 3); // ACM
+		sprintf(strpart,"%d\t",pCNS->speflag == 1); // ISO
+		strcat(samplestr,strpart);
+		sprintf(strpart,"%d\t",pCNS->speflag == 2); // IEEE
+		strcat(samplestr,strpart);
+		sprintf(strpart,"%d\t",pCNS->speflag == 3); // ACM
+		strcat(samplestr,strpart);
 		
 		// 47 CNAC AECSA SRCD ... // contain C
-		fprintf(fp,"CONF/"); 
-		//fprintf(fp,"%d\t",pCNS->strtype == 0 &&  pCNS->slen < 6 && pCNS->slen > 2);
-		fprintf(fp,"%d\t",conferencelike(pCNS->str,pCNS->slen));
-		
+		//sprintf(strpart,"%d\t",pCNS->strtype == 0 &&  pCNS->slen < 6 && pCNS->slen > 2);
+		sprintf(strpart,"%d\t",conferencelike(pCNS->str,pCNS->slen));
+		strcat(samplestr,strpart);
 		
 		// 48 technical report
-		fprintf(fp,"TR/");
-		fprintf(fp,"%d\t",techFlag || phdflag || repFlag);
-		//fprintf(fp,"%d/\t",repFlag);
+		sprintf(strpart,"%d\t",techFlag || phdflag || repFlag);
+		strcat(samplestr,strpart);
+		//sprintf(strpart,"%d/\t",repFlag);
 		
 		
 		// 49 MIT
-		fprintf(fp,"MIT/");
-		fprintf(fp,"%d\t",mitFlag);
+		sprintf(strpart,"%d\t",mitFlag);
+		strcat(samplestr,strpart);
 		
 		// 50 51 52 university of 
-		fprintf(fp,"学校/");
-		fprintf(fp,"%d\t",pCNS->uniflag);
+		sprintf(strpart,"%d\t",pCNS->uniflag);
+		strcat(samplestr,strpart);
 		
-		fprintf(fp,"学校/影响/");
-		fprintf(fp,"%d\t",uniFlag);
+		sprintf(strpart,"%d\t",uniFlag);
+		strcat(samplestr,strpart);
 		
-		//fprintf(fp,"%d/%d\t",pCNS->predeli,pCNS->uniflag);
-		fprintf(fp,"终止/前一个/学校/");
-		fprintf(fp,"%d/%d\t",lpCNS == NULL ? 3 : lpCNS->stopflag,pCNS->uniflag);
+		
+		//sprintf(strpart,"%d/%d\t",pCNS->predeli,pCNS->uniflag);
+		sprintf(strpart,"%d/%d\t",lpCNS == NULL ? 3 : lpCNS->stopflag,pCNS->uniflag);
+		strcat(samplestr,strpart);
+		
 		
 		// (August 1-2 2013)
 		// how about ?
 		
 		// 53 xxxx , (adfadf) or xxxx (adfasf)
-		fprintf(fp,"逗号隔开/");
-		fprintf(fp,"%d\t",contentConnect);
+		sprintf(strpart,"%d\t",contentConnect);
+		strcat(samplestr,strpart);
 		
 		// rfc || request (in tr) 
-		//fprintf(fp,"%d\t",rfc);
+		//sprintf(strpart,"%d\t",rfc);
 		
 		// 54 55 56 57 58 59 in proceedings of
 		// 54
-		fprintf(fp,"In/点/");
-		fprintf(fp,"%d\t",pCNS->procflag == 1); // In point
+		sprintf(strpart,"%d\t",pCNS->procflag == 1); // In point
+		strcat(samplestr,strpart);
 		// 55
-		fprintf(fp,"In点/名字/");
-		fprintf(fp,"%d\t",(pCNS->procflag == 1) && 
+		sprintf(strpart,"%d\t",(pCNS->procflag == 1) && 
 				((npCNS->namelike)||(npCNS->isNameDict )
 					|| (npCNS->rLastNameDict > 0)));
+		strcat(samplestr,strpart);
+		
 		// 56
-		fprintf(fp,"In/状态/");
-		fprintf(fp,"%d\t",inStatus);
+		sprintf(strpart,"%d\t",inStatus);
+		strcat(samplestr,strpart);
+		
 		// 57
-		fprintf(fp,"In/状态/名字/");
-		fprintf(fp,"%d\t",inStatus && ((pCNS->namelike)||(pCNS->isNameDict ) || (pCNS->rLastNameDict > 0)));
+		sprintf(strpart,"%d\t",inStatus && ((pCNS->namelike)||(pCNS->isNameDict ) || (pCNS->rLastNameDict > 0)));
+		strcat(samplestr,strpart);
 		
 		// 58
-		fprintf(fp,"In/Proc/状态/");
-		fprintf(fp,"%d\t",(pCNS->procflag == 1) || procFlag);
+		sprintf(strpart,"%d\t",(pCNS->procflag == 1) || procFlag);
+		strcat(samplestr,strpart);
+		
 		// 59
-		fprintf(fp,"Proc/状态/");
-		fprintf(fp,"%d\t",procFlag);
+		sprintf(strpart,"%d\t",procFlag);
+		strcat(samplestr,strpart);
 		
 		// 60  department of / dept. of
-		fprintf(fp,"Dept/点/"); 
-		fprintf(fp,"%d\t",pCNS->deptflag);
+		sprintf(strpart,"%d\t",pCNS->deptflag);
+		strcat(samplestr,strpart);
 		
 		// 61 press
-		fprintf(fp,"出版社状态/");
-		fprintf(fp,"%d\t",pressFlag);
+		sprintf(strpart,"%d\t",pressFlag);
+		strcat(samplestr,strpart);
 		
 		
 		// 62 conf / journal  
-		fprintf(fp,"似期刊/");
-		fprintf(fp,"%d\t",confFlag);
+		sprintf(strpart,"%d\t",confFlag);
+		strcat(samplestr,strpart);
 
 		
 		// 63 org
-		fprintf(fp,"组织|实验室/");
-		fprintf(fp,"%d\t",orgFlag || labFlag);
+		sprintf(strpart,"%d\t",orgFlag || labFlag);
+		strcat(samplestr,strpart);
 		
 		// 64 group
-		fprintf(fp,"小组/");
-		fprintf(fp,"%d\t",groupFlag);
+		sprintf(strpart,"%d\t",groupFlag);
+		strcat(samplestr,strpart);
 		
 		// 65 lib ins/pub
-		fprintf(fp,"实验室/");
-		fprintf(fp,"%d\t",labFlag);
+		sprintf(strpart,"%d\t",labFlag);
+		strcat(samplestr,strpart);
 		
 		// 66 isbn
-		fprintf(fp,"ISBN/状态/");
-		fprintf(fp,"%d\t",isbnEffect);
+		sprintf(strpart,"%d\t",isbnEffect);
+		strcat(samplestr,strpart);
 		
 		// 67 group lab or dept
-		fprintf(fp,"%d\t",labFlag > 0 || groupFlag > 0 || uniFlag > 0);
+		sprintf(strpart,"%d\t",labFlag > 0 || groupFlag > 0 || uniFlag > 0);
+		strcat(samplestr,strpart);
 		
 		
 		// 68 eds point
-		fprintf(fp,"%d/%d\t",pCNS->edsflag,pCNS->nextdeli);// 
+		sprintf(strpart,"%d/%d\t",pCNS->edsflag,pCNS->nextdeli);// 
+		strcat(samplestr,strpart);
 		
 		
 		// 69
-		fprintf(fp,"%d/%d\t",pCNS->isPubliserDict,
+		sprintf(strpart,"%d/%d\t",pCNS->isPubliserDict,
 				pressFlag &&(labFlag > 0 || groupFlag > 0 || uniFlag > 0) ); 
 				// university , 
-		
+		strcat(samplestr,strpart);
 		
 		// 70 et , al
 		if(lpCNS != NULL && npCNS != NULL)
 		{
 			if((strcmp(lpCNS->str,"et")==0) && (strcmp(pCNS->str,"al")==0))
-				fprintf(fp,"1\t");
+				sprintf(strpart,"1\t");
 			else if((strcmp(pCNS->str,"et")==0) && (strcmp(npCNS->str,"al")==0))
-				fprintf(fp,"2\t");
+				sprintf(strpart,"2\t");
 			else 
-				fprintf(fp,"0\t");
+				sprintf(strpart,"0\t");
 		}else
-			fprintf(fp,"0\t");
-		
+			sprintf(strpart,"0\t");
+		strcat(samplestr,strpart);
 		
 		
 		// 71
@@ -1152,21 +1249,26 @@ pCitationNode CitationInfoPredict(int startOffset,int endOffset)
 					&& (strcmp(npCNS->str,"appear")== 0))
 				)
 			{
-				fprintf(fp,"1\t");
+				sprintf(strpart,"1\t");
 			}else
-				fprintf(fp,"0\t");
+				sprintf(strpart,"0\t");
 			
 		}else
-			fprintf(fp,"0\t");
+			sprintf(strpart,"0\t");
 		// note start
+		strcat(samplestr,strpart);
 		
 		
 		// 72 and
-		fprintf(fp,"%d\t",andFlag);
+		sprintf(strpart,"%d\t",andFlag);
+		strcat(samplestr,strpart);
 	
 		// 73 endSign
-		fprintf(fp,"%d\t",pCNS->stopflag);
-
+		sprintf(strpart,"%d\t",pCNS->stopflag);
+		strcat(samplestr,strpart);
+		
+		// add tr
+		tagger->add(samplestr);
 
 		
 		//enQueue && store
@@ -1174,36 +1276,66 @@ pCitationNode CitationInfoPredict(int startOffset,int endOffset)
 		predftEnQueue(&nextCNSQ,&currentOffset,&mpredeli,refAreaEnd);
 	}
 	
-        return 1;
-	
-	
-	
-	
-	return NULL;
+	////////////////////////////////////////////////////////////////////////////
+	if (! tagger->parse()) return 0; // parse
+	// end input features, output result
+	pCitationNode nodeHead = NULL;
+	pCitationNode nowNode;
+	nowNode = addCitationNode(&nodeHead);
+	int nowid;
+	int lastid;
+	char strelem[1024];
+	char *content;
+	int partlen;
+	lastid = token2Id(tagger->y2(0));
+	memset(strelem,0,1024);
+	partlen = 0;
+	for (size_t i = 0; i < tagger->size(); i++ ) {
+		nowid = token2Id(tagger->y2(i));
+		offsetCp = offsetCpQueue.front();
+		content = getPcontent()+offsetCp.startOffset;
+		memcpy(strelem+partlen,content,offsetCp.endOffset - offsetCp.startOffset);
+		partlen += offsetCp.endOffset - offsetCp.startOffset;
+		if(nowid != lastid)
+		{
+			//addCitationInfo(pCitationNode *node,const char *str,int len,int id)
+			addCitationInfo(&nowNode,strelem,partlen,lastid);
+			memset(strelem,0,1024);
+			partlen = 0;
+		}
+		offsetCpQueue.pop();
+	}
+	addCitationInfo(&nowNode,strelem,partlen,nowid);
+	delete tagger;
+	return nodeHead;
 }
+
+
+
 
 pCitationNode CitationInfoPredictFile(const char *fileName,int startOffset,int endOffset)
 {
+	pCitationNode p;
 	initContent();
 	if(!DEBUGFLAG) setNoParse(1); //for release
 	parseFile(fileName);
-	
+	p = CitationInfoPredict(startOffset,endOffset);
 	cleanContent();
-	return 
+	return p;
 }
 
-pCitationNode CitationInfoPredictString(const char *fileName,int startOffset,int endOffset)
+pCitationNode CitationInfoPredictString(const char *str,int startOffset,int endOffset)
 {
+	pCitationNode p;
 	//dict prepare
-	
-	
+	initContent();
+	if(!DEBUGFLAG) setNoParse(1); //for release	
+	setFileContent(str);
+	p = CitationInfoPredict(startOffset,endOffset);
+	cleanContent();
 	//dict free
-	
+	return p;	
 }
-
-
-
-
 
 
 // pre and post

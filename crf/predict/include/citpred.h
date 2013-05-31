@@ -22,8 +22,14 @@ typedef struct _CitationNode
 	struct _CitationNode * next;
 }CitationNode;
 
+typedef struct _OffsetCp
+{
+	int startOffset;
+	int endOffset;
+}OffsetCp;
 
 typedef CitationNode * pCitationNode;
+typedef OffsetCp * pOffsetCp;
 
 
 #ifdef __cplusplus
