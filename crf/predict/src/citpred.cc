@@ -451,13 +451,13 @@ pCitationNode CitationInfoPredict(int startOffset,int endOffset)
 	
 	int isbnEffect = 0;
 	
-	lastOffset = currentOffset;
+	lastOffset = refAreaStart;
 	//make queue full
 	while(predftEnQueue(&nextCNSQ,&currentOffset,&mpredeli,refAreaEnd));
 	while((pCNS = ftDeQueue(&nextCNSQ)) != NULL)
 	{
 		offsetCp.startOffset = lastOffset;
-		offsetCp.endOffset = pCNS->offset == 0 ?refAreaEnd:pCNS->offset;
+		offsetCp.endOffset = pCNS->offset == 0 ?refAreaEnd:startOffset+pCNS->offset;
 		offsetCpQueue.push(offsetCp);
 		lastOffset = offsetCp.endOffset;
 		
