@@ -457,7 +457,10 @@ pCitationNode CitationInfoPredict(int startOffset,int endOffset)
 	while((pCNS = ftDeQueue(&nextCNSQ)) != NULL)
 	{
 		offsetCp.startOffset = lastOffset;
-		offsetCp.endOffset = pCNS->offset == 0 ?refAreaEnd:startOffset+pCNS->offset;
+		offsetCp.endOffset = pCNS->offset == 0 ?
+			refAreaEnd:
+			offsetCp.startOffset+pCNS->offset;
+		
 		offsetCpQueue.push(offsetCp);
 		printf("%d-%d~%d",offsetCp.startOffset,offsetCp.endOffset,pCNS->offset);
 		lastOffset = offsetCp.endOffset;
