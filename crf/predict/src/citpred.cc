@@ -107,7 +107,7 @@ pCitationNode addCitationInfo(pCitationNode *node,const char *str,int len,int id
 	memcpy(src,str,len);
 	src[len] = '\0';
 	
-	printf("%s[%s]\n",src,id2Token(id));
+	//printf("%s[%s]\n",src,id2Token(id));
 	
 	int page[2];
 	int pn ;
