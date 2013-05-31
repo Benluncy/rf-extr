@@ -14,6 +14,30 @@
 #include "hftctl.h"
 #include "eftfun.h"
 
+void printCitation(pCitationNode p)
+{
+	if(p == NULL) return ;
+	int i;
+	std::cout << "------------------" << std::endl;
+	for(i=0;i<10;i++)
+	{
+		if(p->author[i][0] != 0) std::cout << "author("<<(i+1)
+				<<"): " << p->author[i] << std::endl;
+		else break;
+	}
+	
+	for(i=0;i<10;i++)
+	{
+		if(p->editor[i][0] != 0) std::cout << "editor("<<(i+1)
+				<<"): " << p->editor[i] << std::endl;
+		else break;
+	}
+	
+	
+	
+	printCitation(p->next);
+}
+
 int main(int argc,char *argv[])
 {	
 	/*
@@ -35,8 +59,14 @@ int main(int argc,char *argv[])
 	
 	
 	initCitationInfoPredict();
+	
+	pCitationNode p ;
 
-	CitationInfoPredictFile(testfile,startoffset,endoffset);
+	p = CitationInfoPredictFile(testfile,startoffset,endoffset);
+	
+	printCitation(p);
+	
+	freeCitationNode(&p);
 	
 	cleanCitationInfoPredict();
 	return 0;
