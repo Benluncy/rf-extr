@@ -1318,8 +1318,11 @@ pCitationNode CitationInfoPredictFile(const char *fileName,int startOffset,int e
 	pCitationNode p;
 	initContent();
 	if(!DEBUGFLAG) setNoParse(1); //for release
+	printf("A\n");
 	parseFile(fileName);
+	printf("B\n");
 	p = CitationInfoPredict(startOffset,endOffset);
+	printf("C\n");
 	cleanContent();
 	return p;
 }
