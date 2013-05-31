@@ -89,6 +89,9 @@ dirTraversal.o		:
 run			: all
 	LD_LIBRARY_PATH=$LD_LIBRARY_PATH:lib/ && ./${PROGS}
 
+debug		: all
+	LD_LIBRARY_PATH=$LD_LIBRARY_PATH:lib/ &&  insight ${PROGS}
+
 
 gitupdate		:
 	-${GADD} .

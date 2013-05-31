@@ -457,9 +457,9 @@ pCitationNode CitationInfoPredict(int startOffset,int endOffset)
 	while((pCNS = ftDeQueue(&nextCNSQ)) != NULL)
 	{
 		offsetCp.startOffset = lastOffset;
-		offsetCp.endOffset = pCNS->offset;
+		offsetCp.endOffset = pCNS->offset == 0 ?refAreaEnd:pCNS->offset;
 		offsetCpQueue.push(offsetCp);
-		lastOffset = pCNS->offset;
+		lastOffset = offsetCp.endOffset;
 		
 		
 		memset(samplestr,0,2048); // init
@@ -1285,7 +1285,7 @@ pCitationNode CitationInfoPredict(int startOffset,int endOffset)
 	int nowid;
 	int lastid;
 	char strelem[1024];
-	char *content;
+	char *content = getPcontent();
 	int partlen;
 	lastid = token2Id(tagger->y2(0));
 	memset(strelem,0,1024);
@@ -1294,7 +1294,9 @@ pCitationNode CitationInfoPredict(int startOffset,int endOffset)
 		nowid = token2Id(tagger->y2(i));
 		offsetCp = offsetCpQueue.front();
 		content = getPcontent()+offsetCp.startOffset;
-		memcpy(strelem+partlen,content,offsetCp.endOffset - offsetCp.startOffset);
+		memcpy(strelem+partlen,
+			content+offsetCp.startOffset,
+			offsetCp.endOffset - offsetCp.startOffset);
 		partlen += offsetCp.endOffset - offsetCp.startOffset;
 		if(nowid != lastid)
 		{
