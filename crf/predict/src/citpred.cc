@@ -100,6 +100,21 @@ void freeCitationNode(pCitationNode *node)
 	*node = NULL;
 }
 
+void tagFinishing(char *str)
+{
+	int len=strlen(str);
+	int i;
+	int end = 1;
+	for(i=len-1;i>=0;i--)
+	{
+		if(isAsciiOrDigit(str[i])) end = 0;
+		if(str[i] == '\n' || str[i] == '\r') str[i] = ' ';
+		if(end && (str[i] == ',' || str[i] =='[' || str[i]=='{'
+			|| str[i] == '}'))
+			str[i] = '\0';
+	}
+}
+
 pCitationNode addCitationInfo(pCitationNode *node,const char *str,int len,int id)
 {
 	pCitationNode p = *node;
@@ -132,21 +147,27 @@ pCitationNode addCitationInfo(pCitationNode *node,const char *str,int len,int id
 			snprintf(p->author[0],50,"%s",src);
 			break;
 		case 4: // booktitle
+			tagFinishing(src);
 			snprintf(p->booktitle,50,"%s",src);
 			break;
 		case 5: // date
+			tagFinishing(src);
 			snprintf(p->date,50,"%s",src);
 			break;
 		case 6: // editor
+			tagFinishing(src);
 			snprintf(p->editor[0],50,"%s",src);
 			break;
 		case 7: // institution
+			tagFinishing(src);
 			snprintf(p->institution,50,"%s",src);
 			break;
 		case 8: // journal
+			tagFinishing(src);
 			snprintf(p->journal,50,"%s",src);
 			break;
 		case 9: // location
+			tagFinishing(src);
 			snprintf(p->location,50,"%s",src);
 			break;
 		case 11: // pages
@@ -157,12 +178,15 @@ pCitationNode addCitationInfo(pCitationNode *node,const char *str,int len,int id
 				snprintf(p->volume,50,"%d",page[0]);
 			break;
 		case 12: // publisher
+			tagFinishing(src);
 			snprintf(p->date,50,"%s",src);
 			break;
 		case 13: // tech
+			tagFinishing(src);
 			snprintf(p->tech,50,"%s",src);
 			break;
 		case 14: // title
+			tagFinishing(src);
 			snprintf(p->title,50,"%s",src);
 			break;
 		case 15: // volume
@@ -173,9 +197,11 @@ pCitationNode addCitationInfo(pCitationNode *node,const char *str,int len,int id
 				snprintf(p->volume,50,"%d",vol[0]);
 			break;
 		case 16: // url
+			tagFinishing(src);
 			snprintf(p->url,50,"%s",src);
 			break;
 		case 17: // isbn
+			tagFinishing(src);
 			snprintf(p->isbn,50,"%s",src);
 			break;
 	}
@@ -528,7 +554,7 @@ pCitationNode CitationInfoPredict(int startOffset,int endOffset)
 	lastOffset = refAreaStart;
 	for(int i=refAreaStart;i<refAreaEnd;i++)
 		putchar(*(getPcontent()+i));
-	printf("\n\n");
+	//printf("\n\n");
 	//make queue full
 	while(predftEnQueue(&nextCNSQ,&currentOffset,&mpredeli,refAreaEnd));
 	while((pCNS = ftDeQueue(&nextCNSQ)) != NULL)
@@ -539,11 +565,11 @@ pCitationNode CitationInfoPredict(int startOffset,int endOffset)
 			offsetCp.startOffset+pCNS->offset;
 		
 		offsetCpQueue.push(offsetCp);
-		printf("%d-%d~%d",offsetCp.startOffset,offsetCp.endOffset,pCNS->offset);
+		//printf("%d-%d~%d",offsetCp.startOffset,offsetCp.endOffset,pCNS->offset);
 		lastOffset = offsetCp.endOffset;
-		printf("(%d)",lastOffset);
+		//printf("(%d)",lastOffset);
 		
-		printf("\n");
+		//printf("\n");
 		
 		memset(samplestr,0,2048); // init
 		// 0. PREPARE : FLAGS

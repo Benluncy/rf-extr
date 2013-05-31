@@ -77,6 +77,7 @@ int main(int argc,char *argv[])
 
 	p = CitationInfoPredictFile(testfile,startoffset,endoffset);
 	
+	std::cout<<std::endl;
 	printCitation(p);
 	
 	freeCitationNode(&p);
