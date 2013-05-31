@@ -179,6 +179,7 @@ pCitationNode addCitationInfo(pCitationNode *node,const char *str,int len,int id
 			snprintf(p->isbn,50,"%s",src);
 			break;
 	}
+	*node = p;
 	return p;	
 }
 

@@ -31,7 +31,7 @@ void printCitation(pCitationNode p)
 	if(p->booktitle[0] != 0) std::cout << "booktitle:\t" << p->booktitle << std::endl;
 	if(p->publisher[0] != 0) std::cout << "publisher:\t" << p->publisher << std::endl;
 	if(p->institution[0] != 0) std::cout << "institution:\t" << p->institution << std::endl;
-	if(p->volume[0] != 0) std::cout << "volume:\t" << p->volume << std::endl;
+	if(p->volume[0] != 0) printf("volume:\t%s\n",p->volume);
 	if(p->location[0] != 0) std::cout << "location:\t" << p->location << std::endl;
 	if(p->pages[0] != 0) std::cout << "pages:\t" << p->pages << std::endl;
 	if(p->date[0] != 0) std::cout << "date:\t" << p->date << std::endl;
