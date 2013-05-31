@@ -40,7 +40,7 @@ extern "C"
 int initCitationNode(pCitationNode node);
 pCitationNode addCitationNode(pCitationNode *node);
 pCitationNode addCitationInfo(pCitationNode *node,const char *str,int len,int id);
-int predftEnQueue(pCNSQ Q,int *currentOffset,char *mpredeli,int refAreaEnd);
+//int predftEnQueue(pCNSQ Q,int *currentOffset,char *mpredeli,int refAreaEnd);
 pCitationNode CitationInfoPredict(int startOffset,int endOffset);
 pCitationNode CitationInfoPredictFile(const char *fileName,int startOffset,int endOffset);
 pCitationNode CitationInfoPredictString(const char *str,int startOffset,int endOffset);
