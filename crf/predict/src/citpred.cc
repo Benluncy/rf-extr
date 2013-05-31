@@ -70,7 +70,7 @@ pCitationNode addCitationNode(pCitationNode *node)// node , token id
 	if(p == NULL)
 	{
 		p = new CitationNode;
-		*node = p;
+		
 	}else if(cnIsEmpty(p))
 	{
 		return p;
@@ -80,6 +80,7 @@ pCitationNode addCitationNode(pCitationNode *node)// node , token id
 		p->next = new CitationNode;
 		p = p->next;
 	}
+	*node = p;
 	initCitationNode(p);
 	return p;
 }
