@@ -1,0 +1,641 @@
+
+ MemSpy: Analyzing Memory System Bottlenecks in Programs Margaret Martonosi and Anoop Gupta Computer 
+Systems Laboratory Stanford University, CA 94305 Abstract To cope with the increasing difference between 
+processor and main memory speeds, modem computer systems use deep memory hierarchies. In the presence 
+of such hierar­chies, the performance attained by an application is largely determined by its memory 
+reference behavior if most ref­eremxx hit in the cache, the performance is significantly higher than 
+if most references have to go to main memory. Frequently, it is possible for the programmer to restructure 
+the data or code to achieve better memory reference behav­ior. Unfortunately, most existing perfommnce 
+debugging tools do not assist the programmer in this component of the overall performance tuning task. 
+This paper describes MemSpy, a prototype tool that helps programmed identifj and fix memory bottlenecks 
+in both sequential and parallel programs. A key aspect of MemSpy is that it introduces the notion of 
+data oriented, in addition to code oriented, performance tuning. Thus, for both source level code objects 
+and data objects, Mem-Spy provides information such as cache miss rates, causes of cache misses, and 
+in multiprocessors, information on cache invalidations and local versus remote memory misses. MemSpy 
+also introduces a concise matrix presentation to allow programmers to view both code and data oriented 
+statistics at the same time. This paper presents design and implementation issues for MemSpy, and gives 
+a detailed case study using MemSpy to tune a parallel sparse matrix application It shows how MemSpy helps 
+pinpoint mem­ory system bottlenecks, such as poor spatial locality and interference among data structures, 
+and suggests paths for improvement. 1 Introduction While processor speeds have increased by more than 
+two orders of magnitude over the last decade, main memory (DIUM) speeds have barely increased by a factor 
+of two [10]. Jn response to this ever increasing speed of proces­sors, modem computer systems are designed 
+with sophis- Permission to copy without fee all or part of this material is granted provided that the 
+copies are not made or distributed for direct commercial advantage, the ACM copyright notice and the 
+title of the publication and its date appaar, and notice ia given that copying is by permission of the 
+Association for Computing Maohinery. To copy otherwise, or to republish, requires a fee and/or specific 
+permission. 1992 ACM SIG METRICS &#38; PERFORMANCE 92-6 /92/R.l., USA 01992 ACM 0-89791-508-9192/0005/0001 
+. ..$l .50 Thomas Anderson Computer Science Division, Univ. of California, Berkeley, CA 94720 ticated 
+memoxy systems that include small on-chip caches, large external caches, and interleaved main memory. 
+The memory hierarchies are even deeper and more complex for multiprocessors. One consequence of these 
+deep memory hierarchies is that cache miss latencies have become ex­tremely large when counted in processor 
+clocks. As a re­sult, if an application is to attain good performance, it must exhibit memory reference 
+behavior that exploits caches well the reference pattern must exhibit high spatial, temporal, and processor 
+locality [1]. The memory reference behavior of an application, at the most basic level, depends on the 
+intrinsic nature of the ap­plication however, the programmer still has considerable flexibility in manipulating 
+the algorithm, data structures, and program structme to change the memory reference pat­terns in order 
+to better exploit the memory hierarchy. We tlnd that a tool designed to help in this task must (i) sepa­rately 
+report processor and memory time, so that program­mers can discern when the memory behavior is the bottle­neck 
+(ii) link bottlenecks back to data objects, as welJ as code, and (iii) give memory statistics at a level 
+of detaiJ that allows the programmer to identify and tix the bottlenecks. The latter, in our experience, 
+requires detailed information on which code and data objects are responsible for the most cache misses, 
+and reasons for why those misses occurred-Understanding the cause of misses is important, since some 
+of those misses may be essential misses (e.g., cold-start misses), while others may be more easily optimized 
+away (e.g., replacement or invalidation misses). Most existing performance debugging tools [2, 3, 5, 
+7, 8,9, 15], do not provide the detailed information mentioned above. In this paper, we describe MemSpy, 
+a prototype tool that provides such information and helps programmers imp­rove the memory reference behavior 
+of applications. The paper outlines two case studies showing the usefulness of MemSpy s detailed information 
+in tuning applications with poor memory referencing behavior. While the detailed information provided 
+by MemSpy is beneficial, it comes at the price of higher overhead. For applications whose performance 
+is limited by memory ref­erence behavior, the power of the information provided by MemSpy warrants the 
+extra overhe@, however, one may first want to perform more general code optimization us­ing simpler tools. 
+Consequently, we envision MemSpy as part of a hierarchy of performance debugging tools. At higher levels 
+we expect tools that have low overhead and that provide only basic application statistics. These tools 
+will identify coarse bottlenecks in the program. Lower in the hierarchy we expect tools like MemSpy that 
+provide detailed outputs with somewhat higher overheads. 1. Performance Evaluation Review, Vol. 20, No. 
+1, June 1992 The remainder of the paper is structured as follows. The next section describes related 
+work. Following that, in Section 3, we present an overview of MemSpy. Next, we present a case study using 
+MemSpy to tune the per­formance of a parallel sparse matrix application. Section 5 gives the implementation 
+details and presents data on Mem­Spy s execution time overhead. In Section 6, we discuss our experiences 
+with the system, and Section 7 presents con­clusions. Related Work In recent years, there has been a 
+surge of interest in devel­oping tools to support application performance debugging, rather than simply 
+correctness debugging. Many perfor­mance debuggers now exist, occupying points along a spec­trum ftom 
+high-level, low-overhead tools to more detailed, higher overhead tools. At one end of this spectrum, 
+tools such as gprof are intended to produce simple, high-level statistics with minimal overhead. At the 
+other end, tools like SHMAP and MemSpy are intended to give more de­tailed information to the user with 
+commensurate increase in overhead. This section discusses a selection of relevant tools over the range 
+of this spectrum, and motivates our choice for MemSpy s level of detail. Gprof [9] is a commonly used 
+execution proliler for sequential programs. By giving a hierarchically arranged profile of the execution 
+time of a program s procedures, it offers a high level view of which procedures have the great­est potential 
+for optimization. Gprof, however, does not distinguish between computation time and memory system time, 
+and it therefore provides no help in locating memory system bottlenecks. Quartz [2] is an execution profiler 
+for parallel programs; in many ways, it is an extension of gprof into the parallel domain. Qutvtz reports 
+normalized processor time as its primary metric. This is defined as the total time all proces­sors spend 
+in each section of code, divided by the number of other processors concurrently busy when that section 
+of code w~ being executed. Quartz presents normalized pro­cessor time statistics for a program s procedures, 
+and also reports the amount of normalized processor time spent in critical sections. Normalized processor 
+time emphasizes the point that optimizing an application s less parallel code can have more impact on 
+overall performance than improving code executing with high parallelism. Like gprof, Quartz aggregates 
+computation time and memory system time to­gether, making it difficult to determine when the memory behavior 
+is a bottleneck. However, Quartz is quite good at focusing the user s attention on those procedures that 
+are most critical to performance; we have incorporated some of Quartz s fimctionality into MemSpy. MTOOL 
+[7, 8] is a system specifically designed to de­tect memory bottlenecks in both .%quentid and p-arallel 
+pro­grams. IvlTOOL s basic performance metric is the differ­ence between a program s actual execution 
+time with non­ideal memory system behavior, and the execution time of the same code with an ideal memory 
+system. This differ­ence is the amount of execution time for which the pro­cessor was stalled due to 
+memory system delays. This information is presented for loops and procedures within the program. While 
+MTOOL is a useful tool for focusing attention on the primary memory bottlenecks in the code, it provides 
+no statistics on the specific behavior (cold-start mjsses, interference, sharing, et~.) responsible for 
+the prob. lems. Furthermore, since MTOOL S output is procedure and loop oriented, it often provides little 
+or no insight into which data objects are responsible for the poor memory system be­havior. Another tool 
+for studying memory referencing patterns in programs is SHMAP [5]. This system annotates se­quential 
+FORTRAN programs, collects memory reference t%xs, and produces an animated picture of references to the 
+program s main data objects. While SHMAP is useful for detecting patterns in references to array data 
+objects, it offers only limited help for references to more complex data structures, such as lists and 
+trees. SHMAP also offers little summary information about the program s behavioc miss rates are computed 
+only on a per-processor, rather than per­data-object or per-procedure basis, and the user must glean 
+information on cache replacements by carefully examining the animation. For long running simulations 
+of program execution, watching the animations and discerning patterns may become quite tedious. In summary, 
+current performance monitors exist at many points of the spectrum of possible tradeoffs between effi­ciency 
+and level of detail in their output. We introduce MemSpy to provide a useful level of detail in memory 
+sys­tem performance statistics that has not yet been explorti, further, we examine methods for reducing 
+MemSpy s over­head as much as possible. 3 MemSpy Overview MemSpy is a performance debugging tool designed 
+to help programmers locate and fix memory bottlenecks in applica­tions. MemSpy tirst helps in locating 
+bottlenecks by pro­viding high-level information that focuses the programmer s attention on the problem 
+areas in the application. Then, it helps the programmer tix the bottlenecks by providing de­tailed information 
+on the application s memory behavior at these bottlenecks. MemSpy s key features can be summa­rized as 
+follows: Both data oriented and code oriented output. . An initial attention-focusing mechanism based 
+on the fraction of time spent stalled for memory.  Detailed information on the causes of poor memory 
+performance.  . Applicability to both serial and parallel applications. Traditionally, performance monitoring 
+tools have pre­sented primarily code oriented output that is, the statis­tics are presented for different 
+procedures, loops, or source lines in the code. However, many performance bottlenecks are more naturally 
+viewed in terms of data oriented statis­tics, where statistics are prt+ented for different application 
+data objects. In contrast to earlier approaches, we believe 2. Performance Evaluation Review, Vol. 20, 
+No. 1, June 1992 that both data and code oriented statistics are impommt for performance debugging they 
+provide orthogonal views of program performance, and the combination of the two can be quite powerful. 
+For example, consider pt hor [17], a parallel logic simulation application in the SPLASH bench­mark suite 
+[16]. In pthor, the ElementArray, an array of logic elements, is responsible for more of the program 
+s cache misses than any other data object. However, these misses are distributed across several procedures. 
+Code ori­ented output cannot emphasize ElernentArray s perfor­mance problems as well as data oriented 
+output, because no single section of code is the bottleneck. In this case, the bottleneck lends itself 
+to data oriented viewing. The blocked matrix multiplication code (Z = .Y x l ) shown in Figure 1 gives 
+another example of the power of combining data oriented statistics with code oriented statistics. Blocked 
+algorithms such as this operate on sub­matrices or blocks of the original mati so that data fetched into 
+the cache are reused before replacement. The bulk of the computation is performed in line 13. In this 
+line, the appropriate elements of X and Y are multiplied and the result is accumulated in an element 
+of Z, Code oriented statistics are useful for focusing the programmer s attention on this section of 
+the code. However, with code oriented statistics alone, it would be difficult to determine which of the 
+matrices in the loop is causing the bottleneck. Whh data oriented statistics, one learns that the bottleneck 
+on this line is almost entirely due to misses generated by the Y matrix. 1) BlkMultiply (X, Y, Z, N, 
+B) 2) Matrix *X, *Y, *Z; 3) ink N,B; 4) { 5) int kk, jj, i,jrk; 6) double r; 7) forkk=lto Nby Bdo 8) 
+for j j =lto Nby Bdo 9) for i =lto Ndo 10) for k = kk to min(kk+B-l, N) do 11) r = X[i, k]; 12) for j 
+= jj to min(jj+B-l, N) do 13) Z[i, j] = Z[i, j] + r* Y[k, j]; 14) } Figure 1: Blocked matrix multiply 
+code. For both code and data oriented statistics, it is impor­tant to provide the user with a focusing 
+mechanism; that is, a metric or display that initially helps the user locate bottlenecks in the code. 
+In MemSpy, the primary focusing mechanism is the percentage of total memory stall time as­sociated with 
+each monito~d object. That is, code and &#38;ta objects are ranked according to the fraction of stall 
+time they are responsible for. We have found this more useful than other metrics such as cache miss rates 
+for identi~­ing problem sections in the program. This is because code or data segments with high miss 
+rates, but low total stall time (because there are few references) do not impact per­formance as much 
+as segments with lower miss rates but more total stall time. Figure 2 shows an example of the initial 
+display pro­duced by MemSpy for blocked matrix multiply. In this nm, we multiply two 295 x 295 element 
+matrices togetbeq we use a block size of 64 so that a single block just fits into the simulated 32Kbyte 
+cache. In the output table, data ob­jects am ranked across the horizontal axis, and code objects are 
+ranked vertically. This output matrix presents a concise breakdown of how code and data objects contributed 
+to the program s total memory stall time. The legend at the top gives the names of the data and code 
+objects. Here, we can see that 85% of the program s memory stall time occurs in the 1 -variable in BlkMultiply 
+( ), the routine shown in Figure 1. It is surprising that l is responsible for so much stall time (and 
+so many cache misses), since the l block is sized to fit in the cache. As we proceed, MemSpy s output 
+will provide more information about the precise cause of this problem. TOTAL APPLICATION STATISTICS 
+Execution Time: 649. OM cycles Total Memory Stall Time: 509. 5M cycles Overall Miss Rate: 37 .8% Total 
+References: 26. 93M -Reads: 19.99M (74.2%) -Writes: 6.94M (25.8%) Total Misses: 10.19M -Reads: 9.92M 
+(97.4%) -Writes: .26M (2.6%) -.--------------------------------------. - Percentage of Total Memory 
+Stall Time, broken down by data and code Data Bins: Code Segments: o : Matrix. Y o : BlkMultiply 1 : 
+Matrix. Z 1 : main 2 : Matrix. X 2 : ClearProduct  Data Bins Code I I o 1 2 Segments -----------­ 
+[ Tot% ----------- I 86.4 8.5 ------------------­ 5.1 0 1 2 I I 97.5 1.7 0.8 I I I 85.5 0.9 -­ 7.7 -­0.8 
+4.3 0.8 -- Figure 2: MemSpy initial outputi Blocked matrix multiply. For each data-bin+xle-segment combination, 
+users can request detailed statistics about the behavior of references in that bin . The display gives 
+information such as: miss rate, read and write statistics, statistics on local versus remote misses, 
+and memory latency statistics. Finally, a key feature of this output is the breakdown of the types of 
+cache misses. Cache misses occur in the following situations: (i) if the line has never been referenced 
+before by this processor, (ii) if the line has been replaced out of the cache since its last reference, 
+or (iii) if the line has been invalidated since its last reference. MemSpy provides statistics which 
+break down the misses occurring due to each of these situations. 3. Performance Evaluation Review, Vol. 
+20, No. 1, June 1992 Figure 3 is an example of a detailed display from the blocked matrix multiply example. 
+1 In this case, we are examining the detailed statistics for the 1 matrix in the BlkMulti.ply routine. 
+We can see that this particular data-code combination has a miss rate of 68%. This is sur­ prisingly 
+high, because blocking is used specifically to re­duce cache misses to l-. The outmtt shows that the 
+misses to 1-in this routine are all due to cache replacements.2 MemSpy gives a breakdown of which data 
+objects caused replacements, and we see that roughly 90910of all replace­ments were caused by 1 itself. 
+To summarize, (i) 1 -has a surprisingly high miss rate, (ii) the misses are primarily due to replacements, 
+and (iii) the replacements are mainly caused by other references to the I data object. These three facts 
+alert the programmer to the problem of self-irUerference.3 The programmer can now minimize this ef­fect 
+by choosing a block size with less interference, or by copying the blo-sk so that it occupies a cmttiguous 
+region of memory [11]. DETAILED OUTPUT: Matrix. Y in BlkMultiply Elapsed Time in BlkMultiply: 627. 6M 
+cycles Memory Stall Time in bin: 435. 5M cycles Percentage of Total Memory Stall Time: 85.5% Percentage 
+of Total Misses: 85.5% Miss Rate: 67. 6% Percentage of Total Refs: 47 .8% REFERENCES : 12. 88M -- Reads: 
+12.88M (100.0%) Writes: O (0.0%) MISSES: 8.71M -- Read misses: 8.71M (100.0%) Write misses : 0 (0.0%) 
+1st Ref Miss: O (0.0%) Inval Miss: o (0.0%) Repl Miss: 8.71M (100.0%) Memory Stall Time (Cycles) : Total 
+= 435. 5M, Avg per reference= 33.8 Memory Read Stall Time = 435. 5M, Memory Write Stall Time = O Avg 
+Memory Read Stall Time = 33.8 Causes of Replacements: bin Matrix. Y: 90.0% bin Matri.x. Z: 6.9% bin Matri.x. 
+X: 3.1% Figure3: MemSpy detailed output Yin BlkMultiply. lIn this figme, the Percewzgeof Totol Menrory 
+Smalltime equals the Percmtage of Total Misses he-cause in this case wc usc a simple memory simulator, 
+with a constant latency for all cache misses. 2There are no first referoncc misses in this routine, because 
+att the matrix elements are first referenced in a separate initialization procedure: 3T0 tjimver the 
+effeet shown hem, Lsm et sl. [11] mUUIa~y fi~­mented the code to gather data sirnbx to MemSpy s. MemSpy 
+automates and generalizes this proc-ax+s,making these statistics more accessible to programrmrs, This 
+example has illustrated the usefulness of MemSpy s output. Section 4 also shows a more detailed case 
+study us­ing MemSpy. However, MemSpy s detailed statistics have a cost. Information at MemSpy s level 
+of detail is available in two ways: simulation or htwdware tracing. The prototype version of MemSpy uses 
+simulation to gather the necess@ information. We are optimizing this simulator-based ver­sion and examining 
+the basic performance limitations of this approach. We also intend to create a version of MemSpy that 
+uses the hardware tracing facilities of the DASH mtd­tiprocessor [12] to gather this information. To 
+further re­duce the cost of gathering MemSpy s detailed information, we view MemSpy as part of a hierarchy 
+of performance debugging tools. High level tools provide coarse-level in­formation to focus the user 
+on these selected performrmce bottlenecks; then, MemSpy can be used to monitor partic­ular data objects 
+or sections of code. In @is way, one pays for MemSpy s detail only when it is useful. There are several 
+other important issues that arise as a result of MemSpy s detailed data oriented output. How does MemSpy 
+decide which data object a particular ref­erence belongs to? Should it keep separate statistics for each 
+individually allocated mnge of memory? Or for each class of data objects? Furthermore, how can we automati­cally 
+assign the bins names that best cm-respond to variable names the user recognizes? For example, memory 
+may be allocated and assigned temporarily to pointer name trnp, before being assigned to a more intuitively 
+named variable. We also need to optimize the speed of statistics gathering in general. These issues will 
+be examined more closely in Section 5.  4 A Performance Tuning Case Study In this section, we present 
+a step by step description of how MemSpy may be used to tune a parallel application. As we proceed through 
+the case study, it is important to note how simple statistics &#38;come much more powerful when pre­sented 
+for individual data structures as well as for sections of code. The application we have chosen is tri. 
+It is a parallel program that implements the tnangtdar system solve phase of the incomplete Cholesky 
+conjugate gradi­ent (ICCG) algorithm. (The ICCG algorithm is a widely used itemtive method for solving 
+large spame systems of equations that arise in engineering applications.) The work shown here is an illustration 
+of work previously described in [14]. In the original study, the authors had gathered these statistics 
+using a version of the ICCG code with very low level instrumentation added by hand. MemSpy automates 
+and generalizes this process. The statistics shown here were collected using Mem-Spy with a simulated 
+bus-based multiprocessor consisting of 4 processors, each with 64Kbytes of cache. The cache line size 
+is assumed to be 64 bytes and the miss latency is assumed to be 50 clock cycles. This roughly models 
+the architecture of the Silicon Graphics 4D/340 multiprocessor on which the original t ri study was done. 
+ 4. Performance Evaluation Review, Vol. 20, No. 1, June 1992 fox i =lto N{ x[i] = b[i]; for j =Ito i-1{ 
+x[i] = x[i] -M[i] [j] * x[j]; } } Figure 4: Serial pseudo-code fort ri. 4.1 Example Application: Tri 
+The basic problem solved by t ri k: M r = b, where M is a sparse, lower triangular matrix with unit diagonal, 
+and x and b = vectors. M and b are knowIL r is to be computed. The pseudo-code in Figure 4 gives a straightforward, 
+serial solution to this problem. Since M is lower triangular, j is always less than i in the summation 
+and the SUM involves only x~] that have already been computed. The actual parallel solution we study 
+differs from Figure 4 in several ways. First the sparse matrix M is stored in the following compact format. 
+The non-zero elements of M are stored contiguously by row in the one dimensional array J4 .n:. Another 
+array, CO1,stores the column number of each non-zero in A4.n:. A third may stores pointers to the beginning 
+of each row in M.n:. To parallelize tri, the algorithm attempts to compute values for several z[i] concurrently. 
+Of course, not all iterations can be performed at once, because computing z [iJ in row i may require 
+z [j] from a previous row j. To exploit parallelism, the depen­dencies between rows (various z [i)) can 
+be determined in advance, and an acyclic dependency graph built. By doing a topological sort on this 
+graph, we can assign each row (.z[i]) to a discrete level of computation so that it depends only on rows 
+in lower levels (i.e., those r [i] that have been computed earlier). In the version of tri we begin with 
+here, processors are assigned the rows from each level in a round-robin fashion. Figure 5 shows the pseudo-code 
+executed by each processor. 1) For each row assianed to me { 2j / initialize acc~mulator variable*/ 3) 
+accum = b [row] ; 4) For each non-zero entry, j, in this row{ 5) / wait until x[]l is ready */ 6) while 
+(! Ready [col [j]]) ; 7) / update accum using M.nz and x */ 8) accum = accum -M.nz [j] * x[col[j]]; 9) 
+} 10) / set x[row] to its final value */ 11) x [row] = accum; 12) /* x[rowl is now usable by others */ 
+13) Ready [row] = 1; 14) } Figure 5: Parallel t ri implementation.  4.2 Performance of Original Tri. 
+Code When we run the original t ri code using the benchmark matrix BCSSTK15 [6], we find that the speedup 
+with 4 processors is very low, only a factor of 1.4. To explore the cause, we use MemSpy to tit look 
+at the total number of misses. Ihese numbers am shown in a summarized form on line 2 of Table 1. This 
+figure also shows the breakdom of cache misses among program data objects. The @t thing that stands out 
+is that the totaJ number of cache misses rises sharply, by a factor of 3.3, as we go horn the sequential 
+to the multiprocessor version of the code. Though the total time spent doing real work has re­mained 
+roughly the same, the time spent stalled for memory has more than tripled. Furthermore, h the parallel 
+version, when one process is stalled waiting for memory, others may be forced to spin-wait until that 
+process gets the needed memory item and produces the elements the other processes wait for. Thus, memory 
+behavior is likely to be the prime reason for the poor speedups. To see how the misses may be reduced 
+we now look at the composition of misses in the two cases. We see that the number of misses has increased 
+for all data objects;4 however since M.n = causes the most misses in the multiprocessor vemion, we focus 
+first on its behavior. We tirst note that the non-zero elements of matrix M are accessed only once in 
+both the sequential and parallel ver­sion of the code; thus, ideally the total number of misses for the 
+matrix M should not increase as we go from the sequential to the parallel code. Yet the data show that 
+the number of misses increases by over 5070. When we request more detailed information about the bin 
+M. n ~ from Mem-Spy, it shows us the data in Figure 6. It indicates that most of the misses (over 90%) 
+are first reference (cold) misses and not invalidation or replacement misses. Percentage of Total Memory 
+Stall Time: 42.2% Percentage of Total Misses: 42 .2% Percentage of Total Refs: 55.9% Miss Rate: 9.4% 
+ 1st Ref Miss: 16482 (91.4%) Inval Miss: O (0.00%) Repl Miss: 1556 (8.6%) Causes of Replacements: bin 
+double* .M. nz: 55.5% bin x: 21.7% bin int*. Ready: 12.3% bin b 9.9% Figure 6: MemSpy detailed outputi 
+bin M.n.z in t ri. Once MemSpy points out that most of the misses are fkst reference misses, it is not 
+so hard for the application programmer to figure out that the real cause for increased misses is poor 
+spatial locality for M. n 2. In particular, the number of non-zeroes per row of M is very small in input 
+4Sinc-e the Ready data vector is not nudcd for he uniprocessor ver­si~ k obviously causes no misses there. 
+5. Performance Evaluation Review, Vol. 20, No. 1, June 1992 Table 1: Summary of MemSpy output after various 
+tuning steps. Cache Misses (x 1000) Execution Time Vesion Total M .nz hkady 1! other (x 1000 cycles) 
+Speedup Sequential 12.9 11.2 (86.7%) 1.2 (9.3%) 0.5 (3.9%) 2,580 1.0 Original Parallel 41.6 17.8 (42.2%) 
+11.9 (27.9%) 10.5 (24.6%) 2.3 (5.4%) 1860 1.4 Tuning Step 1 39.2 11.3 (28.8%) 13.2 (33.7%) 14.2 (36.2%) 
+0.5 (1.3%) 1742 1.5 Tuning Step 2 18.1 11.2 (61.9%) 6.4 (35.4%) 0.5 (2.8%) 967 2.6 Tuning Step 3 16.0 
+11.2 (70.0%) 4.3 (26.9%) 0.5 (3.1%) 890 2.9 matrices for the tri computations Since cache lines are 
+8 double words long (64 bytes), each cache line contains multiple rows. In the parallel code, successive 
+rows are frequently assigned to different processors, and as a result, when a processor fetches the contents 
+of a row it needs, it also fetches useless data (adjacent rows relevant only to other processor). This 
+does not occur in the uniprocessor code where adjacent rows are accessed consecutively by the same processor. 
+We emphasize that MemSpy has ticilitated this obsema­tion about spatial locality by allowing us to isolate 
+the miss statistics for M. n J, and letting us compare the uniprocessor and multiprocessor values. Without 
+such detailed data or­iented statistics, the lack of spatial locality would be difficult to infer.  
+4.3 Step 1: Restoring Spatial Locality The goal of this tuning step is to improve the spatial lo­cality 
+of references to M.n z in t ri. This is accomplished by symmetrically reordering the rows and columns 
+of the matrix M. n z, so that the row indices of rows assigned to a particular processor are contiguous 
+and appear in the or­der in which the rows are processed. The details of the reordering method are discussed 
+in [14]. When the program is rerun, using the new ordering scheme for spatial locality, MemSpy produces 
+the new miss composition data summarized on line 3 of Table 1. This out­put indicates that now only 29% 
+of the misses are due to the M.nu, with 34% of the misses in the Ready vector, and 36% of the misses 
+in the z vector. Misses in M.n: have been reduced from 17.8K to 1L3K, and are now only 1% greater than 
+misses in M. n; in the sequential version. The reordering for spatial locality has been effective in 
+reducing the M.ns misses to ahnost the intrinsic number required by the application. While the misses 
+in M.nz have been reduced signifi­cantly, this change leads only to a very minimal improvem­ent in overall 
+performance, about 6%. MemSpy again tells us (as seen in Table 1), that this is because the decrease 
+in misses for M.nz is partly offset by an increase in misses for the Ready and z vectors. Figure 7 shows 
+the detailed output for the Ready vector after step 1. Here, 81% of Ready s misses are due to replacements, 
+and 87% of these replacements are caused by references to the z vector. The 5For exsrnple, if A4 comes 
+frem a partial dfierentist cqustien corr­esponding to a 5-point stenci~ each row has two off-diagonal 
+non-zeroes. introduction of the new ordering scheme, which renumbem the rows in the r and Ready vectors, 
+has resulted in a pathological memory mapping cross-interference between the z and Ready vectors in the 
+cache causes the misses in these data objects to increase dramatically.s Percentage of Total Memory Stall 
+Time: 33. 7% Percentage of Total Misses: 33 .7% Percentage of Total Refs: 26 .2% Miss Rate: 13. 7% 1st 
+Ref Miss: 988 (7.5%) Inval Miss: 1502 (11.4%) Repl Miss : 10749 (81.1%) Causes of Replacements: bin x: 
+86.7% bin double *. M.nz: 13.3% Figure 7: MemSpy detailed output Ready in step 1. We again note that 
+without a tool like MemSpy, it would be difficult to understand the effects of this tuning step. In fkct, 
+one might have jumped to the wrong conclusion that reordering M. n u was not effective in improving spatial 
+locali~, in reality, MemSpy shows that the reordering was effective, but that the potential improvement 
+was offset by interference in the z and Ready vectom. The following two subsections will discuss further 
+steps taken to reduce the Ready and z misses.  4.4 Step 2: Reducing Ready Traffic Following the reduction 
+in M.ns traffic, two other data objects, z and Ready have become the leading contributors to the cache 
+misses. Although r genemtes more misses than Ready, we tirstshow the effect of reducing the misses due 
+to R.ea dy because it is more readily apparent. The Ready vector indicates when a particular z element 
+has been computed and is ready for use by later computa­tions. After step 1, the MemSpy output shows 
+(see Figwe 7) that the Ready misses constitute roughly one third of all misses. Of these, a majority 
+are due to cross-interference between r and Ready (indicated by replacements), a small fraction (7.5%) 
+are pardy intrinsic and pardy due to lack %is cress-interference is dsta &#38;pendent, and does not war 
+ss severely in other matrkcs we have stodicd. . 6, Performance Evaluation Review, Vol. 20, No. 1, June 
+1992 of spatial locality (indicated by first reference misses), and another small fraction (11.5%) are 
+due to sharing or inval­idations. To reduce misses in Ready, one might tirst consider ways of reducing 
+cross-interference and sharing. How­ever, Rothberg and Gupta, in fact, devised a new form of self-scheduling 
+that allows Ready to be eliminated entirely. This method takes advantage of the NsN (Not a Number) value 
+provi&#38;d for by the IEEE 754 Standard for Binary Floating Point Arithmetic. The NsN value is stored 
+into each element of the z vector before the tri phase begins. Then, instead of using the Ready vector 
+to indicate an x element has been computed, processes waiting for r ele­ments can simply spin on the 
+~ value itself. When the value changes fkom NaN to a valid floating point value, it is ready for use. 
+This change substantially improves program perfor­mance due to two effects on the memory system behavior 
+of the program. As shown in Table 1, Ready misses m eliminated entirely furthermore, misses due to the 
+z vector are also substantially reduced due to a decrease in the cross­interference described above. 
+The next subsection focuses on improving the performance of z. 4.5 Step 3: Reducing Tkaffic due to r 
+Cache misses for r primarily occur when an z element produced by one processor is subsequently used by 
+another processor. Thus, the goal of this step is to devise strate­gies for assigning r elements to processors 
+such that each element primarily depends on other ~ elements assigned to the same processor. This reduces 
+the need for interprocessor communication of these values, and reduces the z traffic. Rothberg and Gupta 
+investigate several heuristics for ac­complishing this, and MemSpy is helpful in comparing the effects 
+of these different heuristics. For brevity, we present results for only the lid heuristic proposed by 
+Rothberg and Gupta. J.nit, each r[i] is assigned to the processor that currently owns the most previous 
+ele­ments required to compute that z [i]. MemSpy shows (see line 5 of Table 1) that misses due to the 
+z vector decrease from 6.4K to 4.3K around 41% of these misses am first refemme misses, 12% are due to 
+invalidations, and 47% are due to replacements. MemSpy further indicates that almost all (99%) of the 
+replacements are due to the M. n: matrix. Since tri streams through the data in the very large M mati 
+these replacements ae essentially unavoidable. 4.6 Summary This case study has highlighted how MemSpy 
+maybe used to tune an application s memory behavior. In the tirst tun­ing step, MemSpy was used to calculate 
+miss counts for the M. n; data. These played a key role in pointing out that poor spatiaJ locality was 
+the cause of the increase in misses. Based on this information, we reordered the matrix to improve spatial 
+locality. MemSpy s information on the causes of misses was also instrumental in helping us under­stand 
+the cross-interference that resulted tiom reordering. Without MemSpy, it would have been difficult to 
+separate the two effects. In Step 2, we eliminated Ready misses. MemSpy s data oriented output was key 
+in indicating that Ready was responsible for a large amount of trafEc. In the final tuning step, a heuristic 
+for improving .r access patterns was examined. Here again, MemSpy s miss counts were useful in showing 
+the improvement in x behavior. Further­mo~, MemSpy s data indicating which data object caused replacements 
+was also useful. By lmowing that most of z s replacements were caused by M. n z, we were able to reason 
+that they are largely unavoidable.  5 MemSpy Implementation As we have shown, MemSpy p~sents detailed 
+statistics on low-level memory system events. Gathering data at this level requires suppofi from either 
+a software memory sys­tem simulator or a hardware tracing system. This section discusses the implementation 
+details of the prototype ver­sion of MemSpy, which uses the former, software-based approach. MemSpy is 
+implemented as part of a memory simulator using the Tango [4] system to instrument the code for memory 
+monitoring. In this section, we tl.mt give some necessary background information on Tango memory simu­lations. 
+Following that we discuss issues in generating data and procedure oriented statistics, labeling the data 
+oriented statistics with intuitive names from the user program, and designing the user interface. Finally, 
+we present data on MemSpy s performance. 5.1 Tango Memory System Simulation Tango is a software simulation 
+and tracing system, used by MemSpy in monitoring the memory system behavior of programs. Its tracing 
+and memory simulation facilities are useful in both the sequential and parallel domains. 7 When using 
+Tango, the application to be studied is tit instrumented by a special preprocessor. At each memory refertmce, 
+the instrumentation adds procedure calls to a memory simulator. The memory simulator procedure then calls 
+MemSpy procedures to maintain statistics on simulator events such as cache hits, cache misses, etc. The 
+simulat­or maintains the state of each processor s cache, while the additional MemSpy code tracks the 
+causes and frequency of misses. The modular interface between MemSpy and the memory simulator allows 
+MemSpy to be implemented easily with a variety of memory simulators. Because this method uses no intemnediate 
+trace files, one can run detailed simulations of large benchmarks without the disk space lim­itations 
+imposed by trace-tie based approaches. 5.2 Grouping Statistics into Bins MemSpy presents data and code 
+oriented statistics. To do this, both the code axis and the data axis of the appli­cation are subdivided 
+into logical unitv we call these units code segments and data bins. Statistics are then maintained TTmgo~~~~ 
+multiprtissom by muttipkxing tk execution of SeV­eral application processes on a single real processor. 
+7. P+wformance Evaluation Review, Vol. 20, No. 1, June 1992 for each pairing of code segment and data 
+bin; each such pairing is referred to as a statistical bin. The following subsections &#38;scribe the 
+methods of determining appropri­ate code and data divisions. 5.2.1 Separation of Statistks by Code Objects 
+Along the code axis, MemSpy separates statistics by proce­dmes. It is straightforward to determine which 
+procedure the process is currently in, because Tango supports event logging on procedure entry and exit. 
+These entry and exit events are passed to the memory system simulator, and us­ing them, MemSpy maintains 
+a procedure stack for each process. In this way, the current procedure is always known, and can be used 
+to select the appropriate procedure bin in which to place statistics.  5.2.2 Separation of Statistics 
+by Data Objects Along the &#38;ta axis, MemSpy separates statistics by data bins. Some data bins cormpond 
+to a single data object in the application source code. In other cases, it is appropriate to group together 
+statistics from several data objects into a single data bin. Thus, a data bin may contain statistics 
+ffom several non-contiguous ranges of memory. The following paragraphs discuss (i) how the memory space 
+is divided into data bins and (ii) how these data bins are given names which are intuitive and useful 
+to the progmrnmer using MemSpy. Data Dividon As a first approach to this data binning problem, the program 
+s entire memory space could be di­vided into memory ranges, where each memory range cor­responded to 
+a single data object in the program, and statis­tics are kept for each individual memory range. However, 
+considering each individual data object to be a sepmate sta­tistical unit would likely mult in cases 
+where there are many bins with very similar behavior. For example, in Lo­cusRoute, a CAD wire routing 
+program from the SPLASH benchmarks, the program allocates storage for thousands of wires. Since all the 
+wires have similar memory behavior, keeping separate statistics on each wire is not as useful as aggregating 
+statistics for all wires. To automatically aggre­gate statistics for all wires, we might use an approach 
+which groups into a single data bin all memory ranges allocated at the same point in the source code. 
+However, the op­posite extreme, combining too many data objects together in a single data bin, must also 
+be avoided. For example, in a benchmark program which performs LU decomposi­tion, the program s main 
+data structures are two matrices which are allocated at exactly the same point in the source code, within 
+a NewMat r ix routine. Here, the program­mer would like to view separate statistics for each matrix+ 
+since their memory behavior is quite different. Because of cases like this, MemSpy maintains sepamte 
+statistics for all memory ranges allocated at the same point in the source code with identical call paths. 
+That is, data allocated in different calls to a procedure from different call paths will be monitored 
+in separate bins. 8 We claim that data objects The exaet method used for tracking the catt path is similar 
+to that used by Zom and HMinger in their memory allocation profiler, mprcf [18]. allocated at the same 
+point in the source code via the same call path are usually similar in memory behavior, and their statistics, 
+in general, should be aggregated. To implement this proposed method of data division, MemSpy needs to 
+be able to map every possible memory address to its corresponding data bin. To maintain mappings between 
+ranges of memory and the data to which they cor­respon~ one needs to know the size and starting positions 
+of all memory allocated by the application. In general, pro­grams use three types of memory allocation: 
+(i) static, (ii) stack and (iii) dynamic. In this version of MemSpy, we automatically maintain mappings 
+only for dynarnicatly al­located data. This fits in well with the parallel programming model we currently 
+use, in which all shared memory must be heap allocated9 When users want to monitor a vari­able which 
+is not heap allocated, they can manually add a procedure call into the application to defie that map­ping. 
+For MemSpy to maintain mappings for static and stack allocated dat% it would quire data type information, 
+in order to know the sizes of the individual data objects. A later version of MemSpy will provide the 
+compile time instrumentation support necessary to produce mappings for statically and stack allocated 
+variables. For mappings of dynamically allocated data objects, MemSpy maintains a log of all heap allocated 
+memory, and records which memory ranges belong to which program variables. Logging memory allocations 
+from the heap is fairly straightforwan$ we simply instrument the code to log (i) the pointer returned 
+by the malloc routine, (ii) the size of the allocated block of memory, (iii) the name of the vari­able 
+to which the malloc xeturn value is assigned. (Naming will be discussed in more detail later.) This instrumentation 
+generates events which become part of the input event trace for the MemSpy memory simulator. MemSpy then 
+builds up a data structure to store these memory ranges, We have found this method for data division 
+to be quite effective in practice. However, there will stilI be cases in which the user would like some 
+manual control over the division of data. We m interested in extending the current scheme to allow the 
+user to give suggestions or directives on how the statistical bins should be composed, as well as to 
+provide automatic support for static and stack allocated memory objects. Data Bin Naming III assigning 
+names to data bins, we want to use symbolic variable names from the source program since these have some 
+intuitive meaning to the programmer. Furthermore, clearly, the names should be unique. To satis~ the 
+first requirement, intuitiveness, con­sider each static appearance of a malloc in the code: we name the 
+associated bin with a string that concatenates the data type and variable nane of the pointer which nxeives 
+the malloc return value. However, as stated above, multiple data bins are created for the same malloc 
+if the malloc is encountered through different proctxhue call paths. Thus, to guarantee uniqueness, the 
+names are disarnbiguated by prepending a string summarizing the state of the call stack. 90ur ~-1 pm~~hg 
+model usss C language programs aug­ mented with Argonm National Laboratory parallel programming macros 
+[13]. In this mode~ at] shad memory is dynamicstly allocated using the GJWALLOC macro. 8. Performance 
+Evaluation Review, Vol. 20, No. 1, June 1992 The final full name is of the form: ProcName. return~c. 
+ProcName. return~c.. . .DataType. VarName This method has both strengths and weaknesses. By prepending 
+the bin name with call stack information, we guarantee a unique name for each bin. However, in our ex­perience 
+with MemSpy, we have found that a short vemion of the name: Dat aType. VarName is usually unique and 
+sufficiently intuitive for the programmer. It works espe­cially well when important program variables 
+are d.imt.ly assigned the pointer returned by malloc, so that the vari­able name in the short form is 
+a familiar program name. However, sometimes the allocated memory is assigned to a temporary variable 
+and then later assigned to a more sig­nificant variable in the program. In these cases, the data bin 
+will receive the name of the tempormy variable, rather than the preferred name. Another weakness of this 
+method appears in cases where the long form is necessary to dis­tinguish between data biw, the name it 
+produces, with pro­gram counter values interspersed, is often inconvenient or difficult to read. Both 
+of these wealmesses are hidden from the user by allowing the user to rename variables to a new unique 
+name of their choosing.  5.3 Storing Information on Causes of Misses Statistics on the causes of application 
+misses are an impor­tant part of MemSpfi to provide this data, MemSpy needs to store information to explain 
+the cause of each miss. Cache misses are caused by one of the following: (i) the line has never been 
+referenced before by this processor, (ii) the line has been replaced out of the cache since its last 
+reference, or (iii) the he has been invalidated since its last reference. To distinguish between these 
+three cases, 2 bits of state in­formation are required for each memory line in use by each processor. 
+To store this state information, MemSpy defines a one dimensional array that is indexed by the lower 
+bits of the referenced address. The array contains the state bits indi­cating the cause of the miss. 
+It also contains the remaining upper portion of the address, to act as an identifier. The array size 
+can be varied depending on the size of the ap­plication s data set. If the array is defined to be smaller 
+than the data set of the application, then several referenced addresses might index into the same location 
+of the array we define a hash table to handle these overflow cases. The overflow state information is 
+hashed based on the refer­enced address and stored in linked lists. Clearly, there is a tradeoff here: 
+A smaller primary array will have less space overhead, but with poor performance for applications with 
+large &#38;ta sets that overflow into the hash table. A larger ar­ray will handle a larger data space 
+more efficiently, but with higher space overhead. One could improve the performance of this system by 
+taking advantage of temporal locality in the reference patterns. If an object from the overtlow table 
+has just been referenced, it is likely to be referenced again soon, performance may be improved by moving 
+its state information out of the overflow table and into the primary array. 5.4 User Interface The user 
+interface of a performance monitor must guide the user towards bottlenecks in the code, and then give 
+the information necessary to remedy them. This subsection gives an overview of MemSpy s user interface. 
+The current user interface has been intentionally kept quite simple. A MemSpy session begins by presenting 
+initial data us­ing the focusing mechanism Percentage of Total Memory Stall Time as the primaxy means 
+of sorting the output. That is, for each code object and data bin pair, MemSpy com­putes the ratio of 
+the memo~ stall time incurred in this statistical bin, compared to the total memory stall time in the 
+program. When MemSpy output is tirst displayed, this information is presented as an ordered matrix in 
+which one axis shows the different data bins, and the other axis shows the different procedures. Each 
+row and each column of the matrix are sorted, so that the upper left comer of the matrix contains the 
+procedure-data pair with the highest percentage of total memory stall time, and the numbers decrease 
+as one moves down and to the right. A sample output was shown in Figure 2. The initial display also summarizes 
+information on the program s execution fie, and aggregate cache mem­ory statistics. From this starting 
+point, users have several options available to them. These options include display­ing more information 
+about a bin, renaming data bins, or combining bins and displaying the total information. The most basic 
+operation a user can perform after start­ing up MemSpy is to request a display for a particular statis­tical 
+bin using the Di splayAll command. This display, shown for example in Figure 3, gives detailed information 
+about the statistical bin. This data allows the user to reason about the types of memory system problems 
+in the appli­cation. For example, if a particular data object has a high miss rate, the misses me primarily 
+due to replacements, and the replamments arc pfiarily caused by other references to the same data object, 
+one concludes that self-interfenmx is a problem. The DisplayAll command may also be used on com­binations 
+of multiple data and/or code divisions. That is, one may request the statistics of a particular data 
+object in several procedures, or several data objects within a proce­dure, and so on. By building the 
+basic information given by MemSpy into other useful combinations, the user can adapt the output to the 
+specific high-level stmcture of the code. Other commands allow the user to manipulate the names of the 
+data bins to allow for easier debugging. A fullnarne command allows the user to see a data bin s full 
+name, including the stack trace. Note that, to save space, the main display gives only the partial names 
+of the data bins in the form data-type. variable.name. With f ullname, the user can distinguish between 
+&#38;ta bins whose ptutial names are identical. The rename command allows the user to change the label 
+of a data bin to a more appropriate name. (The most effective method for assign­ing intuitive names to 
+data bins is stiJl an open question. Until we arrive at a more satisfactory conclusion, we find this 
+intermediate approach, giving the bin a unique name that the user is then free to change, quite useful.) 
+In the fbture, we will extend the user interface to give the 9. Performance Evaluation Review, Vol. 20, 
+No. 1, June 1992 user greater control over monitoring. For example, the user can currently request that 
+only a subset of code segments be monitore@ we would like to extend this to give the user control over 
+which data objects are monitored as well. The user should also be allowed to direct the automatic division 
+of data into bins, in cases where a non-default binning is needed. We will also provide the user with 
+a database of statistics from previous runs. This will allow the user to easily compare results from 
+a current version of an application with previous results. Finally, we are currently implementing a graphical 
+user interfhce, to make MemSpy more convenient to use.  5.5 Performance This section presents preliminary 
+performance results for the MemSpy system. While the prototype system is largely unoptimized, the current 
+execution time overheads seem reasonable. We also briefly outline methods for improving MemSpy s performance, 
+a major thrust of future research. Table 2 compares the execution times on a DECsta­tion 3100 for three 
+benchmark applications. Execution times are presented for three cases: (i) Actual uniprocessor benchmark 
+runs, with neither simulation nor monitoring. (ii) Tango simulations of the benchmarks without Mem-Spy 
+monitoring, and (iii) Tango simulations of uniproces­sor benchmark runs with MemSpy monitoring as well. 
+The table shows that MemSpy s overhead, when compared to a uniprocessor run with no monitoring, ranges 
+from a factor of 22 to a factor of 58 for these benchmarks. In order to understand what contributes to 
+this overhead, let us examine the sequence of operations needed to log an event with MemSpy. For each 
+memory reference, the orig­inal assembly code for the application is instrumented with a procedure call 
+to the Tango system. Within the proce­dure, temporary registers (i.e., those whose values are not presexved 
+across procedure calls) are frost saved, so that reg­isters used by the memory simulator will not overwrite 
+the values expected in them by the application. Next, the Tango memory simulator procedure is called. 
+Whhin the memory simulator, different MemSpy routines are called to update the data required for MemSpy 
+s statistics, such as whether the reference is a hit or a miss, a read or write, and so on. In Table 
+2, simulation overhead refers to time spent in the memory simulator procedure; MemSpy overhead refers 
+to time spent in the special MemSpy routines only, From Table 2, we see that the Tango simulation overhead 
+dominates the additional MemSpy overhead in monitoring an application. For the simple simulator used 
+here, more than half of this overhead is in saving and restoring all tem­porary registers before calling 
+the memory simulator. One can reduce this overhead by customizing the register save routine so that it 
+only saves the temporary registers actually used by the MemSpy memory simulator. For example, 10 double 
+precision saves and restores of floating point reg­istem could be eliminated from the current version, 
+This would result in a roughly 50% reduction in register save­restore time for each memory reference. 
+Furthermo~, note that many of the integer registers are used only when simu­lating a cache miss, not 
+when simulating a cache hic by postponing these register saves until after a cache miss is actually detected, 
+we can significantly reduce the overhead of invoking the memory simulator on cache hits, the more common 
+case. Overhead in MemSpy itself ranges from 30 to 44% of the total overhead in these benchmarks. This 
+MemSpy over­head is comprised of (i) time spent determining the bin to which a reference s statistics 
+belong, and (ii) time spent updating statistics, such as counting hits, misses and infor­mation on the 
+causes of misses. The first factor, searching for the appropriate statistical bin, is the prime contributor 
+to MemSpy s overhea~ it accounts for roughly 30% of a pro­gram s total execution time. The search for 
+a bin requires the traversal of a tree data structure containing the map­pings from dynamically allocated 
+address ranges to bins. At the root of the tree is an array of n pointe~ the array is indexed by the 
+upper logz (n ) bits of the search address, and each pointer corresponds to a different portion of the 
+address space. In turn, each of these pointers may point to another array whose elements correspond to 
+sub-portions of that memory region, and so on. Where a portion of memory contains only a single address 
+range, the bin in­formation is stored, and no fnrther arrays are required. In pt her, with roughly 50,000 
+different heap allocated mem­ory ranges, bin searches require an average of 3.7 pointer indirection through 
+the tree. One could further reduce the MemSpy overhead by al­lowing the user the option of keeping statistics 
+only for cache misses, not for cache hits. In the cument version of MemSpy, all references require an 
+address-to-bin transla­tion. By not monitoring hits, we could do bin lookup only for misses. This would 
+lead to a significant performance improvement since bin lookup comprises roughly one third of the application 
+overhead. Without statistics for cache hits, MemSpy could not produce data on cache miss rates or total 
+reference counts. However, one could still view counts of misses, breakdowns of total misses, and data 
+on causes of misses, some of MemSpy s primary features. We feel that with these optimization, MemSpy 
+can be made 5 to 10 times faster for uniprocessor simulations. This overhead is likely to be quite acceptable 
+to many users given the detailed information MemSpy is providing the user. Running MemSpy to simulate 
+multiprocessor, rather than uniprocessor, executions has two additional sources of overhead. These are 
+related to the fact that Tango inter­leaves the execution of the multiple application processes on a 
+uniprocessor. First, the Tango execution time for a multiprocessor run can be no smaller than the total 
+execu­tion times for each thread being run. This is because the threads are run sequentitdly (although 
+interleaved). Secon&#38; additional overhead is incurred when context switching be­tween threads: all 
+non-temporary registers must be saved on a context switch. These factors lead to higher execution time 
+overheads for multiprocessor runs of MemSpy. For example, running MemSpy on a 4 process matrix multipli­cation, 
+with the same input data as the uniprowssor run shown in Table 2, has an overhead of 120.4 as compared 
+to the uniprocess overhead of 21.7. One can reduce this overhead somewhat by optimizing context switching 
+in the simulation. If we make the assumption that context switches are only necessary on cache misses, 
+not on all references as currently assume~ we cm greatly reduce the number 10. Performance Evaluation 
+Review, Vol. 20, No, 1, June 1992 Table 2: MemSpy execution time overhead Application Tri MatMult ~ Pthor 
+Time (s) No Simulation No MemSpy 4.5 54.3 9.0 Time (s) Simulation, No MemSpy 72.0 659.0 313.0 Time (s) 
+Simulation, and MemSpy 101.0 1179.3 521.4 Simulation Overhead alone 16.0 12.1 34.8 MemSpy and Simulation 
+Overhead 22.4 21.7 57.9 of context switches attempted by the application, with lit­tle effect on the 
+simulation results. Finally, future versions of MemSpy may use the ha.xdwam?trace facilities available 
+on the DASH multiprocessor to gather memory reference statistics without the overheads inherent to Tango 
+s sequen­tial simulation-based approach.   Discussion MemSpy s statistics have proven useful in understanding 
+the memory system behavior of several applications. First, our initial focusing mechanism, Percentage 
+of Total Mem­ory Stall Time, is effective in pointing the user towards prob.. lem areas in the code. 
+Second, we have found the break­down of the causes of n sses to be quite useful. Knowing whether the 
+memory system problem is one of interfer­ence, sharing, or poor spatial locality is a large step toward 
+solving the problem, and MemSpy s statistics on causes of misses give the user much of the information 
+needed to diagnose these problems. However, one level of reason­ing that is still left to the user is 
+deciding whether misses are intxinsic to the program, or whether they are excess misses that one can 
+hope to optimize away. For example, in the tri code, misses in M.n: accounted for 70% of total misses 
+after tuning. By examining the code, the user can conclude that these misses are intrinsic, and cannot 
+be significantly reduced. In some cases, a comparison of mul­tiprocessor misses to uniprocessor misses 
+can act as a guide in determining what 12action of the misses are intrinsic. We anticipate several extensions 
+to MemSpy s user in­terface. These include integmting MemSpy into a hierarchy of tools, to provide a 
+complete perfonrmmx tuning system; thus, a high-level tool like Quartz would provide initial in­formation 
+on code bottlenecks, and subsequent runs with MTOOL and MemSpy would give greater detail on spe­cific 
+memory performance bottlenecks. Whhin MemSpy itself, we intend to implement a database to ston? informa­tion 
+about p~vious runs. Such a ctatabase would allow the user to easily compare statistics from the current 
+run with statistics IYom previous runs of the same program. The current MemSpy prototype is simulator 
+base&#38; which gives it several advantages and disadvantages. Sim­ulation allows an application to be 
+tuned with different sets of architectural parameters, and can be usefal in evaluat­ing expected performance 
+of an application on machines not yet available. However, MemSpy s reliance on simula­tion degrades its 
+performance and somewhat Simits ita use­fulness. Clearly, improvements in simulation performance would 
+make MemSpy a more viable tool for a wider range of applications. We intend to optimize the performance 
+of the simulation-based version of MemSpy. Furthermore, for many applications, one can run them in ways 
+that reduce execution times while still giving realistic memory behav­ior. For example, with many numerical 
+applications, one can run them for a small number of iterations and then extrapolate their performance 
+to more realistic numbers of iterations; the t ri code k one such example of this. An­other way to observe 
+realistic behavior with less simulation time is to study cases where both problem size and proces­sor 
+cache sizes have been proportionately scaled down. We are also investigating a MemSpy implementation 
+us­ing the hardware performance monitor on the DASH multi­processor. DASH s hardwme monitor collects 
+traces of bus activity which can then be processed to generate MemSpy statistics. This approach promises 
+a significant performance improvement over the current simulator driven prototype. Furthermore, it allows 
+for a more complete view of program execution, including effects like virtual to physical memory mapping, 
+scheduling, and multiprogramming which are of­ten more difficult (though not impossible) to account for 
+in simulation-based approaches. 7 Conclusions In summary, we have found MemSpy s statistics to be ef­fective 
+in explaining many of the unknowns of memory system behavior for both parallel and sequential programs. 
+MemSpy s data oriented statistics offer an orthogonal view to code oriented statistics, and give the 
+user greater leverage in tuning memory performance. Statistics on the causes of an application s cache 
+misses are also an important aid in performance debugging that has not been adequately pro­vided previously, 
+We envision using MemSpy as part of a hierarchy of performance debugging tools: higher level tools provide 
+initial insight into program behavior, while MemSpy provides detailed information on memory system behavior 
+to address memory performance bottlenecks.  8 Acknowledgments We would like to thank Helen Davis, Doug 
+Pan, and Ed Rothberg for their comments on previous versions of this paper. Thanks also go to Ed Rothberg 
+for providing the case study applications. This work was supported in part by the Digital Equipment Corporation 
+Systems Research 11, Performance Evaluation Review, Vol. 20, No. 1, June 1992 Center and DARPA contract 
+NOO014-87-K-0828. Anoop Gupta is also supported by a National Science Foundation Presidential Young Investigator 
+Award.  References [1] A. Agarwrd and A. Gupta. Memory Reference Charac­teristics of Multiprocessor 
+Applications under MACH In Proc. ACM SIGMETRICS Conference on the Mea­surement and Modeling of Computer 
+Systems, May 1988. [2] T. E. An&#38;rson and E. D. Lazowska. Quartz: A Tool for Tuning Parallel Program 
+Performance. In Proc. ACM SIGMEJRICS Conference on the Measurement and Modeling of Computer Systems, 
+pages 115-125, May 1990. [3] Z. Aral and I. Gertner. Non-Intmsive and Interac­tive Profiling in Parasight. 
+In Proc. ACM SIGPUN Parallel Programming: Experience with Applications, Languages and Systems (PPEALS), 
+pages 21 30, July 1988. [4] H. Davis, S. R. Goldschmidt, and J. Hennessy. Tango: A Multiprocessor Simulation 
+and Tracing System. In Proc. International Conference on Parallel Process­ing, pages 99-107, Aug. 1991. 
+[5] J. Dongarra, O. Brewer, J. A. Kohl, and S. Fineberg. A Tool to Aid in the Design, Implementation, 
+and Un­derstanding of Matrix Algorithms for Parallel Proces­sions. Journal of Parallel and Distributed 
+Computing, 9:185-202, June 1990. [6] I. Duff, R. Grimes, and J. Lewis. Sparse Matrix Test Problems. ACM 
+Transactions on Mathematical Sofi­ware, 15:1 14, 1989. [7] A. J. Goldberg and J. Hennessy. MTOOL: A Method 
+for Isolating Memory Bottlenecks in Shared Memory Multiprocessor Programs. In Proc. International Con­ference 
+on Parallel Processing, pages 251-257, Aug. 1991. [8] A. J. Goldberg and J. Hemessy. Performance Debug­ging 
+Shared Memory Multiprocessor Programs with MTOOL. In Proc. Supercomputing, pages 481-490, Nov. 1991. 
+[9] S. L. Graham, P. B. Kessler, and M. K. McKusick. An Execution Profiler for Modular Programs. So@are 
+Practice and Experience, 13:671-685, Aug. 1983. [10] J. Hennessy and N. Jouppi. Computer Technology 
+and Architecture: An Evolving Interaction. IEEE Com­puter, pages 18 29, Sept. 1991. [11] M. Lam, E. 
+Rothberg, and M. Wolf. The Cache Per­formance and Optimization of Blocked Algorithms. In Proc. Fourth 
+International Conference on Architec­tural Support for Programming Languages and Oper­ating Systems (ASPLOS), 
+pages 63 74, Apr. 1991. [12] D. Lenoski, J. Laudon, T. Joe, D. Nti L. Stevens, A. GuptL and J. Hemessy. 
+The DASH Prototype: Implementation and Performance. To ap­pear in Proc. Nineteenth Annual International 
+Confer­ence on Computer Architecture, May 1992. [13] E. Lusk, R. Overbeek, et al. Portable Programs 
+for Parallel Processors. Holt, Rinehart and Wmton, Inc., 1987. [14] E. Rothberg and A. Gupta. Parallel 
+ICCG on a Hierar­chical Memo~ Multiprocessor Addressing the Tri­angular Solve Bottleneck. Technical Report 
+CSL-TR­90-449, Stanford University Computer Systems Lab­oratory, Sept. 1989. To appear in Parallel Computing 
+92. [15] Z. SegaJl and L. Rudolph. PIE: A Programming and Instrumentation Environment for ParalJel Processing. 
+IEEE So@are, pages 22 37, Nov. 1985. [16] J. P. Singh, W.-D. Weber, and A. Gupta. SPLASH: Stanford Parallel 
+Applications for Shared-Memory. Technical Report CSL-TR-91-469, Stanford Univer­sity, Apr. 1991. [17] 
+L. Soule and A. Gupta. An Evaluation of the Chandy­Misra-Bryant Algorithm for Digital Logic Simulation. 
+In Proc. Sixth Workshop on Parallel and Distributed Simulation, Jan. 1992. [18] B. Zom and P. N. Hiltinger. 
+A Memory Allocation Profiler for C and Lisp. Technical Report UCB/CSD 88/404, University of California, 
+Berkeley, Feb. 1988. 12. Performance Evaluation Review, Vol. 20, No. 1, June 1992 
+			

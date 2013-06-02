@@ -1,0 +1,460 @@
+
+ Job Scheduling in the presence of Multiple Resource Requirements * William Leinberger, George Karypis, 
+Vipin Kumar Department of Computer Science and Engineering, University of Minnesota (leinberg, karypis, 
+kumar) @ cs.umn.edu Abstract In past massively parallel processing systems, such as the Intel Paragon 
+and the Thinking Machines CM-5, the scheduling problem consisted of allocating a single type of resource 
+among the waiting jobs; the processing node. A job was allocated the minimum number of nodes re­quired 
+to meet its largest resource requirement (e.g. mem­ory, CPUs, I/O channels, etc.). Recent systems, such 
+as the SUN E10000 and SGI O2K, are made up of pools of in­dependently allocatable hardware and software 
+resources such as shared memory, large disk farms, distinct I/O chan­nels, and software licenses. In 
+order to make ef.cient use of all the available system resources, the scheduling algo­rithm must be able 
+to maintain a job working set which fully utilizes all of the resources. Previous work in scheduling 
+multiple resources focused on coordinating the allocation of CPUs and memory, using ad-hoc methods for 
+generating good schedules. We provide new job selection heuristics based on resource balancing which 
+support the construc­tion of generalized K-resource scheduling algorithms. We show through simulation 
+that performance gains of up to 50% in average response time are achievable over classical scheduling 
+methods such as First-Come-First-Served with First-Fit back.ll. Keywords: parallel job scheduling, multiple 
+resource constraints, high performance computing 1 Introduction The hardware architectures of past massively 
+parallel processing systems, such as the Intel Paragon, and the *This work was supported by NASA NCC2-5268 
+and by Army High Performance Computing Research Center cooperative agreement num­ber DAAH04-95-2-0003/contract 
+number DAAH04-95-C-0008. Access to computing facilities was provided by AHPCRC, Minnesota Supercom­puter 
+Institute. Permission to make digital/hard copy of all or part of this work for personal or classroom 
+use is granted without fee provided that copies are not made or distributed for profit or commercial 
+advantage, the copyright notice, the title of the publication and its date appear, and notice is given 
+that copying is by permission of ACM, Inc. To copy otherwise, to republish, to post on servers or to 
+redistribute to lists, requires prior specific permission and/or a fee. Thinking Machines CM5, were primarily 
+distributed mem­ory systems. Even for a shared memory system such as the CRI T3E, the high-latency of 
+remote memory accesses pushed application developers to effectively treat them as distributed systems. 
+Applications were tuned to make the most of the performance available using the CPU and mem­ory resources 
+within a single system node. Due to the distributed nature of these parallel systems, the schedul­ing 
+problem consisted of allocating a single resource type, the processing node, among the waiting jobs. 
+A job was allocated the minimum number of nodes required to meet its largest resource requirement (e.g. 
+memory, CPUs, I/O channels, etc.). As a result, many applications wasted re­sources as they executed 
+in the system. For example, a memory intensive job was allocated enough nodes to meet the jobs memory 
+requirements, but might not have needed all the CPUs which were co-allocated by default. The ex­cess 
+CPUs were not available to other waiting jobs and were essentially wasted. Still, given the restrictions 
+imposed by the distributed hardware architectures, this all or nothing approach to resource allocation 
+was the best available. Recent systems, such as the SUN E10000, SRC-6, and the SGI Origin 2000, are made 
+up of pools of independently allocatable hardware and software resources such as shared memory, large 
+disk farms, distinct I/O channels, and soft­ware licenses. Technology advances in computer hardware, 
+software, and architecture allow these shared-everything systems to support application design styles 
+which are in­dependent of the underlying physical hardware partitioning. In order to ef.ciently exploit 
+this .exibility, new scheduling algorithm are required which can maintain a job working set which fully 
+utilizes all of the resources. The previous approaches used for scheduling single resource systems do 
+not directly extend to supporting this K-resource scheduling problem. A key problem with the single resource 
+schedul­ing algorithms is that they are not designed to make use of the information in the additional 
+resource requirements for a given job, or of the additional resource usage statuses in SC 99, Portland, 
+OR (c) 1999 ACM 1-58113-091-8/99/0011 $3.50 the parallel system. Our contribution is to provide new algorithms 
+for the generalized K-resource scheduling problem. Speci.cally, our algorithms are resource-aware, meaning 
+that they are able to use the additional resource information in the sys­tem to intelligentlyselect the 
+orderfor executing the waiting jobs. We show through simulation that performance gains of up to 50% in 
+average response time are achievable over single resource scheduling methods. The remainder of this document 
+is outlined below. Sec­tion 2 provides a summary of past research in single and multi-resource job scheduling 
+algorithms along with a dis­cussion of the limitations of these algorithms when applied to the K-resource 
+scheduling problem. Section 3 presents scheduling algorithms based on our new K-resource bal­ancing heuristics. 
+Experimental results are provided in Sec­tion 4, with a summary provided in Section 5. 2 Related Research 
+2.1 Past Work Job scheduling in parallel systems has been extensively researched in the past [10],[3], 
+[11]. Typically this research has focused on allocating a single resource type (e.g. CPUs) to jobs in 
+the ready queue. However, the use of many of these scheduling algorithms has been limited due to restric­tions 
+in application designs, runtime systems, or the job management system itself. Therefore, simple allocation 
+schemes such as First-Come-First-Serve (FCFS) or FCFS with First-Fit back.ll (FCFS/FF) are used in practice 
+[9], [4],[16]. Current job scheduling practices typically support vari­able resource allocation to a 
+job, and run-to-completion scheduling. Scheduling policies are also heavily based on First-Come-First-Served 
+(FCFS) methods. A FCFS scheduling algorithm allocates resources to jobs in the or­der that they arrive. 
+The FCFS algorithm schedules the next job in the ready queue as soon as suf.cient system resources become 
+available to meet all of the jobs requirements. The advantage is that this provides a level of determinism 
+on the waiting time of each job. The disadvantage of FCFS shows up when the job at the head of the ready 
+queue cannot be scheduled immediately due to insuf.cient system resources, but jobs further down the 
+queue would be able to execute given the currently available system resources. These latter jobs are 
+essentially blocked from executing while the sys­tem resources remain idle. This de.ciency led to the 
+addi­tion of back.lling to the FCFS scheduling algorithm. In the event that the job at the head of the 
+ready queue cannot be scheduled immediately, conservative back.lling searches farther down the ready 
+queue for a job which is able to be scheduled immediately. The only other constraint on these back.ll 
+candidates is that they cannot interfere with the ex­pected start time of jobs which come before them 
+in the ready queue (e.g. jobs which arrived before them) [4]. A weaker version of conservative back.ll 
+is the EASY back.ll heuristic which selects any job from the queue which does not interfere with the 
+expected start time of the .rst blocked job in the ready queue [9]. Typically, back.ll job candi­dates 
+are the smaller or shorter jobs waiting in the ready queue. Back.lling results in a lower average response 
+time for the back.ll jobs, and guarantees some level of progress to larger jobs. A generalized back.ll 
+scheme protects the top N jobs in the ready queue. This supports trading deter­minicity for performance 
+in average response time. Other variants of back.ll have also been studied [17], [18]. A limited effort 
+has extended this work to scheduling jobs with two resource requirements: CPUs and memory. In [13], memory 
+requirements were used as a lower-bound constraint on the number of CPUs to allocate to a job in a distributed 
+memory system. In [15], a branch-and-bound approach was used to select jobs which .t in the available 
+memory in a shared memory system then allocated CPUs to those jobs based on the number available and 
+the current system load. The goal was to allocate the minimum CPU and memory resources to a job such 
+that neither resource al­location would cause severe performance degradation. Both of these efforts recognized 
+that the performance of a job is dependent upon more than the number of CPUs it receives. This shows 
+that future job scheduling systems must be more cognizant of all resource requirements for a given job 
+when attempting to allocate resources to that job. However, these efforts do not provide a clear path 
+for generalized schedul­ing under K-resource requirements. 2.2 Limitations of Current Approaches The 
+FCFS-based algorithms are restricted in two ways. First, they select jobs based on their general arrival 
+order. The pure FCFS job allocation scheme would pack jobs from the job queue into the system, in order 
+of their arrival, un­til the next job in the queue required more of some sys­tem resource (CPUs, memory, 
+disk space, etc.,) than was available. In this case, the job allocation scheme is blocked from scheduling 
+further jobs until suf.cient resources be­come available for this job. This potentially results in large 
+fragments of the other K -1 resources being under-utilized (and possibly all K resources, if the head 
+job blocks due to a large resource requirement). The FCFS with back­.ll probabilistically performs better 
+by skipping over jobs which block while waiting for suf.cient resources and .nd­ing smaller jobs which 
+can make use of the available re­sources. Still, the back.ll jobs are selected in a FCFS order from among 
+all possible back.ll candidates. A single re­source may become exhausted while others remain under­ Job 
+Queue Parallel System Job CPU Req. Req. Mem 0 8 4 1 4 2 2 7 16 3 11 20 4 1 12 5 1 10  Job Allocation 
+Scheme (a) (b)  Scheduling FCFS FCFS/FF UNC Epoch Jobs P/M Jobs P/M Jobs P/M 0 0, 1 12/06 0,1,4,5 
+14/28 0, 2, 4 16/32 1 2 07/16 2 07/16 1, 3, 5 16/32 2 3, 4 12/32 3 11/20 3 5 01/10  Figure 1. Job Allocation 
+Scheme Comparison utilized. Second, these algorithms are not resource aware. They only check to see if 
+a job .ts given the current system re­source availability. They make have no mechanism for us­ing the 
+additional information in the multiple requirements for a given job or in the multiple resource usage 
+statistics of the system. In order for a job allocation scheme to ef.­ciently utilize the independently 
+allocatable resources of the K-resource system, it must be free to select any job based on matching all 
+of the jobs resource requirements with the available system resources. As an example, consider the JMS 
+state depicted in .g­ure 1 (a). The job allocation scheme must map the six jobs in the job queue to a 
+two-resource system with 16 CPUs and 32 GBytes of memory. The CPU and memory require­ments of each job 
+are speci.ed. Assume that the order in the job queue represents the order of arrival and that each job 
+requires the same amount of execution time t. Under these assumptions, a job allocation scheme would 
+select a set of jobs for execution during scheduling epoch ei. The number of epochs required to schedule 
+all jobs in the job queue is used to compare different job allocation schemes. Figure 1 (b) shows the 
+jobs allocated to each scheduling epoch for FCFS, FCFS/FF, and an unconstrained job allo­cation scheme 
+(UNC). The UNC scheme is free to select any job in the job queue for allocation during the current epoch. 
+Although this is a contrived example, it illustrates the basic .aws of FCFS-based job allocation schemes 
+and the potential of less restrictive job allocation schemes. The FCFS allocation scheme allocates jobs 
+0 and 1 in the .rst scheduling epoch but then cannot allocate job 2, due to the total CPU requirement 
+of the three jobs being greater than the system provides (8+4+7> 16). FCFS/FF overcomes this .aw by skipping 
+job 2 and scheduling jobs 4 and 5 in the .rst epoch. However, it then must schedule jobs 2 and 3 in separate 
+epochs as there are no other jobs available to back.ll in each of these epochs. Finally, the optimal 
+UNC algorithm was smart enough to not schedule jobs 0 and 1 in the same epoch. Instead it .nds two job 
+subsets which exactly match the machine con.guration. As a result, the unrestricted job allocation scheme 
+requires fewer schedul­ing epochs to complete all jobs. The FCFS/FF-based schemes use a greedy method 
+to back.ll a machine by selecting the next job which .ts, sub­ject to the back.ll constraints. In general, 
+these methods do not look at the additional resource requirements of the jobs in the job pool or the 
+current state of the system re­source loads. In the K-resource scheduling problem, this approach leads 
+to premature depletion of some resources while others remain under-utilized. In the previous exam­ple, 
+selecting job 0 followed by job 1 depletes the available CPU resources faster than the available memory 
+resources. Our approach is to provide K-resource aware job selection heuristics which use additional 
+job resource requirements and current system state to guide the selection of the next back.ll job. These 
+heuristics are easily incorporated into the current FCFS/FF-based scheduling algorithms by mod­ifying 
+the back.ll job selection procedure. Rather than se­lect the next job which .ts, our heuristics attempt 
+to select the job which best balances the usage of all the system re­sources. Our simulation results 
+show that enhancing the FCFS/FF scheduling algorithm with the K-resource balanc­ing heuristics provide 
+a substantial performance improve­ment in average system response time over the previous greedy .rst-.t 
+heuristics.  3 The Balanced Resource Heuristics, BL and BB The First-Fit (FF) back.ll job selection 
+heuristic requires only that the job .ts into the system. The K-resource bal­ancing heuristics select 
+jobs which attempt to correct a re­source imbalance in the system. De.ne the current us­age of a resource 
+i, 1 = i = K, in the system as Si. Likewise, de.ne the resource requirements for job j as Rij , 1 = i 
+= K. Without loss of generality, assume that 0.0 = Si,Rj = 1.0, 1 = i = K. A resource imbalance i is 
+de.ned as the condition where Si <Sj , 1 = i, j = K in the current scheduling epoch. Essentially, at 
+least one re­source is more heavily used than the other resources. The general notion is that if the 
+resource usages are all kept bal­anced, then more jobs will likely .t into the system, creating a larger 
+back.ll candidate pool. The .rst simple heuristic algorithm follows from this no­tion. Consider a system 
+state in which l is the resource which is currently at a lower utilization than all the other resources 
+(Sl <Si, 1 = i, l l ). A lowest­ = K, i= utilization aware selection algorithm searches the job queue 
+looking for a job j which .ts in the system and which has j jj Ras its largest resource requirement (R= 
+Ri , 1 = i, l = ll K, i l). Adding this job to system heuristically lessens = the capacity imbalance 
+at resource l. The lowest-resource aware packing algorithm can be generalized to the case where the algorithm 
+looks at the w, 0 = w = K - 1 low­est resource utilizations and searches for an item which has the same 
+w corresponding largest resource requirements. The parameter w is a window into the current system state. 
+This is the general windowed lowest-resource job selec­tion heuristic. Similar heuristics have been successfully 
+ap­plied to the multi-constraint graph partitioning problem [7] and a generalized multi-capacity bin-packing 
+problem [8]. The connection between multi-constraint bin-packing and multi-resource scheduling has also 
+been studied [12], [1], [5]. The additional selection granularity provide by the win­dow, w, provides 
+a bene.t when there are suf.cient items from which to choose (O(K!)). However, in the typical job scheduling 
+system, the number of jobs in the queue can be quite small (< 100). Therefore, a version of this heuris­tic 
+which looks only at the single lowest utilized resource (w =1) is pursued here and is called Back.ll 
+Lowest (BL). The BL heuristic may also suffer from a resource size granularity problem. In the previous 
+bin-packing effort, the performance of the windowed lowest-resource heuristic de­graded as the average 
+resource requirement of an item grew with respect to the size of the bin. This reduced the num­ber of 
+items that would .t into a bin, which reduced the opportunity of the heuristic to correct an imbalance. 
+In the typical job scheduling system the size of the jobs relative to the empty space in the machine 
+is often quite large. When one job leaves the system, often only a single job can be selected to replace 
+it. Therefore, the BL heuristic cannot guarantee to actually balance the resource utilization as it will 
+only attempt to balance one of the K resources with the single replacement job. For this reason, we created 
+a second balancing heuristic which selects a job based on its overall ability to balance the resource 
+utilization, termed Back.ll Balanced (BB). BB uses a balance measure to score each back.ll job candidate 
+and then selects the job which results in achieving the best resource utilization balance based on this 
+measure. For our experiments, we used the following balance measure: j maxi(Si + R) i . K j i=1 Si+Ri 
+K where Si represents the current utilization of resource i by the system S, and Rj represents the requirement 
+for re­ i source i by job j. This is essentially a max/average bal­ance measure where a lower value 
+indicates a better bal­ance. Finally, both BL and BB, as de.ned, guide the job se­lection towards balancing 
+the resource utilization, but not increasing the utilization levels. Therefore, a fullness mod­i.er is 
+applied to both schemes which relaxes the balance criteria as the system becomes full. This allows a 
+larger job which achieves a worse balance to be selected over a smaller job which achieves a better balance 
+when the larger job nearly .lls the machine. This fullness modi.er is sim- . Kj i=1 Si+Ri ply 1.0- 
+or the average resource availability if K job j would be scheduled. The score of a back.ll job candi­date 
+is the product of the balance measure and the fullness modi.er. The candidate with the best score is 
+selected for back.lling. Note that the balancing heuristics are aimed at improving the packing ef.ciency 
+of the back.ll jobs, which are typi­cally small. In the online job scheduling problem, however, the overall 
+system utilization is driven by the arrival rate and scheduling of the large jobs. The real goal is to 
+im­prove the average response time for the system by improv­ing the response time of the small jobs without 
+impacting the starting time of the large jobs. So while the large jobs drive the system utilization (overall 
+packing ef.ciency), in­telligent back.lling can be used to improve the average re­sponse time. When the 
+job stream has a large percentage of jobs with small resource requirements, more jobs will .t into the 
+system at one time giving the BL and BB schemes more opportunities to achieve a balanced resource system 
+state (which further increases packing opportunities). For job streams in which the average resource 
+requirements per job are large, the BL and BB schemes with the fullness modi.er approach a Best-Fit scheme 
+in performance. 4 Experimental Results The following subsections describe a parametric simula­tion study 
+to evaluate the BL and BB heuristics. The FCFS algorithm with First-Fit EASY back.ll (FCFS/FF-EASY) is 
+used as the baseline for performance comparison purposes. This algorithm was enhanced with the BL and 
+BB heuris­tics to FCFS/BL-EASY and FCFS/BB-EASY. Additionally, a FCFS with conservative back.ll, FCFS/FF-CONS, 
+was also simulated for completeness. The followingsections de­scribe the workload test cases, performance 
+measures, and experimental results. 4.1 Workload Model Each of the algorithms were simulated on two types 
+of work loads. First, a suite of synthetic workloads was gen­erated. This allowed us to vary different 
+characteristics of 0.45 Dror Feitelson 97 Workload Normal Distribution (Base) 0.5  0.5 0.45 0.4 0.4 
+0.35 0.35 Frequency 0.3 0.3 0.25 0.25 0.2 0.2 0.15 0.1 0.05 0 0 0.2 0.4 0.6 0.8 1 Resource Req. Figure 
+2. Feitelson CPU Distribution the workload with respect to the K resources. Second, two production job 
+traces from the NAS facility at NASA Ames were used as the basis for workloads with two resource re­quirements, 
+CPU and memory. Each of these workloads is described in more detail below. Synthetic Workloads. Several 
+studies on production par­allel workloads have been recently published [14], [6], [2]. These studies 
+typically analyze job trace data which has been collected over a period of time at production parallel 
+computing sites. These studies have focused primarily on workload characteristics such as job arrival 
+rates, number of CPUs required or job size, and the relationship between job size and job execution time. 
+These studies have also resulted in the creation of models for generating synthetic workloads which mimic 
+the characteristics of the produc­tion workload traces. From a multiple resource utilization point of 
+view, these studies are limited in that they typi­cally include only the total number of CPUs and perhaps 
+the peak memory usage statistics for each job. Experimen­tal data for more than a few resources is simply 
+not available yet. Therefore, our synthetic workload generator extends a single resource workload model 
+to K resources with a para­metric relationship between the Ri resource components. We started with a 
+baseline workload model developed by Dror Feitelson et al [2]. This workload model is based on a detailed 
+analysis of six production parallel system work logs and is generally accepted as capturing the major 
+characteristics of a typical production site. A more detailed description and the code for generating 
+the workload is available from: www.cs.huji.ac.il/labs/parallel/workload/wlmodels.html . This code generator 
+creates a list of jobs, with each job described by size (number of processes, or parallelism), runtime 
+(weakly correlated to the size), and a repeat count. 0.15 0.1 0.05 0 0 0.2 0.4 0.6 Resource Req. 0.8 
+1 Figure 3. Normal Distribution The repeat count captures a secondary effect in the fact that a user 
+will submit a job, wait for results, and then submit the same job again, slightly altered. We used the 
+job size and runtime characteristics for this study. Figure 2 shows the distribution of job sizes generated 
+by this model (assuming a 128-CPU system). While the general shape of this distribution is exponential, 
+the model captures other characteristics seen in a production environment. Most notable are that there 
+are a high percentage of small jobs and that job sizes which are multiples of 2 or squares of integers 
+are more likely to occur in practice. For example, in Figure 2, the spike at 0.5 represents a job size 
+of 64 CPUs (26), while a little bump just short of 0.2 represents a job size of 25 CPUs (52). The Feitelson 
+workload model was extended with the following three parameters: 1. K: This study involves the scheduling 
+and allocation of a K-resource system. For each job in the base­line Feitelson model, the job size was 
+used to gener­ate a vector of K resource requirements for that job. For these simulations, values of 
+K were taken from {2, 4, 8}. 2. Relationship of the Ris: The relationship between the Ris of a single 
+job was explored using the variance between the Ris of the job. A set of K random num­bers was drawn 
+from a normal random variable with mean=0.5 and then scaled with the job size from the Feitelson model. 
+The variance values used for the normal distribution were taken from {0.01, 0.1, 1.0}. These normal distributions 
+are depicted in Figure 3. Figures 4 (a), (b), and (c) show the resulting distri­bution of resource Ri 
+for each of the three variance values (note that all Ris, 0 = K - 1, have the same distribution). As 
+the variance increases, the resource  0.45 0.5 (a) v=0.01 R[i] Max: K=8 1 (a) v=0.01 0.4 0.8 0.35 0.3 
+0.25 0.2 R[1] Req. R[1] Req. R[1] Req. 0.6 0.4 0.15 0.1 0.2 0.05 0 0 0 0.2 0.4 0.6 0.8 10 0.2 0.4 0.6 
+0.8 1 Resource Req. R[0] Req. (b) v=0.10 (b) v=0.10 0.5 1 R[i] 0.45 Max: K=8 0.4 0.8 0.35 0.3 0.25 0.2 
+0.6 0.4 0.15 0.1 0.2 0.05 0 0 0 0.2 0.4 0.6 0.8 10 0.2 0.4 0.6 0.8 1 Resource Req. R[0] Req. (c) v=1.00 
+(c) v=1.00 0.5 1 R[i] 0.45 Max: K=8 0.4 0.8 0.35 0.3 0.25 0.2 0.6 0.4 0.15 0.1 0.2 0 0 0 0.2 0.4 0.6 
+0.8 10 0.2 0.4 0.6 0.8 1 Resource Req. R[0] Req. Figure 4. Workload Distributions with Normal Figure 
+5. Workload Relationship with Normal Extensions Extensions Frequency Frequency Frequency (a) NAS 64 CPU 
+Trace 1 (a) NAS 64 CPU Trace 0.5 0.45 CPU Mem 0.8 0.4 0.35 0.3 0.25 0.2 0.15 Memory Req. Memory Req. 
+0.6 0.4 0.2 0.1 0.05 0 0 0 0.2 0.4 0.6 0.8 1 0 0.2 0.4 0.6 0.8 1 CPU Req. Resource Req. (b) NAS 256 
+CPU Trace (b) NAS 256 CPU Trace 1 0.5 CPU 0.45 Mem 0.8 0.4 0.35 0.3 0.25 0.2 0.15 0.6 0.4 0.1 0.2 
+0 0.05 0 0.2 0.4 0.6 Resource Req. 0.8 1 0 0 0.2 0.4 0.6 CPU Req. 0.8 1 Figure 6. Workload Distributions 
+-NAS Trace Figure 7. Workload Relationships -NAS Trace Frequency Frequency spikes in the Feitelson model 
+are spread out. Also shown in Figure 4 (a), (b), and (c) is a second distri­bution which characterizes 
+the maximum of the Ri for each job. The use of this maximum distribution will be used to explain part 
+of our experimental results. As an example, Figures 5 (a), (b), and (c) graphically depict the relationship 
+of R0 and R1 in a 2-resource work­load under the three variance values. Under the low variance depicted 
+in Figure 5 (a), R1 essentially tracks R0. This workload could represent a system where the CPU requirements 
+are proportional to the memory re­quirements of the jobs in the job stream. In contrast, Figure 5 (c) 
+represents a workload where there are also a signi.cant number of CPU intensive or memory in­tensive 
+jobs. 3. System Load: The Feitelson model does not provide an interarrival time between jobs, as this 
+is depen­dent upon the repeat execution characteristic. How­ever, the arrival characteristic is generally 
+believed to be Poisson distributed. For this simulation, we chose to use the average ready queue length 
+achieved by the FCFS/FF-EASY scheduling algorithm as a base­line. Basically, a series of experiments 
+were run using FCFS/FF-EASY to determine an average arrival rate from a Poisson process which would produce 
+a desired average ready queue length. The same arrival rate was then used to simulate the other scheduling 
+algorithms. Ready queue lengths were taken from {32, 64, 128}. NAS Production Workloads. Two production 
+workload traces, provided by the NAS Facility of NASA s Ames Re­search Center, were also used as test 
+cases. The .rst work­load trace was for an SGI Origin 2000 system with 64 CPUs and 16 GBs of memory. 
+The second trace was for a larger SGI with 256 CPUs and 64 GBs of memory. Simulation workloads were derived 
+from these two traces as follows. First, these traces contained information on actual CPU usage and physical 
+memory usage for each job submitted to the system, as well as arrival time and execution time. Therefore, 
+these may be used as an example for analyzing a 2-resource scheduling system. However, many of the jobs 
+listed in the trace showed no CPU or memory usage. Since the goal of using these traces is to characterize 
+a resource relationship between multiple resources, we .ltered out the subset of jobs from the traces 
+which showed a positive us­age of both CPUs and physical memory, with at least one of the values non-zero. 
+This resulted in a set of approximately 4000 jobs from the 64 CPU system trace and approximately 10000 
+jobs from the 256 CPU system trace. Figures 6 (a) and (b) show the distribution of CPU and memory usage 
+for each of the traces, respectively. Figures 7 (a) and (b) graph­ically show the relationship between 
+the CPU and memory usage of each job in the two streams. Note that the 64 CPU system jobs tend to be 
+relatively large, each averaging about 10% of the CPUs in the system and about 8% of the mem­ory in the 
+system. This trace contains very few small jobs (requiring less than one full CPU). This re.ects the 
+nature of the production level workload for this system. In con­trast, the 256 CPU system is used primarily 
+for application development. Very few jobs use more than 25% of the sys­tem resources. While the workload 
+traces provided arrival times for each job, the arrival times of the .ltered job subset resulted in a 
+very low utilization of the system (no waiting, essen­tially). Therefore, synthetic arrival times were 
+generated in the same fashion as for the synthetic workloads described previously. 4.2 Performance Metrics 
+Two basic metrics were collected to compare the perfor­mance of these algorithms: 1. Average Response 
+Time: This the sum of the wait time plus the execution time of a job, averaged over all jobs. This metric 
+captures the ability of the scheduling algo­rithm to service the smaller, shorter jobs. Since the job 
+stream contains a large number of smaller short jobs, the metric provides a good measure of the quality 
+of the scheduling algorithm. 2. Weighted Average Response Time: The weight of a job is de.ned as the 
+product of its resource requirement and execution time. The weighted average response time is then the 
+product of the job weight and the job response time, averaged over all jobs. This is basically a measure 
+of how well the scheduling system provides progress to the large jobs. This is especially useful for 
+analyzing the performance of the i aggressive back.ll­based algorithms, where a job selected for back.lling 
+may block a job which arrived earlier.  4.3 Simulation Results Figures 8, 10, and 12 (a)-(c) depict 
+the average response time results for our synthetic workloads while Figures 14 (a)-(b) show the results 
+for the NAS workloads. Analo­gous data for the weighted average response time results are shown in Figures 
+9, 11, and 13 (a)-(c) and 15 (a)-(b), respectively. Each graph in the .gures shows the results for one 
+value of K, one Ri distribution (synthetic or produc­tion), and the three system load values. Recall 
+that the load value is referenced by the average job queue length achieved by the FCFS/FF-EASY scheduling 
+algorithm. In each Fig­ure, the performance gains (or losses) of FCFS/BL-EASY, FCFS/BB-EASY, and FCFS/FF-CONS 
+are normalized to Normalized Performance Gain Normalized Performance Gain Normalized Performance Gain 
+(a) K=2 (a) K=2 60  Normalized Performance Gain Normalized Performance Gain Normalized Performance 
+Gain 40 20 0 -20 -40 -60 -60 System Load System Load (b) K=4 (b) K=4 60 60  40 20 0 -20 -40 -60 -60 
+System Load System Load (c) K=8 (c) K=8 60 60  40 20 0 -20 -40 -60 System Load System Load Figure 8. 
+Average Response Time, V=0.01 Figure 9. Weighted Avg. Resp. Time, V=0.01 Normalized Performance Gain 
+Normalized Performance Gain Normalized Performance Gain (a) K=2 60 (a) K=2  Normalized Performance 
+Gain Normalized Performance Gain Normalized Performance Gain 40 20 0 -20 -40 -40 -60 -60 System Load 
+System Load (b) K=4 (b) K=4 60  40 20 0 -20 -40 -40 -60 -60 32 64 128 32 64 128 System LoadSystem 
+Load (c) K=8 (c) K=8 60 60  40 20 0 -20 -40 40 20 0 -20 -40 -60 -60 System Load System Load Figure 
+10. Average Response Time, V=0.10 Figure 11. Weighted Avg. Resp. Time, V=0.10 (a) K=2 (a) K=2 60 Normalized 
+Performance Gain Normalized Performance Gain Normalized Performance Gain  Normalized Performance Gain 
+Normalized Performance Gain Normalized Performance Gain 40 20 0 -20 -40 -60 System Load System Load (b) 
+K=4 (b) K=4 60  40 20 0 -20 -40 -40 -60 -60 System Load System Load (c) K=8 (c) K=8 60  40 20 0 -20 
+-40 -40 -60 -60 System Load System Load Figure 13. Weighted Avg. Resp. Time, V=1.00 Figure 12. Average 
+Response Time, V=1.00 Normalized Performance Gain Normalized Performance Gain (a) NAS 64 CPU Trace (a) 
+NAS 64 CPU Trace 60  Normalized Performance Gain Normalized Performance Gain 40 20 0 -20 -40 -60 -60 
+System Load System Load (b) NAS 256 CPU Trace (b) NAS 256 CPU Trace 60 60  40 20 0 -20 -40 -60 System 
+Load System Load Figure 14. Average Response Time, NAS Figure 15. Weighted Avg. Resp. Time, NAS Trace 
+Trace the baseline performance of FCFS/FF-EASY. A positive performance gain indicates a performance increase 
+while a negative performance gain indicates a poorer performance. The effects of each of the three parameters 
+on the av­erage response time metric for the synthetic workloads are described below, followed by a comparison 
+between the av­erage and weighted average response time results. A com­parison between the results of 
+the synthetic workloads and the NAS workloads is then presented. 4.3.1 Effect of K As K increases, the 
+probability that any single Ri is large also increases. This can be seen in the Max distributions shown 
+in Figures 4 (a)-(c). In these .gures, the max distri­bution shifts to the right and up of the single 
+R i distribu­tion. This causes a granularity issue in scheduling. Essen­tially fewer jobs may be scheduled 
+concurrently since any single job may require a large amount of one or more re­sources. Fewer back.ll 
+jobs are available to adjust the jobs selected for execution. Therefore, the performance of all EASY 
+back.ll-based heuristics approaches FF-CONS as K increases. In the limiting case, each job contains a 
+Ri =1.0 forcing all jobs to execute serially. The net effect is that the ability of any scheduling algorithm 
+to achieve a perfor­mance gain diminishes as K increases. The diminished concurrency at higher K reduced 
+the op­portunities for BB-EASY to balance the system state result­ing in lower performance gains. Still, 
+the BB-EASY heuris­tic maintains signi.cant performance gain over FF-EASY showing the bene.t of the resource-balancing 
+heuristic. By keeping the system resource usage balanced, BB-EASY is able to increase concurrency more 
+often than FF-EASY for high K, primarily by executing smaller jobs sooner. The performance gains achieved 
+by the BL-EASY heuristics de­creases with increasing K. Recall that BL-EASY only at­tempts to correct 
+the system resource with the largest usage imbalance. This is an approximation to balancing all re­sources, 
+and its error grows with increasing K. For large K, the concurrency achieved by BL-EASY is similar to 
+that achieved by FF-EASY. However, BL-EASY searches deeper into the ready queue searching for a job with 
+a partic­ular requirement distribution, blocking jobs which arrived earlier. The net effect is that the 
+overall average response time diminishes. 4.3.2 Effect of System Load In general, as the system load 
+increases, all algorithms have a larger pool of jobs from which to .nd suitable back.ll candidates. The 
+intelligent selection of back.ll jobs used by BB-EASY to balance system resource usage becomes more effective, 
+resulting in an increase in performance gains over FF-EASY. Simply put, BB-EASY makes better use of the 
+larger candidate pool than does FF-EASY. This same increase in the back.ll candidate job pool is actually 
+the down-fall of the BL heuristic, which tends to perform poorer at high loads. The larger candidate 
+pool increases the probability that BL-EASY will heuristically skip over jobs selected by FF-EASY and 
+BB-EASY in search of a job with a speci.c resource distribution, but which arrived later. This has the 
+effect of increasing the waiting time of jobs which were skipped. Also, since BL-EASY only indirectly 
+bal­ances the resource usage, the bene.t derived from a larger candidate job pool is less than for the 
+BB-EASY heuristic. The net result is that the average response time gains are less at high system loads, 
+for the BL-EASY heuristic. The num­ber of candidate back.ll jobs grows slower for FF-CONS than it does 
+for the EASY back.ll-based algorithms, so its performance gains drop as the system load increases. 4.3.3 
+Effect of Variability in the Ris As the variance of the Ris increases, the relative sizes of the largest 
+job requirement, Rlargest, and the smallest job requirement, Rsmallest, grows. This causes a granularity 
+issue, similar to that incurred by increasing K. As a result, the concurrency achievable in the system 
+by any schedul­ing algorithm is reduced. The disparity between the largest and smallest Ris has the effect 
+that the number of back.ll candidate jobs available to FF-CONS decreases even further than before, relative 
+to the EASY back.ll-based algorithms. Therefore, the EASY back.ll-based algorithms outperform FF-CONS 
+as the variability increases. The performance of BL-EASY increases with increasing variability. This 
+is be­cause BL-EASY attempts to balance the system state using a single Ri. At high variability, back.ll 
+candidate jobs tend to have a single Ri which is much larger than the others so this approximation to 
+balancing improves. The ability of BB-EASY to intelligently select a back.ll job which has the necessary 
+distribution of Ris needed to move the system to a balanced resource usage state increases with increased 
+variability. However the granularity issues reduce the op­portunities to balance the system state. 4.3.4 
+Comparison of Average vs Weighted Average Re­sponse Time Results In comparing Figures 8, 10, and 12 with 
+Figures 9, 11, and 13 we see that the performance gains achieved by the BB-EASY heuristic in average 
+response time are higher than the performance gains achieved in weighted average response time. While 
+the BB-EASY achieved performance gains of 10-50% in average response time, it achieves only gains of 
+10 - 30% in weighted average response time. This implies that the BB-EASY heuristic is ef.cient at moving 
+small jobs ahead of large jobs with minimal but positive impact to the waiting time of the large jobs. 
+In many production sites, this is actually a desirable effect during peak daytime hours as it improves 
+the response time of the small (and likely developmental) jobs. 4.3.5 Comparison of Synthetic Workload 
+and NAS Production Workload Results The NAS production workload traces most closely .t the characteristics 
+of the synthetic trace in which K =2 and v =1.0 as seen by comparing Figure 5 (c) with Figure 7. Both 
+NAS traces exhibit high variability between the two job resource requirements. The simulation results 
+for aver­age response time and weighted average response time for these two traces is provided in Figures 
+14 and 15, respec­tively. In comparing these .gures with the corresponding synthetic workload .gures, 
+Figures 12 (a) and 13 (a), it is evident that similar trends are achieved. Both the BB-EASY and BL-EASY 
+heuristics outperform the FF-EASY heuris­tic in average response time, whereas FF-CONS performs worse 
+than the EASY back.ll-based heuristics. Addition­ally, FF-CONS, BB-EASY and BL-EASY perform about the 
+same as FF-EASY in weighted average response time. The most notable discrepancy between the NAS trace 
+re­sults and the synthetic workload results is in the relative performances of the algorithms. With the 
+synthetic work­loads, the performance gains in average response time by BB-EASY and BL-EASY were almost 
+2:1, and grew with increasing system load. In the NAS workloads, these algo­rithms performed almost identically. 
+Also, the performance of FF-CONS fell off quickly with increasing system load. In contrast, the performance 
+of FF-CONS in the NAS work­load was small and constant across the system load ranges.  5 Summary In 
+this report, we de.ned a new K-resource scheduling problem and provided two heuristics which may be used 
+to extend current scheduling methods to work in this en­vironment. A K-resource workload model was also 
+devel­oped which may be used to compare the performance of K-resource scheduling algorithms along three 
+separate pa­rameters. The FCFS/BB-EASY back.ll heuristic provides up to a 50% performance gain in average 
+system response time and 40% performance in weighted average response time. The success of the FCFS/BB-EASY 
+scheduling algorithm shows that balancing resource usage can be effective in in­creasing system performance 
+in terms of the average and weighted average response time metrics. This success can be attributed to 
+the fact that FCFS/BB-EASY can perform a better job packing of the small (common case) jobs while maintaining 
+suf.cient progress on the large jobs. Future work will address further support for large job scheduling 
+for both online and of.ine scheduling of K-resource sys­tems. A second heuristic was adapted from two 
+other domains: multi-constraint graph partitioning and multi-capacity bin­packing. The FCFS/BL-EASY scheduling 
+algorithm failed for two reasons. First, the job size relative to the available system resources at any 
+single scheduling epoch provides little opportunity for the heuristic to pick a single job which improves 
+the system resource usage balance. This is due to the fact that the heuristic looks at a single (maximal) 
+re­source imbalance at a time which does not accurately cap­ture the state of the system. Second, the 
+small sample size in the job ready queue is further decreased (actually reordered) due to the implicit 
+partitioning performed by the heuristic. Therefore, this heuristic, while appropriate for the original 
+problem domains, is probably not appropriate for online job scheduling. While our K-resource workload 
+model has many sim­ilarities to two speci.c production workload models, ad­ditional work is required 
+to further characterize the exact relationship between the resource requirements of a job in a production 
+job stream. Another issue with the workload model is with the underlying assumption that all resource 
+requirements are known in advance. There are many closed production sites in which the entire workload 
+is composed of a small number of applications which are run repeatedly on new data sets. In this scenario, 
+it is quite feasible to ac­curately predict the resource requirements of an application at queue time. 
+However, in the general on-line scheduling scenario, this information may have a signi.cant error rate, 
+or may not be available. This scenario is a subject of of our current work in progress. Our success under 
+the current assumptions provide the motivation for this further effort. Finally, note that the K-resource 
+scheduling problem, as de.ned, is dense. There is an implicit assumption that ev­ery job requires some 
+amount of each resource. This model is most appropriate for scheduling parallel applications in a single 
+parallel system, where the number of resources under consideration is small (e.g. K = 8). Conversely, 
+a sparse K-resource scheduling problem may be de.ned as one in which every job requires a small subset 
+of the K available resource types. The sparse model is more appropriate for grid scale computing where 
+there may be hundreds to mil­lions of resources types. This report has focused on the dense problem formulation. 
+Our current work in progress is also addressing this sparse formulation. 6 Acknowledgment We would like 
+to thank James Patton Jones of NASA Ames/MRJ for providing the NAS workload traces, as well as valuable 
+information in interpreting the data in the traces.  References [1] Jr. E. G. Coffman, M. R. Garey, 
+and D. S. Johnson. Approximation algorithms for bin-packing -an up­dated survey. In G. Ausiello, M. Lucertini, 
+and P. Ser­a.ni, editors, Algorithm Design for Computer Sys­tem Design, pages 49 99. Springer-Verlag, 
+New York, 1984. [2] D.G. Feitelson. Packing schemes for gang scheduling. In D.G. Feitelson and L. Rudolph, 
+editors, IPPS 96 Workshop: Job Scheduling Strategies for Parallel Pro­cessing, volume 1162, pages 65 
+88. Springer-Verlag, New York, 1996. Lect. Notes in Computer Science. [3] D.G. Feitelson and L. Rudolph. 
+Parallel job schedul­ing: Issues and approaches. In D.G. Feitelson and L. Rudolph, editors, IPPS 95 Workshop: 
+Job Scheduling Strategies for Parallel Processing, volume 949, pages 1 18. Springer-Verlag, New York, 
+1995. Lect. Notes in Computer Science. [4] D.G. Feitelson and A.M. Weil. Utilization and pre­dictability 
+in scheduling the ibm sp2 with back.lling. In Proceedings of the IPPS/SPDP 1998, pages 542 546. IEEE 
+Computer Society, 1998. [5] M. R. Garey and R. L. Graham. Bounds for multi­processor scheduling with 
+resource constraints. SIAM Journal of Computing, 4(2):187 201, June 1975. [6] S. Hotovy. Workload evolution 
+on the cornell theory center ibm sp2. In D.G. Feitelson and L. Rudolph, editors, IPPS 96 Workshop: Job 
+Scheduling Strate­gies for Parallel Processing, volume 1162, pages 27 40. Springer-Verlag, New York, 
+1996. Lect. Notes in Computer Science. [7] G. Karypis and V. Kumar. Multi-constraint graph par­titioning. 
+In Supercomputing 98, November 1998. [8] W. Leinberger, G. Karypis, and V. Kumar. Multi­capacity bin 
+packing algorithms with applications to job scheduling under multiple constraints. In Interna­tional 
+Conferfence on Parallel Processing, 1999. [9] D. Lifka. The anl/ibm sp scheduling system. Technical report, 
+Mathematics and Computer Science Division, Argonne National Laboratory, Argonne, IL, 1995. [10] R. K. 
+Mansharamani and M. K. Vernon. Compari­son of processor allocation policies for parallel sys­tems. Technical 
+report, Computer Sciences Depart­ment, University of Wisconsin, December 1993. [11] R.K. Mansharamani 
+and M.K. Vernon. Properties of the eqs parallel processor allocation policy. Technical Report 1192, Computer 
+Science Department, Univer­sity of Wisconsin-Madison, November 1993. [12] K. Maruyama, S. K. Chang, and 
+D. T. Tang. A gen­eral packing algorithm for multidimensional resource requirements. International Journal 
+of Computer and Information Sciences, 6(2):131 149, May 1976. [13] C. McCann and J. Zahorjan. Scheduling 
+memory con­strained jobs on distributed memory computers. In Proceedings of the 1995 ACM SIGMETRICS Joint 
+International Conference on Measurement and Mod­elling of Computer Systems, pages 208 219, 1996. [14] 
+W. Nitzberg, K. Windisch, V. Lo, R. More, and D. Fei­telson. A comparison of workload traces from two 
+production parallel machines. In The 6th Sympo­sium on the Frontiers of Massively Parallel Comput­ing, 
+pages 319 326, October 1998. [15] E. W. Parsons and K. C. Sevcik. Coordinated allo­cation of memory and 
+processors in multiprocessors. Technical report, Computer Systems Research Insti­tute, University of 
+Toronto, October 1995. [16] E.W. Parsons and K. C. Sevcik. Implementing mul­tiprocessor scheduling disciplines. 
+Technical Report 356, Computer Systems Research Institute, University of Toronto, Canada, 1998. [17] 
+J. Skovira, W. Chan, H. Zhou, and D.Lifka. The easy-loadleveler api project. In D.G. Feitelson and L. 
+Rudolph, editors, Job Scheduling Strategies for Parallel Processing, volume 1162, pages 41 47. Springer-Verlag, 
+New York, 1996. Lect. Notes in Computer Science. [18] D. Talby and D. G. Feitelson. Supporting priorities 
+and improving utilization of the ibm sp2 scheduler us­ing slack-based back.lling. Technical report, Insti­tute 
+of Computer Science, The Hebrew University of Jerusalem, 1999. 
+			

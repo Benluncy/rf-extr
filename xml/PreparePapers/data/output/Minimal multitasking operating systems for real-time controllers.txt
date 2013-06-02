@@ -1,0 +1,355 @@
+
+ Minimal Multitasking Operating Systems for Real-Time Controllers Geoffrey H. Kuenning Design Interface 
+216 25th Street Manhattan Beach, CA 90266 ABSTRACT In many dedicated microprocessor applications, a 
+full-feature operating system is not required. A methodology is presented for the design of extreme- 
+ly minimal operating systems for such applications. The emphasis is on providing the most basic facili- 
+ties quickly, without precluding later improvements and additions. I. Introduction Since the advent 
+of the microprocessor, the use of small computers as dedicated real-time con- trollers has become very 
+common. Frequently, the software is asked to perform complex functions that are best implemented by writing 
+several tasks to run under a multitasking operating system. Of course, this design approach requires 
+that such an operating system be available. The more estab- lished micros, especially 8-bit machines, 
+have many such systems available from their manufacturers and from independent software houses. Newly-released 
+chips, however, are very rarely announced together with complete software support. In such a case, the 
+designer is faced with the task of writing an in-house operating system to support the real-time software. 
+ Luckily, the characteristics of many dedicated controller applications can greatly s~mplify the design 
+of the underlying operating system. Indeed, the most basic, no-frills form of the system can be implemented 
+in less than one week. Such a system, although primitive, provides all of the facilities needed by most 
+controller applications. One such system implemented by the author contains less than a thousand lines 
+of assembly code, providing only scheduling and basic synchronization facilities, yet supports a 12,000-1ine 
+software package that drives a complex device in a parallel manner. In this paper I present the features 
+of the system design that are central to its rapid implementa- tion. Permission to copy without fee 
+all or part of this material is granted provided that the copies are not made or distributed for direct 
+commercial advantage, the ACM copyright notice and the title of the publication and its date appear, 
+and notice is given that copying is by permission of the Association for Computing Machinery. To copy 
+otherwise, or to republish, requires a fee and/or specific permission. &#38;#169; 1981ACM0-89791-059-1/81/1000/0020 
+$00.75 2. Simplifications Modern software engineering is continually moving in the direction of providing 
+more facili- ties and generality to the applications programmer and the user, even at the expense of 
+slightly greater overhead. This is a reasonable response to the dropping price of hardware and the rising 
+price of people. It is usually economical to buy high-powered operating systems and use the savings on 
+programming costs to pay for more powerful hardware. However, when the operating system is custom- designed 
+to support a particular application, it can be desirable to move in the direction of fewer facilities 
+and more specialization. To take an extreme example, it is not very useful to have an operating system 
+that supports an excellent disk file structure, if the dedicated-controller appli- cation will be on 
+a machine with no disks. As a less extreme example, consider the concept of firewalls. Firewalls are 
+always useful in multi- tasking systems --in general-purpose systems they protect unrelated tasks, while 
+in specialized applications they isolate bugs to one task and thus make debugging easier. However, many 
+small computers fail to provide hardware support for firewalls. Further, in a dedicated controller, a 
+bug will crash the device, whether by a collision with a firewall or by clobbering another task's address 
+space. If we are willing to give up the debugging aid provided by firewalls, we may be able to dispense 
+with them entirely, and save writing many lines of operating system code. Another general-purpose feature 
+that can be eliminated in many dedicated controllers is pre- emptive scheduling. In many dedicated controllers, 
+none of the applications tasks is compute bound. Instead, an applications task tends to follow a pattern 
+of waking up, making a few decisions and performing a little I/O, and going back to sleep for a relatively 
+long time. In such a system, preemptive scheduling can be superfluous. If preemptive scheduling is not 
+necessary, the methods presented in this paper will allow the reader to write a simple scheduler. If 
+preemptive scheduling is necessary, more sophisticated methods, beyond the scope of this paper, must 
+be used. The critical factor in determining whether or not preemptive scheduling is necessary is the 
+task response time, T. This is the amount of time that elapses between an event (such as an interrupt) 
+and the execution of the first instruction of the  20 task that responds to the event. In a system 
+with preemptive scheduling, the task response time is given by T = tf + t. + t i s  where tf is the 
+longest amount of time that inter- rupts are off, t i is the execution time of the interrupt routine 
+in question, and t s is the time needed by the scheduler to switch tasks. The big advantage of a preemptive 
+scheduler in real-tlme applications is that T is a function only of the operating system, and is not 
+affected by the be- havior of any individual task. If there is no preemptive scheduling, on the other 
+hand, the task response time becomes depen- dent on the individual tasks. The worst ease is when one 
+of the tasks enters an infinite loop -- the task response time becomes infinite. In the more normal case, 
+the task response time for a round-robin scheduler is T = tf + t i + E (t t + t s) tasks where tf, ti, 
+and t s are as before, and t t is the time used by task t before it voluntarily gives up control of the 
+CPU. Clearly, the task response time in this case is much larger and more variable than in the preemptive-scheduling 
+case. Neverthe- less, the worst-case value of T can frequently be estimated from the following equation: 
+ Test~ tf + t i + n'(twc + t s)  where n is the number of tasks in the system, and two is the worst-case 
+value of t t across all tasks. Since this is a very pessimistic estimate, it is safe to use it for design 
+decisions. The value of T must be compared with the mechanical realities of the device being controlled 
+in order to determine whether preemptive scheduling will be needed. In a paper-processing machine that 
+moves the paper at ten inches per second, a T of I0 milliseconds will allow a task to stop a paper transport 
+with one-tenth of an inch accuracy, which is plenty for many applications. In a numerically controlled 
+machine tool, a T of 5 milliseconds will allow a cut proceeding at 6 inches per minute to be halted within 
+.0005" of the desired location. If we assume 5 tasks for the first application and 3 for the second and 
+neglect (tf + ti) , this allows each task 2 milli- seconds (in the first case) or 1.67 milliseconds (in 
+the second) for (twc+ ts). Even on a creaky old 8-bit microprocessor, this is an enormous amount of time 
+when the processing required typi- cally comprises 50 to I00 instructions with no loops (exclusive of 
+ts, which is frequently the major component of (twc+ ts) in small systems). In some applications, there 
+will be one or two tasks that have a loop somewhere that is too long to produce an acceptable value of 
+twc (and thus Test). If there are many of these compute- bound sections, a preemptive scheduler is probably 
+a more economical design. However, if there are only a few CPU-intensive loops, the problem can sometimes 
+be solved by inserting a "Next-Task" call (see below) into each such loop. This will reduce twc to the 
+time for one loop iteration, rather than the time needed to execute the whole loop. Of course, the loop 
+will be slowed somewhat by the extra task switching. One of the major benefits of eliminating pre- emptive 
+scheduling shows up not in the operating system, but in the application software. In a non-preemptive 
+system, all code between two "Next- Task" calls (see below) runs as an indivisible unit (with the exception 
+of interrupts). Since many task synchronization schemes require all or part of their operations to be 
+carried out indi- visibly, this allows synchronization to be done without special code to ensure indivisibility. 
+(This applies only to intertask communications; interrupts are still a special case which will be considered 
+in a later section.) A related benefit is the simplification of reentrant coding. On some architectures, 
+it is almost impossible to write truly reentrant code, because the architecture requires the use of dir- 
+ectly-addressed memory cells as temporaries. In a preemptive system, each task would have to have its 
+own set of temporaries, lest an unexpected preemption cause a needed temporary to be destroyed by another 
+task. In a non-preemptive system, how- ever, the programmer must only ensure that the temporary has been 
+used or preserved before the CPU is voluntarily given up. In a similar manner, the manipulation of queues 
+and other shared system data structures does not require special coding. As long as the data structure 
+is unused by interrupt code and all modifications are complete before a task switch is done, manipulation 
+can be done freely. In a dedi- cated controller where all of the tasks in the system are cooperating 
+and thus sharing data, this can be a major advantage. After eliminating firewalls and preemptive scheduling, 
+all that is needed is a round-robin or priority scheduler that is invoked upon the re- quest of the task 
+being suspended. If a task that was awaiting an event becomes enabled (presumably because the event occurred), 
+it is placed on the CPU queue but must still wait for the currently- running task to voluntarily give 
+up control before it can contend for the processor. Preemptive scheduling cannot actually be com- pletely 
+eliminated from such a system, because the hardware will still be preempting non-interrupt routines in 
+favor of interrupts. This must be kept in mind when writing tasks that synchronize with interrupt routines, 
+because the indivisibili- ty is violated by the interrupt. However, interrupt interfacing can easily 
+be isolated to a few routines, and the advantages of indivisibility will still be available throughout 
+the rest of the system. If this caveat is obeyed, it is possible to reduce the scheduler itself to a 
+very small pair of routines: "Next-Task" and "Schedule". 3. Implementation The heart of the "instant" 
+operating system is the "subroutine" "Next-Task". "Next-Task" is called by a task when it is through 
+with its time slice and wishes to give up control to the next task in the CPU queue. "Next-Task" will 
+save the registers and machine state of the calling task on the task's stack or in its Task Control Block, 
+and will then search the CPU queue for another task to run. When one is found, "Next-Task" reloads the 
+state and registers for that task and reenters the new task. Because "Next-Task" does not return to its 
+caller (at least not right away), it is not  really a subroutine, but it appears to be a sub- routine 
+to any individual task, albeit one that has no effect on the task's data space. Each task existing 
+in the system has an associated Task Control Block, or TCB. The TCB contains all task-control information, 
+saved registers, local storage, etc. The TCB's for the tasks that are contending for the CPU are kept 
+in a linked llst (circular in some designs) called the CPU queue. TCB's for blocked tasks may or may 
+not remain on the CPU queue while the task is blocked, depending on the particular implementa- tion. 
+In the simplest version of the operating system, there is no such thing as a blocked task at all; the 
+subroutine that in a more sophisticated system would block a task will instead simply enter a polling 
+loop (in which polls are interspersed with "Next-Task" calls) until the awaited condition is satisfied. 
+(An example of this technique is given in the "Wait" routine presented later). In a system without blocking, 
+"Next-Task" is implemented as something like the following: PROCEDURE Next-Task = BEGIN Save processor 
+state in Current-TCB; --This is all that is needed --to suspend this task CALL Schedule (Current-TCB); 
+ --Find next TCB that is --runnable and make it the --current one Restore processor state from Current-TCB; 
+ --"Processor state" includes --the return address for --"Next-Task" itself, which --was saved previously 
+ END; PROCEDURE Schedule (Current-TCB) = BEGIN Current-TCB := Next-TCB OF Current-TCB; IF Current-TCB 
+= End-of-List THEN Current-TCB := First-TCB; END;  In this implementation, the CPU queue is a simple, 
+rather than a circular, list. "Next-Task" saves the current task's processor state (includ- ing the return 
+address for "Next-Task") and enters the next runnable task. (The third statement of "Next-Task" must 
+usually be implemented in assem- bly language, since few higher-order languages provide a way for a subroutine 
+to change its own return address.) The subroutine "Schedule" is the actual scheduler of the system, 
+the routine that decides what task is to get the CPU next. In the basic version given above, simple round-robin 
+scheduling is used, and all tasks are always eligible for the processor (which is the same as saying 
+that there is no task blocking in the system). Thus, all that "Schedule" has to do is return the next 
+task in the CPU queue. Since there is no task blocking, all tasks that await events must do so by polling. 
+The statement UNTIL event DO CALL Next-Task; will poll for the specified condition without monopolizing 
+the processor. If such a statement is placed in a subroutine, the calling routine will not be able to 
+tell that the waiting was done with a polling loop, rather than with task blocking. This mechanism, 
+although crude, is a complete scheduler; it will run without refinements and can support an amazingly 
+complex system of tasks. However, improvements can be made which will simplify the programmer's life 
+and increase the efficiency of the system. For example, a task that is awaiting an event could be flagged 
+as such, or even removed from the CPU queue, making it a blocked task in the conventional sense of the 
+term. This will eliminate the overhead of entering a task that is about to test a condition and immediately 
+call "Next-Task" because the test failed. (Of course, this overhead is traded for the scheduler overhead 
+of testing the blocked con- dition or manipulating the CPU queue, and the overhead of clearing the block 
+or reseheduling the task on the CPU queue when the awaited event Occurs.) A scheduler that allows a 
+"blocked" hit can be implemented by rewriting "Schedule", and adding subroutines "Block" and "Unblock". 
+"Next-Task" is unchanged. PROCEDURE Schedule (Current-TCB) = DO BEGIN Current-TCB := Next-TCB OF Current-TCB; 
+IF Current-TCB = End-of-List THEN Current-TCB := First-TCB; END; UNTIL NOT Blocked OF Current-TCB; PROCEDURE 
+Block = BEGIN Save processor state in Current-TCB; Blocked OF Current-TCB := TRUE; CALL Schedule (Current-TCB); 
+Restore processor state from Current-TCB; --As with "Next-Task", the --processor state includes --our 
+own return address, so --we will enter the new task END; PROCEDURE Unblock (TCB) = Blocked OF TCB := 
+FALSE; Here, a task can block itself by calling "Block", and can be unblocked by either another task 
+or an interrupt routine by calling "Unblock" with the subject TCB as a parameter. Blocked tasks are bypassed 
+by "Schedule". Since the scheduler is a simple variant of the one given previously, the "blocked" flag 
+can be left out of an early implementation and added later if it proves necessary. Many (if not most) 
+multitasking systems re- quire some form of intertask and task/interrupt synchronization. One popular 
+mechanism is Dijkstra's semaphore (Dijkstra 1968a, 1968b). The semaphore is well suited for mutual exclusion, 
+re- source control, and queue management (Dijkstra  1968b, Cocanower et al. 1970, Mills 1971). A crude 
+semaphore facility is very easy to implement in the instant operating system: PROCEDURE Wait (Semaphore) 
+= BEGIN UNTIL Semaphore GT ~ DO CALL Next-Task; Semaphore := Semaphore -I; END; PROCEDURE Signal (Semaphore) 
+= Semaphore := Semaphore + I;  The correctness of the above procedures de- pends on the lack of preemptive 
+scheduling in the system. When the "Wait" subroutine finds a semaphore value greater than zero, it must 
+proceed directly through the assignment statement without allowing any other tasks to run (because some 
+other task might also find the positive value and conclude that the semaphore was available). Similarly, 
+the increment operation in "Signal" must be done indivisibly. In the non-preemptive system, task switching 
+is always explicit, so the indivisibility of these operations is assured. A final feature required by 
+many operating systems is some form of dynamic memory allocation. Although there are a number of algorithms 
+known (Knuth 1973 contains a good summary of several of the better ones), all are somewhat difficult 
+to implement and debug. Eventually one of them must be chosen and implemented, but to get a crude initial 
+system off the ground so that the applica- tion software effort can proceed, it is much easier to write 
+a very simple and inefficient allocator. For many systems, a subroutine that picks fixed-sized blocks 
+of memory from a linked list of available blocks will be good enough for such a first allocator. If the 
+calling sequence to this allocator is properly designed, it can be replaced later with a better algorithm. 
+In the early stages of system development, or in extremely simple systems, however, the ease of coding 
+the allocator and the absence of allocator bugs can easily offset the expense of allocating grossly oversized 
+blocks. The presence of a memory allocator makes the dynamic creation and deletion of tasks simple: 
+ PROCEDURE Create-Task (Entry-Point) = BEGIN Allocate a TCB-sized block; Initialize TCB; Saved-PC OF 
+TCB := Entry-Point; Link TCB on CPU queue; END; PROCEDURE Delete-Self = BEGIN Unlink Current-TCB from 
+the CPU queue; Deallocate Current-TCB; Current-TCB := First-TCB; CALL Schedule (Current-TCB); Restore 
+processor state from Current-TCB; --As with "Next-Task" and --"Block", the processor --state includes 
+our return --address END;  Task creation must be done externally to the new task. The created task 
+is not entered immediately, but is placed on the CPU queue and must contend with the other tasks in the 
+system for its turn at the processor. When the new task is finally entered, the scheduler will not be 
+able to tell it from a newly-unblocked task, and will enter the task at the requested entry point. Task 
+deletion, on the other hand, must be done by the task being deleted. Before calling "Delete-Self", the 
+task must return any allocated memory and perform any other needed cleanup func- tions. "Delete-Self" 
+will deallocate the task's TCB and pass control of the CPU on to another eligible task. With task scheduling, 
+synchronization, creation, and deletion available, a very powerful operating system has been created 
+with very little effort. From this point, the system can grow to meet whatever needs it must. Priority 
+scheduling can be implemented in a system with blocking by reordering the CPU queue according to priority 
+and modifying subroutine "Schedule" to search the queue from the beginning on every call, rather than 
+starting the search from the current TCB. If the system has a disk, code can be read into an allocated 
+buffer and a TCB created to run it. This provides a simple but complete dynamic task loading facility. 
+A command interpreter can then use this facility to load operator command tasks, providing an extensible 
+operator interface. Many other extended facilities can be provided with equal ease. The mechanisms described 
+above are intentionally primitive and basic; the idea is to get a system running in minimum time and 
+then to go back later to refine those parts that need it. 4. Interrupt Synchronization Since many of 
+the advantages of non-preemptive  scheduling derive from the automatic indivisibility of all task code 
+between two "Next-Task" calls, a natural question is whether the presence of inter- rupts (which are 
+unavoidably preemptive when en- abled) obviates the advantages of the approach. It is certainly true 
+that dealing with interrupts is more complicated than most systems programming, but with careful design 
+of the interfaces between interrupts and the rest of the software, interrupts can fit perfectly well 
+into the non-preemptive approach. It is well established that the solution to  complex synchronization 
+problems (such as the Five Dining Philosophers) lies partly in the confine- ment of the interactions 
+between tasks to a small amount of code. This is best exemplified by the monitor concept (Brinch-Hansen 
+1973b). The same principle can be applied to interrupts. By con- fining the task/interrupt interface 
+to a few instructions and interface variables, the problem of ensuring correctness is similarly confined. 
+ For example, semaphores as implemented  earlier could be used for task/interrupt communi- cation, 
+with the task calling "Wait", and the interrupt routine calling "Signal" when the inter- rupt occurred. 
+Since the interface is limited to two small subroutines and a single variable, We can easily verify 
+their safe operation. Since "Signal" is called by the interrupt  service routine, it will always execute 
+indivisi- bly from the task's point of view, and thus the increment operation will always be done correctly. 
+ The same is not true of the "Wait" procedure. Since "Wait" is never called from interrupt code, there 
+is no problem with being interrupted between the UNTIL loop's test and the decrement statement. However, 
+the decrementation itself can present a problem in a machine with a "load/store" architecture. If there 
+is no indivisible decre- ment instruction available, interrupts must be turned off for the duration 
+of the decrement (usually two or three instructions). Of course, semaphores are not always the most 
+appropriate method of task/interrupt synchroniza- tion. If an interrupt is ultimately created by some 
+physical device, that device may behave ab- normally and either fail to produce an interrupt or produce 
+an interrupt when none is expected. For example, a motor on a mechanical arm could sieze up, preventing 
+the expected interrupt from a limit switch. Alternatively, someone could bump the limit switch when the 
+motor was not running, producing a spurious interrupt. (This problem is not limited to mechanical devices; 
+tasks also crash or produce spurious output. The techniques presented here can be adapted for intertask 
+synchronization with no difficulty.)  If semaphores are used for synchronization with such a device, 
+correct and reliable operation despite the errors will be difficult to achieve. A spurious interrupt 
+will produce a spurious call to "Signal", and the next "Wait" operation executed on that semaphore will 
+complete immediately instead of waiting. A missing interrupt will cause a pending "Wait" operation to 
+become hung; this can be solved by having a timeout interrupt provide the "Signal", but then an extremely 
+late interrupt (e.g., from an almost-siezed motor) will re-introduce the spurious-interrupt problem. 
+Both problems can be solved with auxiliary flags, but the use of flags clutters the implementation and 
+makes it into something that is not really a sema- phore. Formal attempts have been made to define semaphores 
+that could solve these problems (see Coeanower et al. 1970 and Mills 1971), but the resulting mechanisms 
+proved unwieldy and introduced new problems of their own. A modification of the task blocking mechanism 
+introduced earlier can be used to interface with unreliable interrupts. The task enables inter- rupts 
+explicitly by calling "Enable-Interrupts", and interrupts are automatically disabled when the task is 
+unblocked. An automatic timeout mechanism detects missing interrupts. PROCEDURE Enable-lnterrupt (Interrupt-ID) 
+= BEGIN Current-Device OF TCB := Interrupt-ID; Blocked OF Current-TCB := TRUE; --Caller is not allowed 
+to call --"Next-Task" after this point END; PROCEDURE Interrupt-Block (Timeout) = BEGIN Save processor 
+state in Current-TCB; Timer-Value OF Current-TCB := Absolute-Time + Timeout; Timer-On OF Current-TCB 
+:ffi TRUE; IF NOT Blocked OF Current-TCB THEN  Timer-On OF Current-TCB := FALSE; CALL Schedule (Current-TCB); 
+Restore processor state from Current-TCB; -- AS with "Next-Task", --"Block", and "Delete-Self", --this 
+includes this --routine's return address END; PROCEDURE Interrupt-Unbloek (TCB, ID) = IF Blocked OF 
+TCB AND Current-Device OF TCB = ID THEN BEGIN Current-Device of TCB := None; Blocked OF TCB := FALSE; 
+Timer-On OF TCB := FALSE; Timed-Out OF TCB := FALSE; END ; INTERRUPT PROCEDURE Timer-Interrupt = Absolute-Time 
+:= Absolute-Time + I; PROCEDURE Schedule (Current-TCB) =  DO BEGIN Current-TCB := Next-TCB OF Current-TCB; 
+IF Timer-On OF Current-TCB AND Timer-Value OF Current-TCB LE Absolute-Time THEN BEGIN Current-Device 
+OF TCB := None; --This statement disables --any subsequent executions --of "Interrupt-Unblock" Blocked 
+OF Current-TCB := FALSE; Timer-On OF Current-TCB := FALSE; Timed-Out OF Current-TCB := TRUE; END; END; 
+UNTIL NOT Blocked OF Current-TCB;  In a "load/store" type of architecture, these routines can be implemented 
+without disabling interrupts if each of the TCB flags ("Blocked", "Timer-On", and "Timed-Out") is kept 
+in a dedicated storage unit so that it can be set or cleared in a single operation. In interfacing with 
+interrupts, the problems usually arise in places where a value loaded from memory is re-used, either 
+explicitly or implicitly, after an interrupt routine has modified it. The classic example of this is 
+the three-instruction sequence that loads a variable, modifies it, and writes it back to memory. If an 
+~nterrupt occurs during this sequence, the value written will be incorrect. A less obvious example occurs 
+in the procedure "Interrupt-Block" above. If the IF statement were omitted, the procedure would impli- 
+citly assume that the "Blocked" flag of the cur- rent TCB was set. If an interrupt occurred between the 
+call to "Enable-Interrupt" and the call to "Interrupt-Block", the task would not block (which is correct), 
+but the "Timer-On" flag would remain TRUE (which is not). The reader may wonder why we set the "Timer- 
+On" flag and then conditionally clear it, rather than simply conditionally setting it. The reason is 
+that the conditional set operation necessarily involves an IF test before it, and implicitly assumes 
+that the result of the test has not changed since it was made. If the interrupt comes between the test 
+and the flag setting, this is not true, and the "Timer-On" flag will wind up set when the "Blocked" flag 
+is clear, which is illegal. A similar analysis can be applied to the scheduler to verify its operation. 
+The conse- quent clause of the IF statement appears to assume that the "Blocked" and "Timer-On" flags 
+are both set. However, a closer examination will show that interrupts during the execution of the IF 
+statement (for example, consider an interrupt that occurs just after the second BEGIN) will not produce 
+inconsistent results. Both the interrupt routine and "Schedule" are setting "Blocked" and "Timer-On" 
+to FALSE, so it does not matter which routine does so first. Once the first statement after the second 
+BEGIN is executed, the interrupt routine will not touch the TCB, so it cannot interfere with the setting 
+of "Timed-Out". Thus, interrupts occurring before the IF statement will produce a no-timeout indication, 
+while interrupts during the IF statement will produce a correct timeout indication (since a too-late 
+interrupt is considered not to have occurred). An advantage of the above synchronization method is that 
+there are no time-consumlng opera- tions performed in interrupt routines. For exam- ple, the "clock tick" 
+interrupt service routine must only increment a multiple-precision absolute tick counter; all other timeout 
+processing is done by the scheduler. In contrast, we could have defined the "Timer-Value" field of the 
+TCB as the number of ticks remaining before the timeout ex- pired, and had the clock interrupt routine 
+scan all TCB's on each tick, decrementing active tick counts. By placing this burden on the scheduler, 
+we can avoid leaving interrupts disabled for the time that such a scan would take. The interrupt-blocking 
+version of the schedu- ler can be used to synchronize the passing of data, as well as signalling the 
+occurrence of an interrupt. A method of data passing that is especially appropriate for stream I/O devices 
+such as keyboards and printers is the circular buffer. This well-understood and easily imple- mented 
+data structure can be made completely immune to interrupt timing problems. For example, consider the 
+following keyboard support module: MODULE Keyboard-Support = BEGIN LITERAL Buffer-Size = 3@; CHARACTER 
+Buffer (Buffer-Size); INTEGER In-Ptr RANGE @..Buffer-Size -J INITIAL @, Out-Ptr RANGE @..Buffer-Size 
+-! INITIAL @, Num-Chars RANGE @..Buffer-Size INITIAL @; BOOLEAN Overflow INITIAL FALSE; PROCEDURE Get-Character 
+= BEGIN CHARACTER Char; IF Num-Chars EQ ~ AND NOT Overflow THEN CALL Enable-Interrupt (Keyboard); IF 
+Num-Chars NE @ OR Overflow THEN CALL Interrupt-Unblock (Current-TCB, Keyboard); CALL Interrupt-Block 
+ (Keyboard-Timeout); IF Overflow THEN BEGIN Overflow := FALSE; Char := -|; END ELSE Char := Buffer 
+(Out-Ptr); Out-Ptr := MOD (Out-Ptr + I, Buffer-Size); Num-Chars := Num-Chars -I; END; RETURN Char; 
+END; INTERRUPT PROCEDURE Keyboard-Interrupt (Char) = BEGIN CHARACTER Char; IF Num-Chars BQ Buffer-Size 
+THEN Overflow := TRUE ELSE BEGIN Buffer (In-Ptr) = Char; In-Ptr := MOD (In-Ptr + I, Buffer-Size); 
+Num-Chars := Num-Chars + I; END; CALL Interrupt-Unblock (Keyboard-TCB, Keyboard); END; END; The interaction 
+between a task wanting to use the keyboard and the keyboard support is entirely through the "Get-Character" 
+subroutine. This rou- tine interfaces to the interrupt routine through a buffer and four variables. Of 
+these, only two are shared, and one of the two ("Overflow") is set only by the interrupt and cleared 
+only by the task. The correctness of the procedures thus reduces to the correctness of the operations 
+on "Num- Chars". If the computer has an indivisible memory-decrement instruction, it can be used to 
+ 25 decrement "Num-Chars" in the "Get-Character" rou- tine. (The corresponding increment is always 
+ indivisible from the task's point of view, since interrupts run to completion before the task is re-entered, 
+so loads and stores are sufficient).  If no memory decrement instruction is available, interrupts must 
+be disabled while "Num-Chars" is  decremented. The decrement can usually be done in three or four instructions, 
+which is not an unreasonably long time for interrupts to remain off. A slightly different implementation 
+will  eliminate the need for disabling interrupts even on a "load/store" architecture. In this approach, 
+ the "Num-Chars" variable is completely eliminated, since it can be calculated from the input and out- 
+ put pointers. To avoid the ambiguous case when the input and output pointers are equal (which occurs 
+both when the buffer is full and when it is empty), the code is written to prohibit filling the last 
+character of an almost-full buffer. As in the interrupt-blocking procedures  given above, the order 
+of certain operations is important. In particular, "Get-Character" must retrieve its character before 
+it updates "Num- Chars", lest the character-~r~-~e clobbered by a new one before it is read. In addition, 
+the call to "Interrupt-Block" in "Get-Character" makes the implicit assumption that "Num-Chars" is zero. 
+This is normally assured by the first IF statement; "Interrupt-Block" is a null operation if "Enable-Interrupt" 
+has not been called. If an interrupt occurs after the IF-test has been made but before the "Enable-Interrupt" 
+call, however, "Num-Chars" will be nonzero but the task will still block. This case is taken care of 
+by the second IF statement, which uses "Interrupt- Unblock" to undo the effects of the "Enable- Interrupt". 
+In certain cases, both the interrupt routine and the second IF statement will call "Interrupt-Unblock"; 
+the mechanism that rejects spurious interrupts will deal with this. The circular-buffer interface can 
+also be easily implemented in the simpler system that does not support task blocking. In "Get-Character", 
+the first three statements (through the call to "Interrupt-Block") are replaced by the following polling 
+statement: UNTIL Num-Chars NE ~ OR Overflow DO CALL Next-Task;  Additionally, the "Interrupt-Unblock" 
+call must be removed from "Keyboard-Interrupt". The circular-buffer method can be used for a wide variety 
+of interrupt-driven devices. A simple reversal of roles leads to a printer/termi- nal driver; in this 
+version overflow is impossible because the task, unlike the interrupt, can wait for the buffer to empty. 
+If the buffer is filled with action codes instead of characters, and the buffer-emptying routine is table 
+driven, extremely complex device interfaces can be implemented with complete safety. 5. Conclusion and 
+History The author has personally been involved in the implementation of four different multitasking 
+operating systems using the above concepts, and is aware of the existence of several others (Coca- nower 
+et al. 1970, Ball 1974, Mills 1969 and 197], and Kuenning 1981h). The Computers used for these systems 
+ranged from a DEC PDP-II to an l~tel 8080, with the applications ranging from a network message-switching 
+processor to a complex paper- processing machine incorporating a number of inde- pendent devices. The 
+system structure varies with the application, but always adheres to the rule of keeping things crude 
+and simple unless there is an excellent reason not to. The system as described in this paper is capable 
+of handling many appli- cations where multitasking is required but there are no user programmers debugging 
+erroneous code in the final system. Obviously, the system is totally unsuited for a large university 
+time- sharing installation, but for small dedicated con- trollers it is often ideal. Nonpreemptive systems 
+are not at all new; many early systems employed extremely simple schedulers. The author first encountered 
+the con- cept while working on the MERIT computer network (Cocanower et al. 1970), which in turn borrowed 
+it from the University of Michigan (Mills 1969). The technique appears independently in countless other 
+systems. The most dramatic example of the usefulness of the "instant" approach occurred when a disk 
+engineering project required a multiple-port test device to drive the disk. An underlying operating system 
+for this processor, using the crudest forms of all the mechanisms implemented, was up and running less 
+than one week after its conception, starting from scratch and programmed entirely by one (experienced) 
+person. REFERENCES Baer, J.L. "A survey of some theoretical aspects of multiprocessing." Computing 
+Surveys 5, 1 (March 1973), 31-80. Ball Computer Products (Sunnyvale, CA). DINOS Programmer's Reference 
+Manual, 1974. Brinch-Hansen, P. "Concurrent programming con- cepts." Computin~ Surveys 5, 4 (Dec. 1973), 
+223-245. Brinch-Hansen, P. Operating System Principles. Prentice-Hall, Englewood Cliffs, N.J. 1973. 
+ Cocanower, A.B., Fischer, W., Gerstenberger, W.S., and Read, B.S. The Communications Computer Operating 
+System- The Initial Design. MERIT Computer Network Report No. I070-TN-3, Oct. 1970. (Available from National 
+Techni- cal Information Service as Report No. PB203 552). Dijkstra, E.W. "Cooperating sequential processes." 
+In Programming Languages, F. Genuys (ed.), Academic Press, New York, 1968, 43-112.  Dijkstra, E.W. "The 
+structure of THE-multipro- gramming system." Comm. ACM ]I, 5 (May ]968), 341-346. Knuth, D.E. The Art 
+of Computer Pro~rammin~ Vol. I. Addison-Wesley, Reading, Mass., 1973. Kuenningp G.H. "Designing Real-Time 
+Software Systems." ACM Conference on Small Systems, 1981. Mills, D.L. Multipro~rammin. ~ in a Small-Systems 
+Environment. Universzty of Michigan Tech- nical report 19, Ann Arbor, Michigan, ]969. Mills, D.L. Proposal 
+for a Multiprogramming System for a PDP-]I. University of Michigan unpublished internal report, ]971. 
+ Presser, L. "Multiprogramming Coordination." Computing Surveys 7, I (March 1975), 21-44. Shaw, A.C. 
+The Logical Design of Operating SysD tems. Prentice-Hall, Englewood Cliffs, N.J., ]974. 
+			

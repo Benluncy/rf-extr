@@ -1,0 +1,334 @@
+
+ On the Parallel Implementation of Goldberg s Maximum Flow Algorithm * Richard J. Andersont Jo&#38;o 
+C. Setubal$ Department of Computer Science &#38; Engineering University of Washington Seattle, WA 98195 
+ Abstract We describe an efficient parallel implementation of Goldberg s maximum flow algorithm for a 
+shared-memory multiprocessor. Our main tech­nical innovation is a method that allows a global relabeling 
+heuristic to be executed concurrently with the main algorithm; this heuristic is essen­ tial for good 
+performance in practice. We present performance results from a Sequent Symmetry for a variety of input 
+distributions. We achieve speed-ups of up to 8.8 with 16 processors, rela­tive to the parallel program 
+with 1 processor (5.8 when compared to our best sequential program). We consider these speed-ups very 
+good and we provide evidence that hardware effects and insuf­ficient parallelism in certain inputs are 
+the main obstacles to achieving better performance. Introduction The general research area addressed 
+in this pa­per is the implementation of parallel algorithms. *This work was supported by NSF Presidential 
+Young Investigator Award CCR-8657562, NSF CER grant CCR­861966, NSF/Darpai grant CCR-8907960, and Brazilian 
+Agency FAPESP grant 87/1385-7. t E-mail address anderson@cs. Washington. edu. ton leave from State University 
+of Campinas-j Brazil. E-mail address setubal@cs. washington, edu. Permission to copy without fee all 
+or part of this material is granted provided that the copies are not made or distributed for direct commercial 
+advantage, the ACM copyright notice and the title of the pubhcation and its date appear, and notice is 
+given that copying is by permission of the Association for Computing Machinery. To copy other­wise, or 
+to republish, requires a fee aud/or specific permission. Our current research is focused on the implemen­t 
+ation of combinatorial algorithms on shared­memory machines and in this paper we present a parallel implement 
+ation of Goldberg s maximum flow algorithm [G0187, GT88]. The problem of computing a maximum flow in 
+a network is a fundamental combinatorial problem, with many applications in the fields of transportation 
+plan­ ning and operations research [Law76, PS82]. We concentrate on Goldberg s algorithm for two reasons: 
+computational experiments [DM89, AS92] have shown that it is the fastest sequen­ tial maximum flow algorithm 
+in practice; and it has a structure amenable to parallel imple­ment ation. Those experiments and others 
+have also shown that Goldberg s algorithm performs best when a global relabeling heuristic is incor­porated 
+to the algorithm. Running times have been observed to decrease by two orders of mag­nitude on moderate-sized 
+graphs (4K vertices) when this heuristic is in place. Therefore, any parallel implementation of Goldberg 
+s algorithm must also include this heuristic. However, the natural approach of incorporating the heuristic 
+into a parallel algorithm gives rise to errors, due to subtle interactions between the global rela­beling 
+and the mtin operations of the algorithm. One of our main results is a correct method for incorporating 
+concurrent global relabeling into a parallel implement ation. Another contribution that we present is 
+a data structure that allows some control of parallel granularity. In many combinatorial algorithms it 
+is the case that towards the end of execu­tion only a few time-consuming tasks remain, and these can 
+severely degrade parallel perfor- SPAA 92-61921CA @1992 ACM 0-89791-484-8/92/0006/0168 . . . . . .. $1.50 
+168 mance. This has been reported, for instance, for a parallel algorithm for the assignment problem 
+[BMPT91]. It is also the case for Goldberg s al­gorithm. To alleviate this problem, in our im­plementation 
+processors send tasks to, and re­ceive tasks from, a global workpile. This clat a structure is able to 
+dynamically change the size of tasks assigned to processors depending on the amount of work available. 
+We have performed detailed measurements of the implement ation s performance on a wide range of input 
+distributions. Our input ,gra,phs have generally been graphs with semi-regular structure and random edge 
+capacities. We have achieved what we consider to be respectable per­formances on a Sequent Symmetry: 
+on one class of graphs, a speed-up relative to the one proces­sor version of the parallel implementation 
+of 8.8 on 16 processors, and a speed-up of 5.8 relative to our best sequential implementation. The dif­ference 
+in performance between the one proces­sor parallel implement ation and the sequential implementation 
+is primarily the cost of locking. We have looked at the sources of performance degradation and concluded 
+that a combination of hardware effects, like bus contention, and lack of parallelism in some inputs are 
+the major sources of slowdown. Lack of parallelism is a factor when a significant part of the execution 
+is devoted to handling the few remaining tasks alluded to in the previous paragraph, and the size of 
+these tasks cannot be further decreased. 2 Goldberg s algorithm The formal definition of the maximum 
+fio w prob­ lem is (after [Tar83]): The input is a directed graph G(V, E), IVI = n, [El = n-t, with distin­guished 
+vertices s (the source) and t (the sink), and a positive capacity C(V, w) associated with every edge 
+(v, w) E E. A flow on the graph is a real-valued function ~ on each edge such that (1) for all e E E, 
+j(v, w) s C(V, w) (when ~(v, w) = C(V, w) we say that e is sai%rafed) (2) j(v, w) = ~(w, v) (antisymmetrg 
+constraint) and (3) ~w f(v, -w) = O for every vertex w ex­ cept the source and the sink (flow conservation 
+constraint). The value of the flow is ~V ~(s, v), the net flow out of the source. The desired out­put 
+is a flow function which maximizes the value of the flow, Goldberg s algorithm [G0187, GT88] operates 
+ over the residual graph Gj = (V, I?j): it has the same vertex set, but only edges (v, w) such that ~(v, 
+w) < C(V, w) are considered (the residual edges). 1 The basic idea in the algorithm is to introduce as 
+much flow as possible at the source, and to gradually push it towards the sink. The algorithm allows 
+the conservation constraint to be violated during execution: vertices can have more flow coming into 
+them than going out. This means that at any point during execution some vertices will have ezcess flow; 
+these vertices are called active. Initially the source sends all the flow it can to its neighboring vertices: 
+they will be the first active vertices. The basic local op­eration of the algorithm is the push operation: 
+an active vertex is selected for discharge and its excess flow is pushed to neighboring vertices in Gf 
+(thus possibly activating other vertices). If the edge is saturated by the push, we say that it is a 
+saturating push. Otherwise it is a non­saturating push, The decision as to which ver­tices to push the 
+excess flow to is based on labels associated with each vertex. These labels are lower-bound estimates 
+on the dist ante (in num­ ber of edges) that flow would have to cover go­ ing from the vertex to the 
+sink. We denote the label of vertex v by d(v). The sink has fixed la­ bel O and the source fixed label 
+n; other vertices can be assumed initially to have label O. Active vertex v pushes flow to w iff (v, 
+w) c G} and d(v) = d(w) + 1. In other words, active ver­tices try to send flow through (what appear to 
+be) shortest paths to the sink. An active ver­tex v may find itself unable t: push flow because all labels 
+of neighboring vertices are greater than or equal to V S. In this case a relabel operation applies: v 
+scans its neighbors and changes its la­bel to be one higher than the minimum among the neighbors labels. 
+Some of the flow initially pushed by the source may not be able to reach 1Note that whenever there is 
+flow from w to w there will be a residual edge from w to v. the sink; this excess fiow is pushed back 
+to the source. To achieve this the labels of the vertices that have been disconnected from the sink should 
+now reflect the estimated shortest-path distance from each of them to the source. When there are no more 
+active vertices, the algorithm has computed a maximum flow and stops. There is considerable flexibility 
+in an imple­ment ation of Goldberg s algorithm, in particular different selection rules may be used in 
+choos­ing the order that active vertices are processed. Goldberg s algorithm runs in polynomial time 
+for any ordering of active vertex processing. If the active vertices are processed in a queue (FIFO) 
+ordering, then the running time is O (n3); if the active vertex of highest label is processed first, 
+the running time is 0(n2TTL1/2) [CM89]. Both of these bounds are tight, although the graphs that force 
+the given running times are very con­trived. These worst case bounds improve to O(nm log(n2/m)) when 
+dynamic trees are used [GT88]. In all of these cases the dominant term in the running time is due to 
+the number of non­saturating pushes. There have been a number of studies of the performance of sequential 
+implementations of Goldberg s algorithm [DM89, AS92]. The re­sults of these studies differ from the theoreti­cal 
+predictions, generally observing much better performance than the worst case bounds. For example, in 
+[AS92] running times range from 0(nl-3) to O(nl g) for various classes of sparse graphs, for both the 
+queue and highest-label-first implement ations. The observations also suggest that dynamic trees would 
+not give the substan­tial performance improvement that they give to the worst case analysis. The approach 
+to obtaining an efficient paral­lel implement ation of Goldberg s algorithm de­pends upon the target 
+machine. If a very large number of processors is available (such as on a Connection Machine), then a 
+natural implemen­tation is to simultaneously perform push/relabel operations from all vertices, both 
+active and in­active. However, if only a small number of pro­cessors is available, as was our case, then 
+it is bet­ter to only process the active vertices. Since the algorithm remains correct for any ordering 
+of op­erations, the operations can proceed in an asyn­chronous manner, provided some mechanism is used 
+to prevent conflicts of the individual oper­ations. The general approach we adopted in our implement 
+ation was to maintain a global work queue which keeps track of the active vertices. A processor removes 
+vertices from the queue, ap­plies push operations to them, possibly relabels them, and puts any newly 
+activated vertices back in the queue. More details will be given in the following sections. As described 
+above, our parallel algorithm is essentially a parallel implementation of the queue variant of Goldberg 
+s algorithm, and the speed-ups we present are computed with respect to the sequential queue implementation. 
+We note that our measurements [AS92] showed that the sequential queue implement ation was more ro­bust 
+than highest-label-first, meaning that its performance was either better or competitive with that of 
+highest-label-first, depending on the particular class of graphs in which they were tested. We finally 
+note that a natural question is whether other algorithms could have given a bet­ter parallel implement 
+ation. Among sequential algorithms, an implementation of Dinic s [Din70] was the only other close to 
+Goldberg7s in perfor­mance in our experiments [AS92], and in all cases but one it was at least twice 
+as slow. In addition, a parallefization of Dinic s algorithm seems more complicated and unintituitive, 
+requiring a lot of synchronization among processors. In spite of these observations we did attempt to 
+parallelize this ~gorithm but the speed-ups we obtained were very poor.  3 Concurrent Global Relabel­ing 
+ As explained above vertices labels are updated during Goldberg s aJgorithm execution by the re­label 
+operation. Even though these updates are sufficient for the algorithm to compute the cor­rect result 
+it has been found that performing oc­casional global relabelings vastly improves the performance of the 
+algorithm. This heuristic was 170 suggested by Goldberg and Tarjan [G0187, GT88] and is done by performing 
+a backwards breadth­first search (BFS) on Gf from the sink and from the source. The labels are updated 
+to be the ex­act dktance in number of edges from each vertex to the sink or, when a vertex cannot reach 
+the sink, the exact distance to the source plus n. We call this heuristic periodic global relabeling. 
+A different heuristic, called gap-relabel and proposed by Derigs and Meier [DM89], does not rely on B 
+FS, but simply detects when velrtices can no longer reach the sink and updates their labels to n. The 
+new labels obtained are not as accurate as those given by global relabeling, but the heuristic is less 
+costly. Sequential exper­iments that we have done indicate that in spite of its simplicity, a sequential 
+implement atiom us­ing gap-relabel is not as efficient as one using periodic global relabeling. In particular, 
+gap­relabel does not help in returning excess flow to the source. Given the improvements in performance: 
+that result when these heuristics are used, any pamdlel implement ation must include one or the other 
+to achieve good performance. The only other paral­lel implementation of Goldberg s algorithm that uses 
+such heuristic relabeling and that we are aware of [AG91] is a synchronous implement a­tion running on 
+a Connection Machine, andl they execute the heuristic relabeling while suspendi­ng the other operations. 
+However, in an asyn­chronous implement ation using a small nu~mber of processors like ours it is highly 
+desirable to al­low heuristic relabeling to be done concurrently wit h push/relabel operations. In addition, 
+we believe that concurrent periodic global relabel­ing should be preferred over gap-relabel if its cost 
+can be kept at roughly the same levels of t he se­quential implement ation. The question then is: how 
+can periodic global relabeling be incorpo­rated into a parallel implementation? Given the simplicity 
+of both the push/relabel operations and the manner in which global re­labeling is done, one is tempted 
+to simply plug in the heuristic into a parallel implement :ation, taking only the obvious precaution 
+of prevent­ ing simultaneous label up dat es. However, this approach may violate one essential invariant 
+of Goldberg s algorithm: given any vertex v it must be the case that d(v) < d(w) + 1, for W edges (v, 
+w) c Ef. This is the valid labeling condition. Invalid labelings can cause flow to be routed in the wrong 
+direction resulting in the algorithm stopping with a nonmaximum flow. Next we de­ scribe how to incorporate 
+concurrent global re­ labeling while keeping the labeling valid, We see each application of global relabeling 
+as a wave that sweeps through the graph. Waves are numbered consecutively from zero. In ad­ dition to 
+its label, each vertex has also a wave number, which reflects the number of the wave that most recently 
+updated it. The conditions for the push operation are augmented to allow pushes only between vertices 
+that have the same wave number. We also insure that in any la­ bel update the label is never decreased. 
+Finally, both the relabel operation and global relabeling must lock the vertex to be updated, and the 
+push operation must lock both endpoints of the edge through which flow is being pushed. Deadlock is avoided 
+by having the push operation acquire both locks only when both are free. Denoting by .Z%oci a procedure 
+as executed by processor i, we get the following pseudo-code (compare to fig­ ure 1 in [GT88]): Push;(?), 
+w) Applicability: Processor i holds the locks for both v and w, v is active, (v, w) c I?f, d(v) == 
+d(w)+l, and wave(v) = wave(w). Action: Push as much flow to w as (v, w) affords, and update v s and 
+w s excesses. Relabel Applicability: Processor i holds the lock for v, v is active, and if (v, w) E 
+Ej then d(v) < d(w). Action: newd -rnin{d(w) + 11(v, W) E ~j}; if newd > d(v) then d(v) + newd. In 
+addition to Push and Relabel, a processor can also invoke operation GlobalRelabel on a ver­tex v when 
+a global relabeling wave reaches v (more details on global relabeling are given in section 4.2). We assume 
+there are global vari­ables Current Wave and CurrentLevel which keep track of the current wave number 
+and current level in the BFS tree, respectively. GlobalRelabel;(v) Applicability: Processor i holds the 
+lock for v, wave(v) < Cur~entWave. Action: if d(v) < CurrentLevel then d(v) ~ CumentLeoel; wave(v) G 
+CurrentWave. With these modifications we can prove that the algorithm is correct. Theorem 1 The parallel 
+algorithm incorporat­ ing global relabeling as described above correctly computes a maximum flow. The 
+proof is based upon Goldberg s original proof [G0187]. The main modification is in es­tablishing that 
+the labeling remains valid, which is given by the following lemma: Lemma 1 With the method described 
+above, for all edges e = (v, w) c Ef such that both v and w belong to the same global relabeling wave, 
+it is the case that d(v) < d(w) + 1 throughout the algorithm 9s ezecution. Proo&#38; First we note that 
+initially the la­beling is valid. To simplify the proof we as­sume that only one processor is performing 
+the breadth-first search for the current global rela­beling wave, while the others are concurrently doing 
+push/relabel operations. Case 1: Push operation. consider edge (v, w) as in the statement of the lemma. 
+Since a push from v to w can only happen if v and w belong to the same wave and both v and w are locked 
+while the push is being done, labeling remains valid. Case 2: Relabel operation. If vertex v is being 
+relabeled, it is locked, so no other proces­sor will change v s label while v s neighbors are scanned. 
+Suppose v s new label is d(w) + 1.Be­tween the time v checks w s label and the time that v actually is 
+relabeled, w s label may have changed. But w s label can only increase, there­fore v s label is still 
+valid. No change in the flow of edge (v, w) can happen, since v is locked. Case 3: Global relabeling. 
+Assume the cur­rent wave is number k and that it is relabeling vertices at level 1+ 1 (meaning that these 
+vertices are at least 1 + 1 edges away from the sink; an analogous argument applies to vertices that 
+can only reach the source). Consider vertex v on thk level and the actual label d(v) that v has when 
+it is reached by wave k. a: d(v) >1 + 1. This means that v s label was raised by a local relabel operation; 
+therefore, by case (2) above, its label is valid. b: d(v) = 1+1. Suppose there exists edge (v, w) such 
+that w has also been reached by wave k and d(w) <1. Then it must be the case that (v, w) @ Gj at the 
+time w scanned its prede­cessors after having been added to wave k. So no pushes could have happened 
+between v and w (since they belonged to different waves), and therefore by the time wave k reaches v 
+it is still the case that (v, w) # Gj, and the labels are valid. c: Suppose there exists edge (u, v) 
+such that u has also been reached by wave k and such that d(u) >1 + 1. Then it must be the case that 
+d(u) was set by a relabel operation, so by case (2) above labeling between u and v is valid. 1 4 Implementation 
+details 4.1 The queue for active vertices The queue for active vertices is actually divided in two: 
+one shared, and the other local to each processor. The local queue is further subdivided into inqueue 
+and outqueue. A processor takes a vertex from inqueue and discharges it. When inqueue is empty, a processor 
+gets a new batch of b vertices from the shared queue and stores them in its local inqueue. AS these vertices 
+are discharged, newly activated vertices are placed in out queue, which also has size b. When out queue 
+gets full, the processor places the entire contents in the shared queue. A processor becomes idle 172 
+if it exhausts its inqueue, and both the shared queue and its out queue are empty. It is activated again 
+as soon as the shared queue receives new vertices. The granularity control previously alluded to is achieved 
+through dynamic adjustment in the value of variable b, taking into account the num­ber of idle processors. 
+This adjustment is done as follows: initially b = 16 (the maximum value).  b decreases in half if at 
+least 2 or 15% cjf the processors are idle.  b doubles if ap+aV/b > 1.5p, where ap is the number of 
+active processors, aV is the num­ber of available vertices in the shared queue, and p is the total number 
+of processors.  the rules above are checked every 200 dis­charge operations.  The idea of having different 
+rules to increase and to decrease b is to prevent too much oscilla­ tion in the value of b.  4.2 Global 
+Relabeling Given the correct way to perform global relabel­ing concurrently wit h push/relabel operations, 
+there remains the question of how to dlvicle all these tasks among the processors. Two possibil­ityies 
+are apparent: (1) whenever the time comes for global relabeling, assign only one processor to do it; 
+(2) make all processors take part in all operations. The advantage of (1) is that a sim­ple queue suffices 
+as data structure, since there is never cent ention for it. This, in fact, was our initial approach. 
+However, it has the significant drawback of limiting the global relabeling s share of the total parallel 
+work to l/p (where p is the number of processors being used). Profiles of se­quential executions indicated 
+that global relabel­ing can be responsible for as much as 40% of the work, so clearly for any p > 2, 
+a parallel imple­ment ation based on approach (1) might be doing less global relabelings than necessary. 
+We there­fore adopted approach (2), as described ne~t. Similarly to the sequential implementation, globzd 
+relabeling is applied periodically to the graph. When global relabeling is active , after every discharge 
+a processor tries to retrieve up to q vertices from the BFS queue (q is a parameter of the implementation, 
+and for the results described here we used the value 4). The immediate prede­cessors of these vertices 
+are then processed and possibly placed in the BFS queue. The key to obtaining maximum benefit from global 
+relabel­ing at the lowest cost comes from the fact that it is done concurrently with other operations 
+and because a processor performs this BFS operation only if the B FS queue is not currently being used 
+by any other processor; otherwise it goes on to perform another discharge operation. The frequency with 
+which global relabeling is applied is based upon the total number of dis­charge operations performed 
+by all processors. Our experience in sequential implementations has shown that, for a given input graph, 
+there seems to be an optimum frequency for global re­labeling, in the sense that it represents the best 
+trade-off between obtaining bet ter labels and not spending too much time to get them. In the se­quential 
+case, a frequency that does a good job on most inputs is every 2n discharge operations, and that is the 
+frequency we used on the par­allel implement ation. Due to the way we imple­ment ed global relabeling 
+the number of discharge operations carried out while global relabeling is in progress increases as the 
+number of proces­sors increases. This means that beyond a cer­t ain number of processors global relabeling 
+will be done continuously, since more than 2n dis­charge operations will have been completed be­fore 
+the wave terminates. With the parameter settings that we used, we estimate this threshold to be around 
+30 processors.  5 Experimental Results 5.1 Machine The experiments were conduct ed on a Sequent Symmetry 
+S81 with 20 Intel 16Mhz 80386 pro­ cessorfi, and 32 megabyt eii of memory, running DYNIX 3.0. Each processor 
+has a 64 Kbyte cache memory. The program was written in C using the Parallel Programming Library pro­vided 
+with Sequent systems, which allows the forking of processes, one per processor. 5.2 Test data and methodology 
+We tested the implementation on many kinds of graphs, and we present the results for three different 
+input czasses, as follows: Random level graphs: These are rectangular grids of vertices , where every 
+vertex in a row has 3 edges to randomly chosen vertices in the following row. The source and the sink 
+are ex­ternal to the grid, the source has edges to all ver­tices in the top row, and all vertices in 
+the bot­tom row have edges to the sink. Edge capacities are integers drawn randomly and uniformly from 
+[1,104]. Two sub-classes were considered: wide, in which there are more columns than rows, and long, 
+vice-versa; below we use acronyms rlgw and rlgl to designate these classes, respectively. Re­sults in 
+this paper are for instances with n ~ 214 vertices. Rmf graphs: these were described in [GG88] and are 
+made of 11 square grids of vertices (frames) having 12x Iz vertices, and connected to each other in sequence. 
+The source is in a corner of the first frame, and the sink is in a corner of the last frame. Each vertex 
+is connected to its grid neighbors within the frame, and to one ver­tex randomly chosen from the next 
+frame. There are about 6n edges in the network. Edge capaci­ties within a frame are 104x J2 x 12, Capacities 
+for edges between frames are chosen uniformly from the range [1,104]. Also in this case we considered 
+wide (few and large frames) and long (many and small frames) varieties; below we use acronyms rm~w and 
+rmfZ to designate these classes, respec­tively. Results in this paper are for inst antes with n = 214 
+vertices. Acyclic dense graphs: these are complete di­rected acyclic graphs. Edge capacities are in the 
+range [1 ,lOG]; below we use acronym ad to des­ignate this class. Results in this paper are for instances 
+with n = 500 vertices. The methodology in preparing the experi­ments was as follows: e for every input 
+class, 15 inst antes were gen­erated using different seeds for the pseudo­random generator. For each 
+instance 3 runs were conducted. The running times and other statistics that we report below are av­erages 
+of these 45 runs, for each input class. The standard deviation for each set of 15 in­st antes was computed 
+for each average and genera~y found to be within 15% of the mean (in all cases it was under 25%). Runs 
+on the same set of inputs were done with number of processors ranging from 1 to 16. e reported running 
+times for both sequential and parallel implement ations do not include input and initialization time. 
+ 5.3 Times and speed-ups We define speed-up as the running time of our best sequential program divided 
+by the parallel running time. Relative speed-up is defined using the running time of the parallel program 
+with 1 processor as the numerator. We denote number of processors by p. Table 1 gives the sequential 
+and parallel run­ning times for 16 processors, as well as speed-ups and relative speed-ups obtained. 
+Figure 1 shows how relative speed-up changes with number of processors, for input classes rmfi and rmfw. 
+The curves for classes rlgl, rlgw, and ad were similar to that for rmfl. 5.4 Analysis of results In 
+this section we concentrate on relative speed-up and try to answer the question: why isn t it optimal? 
+We provide evidence that lack of parallelism and hardware efiects are the major factors. Another potential 
+source of slowdown is lock contention but this does not appear to be a problem in our implementation. 
+Lack of parallelism results whenever the num­ber of active vertices is less than the number of processors 
+in use. If this is the case for a sig­nificant part of the execution then the resulting 9, 8 7 6 5 4 
+3 11I 1I I , 1 2 4 6 8 10121416 number of processors Figure 1: Relative speed-up for classes rmfl (solid) 
+and rmfw (dashed). input class n m sequential parallel speed-up relative I -1. . .. 1 6386 48896 time 
+30.3 time 5.5 5.5 speed-up 8.6 AWMLQ 2.5..5 4.9 5.2 R.A --- I I .­ r334T 176.4 I 43.3 4.1 6.2 I I 
+, I - -. -­ 1 I 1 , -. I Table 1: Average running times (in seconds) and speed-ups obtained. Parallel 
+times were obtained with 16 processors. speed-up will be poor. We can have an idea of that the remaining 
+flow that has to be pushed is how much parallelism is available by looking at flowing through just a 
+few paths. To illustrate the queue contents during the sequential algo-this, in table 2 we present a 
+profile of the phases rithm execution. Let us define a phase as the pe-for all input classes tested. 
+There we see that in riod when the algorithm discharges all vertices classes rlgw, rlgl, and rmfl thereis 
+a large per­that were activated in the previous phase. In cent age of phases with many vertices, and 
+these the first phase the active vertices are the source s were the classes where we got the best speed-ups. 
+neighbors. The number of active vertices at the In contrast, the class where speed-up was poor­beginning 
+of a phase can be seen as the maximum est ( rm~w) has a large percentage of phases where available parallelism. 
+In general we found that the number of available vertices is less than 50. available parallelism decreases 
+drastically after Hardware effects is a broad term that en­a certain point in the execution. Depending 
+on compasses phenomena like bus contention, cache the input class, this can result in a large num-flushes 
+due to false sharing, and other mem­ber of phases with just a few vertices, meaning ory hierarchy effects 
+typical of a shared-memory Table 2: Percentage of phases that had number of vertices in the range indicated. 
+(These percentages are averages and hence the columns do not necessarily add up to 100. ) number of vertices 
+rlgw rlgl rmfl rmjw ad <50 22 27 28 86 61 >50 78 75 71 15 40 P 1 2 4 8 16 running time(secs) 48.7 27.1 
+14.7 8.4 5.3 efficiency (tl .90 .83 .72 .57 /ptP) push time(p-sees) 37.5 41.6 43.8 46.2 54.4 efficiency 
+(tl . .90 .86 .81 .69 /tp) Table 3: Decrease in running time efficiency and push time efficiency for 
+one instance of class rrnjl. machine like the Sequent. To have an idea of how much these effects have 
+influenced our per­formance results we have measured the average time needed to execute one push operation 
+over the entire execution of the program on a few instances, and how this average changes when the number 
+of processors increases. We chose the input classes where we got our best speed­up numbers (lack of parallelism 
+being minimal) and timings were done only when all processors were busy. In table 3 we present the results 
+for one instance that we tested (results for other in­st antes were similar). It is clear that the decrease 
+in speed-up efficiency as the number of proces­sors increases parallels the decrease in efficiency of 
+the push operation. Assuming that the push operation dominates the running time we can es­timate the 
+maximum relative speed-up possible for a given number of processors. For class rmfl and 16 processors, 
+for example, this estimate is 11, and we obtained 8.8.  6 Conclusions and further work Our main result 
+is in establishing that Gold­berg s algorithm can be efficiently parallelized on a shared memory multiprocessor. 
+The main factors in getting good performance were to im­plement a concurrent version of global relabeling 
+and an adaptive data structure for maintaining the workpile. These innovations lead to a perfor­mance 
+improvement of up to 5070 over our earlier results. There are a number of directions that we would like 
+to extend the work. First of all, we would like to do a more careful analysis of the the slowdown of 
+the algorithm. We know that both hardware effects and lack of parallelism are the major contributors 
+to the slowdown. We would like to break the hardware effects into well de­fined components. Our belief 
+is that bus con­tention is the dominant component of the hard­ware slowdown alt bough we do not have 
+concrete evidence of this. A more thorough understand­ing of the limited parallelism requires taking 
+a detailed look at how the algorithm performs on different input distributions. Other directions to extend 
+this work are to look at other classes of parallel machines and other combinatorial problems. We believe 
+that our results should apply to other shared mem­ory machines. However, we consider the problem of whether 
+or not Goldberg s algorithm can be effectively parallelized on a non-shared memory machine to be open. 
+As for other combinatorial problems, the rein-cost maximum flow problem is a natural follow-on problem 
+to study. The min­cost flow problem can be solved by similar tech­niques as the maximum flow, but it 
+generally re­quires substantially more computation, whi~ch in turn gives a greater opportunity for paralleliza­tion. 
+ References [AG91] F. Alizadeh and A. V. Goldberg. E:~per­iments with the Push-Relabel Method for the 
+Maximum Flow Problem on a Connection Machine. Paper presented at the DX~ACS Implementation Chal­lenge 
+Workshop, 1991. [AS92] R. J. Anderson and J. C. Setubal. Gold­berg s Algorithm for Maximum Flow in Perspective: 
+a Computational Study. Submitted for inclusion in the DI-MACS Implementation Challenge Work­shop Proceedings, 
+1992. [BMPT91] E. Balas, D. Miller, J. Pekny,, and P. Toth. A Parallel Shortest Augment­ing Path Algorithm 
+for the Assignment Problem. JACM, 38(4):985-1004, 1991. [CM89] J. Cheriyan and S. N. Maheshwari, Analysis 
+of Preflow Push Algorithms for Maximum Network Flow. SIAM Jour­nal on Computing, 18(6):1057 1086, 1989. 
+[DM89] U. Derigs and W. Meier. Implement­ing Goldberg s Max-Flow Algorit hlm a Computational Investigation. 
+ZOR Methods and Models of Operations Re­search, 33;383 403, 1989. [Din70] E. A. Dinic. Algorithm for 
+Solution of a Problem of Maximum Flow in a, Net­work Wit h Power Estimation. $ oviet Math. Dokl., 11:1277 
+1280, 1970. [G0187] A. V. Goldberg. Efficient Graph Algo­rithms for Sequential and Parallel Com­puters. 
+Ph. D. dissertation, Massachus­set ts Institute of Technology, Cam­bridge, Mass., Jan. 1987. [GT88] A. 
+V. Goldberg and R. E. Tarjan. A New Approach to the Maximum-Flow Problem. Journal of the ACM, 35(4):921-940, 
+1988. [GG88] D. Goldfarb and M. Grigoriadis. A Computational Comparison of the Dinic and Network Simplex 
+Methods for Maximum Flow. Annals of Oper­ations Research, 13:83 123, 1988. [Law76] E. L. Lawler. Combinatorial 
+Optimiza­tion: Networks and Matroids. Holt, Rinehart, and Winston, New York, 1976. [PS82] C. H. Papadimitriou 
+and K. Stei­glitz. Combinatorial Optimization: Al­gorithms and Complexity. Prentice-Hall, Englewood Cliffs, 
+N. J., 1982. [Tar83] R. E. Tarjan. Data Structures and Net­work Algorithms. SIAM, Philadelphia, Pennsylvania, 
+1983.  
+			

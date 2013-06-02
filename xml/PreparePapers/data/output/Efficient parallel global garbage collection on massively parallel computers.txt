@@ -1,0 +1,479 @@
+
+ Efficient Parallel Global Garbage Collection on Massively Parallel Computers Tomio Kamada, Satoshi Matsuoka, 
+Akinori Yonezawa The University of Tokyo Abstract On distributed-memory high-performance MPPs where 
+processors are interconnected by an asynchronous network, eficient Garbage Collection (GC) becomes dificult 
+due to inter-node references and references within pending, un­processed messages. Our parallel global 
+GC algorithm (1) takes advantage of reference locali~, (2) efjciently tra­verses references over nodes, 
+(3) admits minimum pause time of ongoing computations, and (4) has been shown to scale up to 1024 node 
+MPPs. The algorithm employs a global weight counting scheme to substantially reduce mes­sage trajic. 
+The two methods for confirming the arrival of pending messages are used: one counts numbers of mes­sages 
+and the other uses network bulldozing. Performance evaluation in actual implementations on a multicomputer 
+with 32-1024 nodes, Fujitsu APIOOO, re­veals various favorable properties of the algorithm. Introduction 
+Much of previous programming systems for MPPs (Mas­ sively Parallel Processors) have either precluded 
+dynamic storage allocation, such as FORTRAN, or allowed dynamic allocation but were not pointer-safe 
+, such as C, and re­quired the programmer to manage storage with explicit ma 11 oc ( ) and free ( ) calls. 
+In the sequential program­ming domain, however, it is well known that most recent breed of programming 
+languages based on well-founded programming paradigms (functional, object-oriented, logic programming, 
+etc.) and of actual practical use are pointer­safe, and manage storage automatically with garbage collec­tion 
+(GC). Examples are Common Lisp, Smalltrdlc, Eiffel, Standard ML, Prolog, etc. Even for C++, several propos­als 
+have been made for GC (e.g., [8]), and within the C++ Standardization Committee, GC is one of the major 
+agenda. As the application of parallel programming broadens from specialized fields such as numerical 
+computing to more general computing areas such as knowledge process­ ing or business computing, there 
+is a growing need for a bet­ ter, more advanced languages (which could be extensions to previously mentioned 
+sequential counterparts.) Indeed, there have been some experimental programming g languages for small-to 
+medium-scale distributed-memory parallel architectures that facilitated automated storage manage­ment. 
+Some notable examples are MultiLisp[9], KLl [19], and POOL/T[l]. Also, in distributed computing, sev­eral 
+distributed GC algorithms have been proposed in the past. But for both of such cases, realistic applications 
+to commercially-available, large-scale MPPs have not been entirely successful. This is because the algorithms 
+(1) in­curred excessive message traffic, (2) involved prohibitive runtime overhead, (3) did not properly 
+scale to larger num­ber of processors, and/or (4) have not been implemented to test their validity/efficiency. 
+In general, GC algorithms for distributed-memory archi­tectures can be largely classified into two types: 
+ Using reference counts: This type of GC algorithm mainly performs local GC on each node and uses ref­erence 
+counting to decide which objects are referenced from other nodes [4, 24,13, 18]. However, no algorithms 
+we know to date can collect cyclic garbage ranging over nodes with low runtime overhead required for 
+parallel computation.  Distributed marking over nodes: This type of GC algo­rithm is an extension of 
+the standard mark-and-sweep algorithm, and traverses/msrks both local and inter­node references [2, 10, 
+11, 22]. They can collect cyclic gsrbages, but many involve long pause time and/or exces­sive message 
+traffic. Messages by the garbage collector not only marks objects in other nodes, but also used to de­tect 
+termination of marking traversal. Some algorithms allow independent local GC on each node to exploit 
+ref­erence locality[lO, 11, 22].  We present an efficient real-life distributed GC algo­ rithm based 
+on an asynchronous message passing model and distributed marking. It assumes distributed-memory high­ 
+performance MPPs where processors are interconnected by a high-speed asynchronous network. The first 
+prototype has been implemented and running on a 32-1024 node MPP, Fu­ jitsu AP1OOO. As far as we know, 
+it is the first GC algorithm to have been shown to scale to 1024 nodes. 1063-9535/94 $4.0001994 IEEE 
+Our GC algorithm has the following favorable properties: Our global GC traverses inter-node references, 
+and can collect distributed cyclic garbages quickly and efficiently by exploiting parallelism of all 
+the processors.  GC algorithms that uses distributed marking tend to in­volve extensive message traffic, 
+incurring high runtime overhead and also disturbs ongoing computation. Our global GC reduces message 
+traffic by over 50% com­pared to straightforward algorithms, featuring efficient handling of outstanding 
+references within messages and low-communication termination detection of marking.  Our global GC admita 
+minimum pause time for user applications (mutators), and allows concurrent muta­tor/collector operations. 
+As we will discuss later, this property is essential for performance reasons because it allows effective 
+latency hiding of the communications.  Our GC algorithm S.I1OWSlocal generational GC on each node to 
+operate independently of other nodes (without invoking global GC), facilitating efficient collection 
+of local garbage, taking advantage of reference locality.  Experimental results show that our algorithm 
+is so far scalable to 1024 processors on AP1OOO,in that global GC time remain nearly constant even as 
+the number of nodes increase. This effectively indicates that the aggregate global GC performance scales 
+linearly at least up to that point.  Where object references may change in real-time by message passing, 
+it is necessary for global GC to consider pending messages on asynchronous networks and confirm all arrivals 
+of messages that were sent before global GC starts. We use two different methods for confirming the arrival 
+of pertding messages: one is the message counting method that counts the numbers of incoming and outgoing 
+messages, and the other is an improved variant of bulldozing method [22]. We evaluate their respective 
+performances and compare their advantages/dkadvantages. Termination of marking must also be detected 
+with low message traffic, but it is difficult to do so efficiently in dis­tributed environments; our 
+algorithm uses weighted Throw Counting (WTC) scheme[17, 14] to reduce message traffic. We have implemented 
+prototype version of our algorithm on Fujitsu AP1OOO, a multicomputer with 32-1024 nodes, and validated 
+its correct operation and did several perfor­ mance benchmarks, including the measurement of reduction 
+in message traffic of global GC. Section 2 surveys related work of distributed GC. SW­tion 3 presents 
+the system overview of our GC algorithms. Section 4 describes the objects to be marked. Section 5 covers 
+the algorithm of termination detection. Section 6 summarizes our global GC algorithm. Section 7 evaluates 
+the performance of our global GC, and we do some specific discussions in Section 8 and conclude in Section 
+9. 2 Related Work Several distributed GC algorithms have been proposed in the past, but realistic applications 
+to MPPs have not been entirely successful. This is because the algorithms (1) in­curred excessive message 
+traffic, (2) involved prohibitive runtime overhead, (3) did not properly scale to larger num­ber of processors, 
+and/or (4) have not been implemented to test their validity/efficiency. The algorithms can be largely 
+classified into two types: (1) one uses reference counts for global GC, and (2) the other uses distributed 
+marking over nodes for global GC that traverses/marks both local and inter-node references. [4, 24, 18, 
+13] can be categorized into the fist type. They manage inter-node references using variants of refer­ence 
+counts. They have local GC on each node, and can reclaim garbage with low cost that have not been referenced 
+from other nodes exploiting reference locality. [4, 24] pro­posed weighted reference counts to decrease 
+the cost of managing reference counts; however they can not collect cyclic garbage ranging over nodes 
+using reference counts. RealM.ic dktributed GC algorithms must be able to collect cyclic garbages with 
+low runtime overhead required for par­allel computation: for example, with (concurrent) object­oriented 
+language, objects can easily create cyclic garbage by only sending their addresses to objects whose address 
+they know. [18] can collect cyclic garbages by using refer­ence counts plus timestamps, but their runtime 
+overhead of managing references is too high to be used in parallel com­putations where new references 
+are created frequently. [13] employs group based GC to collect cyclic garbages ranging over nodes. Group 
+GC is similar to distributed marking, but requires more marking cost and network traffic. [2, 10, 11, 
+22] belong to the second type of GC algo­rithm that uses distributed marking. They can collect cyclic 
+garbages, but involve excessive message traffic, and/or do not allow concurrency with user thread, which 
+is essential for latency hiding. [10, 11, 22] exploit reference locality by facilitating either local 
+GC on each node or structuring the GC system hierarchically. [2] introduces the use of three marking 
+colors (white, gray, black) for termination detection, and also takes advan­tage of the parent-child 
+relation between collectors to detect the emptiness of distributed gray sets. However, it uses global 
+synchronizations over collectors on all the nodes of­ten, and also does not really consider asynchronous 
+message passing. Also, to achieve concurrency with mutators, be­fore sending a message, mutators must 
+gray the objects that are sent as parameters. This may involve graying objects on remote nodes and could 
+pause the mutator for a long time. [10, 11] employ the three marking colors as well, but requires much 
+less synchronization. They send back acknowledgement messages for each mark message when referenced object 
+are marked black, and global marking is judged as terminated when all the nodes have exhausted their 
+gray sets. However, acknowledging messages dou­bles the message traffic required for global GC, and, 
+even more messages are needed to detect the emptiness of dis­tributed gray sets. As we show in Section 
+7, the number of marking messages is considerable, and thus reduction of the GC messages in essential 
+for achieving good perfor­mance. Both employ (local) write barrier for concurrency with mutators, and 
+mutators are allowed to work in black (marked and traversed) area only. [22, 16] presenta an GC algorithm 
+of actors under the definition proposed in [12]. [22] emphasizes the treatment of pending messages in 
+net­work and employs bulldozing messages to confirm message arrival. However, the algorithm also requires 
+an acknowl­edgement message for every marking message, doubling the traffic of global GC messages. It 
+also allows mutators to work concurrently with marking, however, the run-time overhead of their algorithm 
+in collecting the actors seems very high. [16] collects the global information of object ref­erence into 
+one master node, upon which traversal is done based on [12]. The algorithm exhibita favorable behavior 
+such as fault tolerance and message loss in distributed sys­tems, but the centralization of collection 
+information would be difficult to scale up to the level required for MPPs. 3 Our GC System Our global 
+GC system consists of local collectors on each node and a GC host(Fig. 1). Each local collector traverses 
+references in its node. If an inter-node reference is found, the local collector sends a mark message 
+to the collector on the owner node of the referenced object to mark the referenced objects and traverse 
+the references from there. The GC host is a special node that decides the initiation of global GC, and 
+also detects termination of marking. Mes­ sages for termination detection are sent only between the local 
+collectors and the GC host. A local collector requests the GC host to start global GC when its local 
+GC has failed to reclaim sufficient memory. The GC host judges whether global GC is needed, and if so 
+announces the initiate global GC. Each local collector starta the global marking task when an announcement 
+of global GC initiation or a marking mes­ sage arrives. The execution of the mutator proceeds con­ currently 
+with local and global marking, and thus no pause time is incurred by, say, global barrier synchronization. 
+The GC host determines termination of marking based on infor­ mation from each local collector, and it 
+sends messages to all the local collectors to release unmarked memory. Existence of such a central management 
+node may seem that the node might become a scalability bottleneck, but as we shall show in Section 7, 
+performance benchmarks have so far shown that this is not a problem for low-latency GC HOST I on ctor 
+ F@ure 1: global GC system message-passing archhectures. This is primarily due be­cause the number of 
+messages sent to the GC host are sub­stantially lower compared to the aggregate number of mes­ sages 
+sent during the course of normal computation plus the mark messages sent directly between the local collectors. 
+To allow local GC to operate independently of other nodes without invoking global GC, each node has an 
+export set, that consists of pointers to objects possibly referenced from other nodes, and are treated 
+as a part of the root set during local GC. When an object pointer is exported to other nodes, the node 
+adds the pointer to its export set. Deletions from export set are done only via global GC to reduce the 
+overhead during ordinary computation. When global GC starts, nodes reset their export sets, and objects 
+that are marked by mark messages are reentered to the export set. 4 Which Objects to Mark in Global GC? 
+Global GC in a distributed environment poses difficulties in determining (1) which objects to mark and 
+(2) how to detect termination of marking. This section discusses the issue (l), and the issue (2) is 
+discussed in Section 5. First, we define live objects and garbage in our global GC: 1. Objects that are 
+executing methods, or (potentially) have unprocessed messages, are live (called active objects). 2. 
+Objects referenced from (lexically) top-level variables are live. 3. The transitive closure of references 
+from live objects are live. 4. All other objects are garbage. Our global GC effectively takes a logical 
+snapshot of the collective state of the global heap and the network at the start of the mark phase. We 
+reclaim objects that were already garbage at the snapshot, and do not reclaim objects that become garbage 
+during global GC. Newly created objects during GC are allocated as marked objects. The global GC algorithm 
+marks objects by globally traversing references from top-level variables, the execu­tion context and 
+the instance variables of logically active objects, and logically unprocessed messages. Pending mes­ 
+ sages in the network, however, complicate the treatment of reference relationships among objects. In 
+Fig.2, a mutator E ageBO . A ~ o active object 0-00 0 >ference  -73J L J\2 Figure 2: Old Messages 
+message with a sole global reference to object C is sent from object A and has not arrived at its destination 
+object B, whose sole global reference held at A is lost immediately after the message has been sent. 
+If global GC starts at this point, B and C are live because B will become active when the message arrives, 
+and C will be referenced by B. How­ever, if the global GC would fail to recognize the message, both B 
+and C would be mistakenly collected as garbage. Unprocessed messages that are sent just prior to the 
+start of global GC and have not yet arrived at their destination (either traversing through the network 
+or residing in some message buffer) are called old messages, and their destina­tion objects are logically 
+active. When a node receives an old message, the local collector on the node marks from the destination 
+object and the objects that are referenced by the message. Algorithms for judging whether a given mutator 
+message is old or not is described in Section 5.1. On a given node, if old messages arrive after marking 
+termination, objects referenced by old messages may be wrongly reclaimed in the collection phase that 
+immediately follows. Confirming the arrival of all the old messages must be done before determination 
+of marking termination. On the other hand, when we have marked all objects that had been accessible from 
+each node at the initiation of global GC, and rdso marked objects that had been accessible horn messages 
+that had been sent before initiation of global GC on each node, we can guarantee that no unmarked objects 
+will be referenced horn any of the nodes, even if the initia­tions of global GC are not logically consistent. 
+Algorithms for arrival confirmation are discussed in Section 5.1, and marking termination algorithm is 
+presented in Section 5.2. Finally, in our global GC, as marking and mutators are concurrently processed, 
+mutators may write into unmarked objects and destroy the reference relationship at the irtitia­tion of 
+global GC. In order to maintain the global virtual snapshot, we use the standard technique of (local) 
+write barrier to detect such a overwrite, and local collectors mark from the references that will be 
+lost by the writing. But if write barrier cost is high, we can further omit the write barrier by reducing 
+the concurrency between marking and ordinary computations as described in Section 5.3. Altogether, local 
+collectors perform the following mark­ing actions during global GC: 1. Mark ffom (Iexically) top-level 
+variables, local active objects, and their unprocessed messages. 2. Mark horn remote references via 
+mark messages. 3. Mark ffom old messages. 4. Mark from references lost in local writes into unmarked 
+objects.  5 Termination Detection It is also difficult to detect termination of marking with low message 
+traffic in a distributed environment. Reviewing the discussions in Section 4, marking can be judged as 
+being terminated when the following three conditions are satisfied: 1. The arrivals of all the old messages 
+have been confirmed. 2. All the local collectors have no further objects to mark. 3. No mark messages 
+are in transit within the network. We refer to the set of global system states that satisfy con­ditions 
+2 and 3 as quiescent states. If above conditions are satisfied, all the live objects are marked, and 
+there will be no further writes into unmarked objects, and local collectors will not mark any more objects. 
+Section 5.1 presents two methods for confirming the ar­rival of all the old messages that work concurrently 
+with  mtttators and marking, and Section 5.2 describes an algo­rithm to detect the quiescent state with 
+low message traffic. 5.1 Arrival Confirmation of Old Messages Our global GC confirms the arrival of 
+all the old mes­sages to assure marking horn all the references contained therein. We have two alternative 
+methods to con6rm the arrival: one is message counting method that eliminates the mutator ACK (acknowledge 
+response) messages, and the other is bulldozing method that improves the network clear­ing operation 
+algorithm described in [22]. Both algorithms work concurrently with marking, and do not block sending 
+of new messages by the mutator. 5.1.1 Message Counting Method ACKS are messages that are sent to the 
+sender node to con­firm the arrival of mutator messages*. However, naive em­ployment of ACKS would double 
+the number of messages sent by mtttators during the entire computation, and fur­thermore, all the mutator 
+messages would have to contain the sender node ID, possibly increasing the cost of message sendingt. 
+ *Note that this is different from acknowledgement of mark messages sent by the eottectms t rncr~ in 
+message size is not of importance her% rather, we are concerned with mtttime overhead causedby fetching 
+the node ID, sending it onto the network, receiving and precesaing ACK messages,etc. r > bundezino f 
+-1 The message counting method eliminates the need of ACKS. All the nodes count the number of outgoing 
+and incoming mutator messages, but no ACKS are sent. During InOde ode  HiiE!6d global GC, the GC host 
+watches the sum of the number of sent and received old messages in the system, in order to conlirm the 
+arrival of all the old messages. To distinguish the old messages from mutator messages sent after the 
+start of global GC (called new messages), we assign a color to each mutator message. Nodes have a common 
+color that changes at the initiation of each round of global GC, and all the mutator message are given 
+this color. In practice, one bit is sufficient as a color bit since executions of global GCS do not overlap. 
+Each node distinguishes the number of sent or received messages according to their respective colors. 
+The aggregate number of sent and received messages in the system should be equivalent for a given color. 
+Each node sends the number of sent old messages to the GC host at the initiation of global GC. The GC 
+host will know the number of all the sent messages of a particular color in the system when it receives 
+the information from all the nodes. Then, each node sends the number of received old message to the GC 
+host when it has no objects to mark for a certain time period. If an old message arrives afterwards, 
+the local collector resumes marking from it, and sends the number of newly received old messages to the 
+GC host again when it has no more objects to mark. The GC host will have coniirmed the arrival of all 
+the old messages when the sum of the number of all the sent messages in the system and the sum of the 
+number of all the received messages received from the nodes are equal. If old messages are guaranteed 
+to arrive at their destination in finite time, all the nodes will have received their old messages, and 
+the GC host can conlirm this fact in finite time. In comparison, naive usage of ACKs would require all 
+the mutator messages to contain the sender node IDs. Moreover, even if ACK information were to be storedlcombined, 
+and exchanged only during global GC, ACK information would have to be exchanged between all the node 
+pairs leading to a 0(n2) algorithm where n is the number of nodes. In contrast, the message counting 
+method sends messages for arrival confirmation only during global GC, and more im­portantly, the number 
+of messages required for global arrival confirmation is reduced to O(n). 5.1.2 Bulldozing Method The 
+bulldozing method uses hardware-assisted network clearing operation that cart be used in networks that 
+guar­antee message FIFOness [22]. Bulldozing does not block sending of new messages; instead Bulldozing 
+messages are sent through all the network paths of thes ystem, and arrivals of bulldozing messages through 
+a given path guarantee the arrival of old messages through that path. Note that some new messages may 
+be sent before the passage of the bull-Figure 3: Bulldozing dozing message and arrive before bulldozing 
+completes, but this fact does not affect the correctness of global GC (Fig,3). No actual global GC implementations 
+on MPPs have used bulldozing tQour knowledge, however. In [22], an algorithm is given such that the nodes 
+store and forward bulldozing messages O(nl/2) times for each particular path, and O(n) times in the system. 
+Thus the latency of processing bull­dozing messages is high for a large n. On the other hand, if bulldozing 
+messages are sent between all node pairs, store­forwarding would not be necessary resulting in O(1) latency, 
+but message traffic becomes 0(ra2). In our implementation on AP1OOO, we send bulldozing messages to sweep 
+out old messages, but reduce message traffic and latency by taking advantage of the physical net­work 
+topology. Nodes store and forward bulldozing mes­sages 6 times for each particular path for an arbitrary 
+n, and 8 x n bulldozing messages are in the system in total. Only messages that arrive before announcement 
+of bull­dozing termination can be old. Thus, we do not need to color mutator messages, as the arrival 
+of the bulldozing message guarantee that the old message have been processed. As a result, we totally 
+eliminate the runtime overhead in mu­ tator message passing (no counting/colorirtg is required), although 
+we might recognize a small fraction of new mes­ sages as old and mark from them (Fig.3).  5.2 Detection 
+of Quiescent State Another problem of distributed marking is the termina­tion detection of marking with 
+low message traffic. Many global GC algorithms return an acknowledgement message+ per every mark message 
+to indicate the arrival of the message, or the termination of marking from it. Thus, the number of messages 
+required for termination detection would be more than twice the number of mark messages. In order to 
+reduce this cost, we use JVTC scheme[17, 14] to detect quiescent state of marking. Mark messages and 
+marking local collectors are given positive weights by the GC host. The GC host finds the quiescent state 
+of marking when all weights are returned to the GC host. The GC host gives positive weights to all the 
+local col­lectors at the initiation of global GC. Local collectors send mark messages with positive weight 
+dividends. A local t Again, not to be confused with ACKS, which are acknowledgements to mutator messages. 
+ Local Collector for each mark message, our method only needs to communi­ cate infrequently with the 
+GC host to return/request weight weight that is managed by each local collector as a unit, and it re­ 
+quires substantially less message traffic. On the other hand,  L!ii?J + weight m Figure 4: Marking 
+Messages with Weight GC HOST given weight : @ return of weight /&#38; not marking message not marking 
+m~m Figure 5: Returning of Weight collector that receives a mark message adds the weight of the message 
+to its own current weight(Fig.4). The invariant is that the sum of the weights of mark messages and locrd 
+collectors are equal to the weight that the GC host gives out. Each local collector returns its weight 
+to the GC host if it has no objects to mark for a certain period(Fig.5). If all the weights are returned 
+to the GC host, the GC host can judge that the system is in the quiescent state. The GC host judges the 
+termination of marking when it contirms the arrival of all the old messages and the marking state is 
+quiescent. One exceptional case to consider is as follows: because our concurrent global collector marks 
+from lost references to unmarked objects caused by mutator writes, it is conceivable that after the local 
+collector has returned all its weight to the GC host, a mutator write could resume marking in the node, 
+while the GC host would judge the termination of marking and wrongly start the reclamation phase. However, 
+such cases are guaranteed not to occur. The usual correctness criterion of the local concurrent collector 
+guarantees that all locally referenced live objects are marked and the weight of anode is not returned 
+until such local markings are finished. Thus, such unmarked old object must either be referenced from 
+old messages or other nodes, and as a result, when the arrival of all the old messages have been contirmed, 
+there is a node or a mark message in the system whose weight is positive. Since the GC host does not 
+start reclamation until the arrival of all the old messages are confirmed and all the weights are returned 
+to the GC host, no such exceptional case could occur. On the other hand, if marking terminates, all the 
+weights will be returned to the GC host in finite time, and the GC host will certainly judge termination 
+of marking. Comparing with methods that return acknowledgement our method could result in concentration 
+of weight mes­sages to the GC host, but experimental results so far show that this is not a problem because 
+weight message traffic is very infrequent compared to other types of messages. 5.3 Optimizations We can 
+further optimize our algorithm to reduce mes­sages traffic to the GC host. Our implementation on AP1OOO 
+currently incorporates the following optimizations: For the message counting method, we can combine 
+the messages that send the number of received old message and that return weight into one message to 
+the GC host.  Each local collector could delay the returning of weight for a certain time period after 
+local marking terminates, letting the mutator execute in the node. In our global GC, it is sometime the 
+case that, immediately after re­turning the weight, an old messages or a mark message woutd arrive and 
+marking must be resumed. By incorpo­rating such a delay, we can reduee such cases and reduee messages 
+to the GC host, with a small penalty in global GC time. In a similar way, a local collector can delay 
+returning of weight for a certain period of time from the initiation of global GC to reduces GC messages. 
+In addition, we can omit write barriers by reducing con­  currency between marking and ordinary computations, 
+if write barrier cost is high. We can avoid assignment on un­marked objects by using a scheme that is 
+based on the idea proposed in [5]. At the start of the marking phase, each node traverses/marks local 
+references transitively from all the root objeeta of each node, and then ordinary compu­tations are allowed 
+to execute. After marking, ordinary computations are executed in the node without accessing unmarked 
+objects. For messages from other nodes, each node traverseslmarks references transitively from local 
+ob­jects referenced directly by the message on the node, and then execution of the activity associated 
+with the message is allowed. After each marking, ordinary computations de­rived horn the message are 
+executed in the node without accessing unmarked objects. Fortunately, this scheme does not invalidate 
+our termination detection rdgorithm: First, this scheme does not increase the number of marking on ob­jects, 
+and only mandates the checking of whether unmarked objects are directly referenced by each received message. 
+When unmarked objects are directly referenced by a mes­sage, nodes might mark from these objects without 
+positive weight. However, even in such cases, termination is not judged wrongly because these unmarked 
+objects must be referenced from either old messages or other nodes as in the case of assignment on unmarked 
+objects in Section 5.2, and as a result, when the arrival of all the old messages have been confirmed, 
+there is a node or a mark message in the system whose weight is positive. Second, since this scheme only 
+traverses references horn untraversed objects and old messages, it does not increase the number of remote 
+mark messages that traverse inter-node references, and re­mote markings will terminate in finite time. 
+Altogether termination will be detected correctly in finite time. 6 The Algorithm Altogether, we can 
+formalize our global GC algorithm as follows: In Local Collectors During ordinary computation phase, 
+each local collector starts the marking phase, when a mark­ing message or an announcement of initiation 
+of global GC (or a bulldozing message in case of bulldozing method) ar­rives. A local collector marks 
+concurrently using a marking stack. At the initiation of marking phase, the marking stack initialized 
+to contain (lexically) top-level variables, local active objects, and their unprocessed messages. For 
+the message counting method, it sends the number of sent old messages to the GC host. Laal collectors 
+examine received messages during the marking phase, and behave as follows depending on the message kind: 
+Marking messages: The reference information in the marking message is added to the marking stack. (Possibly) 
+old mutator messages: The node adds refer­ ence information in old messages to the marking stack. For 
+message counting method, old-colored messages are judged as old. For bulldozing method, messages that 
+arrived before the announcement of termination of bulldozing are judged as old. Announcement message 
+of marking termination: Each node starts to reclaim their unmarked areas, and return to the ordinary 
+computation phase. Local collectors send messages to the GC host for termi­ nation detection of marking, 
+as follows: For the message counting method, when a node has no objects to mark in its marking stack 
+for a certain period, and a given time has passed since the the initiation of global GC, the node returns 
+its weight and the number of received old messages to the GC host.  In case of bulldozing method, when 
+a node has re­  ceived the announcement message of termination of bulldozing, and it has no objects 
+to mark in its marking ~FOrtttebulldozing operations, all nodesareannouncsdthe teRUhatiOrI of bulldozing. 
+stack for a certain period, and a given time has passed since the the initiation of global GC, the node 
+returns its weight. At the GC Host In Marking Phase, the GC host deter­mines termination of marking based 
+on the information from each local collector, upon which it sends messages to all the local collectors 
+to release unmarked memory. For the message counting method, the GC host deter­mines that marking has 
+terminated if the following three conditions are satisfied. It has received the number of sent old messages 
+from all the nodes.  The sum of the number of all the sent old messages and the sum of the number of 
+all the received old messages are equal.  All weight has been returned to the GC host.  For the bulldozingmethod, 
+the GC host determines termi­nation of marking if following two conditions are satisfied. Bulldozing 
+operations have been terminated.  All weight has been returned to the GC host.  7 Performance Evaluation 
+We have implemented a prototype of our global GC algo­rithm on a 32 1024 nodes Fujitsu API 000 MPP (each 
+node consists of 25 MHz SPARC and 16MB memory). In or­der to evaluate the performance, we employed a 
+tine-grain, naive combinatorial N-Queen search problem (Tablel ), and a fine-grain, one-dimension Newtonian 
+N-body problem so­lution based on algorithm presented in [25], that is a parallel extension of [3] (Table2,Fig.6). 
+The heap size was fixed to 8MB per each node. The number of messages for global GC excluding mark messages, 
+i.e. weight return/request or bulldozing messages (row A), is 3-15 % of the number of mark messages (row 
+B), when the number of remote references are substantially larger than the number of the nodes in the 
+system by orders of magnitude (Tablel ,2). In other words, the total number of messages for global GC 
+is a small fraction greater than the number of remote references. In the case of acknowledging every 
+mark message, the number of message for global GC would be more than twice the number of remote references. 
+Our method reduces message traffic of global GC by about half. Both the message counting method and the 
+bulldozing method terminates marking in about 200-300 msec irre­ spective of the number of nodes. Furthermore, 
+since muta­ tors are concurrently executed during that time, the latency involved in remote marking is 
+effectively hidden. The only case the mutator becomes blocked is when the node phys­ ically runs out 
+of memory during this period. For N-body (Table2), the number of ordinary messages (row C) is al­method 
+for arrival confirmation I msg count I bulldozing #of gc messages excludimz mark messazes: A 1360 4100 
+ III I #of ordinary messages I I I during globti GC: C 9100 10500 (old messages) (5) (3) #of weight requests 
+72 0 #of marked objects (x Id) 6.5 6.5 Table 2: Performance Evaluation of Global GC (512nodes,20000 
+Body) Number 01 GC Meeaegea 8000 .. ,... .,.. 6000 .,. .,.. 70W Bu,ldozing . ,/.. messagesk h e system 
+,,,6000 .,/ .,. 5000 ,. .  Meeqe Cantin$ .... messages in the systim ,./ 4000 (= messages.0 the IX! 
+hast) ,.., ... 3000 .,/ / ~ 2000 ,..  -------­ ---.. ,/ 1000 ..~ ,.. --.--.---- -k-ild;;in~ 5-. messages 
+ta the W host . ----Nrmhr I 256 512 1024 N~=0 768 In the Syateen Figure 6: The Number of GC Messages 
+Excluding Mark Messages (13-Queens) most equal to 20 5Z0 of the number of GC messages during global 
+GC (row A + B), and most of ordinary messages are colored new. This implies ordinary computations proceeded 
+substantially during the global GC phases. Comparing the message counting method with the bull­dozing 
+method, the bulldozing method involves more mes­ sage traffic than message counting method (Table2,1 
+), This is because the latter uses bulldozing messages exclusively for arrival confirmation, while message 
+counting method can combine messages for arrival confirmation and for de­tection of quiescent state. 
+In addition, whether or not ef­fective bulldozing algorithm would be possible depends on the network 
+architecture of the underlying hardwar~ for ex­ample, most adaptive routing networks does not guarantee 
+message FIFOness and thus precludes bulldozing. On the other hand, the bulldozing method has the advantage 
+that it would involve little mutator overhead as it does not have to deal with runtime color information 
+or message counting. In this benchmark, the number of messages to the GC host are small, and thus message 
+concentration on the GC host does not become a problem. More specifically, the number of messages to 
+the GC host is 3 20 times as many as the number of nodes, and it can be reduced to 3-5 times by postponing 
+returning of weight(Tablel ,2, Fig.6). In our performance evaluation with 1024 nodes AP1OOO, the num­ber 
+of the GC messages to the GC host does not exceed 5000, and that did not become a bottleneck in our bench­mark. 
+However, concentration of messages to the GC host would become higher and could potentially cause problems 
+if the number of nodes increases by orders of magnitude. In such a case, improvements will be needed 
+such as creating a hierarchy of GC hosts. In our implementation on AP1OOO, messages for global GC cannot 
+be given priority over mutator messages due to hardware restriction, and as a result, latency of receiving 
+global GC messages tend to be longer, resulting in longer marking time and thus potentially increasing 
+the chance of mutator block. If global GC messages can be processed with higher priority over mutator 
+messages, global GC would take shorter time, and we can exploit more effective varia­tions of the algorithms. 
+8 Discussions 8.1 Concurrent CC and Latency Hiding In centralized memory architectures, concurrent GC, 
+which allow concurrent mutator and collector activities, is usually employed for reducing the interactive 
+response time of the system, and do not result in performance benefits. On the contrary, the overhead 
+of GC is usually worse in con­current GC compared to a more naive stop-and-go type of GC algorithms-that 
+is to say, stop-and-go algorithms ex­hibit better overall performance. This is primarily because concurrent 
+GC may involve overhead of context switching, and/or overhead of coordinating mutator-collector activities, 
+and/or loss of locality in the computation. For parallel GC in a distributed memory parallel architec­tures, 
+however, the observation is that concurrent collection is a requirement for BETTER performance. This 
+is primar­ily due to the following reasons: 1. Multithreading of the mutator and the collector allows 
+latency hiding. This simple fact, which is a general char­acteristics of multithreading in distributed-memory 
+par­allel processing 15], is nevertheless more important then it seems for distributed-memory GC on MPPs. 
+Detailed logging of global GC shows that the bulk of the marking phase completes relatively quickly, 
+and most nodes will remain idle for the rest of the GC phase. By multithread­ing with the mutrttor, such 
+latency is effectively hidden, allowing full utilization of the processors. application #of nodes method 
+for arrival confirmation #of gc messagesexcluding mark messages:A #of mark messages: B A/B marking tirne(msec) 
+#of gc messagesto host #of marked objects (x 105) #of garbage objects (x 105) percentage of marked objects 
+ 12-Queens 64 13-Queens 1024 msg count bulldozing 410 640 13700 15700 3.070 4.1 % 190 190 410 210 6.7 
+6.6 27.8 25.3 19% 21% msg count bulldozing 3700 9200 24000 23000 15% 40% 170 190 3700 2100 1.5 1.3 34.3 
+32.8 4.4% 3.8 %  Table 1: Performance Evaluation of Global GC (N-Queens) 2%Even for stop-and-go collection, 
+the algorithm has to guarantee the global consistency in the state mutator state. This means that the 
+network has to be cleared of in-transit messages that may potentially contain critical references in 
+the same manner as our current algorithm. This will further lengthen the pause time, in which most of 
+com­ putational resources are wasted. One potential advantage of stop-and-go collection is that, it would 
+allow the GC to dominate the communication re­source of the system, and could in turn allow the GC phase 
+to complete in a shorter time period compared to concur­rent collection (although the aggregate efficiency 
+in terms of machine utilization will be worse.) For communication­intensive computations, this could 
+actually be the case, as the network would be heavily loaded. However, such a short pause time is already 
+achieved by concurrent garbage collection in the fist place. 8.2 Coexisting with Active Messages Up 
+until now, we have not discussed what kind of mes­ sage passing mechanism one would use for sending both 
+the mutator and GC messages. Recent proposal of Active Messages[23] greatly reduced the latency involved 
+in mes­ sage passing down to the order of less than 10 # seconds on CM-5. Active Messages involve compiling 
+a customized preamble procedure for each specific message type, and passing only the pointer to the head 
+of the procedure at the head of the message rest of the message is sent in a packed form without any 
+type tags or message size tags. Upon reception of this pointer, the receiver node immedi­ ately jumps 
+to the customized preamble, which extracts the rest of the message from the network interface and interprets 
+them directly as the rest of the data arrives. Active Messages are being used in various high-performance 
+programming language implementations, such as Id[7], Split-C[6], and our ABCL/onAP1000[21 ], a high-performance 
+concurrent object-oriented language system. Given the low latency of Active Messages, it is only natural 
+that one would prefer to use it for both the mutator and GC messages in order to achieve efficiency. 
+However, it is not possible to employ Active Messages naively in our GC algorithm, because the algorithm 
+requires genericldynamic checking of various type tags within the message, as well as checking the state 
+of the local collector. Such tag and state checking are exactly the source of the considerable run-time 
+overhead which Active Messages tried to eliminate in the first place. More specifically, the GC algorithm 
+mandates that the system (1) recognize the references contained in the message, and (2) behave differently 
+for the same message, depending on the current state of the collector. Fortunately, our GC algorithm 
+and Active Messages can coexist in the following way: The idea is to customize both the preamble procedure 
+and the initial message han­dler. For each message type of Active Messages, alternative preamble procedures 
+are compiled such that, in addition to interpreting the message in a normal way, pushes the references 
+contained in the message into the mark stack. Now, the standard behavior of the initial message handler 
+is to receive the first word of the message that contains the pointer to the preamble procedure and make 
+a dispatch to the pointer. When global GC starts, the original initial message handler is replaced with 
+the one which makes a dispatch to the corresponding alternative preamble procedure. Al­though such a 
+mechanism is a small penalty, since majority of the computation is done during which GC is not active, 
+it is better to optimize for normal computation by retaining the full efficient characteristics of Active 
+Messages, which this technique does. 9 Conclusion and Future Work Our parallel global GC algorithm reduces 
+the runtirne overhead and message traffic for global GC significantly. The number of messages for termination 
+detection of msrk­ing is about 3-15!Z0of the number of mark messages. This implies our global GC needs 
+less than half the message traffic compared to previous algorithms. Comparing the two alternatives of 
+old message arrival detection, the bulldozing method and the message counting method, the bulldozing 
+method has the advantage that it [9] does not require coloring or counting of messages, but its viability 
+depends on the underlying hardware, and latency of bulldozing could be longer as a result. [10] In our 
+current implementation on AP1OOO, processing of global GC message is not given priority over mutator 
+mes­sages due to hardware restrictions. If global GC messages [11] could be given higher priority overmutator 
+messages, global GC would take lesser time, and thus significantly reducing the chance of mutator block 
+on each node. [12] As a future work, since our implementation is still a pro­totype version, we plan 
+to evaluate realistic performances in various parallel program benchmarks such as SPLASH[20]. [13] Although 
+the current algorithm has shown to scale to 1024 nodes on a relatively standard MPP, we still would like 
+to [14] extend the system so that it would have better scalability for MPPs with over thousands of nodes, 
+by making the GC host and the arrival/termination detection algorithms to be [15] hierarchical. Finally, 
+our global GC needs to be extended to account for object migration. [16] Acknowledgements [17] We would 
+like to express our thanks to Fujitsu Laboratory for allowing us to use the AP1OOO(1024 nodes version). 
+We also thank the member of the ABCL project group for their [18] continues advice and discussions. References 
+[19] [1] P. America. Designing an Object-Oriented Program­ming Language with Behavioral Subtyping. In 
+Proc. of REXIFOOL, volume 489 of LNCS, pages 60-90, 1990. [20] [2] L. Augusteijn. Garbage Collection 
+in a Distributed Environ­ment. In Proc. of PARLE, volume 259 of LNCS, 1987.  [21] [3] J. Barnes and 
+P. Hut. A Hierarchical O(N log IV) Force- Calculation Algorithm. Nature, 324:446-449,1986. [4] D. I. 
+Bevsn. Distributed Garbage Collection Using Reference Counting. In Proc. of PARLE, volume 259 o~LNCS, 
+1987. [22] [5] H. C. and B. H. Actors end continuous functional. In Proc. of IFIP Woking Conference on 
+Formal Description of Programming Concepts, pages 1-21, 1988. [23] [6] D. E. Culler, A. Dusseau, S. C. 
+Goldstein, A. Krishnamurthy, S. Lumetta, T. von Eicken, and K. Yelick. Parallel Program­ming in Split-C. 
+In Proc. of Supercomputing, pages 15-19, 1993. [24] [7] D. E. Culler, A. Ssh, K. E. Schauser, T. von 
+Eicken, and J. Wawrzynek. Fine-Grain Psmdlelism with Minimal Hard­[25] ware Support: A Compiler-Controlled 
+Threaded Abstract Machine. In Proc. of ASPLOS, pages 166-175, 1991.  [8] D. L. Detlefs. Concurent garbage 
+collection for C++. In Topics in Advanced Language Implementation, pages 101­ 134. MIT PRESS. R. H. H. 
+Jr. Mukilisp: A Language for Concurrent Sym­bolic Computation. ACM Transactions on Programming Languages 
+and Systems, 7(3):501-538, 1985. E. Jul, H. Levy, N. Hutchinson, and A. Black, Fine-grained Mobility 
+in the Emerald System. In ACM Transactions on Computer Systems, 1988. N. C. Jmd and E. Jul. Comprehensive 
+and Robust Garbage Collection in a Distributed System. In Memory Management, volume 637 of LNCS, 1992. 
+D. Kafura, D. Washabaugh, and J. Nelson. Garbage Collec­tion of Actors. In Proc. ofECOOPIOOPSLA, pages 
+126-134, 1990. B. Lang, C. Queinnec, and J. Piquer. Garbage Collecting the World. In Proc. of POPL, 1992. 
+F. Mattern. Global quiescence detection based on credit distribution and recovery. In$ Proc. Lett., 30(4):195-200, 
+1989. R. S. Nikhil and Arrvind. Can Datailow subsume von new­mann Computing? In Proc. of ISCA, pages 
+262-272, 1989. I. Puaut. A distributed garbage collector for active objects. In Proc. of 00PSLA, 1994. 
+(to appear). K. Rokusawa, N. Ichiyoshi, T. Chikayama, and H. Nakashima. An Efficient Termination Detection 
+and Abor­tion Algorithm for Distributed Processing Systems. In Proc. of ZCPP88, volume 1, pages 18-22, 
+1988. M. Schelvis. Incremental Distribution of Timestamp Packets: A New Approach To Distributed Garbage 
+Collection. In Pnx. of OOPSLA, 1989. D. Sekita and T. Chikayama. Plan for a portable imple­mentation 
+of KLl. In IPSJ SIG Notes, volume 92, pages 123-130. Information Processing Society of Japan, 1992. (in 
+Japanese). J. P. Sin@, W.-D. Weber, and A. Gupta. SPLASH: Standard Parallel Applications for Shared-Memory. 
+K. Taura, S. Matsuoka, and A. Yonezawa. An Efficient Im­plementation Scheme of Concurrent Object-Oriented 
+Lan­guages on Stock Multicomputers. In Proc. of PPOPP, pages 218-228, 1993. N. Venkatasubramsnisn, G. 
+Agha, and C. Talcott. Scalable Distributed Garbage Collection for System of Active Objects. In Memory 
+Management, volume 637 of LNCS, 1992. T. von Eicken, D. E. Culler, S. C. Goldstein, end K. E. Schauser. 
+Active Messages: a Mechanism for Integrated Communication and Computation. In Proc. of ISCA, pages 256-266,1992. 
+P. Watson and I. Watson. An Efficient Garbage Collection Scheme For Parallel Computer Architectures. 
+Jn Proc. of PARLE, volume 259 of LNCS, 1987. M. Yasugi. A Concurrent Object-Oriented Programming Language 
+System for Highly Parallel Data-Driven Comput­ers and its Applications. Technical Report 94 7e, Dept. 
+of Information Science, Univ. of Tokyo, 1994. (Doctoral Thesis, Mar. 1994).  
+			

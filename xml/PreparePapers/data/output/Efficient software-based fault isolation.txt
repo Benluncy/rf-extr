@@ -1,0 +1,589 @@
+
+ Efficient Software-Based Fault Isolation Robert Wahbe Steven Lucco Thomas E. Anderson Susan L. Graham 
+Computer Science Division University of California Berkeley, CA 94720 Abstract One way to provide fault 
+isolation among cooperating software modules is to place each in its own address space. However, for 
+tightly-coupled modules, this so­lution incurs prohibitive context switch overhead, In this paper, we 
+present a software approach to imple­menting fault isolation within a single address space. Our approach 
+has two parts. First, we load the code and data for a distrusted module into its own fault do­main, a 
+logically separate portion of the application s address space. Second, we modify the object code of a 
+distrusted module to prevent it from writing or jump­ing to an address outside its fault domain. Both 
+these software operations are portable and programming lan­guage independent. Our approach poses a tradeoff 
+relative to hardware fault isolation: substantially faster communication be­tween fault domains, at a 
+cost of slightly increased execution time for distrusted modules. We demon­strate that for frequently 
+communicating modules, im­plementing fault isolation in software rather than hard­ware can substantially 
+improve end-to-end application performance. This work was supported in part by the National Sci­ence 
+Foundation ( CDA-8722788), Defense Advanced Research Projects Agency (DARPA) under grant MDA972-92-.J-1028 
+and contracts D ABT63-92-C-0026 and NO0600-93-C-2481, the Digi­tal Equipment Corporation (the Systems 
+Research Center and the External Research Program), and the AT&#38;T Foundation. Anderson was also supported 
+by a National Science Foundation Young Investigator Award. The content of the paper does not necessarily 
+reflect the position or the policy of the Government and no official endorsement should be inferred. 
+Email: {rwahbe, lUCCO, tea, grahefn}@cs .berkeley. edu Permission to copy w!thout fee all or pa~t of 
+th!s material IS H,ented prov,ded that the W%or d,arr(buceu for GVPIeSnotmode d!rect commercial advantage, 
+the ACM copyright notice and the title of the publ!catlon and Its date appear, and not[ce IS given that 
+copying IS by permission of the Association for Computing Machinery. To copy otherwtse, or to republish, 
+requires a fee andlor specific permtsslon. SIGOPS 93/12 /93/N. C., USA 0 1993 ACM 0-89791 -632 -S/93 
+/0012 . ..$l .50 1 Introduction Application programs often achieve extensibility by incorporating independently 
+developed software mod­ules. However, faults in extension code can render a software system unreliable, 
+or even dangerous, since such faults could corrupt permanent data. To in­crease the reliability of these 
+applications, an operat­ing system can provide services that prevent faults in distrusted modules from 
+corrupting application data. Such fault isolation services also facilitate software de­velopment by helping 
+to identify sources of system fail­ure. For example, the POSTGRES database manager in­cludes an extensible 
+type system [Sto87]. Using this facility, POSTGRES queries can refer to general-purpose code that defines 
+constructors, destructors, and pred­icates for user-defined data types such as geometric objects. Without 
+fault isolation, any query that uses extension code could interfere with an unrelated query or corrupt 
+the database. Similarly, recent operating system research has fo­cused on making it easier for third 
+party vendors to enhance parts of the operating system. An ex­ample is micro-kernel design; parts of 
+the operat­ing system are implemented as user-level servers that can be easily modified or replaced. 
+More gener­ally, several systems have added extension code into the operating system, for example, the 
+BSD network packet filter [M RA87, MJ93], application-specific vir­tual memory management [HC92], and 
+Active Mes­sages [vCGS92]. Among industry systems, Microsoft s Object Linking and Embedding system [Cla92] 
+can link together independently developed software mod­ ules. Also, the Quark Xprem desktop publishing 
+sys­tem [Dys92] is structured to support incorporation of general-purpose third party code. As with PO 
+ST GRES, faults in extension modules can render any of these systems unreliable. One way to provide fault 
+isolation among cooperat­ing software modules is to place each in its own address space. Using Remote 
+Procedure Call (RPC) [BN84], modules in separate address spaces can call into each other through a normal 
+procedure call interface. Hard­ware page tables prevent the code in one address space from corrupting 
+the contents of another. Unfortunately, there is a high performance cost to providing fault isolation 
+through separate address spaces. Transferring control across protection bound­aries is expensive, and 
+does not necessarily scale with improvements in a processor s integer perfor­mance [ALBL91]. A cross-address-space 
+RPC requires at least: a trap into the operating system kernel, copy­ing each argument from the caller 
+to the callee, sav­ing and restoring registers, switching hardware ad­dress spaces (on many machines, 
+flushing the transla­tion lookaside buffer), and a trap back to user level. These operations must be 
+repeated upon RPC re­turn. The execution time overhead of an RPC, even with a highly optimized implementation, 
+will often be two to three orders of magnitude greater than the execution time overhead of a normal procedure 
+call [BALL90, ALBL91]. The goal of our work is to make fault isolation cheap enough that system developers 
+can ignore its perfor­mance effect in choosing which modules to place in separate fault domains. In many 
+cases where fault iso­lation would be useful, cross-domain procedure calls are frequent yet involve only 
+a moderate amount of computation per call. In this situation it is imprac­tical to isolate each logically 
+separate module within its own address space, because of the cost of crossing hardware protection boundaries. 
+We propose a software approach to implementing fault isolation within a single address space. Our ap­proach 
+has two parts. First, we load the code and data for a distrusted module into its own fault domain, a 
+logically separate portion of the application s address space. A fault domain, in addition to comprising 
+a con­tiguous region of memory within an address space, has a unique identifier which is used to control 
+its access to process resources such as file descriptors. Second, we modify the object code of a distrusted 
+module to pre­ vent it from writing or jumping to an address outside its fault domain. Program modules 
+isolated in sepa­rate software-enforced fault domains can not modify each other s data or execute each 
+other s code except through an explicit cross-fault-domain RPC interface. We have identified several 
+programming-language­independent transformation strategies that can render object code unable to escape 
+its own code and data segments. In this paper, we concentrate on a sim­ ple transformation technique, 
+called sandboxing, that only slightly increases the execution time of the mod­ ified object code. We 
+also investigate techniques that provide more debugging information but which incur greater execution 
+time overhead. Our approach poses a tradeoff relative to hardware­based fault isolation. Because we 
+eliminate the need to cross hardware boundaries, we can offer substantially lower-cost RPC between fault 
+domains. A safe RPC in our prototype implementation takes roughly 1. lps on a DECstation 5000/240 and 
+roughly 0.8ps on a DEC Al­pha 400, more than an order of magnitude faster than any existing RPC system. 
+This reduction in RPC time comes at a cost of slightly increased distrusted module execution time. On 
+a test suite including the the C SPEC92 benchmarks, sandboxing incurs an average of 4% execution time 
+overhead on both the DECstation and the Alpha. Software-enforced fault isolation may seem to be counter-intuitive: 
+we are slowing down the common case (normal execution) to speed up the uncommon case (cross-domain communication). 
+But for fre­quently communicating fault domains, our approach can offer substantially better end-to-end 
+performance. To demonstrate this, we applied software-enforced fault isolation to the POSTGRES database 
+system run­ning the Sequoia 2000 benchmark. The benchmark makes use of the POSTGRES extensible data type 
+sys­tem to define geometric operators. For this bench­mark, the software approach reduced fault isolation 
+overhead by more than a factor of three on a DECsta­tion 5000/240. A software approach also provides 
+a tradeoff be­tween performance and level of distrust. If some mod­ules in a program are trusted while 
+others are dis­trusted (as may be the case with extension code), only the distrusted modules incur any 
+execution time over­head. Code in trusted domains can run at full speed. Similarly, it is possible to 
+use our techniques to im­plement full security, preventing distrusted code from even reading data outside 
+of its domain, at a cost of higher execution time overhead. We quantify this ef­fect in Section 5. The 
+remainder of the paper is organized as follows. Section 2 provides some examples of systems that re­quire 
+frequent communication between fault domains. Section 3 outlines how we modify object code to pre­vent 
+it from generating illegal addresses. Section 4 describes how we implement low latency cross-fault­domain 
+RPC. Section 5 presents performance results for our prototype, and finally Section 6 discusses some related 
+work. Background In this section, we characterize in more detail the type of application that can benefit 
+from software­ enforced fault isolation. We defer further description of the POSTGRES extensible type 
+system until Section 5, which gives performance measurements for this ap­ plication. The operating systems 
+community has focused con­siderable attention on supporting kernel extensibil­ity. For example, the UNIX 
+vnode interface is de­signed to make it easy to add a new file system into UNIX [Kle86]. Unfortunately, 
+it is too expensive to forward every file system operation to user level, so typically new file system 
+implementations are added directly into the kernel. (The Andrew file system is largely implemented at 
+user level, but it maintains a kernel cache for performance [HKM+88].) Epoch s ter­tiary storage file 
+system [Web93] is one example of op­erating system kernel code developed by a third party vendor. Another 
+example is user-programmable high perfor­mance 1/0 systems. If data is arriving on an 1/0 channel at 
+a high enough rate, performance will be degraded substantially if control has to be transferred to user 
+level to manipulate the incoming data [FP93]. Similarly, Active Messages provide high performance message 
+handling in distributed-memory multiproces­sors [vCGS92]. Typically, the message handlers are application-specific, 
+but unless the network controller can be accessed from user level [Thi92], the message handlers must 
+be compiled into the kernel for reason­able performance. A user-level example is the Quark Xpress desktop 
+publishing system. One can purchase third party soft­ware that will extend this system to perform func­tions 
+unforeseen by its original designers [Dys92]. At the same time, this extensibility has caused Quark a 
+number of problems. Because of the lack of efficient fault domains on the personal computers where Quark 
+Xpress runs, extension modules can corrupt Quark s internal data structures. Hence, bugs in third party 
+code can make the Quark system appear unreliable, because end-users do not distinguish among sources 
+of system failure. All these examples share two characteristics. First, using hardware fault isolation 
+would result in a signif­icant portion of the overall execution time being spent in operating system 
+context switch code. Second, only a small amount of code is distrusted; most of the exe­cution time is 
+spent in trusted code. In this situation, software fault isolation is likely to be more efficient than 
+hardware fault isolation because it sharply re­duces the time spent crossing fault domain boundaries, 
+while only slightly increasing the time spent executing the distrusted part of the application. Section 
+5 quan­tifies this trade-off between domain-crossing overhead and application execution time overhead, 
+and demon­strates that even if domain-crossing overhead repre­sents a modest proportion of the total 
+application ex­ecut ion time, software-enforced fault isolation is cost effective. 3 Software-Enforced 
+Fault Iso­lat ion In this section, we outline several software encapsula­tion techniques for transforming 
+a distrusted module so that it can not escape its fault domain, We first describe a technique that allows 
+users to pinpoint the location of faults within a software module. Next, we introduce a technique, called 
+sandboxing, that can iso­late a distrusted module while only slightly increasing its execution time. 
+Section 5 provides a performance analysis of this technique. Finally, we present a soft­ware encapsulation 
+technique that allows cooperating fault domains to share memory. The remainder of this discussion assumes 
+we are operating on a RISC load/store architecture, although our techniques could be extended to handle 
+CISCS. Section 4 describes how we implement safe and efficient cross-fault-domain RPC. We divide an application 
+s virtual address space into segments, aligned so that all virtual addresses within a segment share a 
+unique pattern of upper bits, called the segment identifier. A fault domain consists of two segments, 
+one for a distrusted module s code, the other for its static data, heap and stack. The specific seg­ment 
+addresses are determined at load time. Software encapsulation transforms a distrusted module s object 
+code so that it can jump only to tar­gets in its code segment, and write only to addresses within its 
+data segment. Hence, all legal jump tar­gets in the distrusted module have the same upper bit pattern 
+(segment identifier); similarly, all legal data addresses generated by the distrusted module share the 
+same segment identifier. Separate code and data segments are necessary to prevent a module from mod­ifying 
+its code segmentl. It is possible for an address with the correct segment identifier to be illegal, for 
+in­stance if it refers to an unmapped page. This is caught by the normal operating system page fault 
+mechanism. 3.1 Segment Matching An unsafe anstructzon is any instruction that jumps to or stores to an 
+address that can not be statically ver­ 10ur system supports dynamic linking through a special interface. 
+ified to be within the correct segment. Most control transfer instructions, such as program-counter-relative 
+branches, can be statically verified. Stores to static variables often use an immediate addressing mode 
+and can be statically verified. However, jumps through reg­isters, most commonly used to implement procedure 
+returns, and stores that use a register to hold their target address, can not be statically verified. 
+A straightforward approach to preventing the use of illegal addresses is to insert checking code before 
+ev­ery unsafe instruction. The checking code determines whether the unsafe instruction s target address 
+has the correct segment identifier. If the check fails, the in­serted code will trap to a system error 
+routine outside the distrusted module s fault domain. We call this software encapsulation technique segment 
+matchzng. On typical RISC architectures, segment matching requires four instructions. Figure 1 lists 
+a pseudo-code fragment for segment matching. The first instruction in this fragment moves the store target 
+address into a dedzcated r-eg~ster. Dedicated registers are used only by inserted code and are never 
+modified by code in the distrusted module. They are necessary because code elsewhere in the distrusted 
+module may arrange to jump directly to the unsafe store instruction, by­passing the inserted check. Hence, 
+we transform all unsafe store and jump instructions to use a dedicated register. All the software encapsulation 
+techniques presented in this paper require dedicated registers. Segment matching requires four dedicated 
+registers: one to hold addresses in the code segment, one to hold addresses in the data segment, one 
+to hold the segment shift amount, and one to hold the segment identifier. Using dedicated registers may 
+have an impact on the execution time of the distrusted module. However, since most modern RISC architectures, 
+including the MIPS and Alpha, have at least 32 registers, we can retarget the compiler to use a smaller 
+register set with minimal performance impact. For example, Section 5 shows that, on the DECstation 5000/240, 
+reducing by five registers the register set available to a C compiler (gee) did not have a significant 
+effect on the average execution time of the SPECg~ benchmarks. 3.2 Address Sandboxing The segment matching 
+technique has the advantage that it can pinpoint the offending instruction. This capability is useful 
+during software development. We can reduce runtime overhead still further, at the cost of providing no 
+information about the source of faults. 2For architectures with limited register sets, such as the 80386 
+[Int86], it is possible to encapsulate a module using no re­served registers by restricting control flow 
+within a fault domain. dedicated-reg + target address Move target address into dedicated register. scratch-reg 
++ (dedicated-reg> >shift-reg) Right-shift address to get segment identifier. s crat ch-reg is not a dedicated 
+register. shift-reg is a dedicated register. compare s crat ch-reg and segment -reg segment -reg is a 
+dedicated register. trap if not equal Trap if store address is outside of segment. store instruction 
+uses dedicated-reg Figure 1: Assembly pseudo code for segment matching. dedicated-reg ~ target-reg&#38;and-mask-reg 
+Use dedicated register and-mask-reg to clear segment identifier bits. dedicated-reg += dedicated-reg 
+I segment-reg Use dedicated register segment-reg to set segment identifier bits. store instruction uses 
+dedicated-reg Figure 2: Assembly pseudo code to sandbox address in target-reg. Before each unsafe instruction 
+we simply insert code that sets the upper bits of the target address to the correct segment identifier. 
+We call this sandboxzng the address. Sandboxing does not catch illegal addresses; it merely prevents 
+them from affecting any fault do­main other than the one generating the address. Address sandboxing requires 
+insertion of two arith­metic instructions before each unsafe store or jump instruction. The first inserted 
+instruction clears the segment identifier bits and stores the result in a ded­icated register. The second 
+instruction sets the seg­ment identifier to the correct value. Figure 2 lists the pseudo-code to perform 
+this operation. As with seg­ment matching, we modify the unsafe store or jump instruction to use the 
+dedicated register. Since we are using a dedicated register, the distrusted module code can not produce 
+an illegal address even by jumping to the second instruction in the sandboxing sequence; since the upper 
+bits of the dedicated register will al­ready contain the correct segment identifier, this sec­ond instruction 
+will have no effect. Section 3.6 presents a simple algorithm that can verify that an object code module 
+has been correctly sandboxed. Address sandboxing requires five dedicated registers, One register is used 
+to hold the segment mask, two registers are used to hold the code and data segment Guard Zones Segment 
+( Figure 3: A segment with guard zones. The size of the guard zones covers the range of possible immediate 
+offsets in register-plus-offset addressing modes. identifiers, and two are used to hold the sandboxed 
+code and data addresses.  3.3 Optimization The overhead of software encapsulation can be re­duced by 
+using conventional compiler optimizations. Our current prototype applies loop invariant code mo­tion 
+and instruction scheduling optimizations [ASU86, ACD74]. In addition to these conventional techniques, 
+we employ a number of optimizations specialized to software encapsulation. We can reduce the overhead 
+of software encapsula­tion mechanisms by avoiding arithmetic that computes target addresses. For example, 
+many RISC architec­tures include a register-plus-offset instruction mode, where the offset is an immediate 
+constant in some lim­ited range. On the MIPS architecture such offsets are limited to the range -64K 
+to +64K, Consider the store instruction store value, off set (reg), whose address off set (reg) uses 
+the register-plus-offset ad­dressing mode. Sandboxing this instruction requires three inserted instructions: 
+one to sum reg+offset into the dedicated register, and two sandboxing in­structions to set the segment 
+identifier of the dedicated register. Our prototype optimizes this case by sandboxing only the register 
+regj rather than the actual target ad­dress reg+of f set, thereby saving an instruction. To support this 
+optimization, the prototype establishes guard zones at the top and bottom of each segment. To create 
+the guard zones, virtual memory pages ad­jacent to the segment are unmapped (see Figure 3). We also reduce 
+runtime overhead by treating the MIPS stack pointer as a dedicated register. We avoid sandboxing the 
+uses of the stack pointer by sandboxing this register whenever it is set. Since uses of the stack pointer 
+to form addresses are much more plentiful than changes to it, this optimization significantly improves 
+performance. Further, we can avoid sandboxing the stack pointer after it is modified by a small constant 
+offset as long as the modified stack pointer is used as part of a load or store address before the next 
+control transfer instruc­ tion. If the modified stack pointer has moved into a guard zone, the load or 
+store instruction using it will cause a hardware address fault. On the DEC Alpha processor, we apply 
+these optimizations to both the frame pointer and the stack pointer. There are a number of further optimizations 
+that could reduce sandboxing overhead. For example, the transformation tool could remove sandboxing se­ 
+quences from loops, in cases where a store target ad­ dress changes by only a small constant offset during 
+each loop iteration. Our prototype does not yet imple­ ment these optimizations. 3.4 Process Resources 
+Because multiple fault domains share the same virtual address space, the fault domain implementation 
+must prevent distrusted modules from corrupting resources that are allocated on a per-address-space basis. 
+For example, if a fault domain is allowed to make system calls, it can close or delete files needed by 
+other code executing in the address space, potentially causing the application as a whole to crash. One 
+solution is to modify the operating system to know about fault domains. On a system call or page fault, 
+the kernel can use the program counter to deter­mine the currently executing fault domain, and restrict 
+resources accordingly. To keep our prototype portable, we implemented an alternative approach. In addition 
+to placing each distrusted module in a separate fault domain, we re­quire distrusted modules to access 
+system resources only through cross-fault-domain RPC. We reserve a fault domain to hold trusted arbitration 
+code that de­termines whether a particular system call performed by some other fault domain is safe. 
+If a distrusted module s object code performs a direct system call, we transform this call into the appropriate 
+RPC call. In the case of an extensible application, the trusted por­tion of the application can make 
+system calls directly and shares a fault domain with the arbitration code. 3.5 Data Sharing Hardware 
+fault isolation mechanisms can support data sharing among virtual address spaces by manipulat­ing page 
+table entries. Fault domains share an ad­dress space, and hence a set of page table entries, so they 
+can not use a standard shared memory im­plementation. Read-only sharing is straightforward; since our 
+software encapsulation techniques do not al­ter load instructions, fault domains can read any mem­ory 
+mapped in the application s address space 3. If the object code in a particular distrusted mod­ule has 
+been sandboxed, then it can share read-write memory with other fault domains through a technique we call 
+lazy pointer swizzling. Lazy pointer swizzling provides a mechanism for fault domains to share ar­bitrarily 
+many read-write memory regions with no ad­ditional runtime overhead. To support this technique, we modify 
+the hardware page tables to map the shared memory region into every address space segment that needs 
+access; the region is mapped at the same offset in each segment. In other words, we alias the shared 
+region into multiple locations in the virtual address space, but each aliased location has exactly the 
+same low order address bits. As with hardware shared mem­ory schemes, each shared region must have a 
+different segment offset, To avoid incorrect shared pointer comparisons in sandboxed code, the shared 
+memory creation inter­face must ensure that each shared object is given a unique address. As the distrusted 
+object code ac­cesses shared memory, the sandboxing code automati­cally translates shared addresses into 
+the correspond­ing addresses within the fault domain s data segment. This translation works exactly like 
+hardware transla­tion; the low bits of the address remain the same, and the high bits are set to the 
+data segment identifier. Under operating systems that do not allow virtual address aliasing, we can implement 
+shared regions by introducing a new software encapsulation technique: shared segment mat thing. To implement 
+sharing, we use a dedicated register to hold a bitmap. The bitmap indicates which segments the fault 
+domain can access. For each unsafe instruction checked, shared segment matching requires one more instruction 
+than segment matching.  3.6 Implementation and Verification We have identified two strategies for implementing 
+software encapsulation. One approach uses a compiler to emit encapsulated object code for a distrusted 
+mod­ule; the integrity of this code is then verified when the module is loaded into a fault domain. Alternatively, 
+the system can encapsulate the distrusted module by directly modifying its object code at load time. 
+3 We have implemented versions of these techniques that per­form general protection by encapsulating 
+load instructions as well as store and jump instructions. We discuss the performance of these variants 
+in Section 5. Our current prototype uses the first approach. We modified a version of the gcc compiler 
+to perform soft­ware encapsulation. Note that while our current imple­ mentation is language dependent, 
+our techniques are language inde pendent. We built a verifier for the MIPS instruction set that works 
+for both sandboxing and segment match­ing. The main challenge in verification is that, in the presence 
+of indirect jumps, execution may begin on any instruction in the code segment. To address this situation, 
+the verifier uses a property of our software encapsulation techniques: all unsafe stores and jumps use 
+a dedicated register to form their target address. The verifier divides the program into sequences of 
+in­structions called unsafe regions. An unsafe store re­gion begins with any modification to a dedicated 
+store register. An unsafe ]ump region begins with any mod­ification to a dedicated jump register. If 
+the first in­struction in a unsafe store or jump region is executed, all subsequent instructions are 
+guaranteed to be exe­cuted. An unsafe store region ends when one of the following hold: the next instruction 
+is a store which uses a dedicated register to form its target address, the next instruction is a control 
+transfer instruction, the next instruction is not guaranteed to be executed, or there are no more instructions 
+in the code segment. A similar definition is used for unsafe jump regions. The verifier analyzes each 
+unsafe store or jump re­gion to insure that any dedicated register modified in the region is valid upon 
+exit of the region. For ex­ample, a load to a dedicated register begins an unsafe region. If the region 
+appropriately sandboxes the ded­icated register, the unsafe region is deemed safe. If an unsafe region 
+can not be verified, the code is rejected. By incorporating software encapsulation into an ex­isting 
+compiler, we are able to take advantage of com­piler infrastructure for code optimization. However, this 
+approach has two disadvantages. First, most mod­ified compilers will support only one programming lan­guage 
+(gee supports C, C++, and Pascal). Second, the compiler and verifier must be synchronized with re­spect 
+to the particular encapsulation technique being employed. An alternative, called binary patching, alleviates 
+these problems. When the fault domain is loaded, the system can encapsulate the module by directly modi­fying 
+the object code. Unfortunately, practical and ro­ bust binary patching, resulting in efficient code, 
+is not currently possible [LB92]. Tools which translate one binary format to another have been built, 
+but these tools rely on compiler-specific idioms to distinguish code from data and use processor emulation 
+to han­dle unknown indirect jumps[SCK+93]. For software encapsulation, the main challenge is to transform 
+the code so that it uses a subset of the registers, leav­ (read-only) code segment, it can only be modified 
+by Tmsted Untrusted a trusted module. Mler Domain Cake Domain For each pair of fault domains a customized 
+call and return stub is created for each exported procedure.call Add Add: call F Stub Currently, the 
+stubs are generated by hand rather than return using a stub generator [J RT85]. The stubs run unpro­tected 
+outside of both the caller and callee domain. The stubs are responsible for copying cross-domain arguments 
+between domains and managing machine Return state. ~ T Stub Because the stubs are trusted, we are able 
+to copy call arguments directly to the target domain. Tra- Jump Table ditional RPC implementations across 
+address spaces I typically perform three copies to transfer data. The arguments are marshaled into a 
+message, the kernel Figure 4: Major components of a cross-fault-domain copies the message to the target 
+address space, and RPC. finally the callee must de-marshall the arguments. By having the caller and callee 
+communicate via a shared ing registers available for dedicated use. To solve this buffer, LRPC also uses 
+only a single copy to pass data problem, we are working on a binary patching proto­ between domains [BALL91]. 
+type that uses simple extensions to current object file The stubs are also responsible for managing machine 
+formats. The extensions store control flow and register state. On each cross-domain call any registers 
+that are usage information that is sufficient to support software both used in the future by the caller 
+and potentially encapsulation. modified by the callee must be protected. Only regis­ters that are designated 
+by architectural convention to be preserved across procedure calls are saved. As an  4 Low Latency 
+Cross Fault Do­ optimization, if the callee domain contains no instruc­main Communication tions that 
+modify a preserved register we can avoid saving it. Karger uses a trusted linker to perform this The 
+purpose of this work is to reduce the cost of fault kind of optimization between address spaces [Kar89]. 
+isolation for cooperating but distrustful software mod-In addition to saving and restoring registers, 
+the stubs ules. In the last section, we presented one half of our must switch the execution stack, establish 
+the correct solution: efficient software encapsulation. In this sec-register context for the software 
+encapsulation tech­tion, we describe the other half fast communication nique being used, and validate 
+all dedicated registers. across fault domains, Our system must also be robust in the presence of Figure 
+4 illustrates the major components of a cross-fatal errors, for example, an addressing violation, while 
+fault-domain RPC between a trusted and distrusted executing in a fault domain. Our current implementa­fault 
+domain. This section concentrates on three as-tion uses the UNIX signal facility to catch these errors; 
+pects of fault domain crossing. First, we describe it then terminates the outstanding call and notifies 
+the a simple mechanism which allows a fault domain to caller s fault domain. If the application uses 
+the same safely call a trusted stub routine outside its domain; operating system thread for all fault 
+domains, there that stub routine then safely calls into the destination must be a way to terminate a 
+call that is taking too domain. Second, we discuss how arguments are effi-long, for example, because 
+of an infinite loop. Trusted ciently passed among fault domains. Third, we detail modules may use a timer 
+facility to interrupt execu­how registers and other machine state are managed on tion periodically and 
+determine if a call needs to be cross-fault-domain RPCS to insure fault isolation. The terminated. protocol 
+for exporting and naming procedures among fault domains is independent of our techniques. The only way 
+for control to escape a fault domain 5 Performance Results is via a jump table. Each jump table entry 
+is a con-To evaluate the performance of software-enforced fault trol transfer instruction whose target 
+address is a legal domains, we implemented and measured a prototype entry point outside the domain. By 
+using instructions of our system on a 40 MHz DECstation 5000/240 (DEC­ whose target address is an immediate 
+encoded in the MIPS) and a 160iMhz Alpha 400 (DEC-ALPHA). instruction, the jump table does not rely on 
+the use of YVe consider three questions. First, how much over­ a dedicated register. Because the table 
+is kept in the head does so ftware encapsulation incur? Second, how fast is a cross-fault-domain RPC? 
+Third, what is the performance impact of using software enforced fault isolation on an end-user application? 
+We discuss each of these questions in turn. 5.1 Encapsulation Overhead We measured the execution time 
+overhead of sand­ boxing a wide range of C programs, including the C SPEC 92 benchmarks and several of 
+the Splash bench­ marks [Ass91, SWG9 1]. We treated each benchmark as if it were a distrusted module, 
+sandboxing all of its code. Column 1 of Table 1 reports overhead on the DEC-MIPS, column 6 reports overhead 
+on the DEC- ALPHA. Columns 2 and 7 report the overhead of using our technique to provide general protection 
+by sand­ boxing load instructions as well as store and jump instructions. As detailed in Section 3, sandboxing 
+requires 5 dedicated registers, Column 3 reports the overhead of removing these registers from possible 
+use by the compiler. All overheads are computed as the additional execution time divided by the original 
+pro­ gram s execution time. On the DEC-MIPS, we used the program measure­ ment tools pixie and qpt to 
+calculate the number of additional instructions executed due to sandbox­ ing [Dig, BL92]. Column 4 of 
+Table 1 reports this data as a percentage of original program instruction counts. The data in Table 1 
+appears to contain a num­ber of anomalies. For some of the benchmark pro­grams, for example, 056. ear 
+on the DEC-MIPS and 026. compress on the DEC-ALPHA, sandboxing reduced execution time. In a number of 
+cases the overhead is surprisingly low. To identify the source of these variations we de­veloped an analytical 
+model for execution overhead. The model predicts overhead based on the number of additional instructions 
+executed due to sandbox­ing (s-tnstructtons), and the number of saved float­ing point interlock cycles 
+(interlocks). Sandboxing in­creases the available instruction-level parallelism, al­lowing the number 
+of floating-point interlocks to be substantially reduced. The integer pipeline does not provide interlocking; 
+instead, delay slots are explicitly filled with nop instructions by the compiler or assem­bler. Hence, 
+scheduling effects among integer instruc­tions will be accurately reflected by the count of in­structions 
+added (s-mstructtons). The expected over­head is computed as: (s-instructions interlocks) /cyc!es-per-second 
+ortglnal-execut ton-t zme-seconds 4Loads in the libraries, such as the standard C library, were not sandboxed. 
+The model provides an effective way to separate known sources of overhead from second order effects. 
+col­ umn 5 of Table 1 are the predicted overheads. As can be seen from Table 1, the model is, on aver­age, 
+effective at predicting sandboxing overhead. The differences between measured and expected overheads 
+are normally distributed with mean 0.770 and standard deviation of 2.6?10. The difference between the 
+means of the measured and expected overheads is not statisti­cally significant. This experiment demonstrates 
+that, by combining instruction count overhead and floating point interlock measurements, we can accurately 
+pre­dict average execution time overhead. If we assume that the model is also accurate at predicting 
+the over­head of individual benchmarks, we can conclude that there is a second order effect creating 
+the observed anomalies in measured overhead. We can discount effective instruction cache size and virtual 
+memory paging as sources for the observed ex­ecution time variance. Because sandboxing adds in­structions, 
+the effective size of the instruction cache is reduced. While this might account for measured over­heads 
+higher than predicted, it does not account for the opposite effect. Because all of our benchmarks are 
+compute bound, it is unlikely that the variations are due to virtual memory paging. The DEC-MIPS has 
+a physically indexed, physically tagged, direct mapped data cache. In our experiments sandboxing did 
+not affect the size, contents, or starting virtual address of the data segment. For both original and 
+sandboxed versions of the benchmark programs, successive runs showed insignificant variation. Though 
+difficult to quantify, we do not believe that data cache alignment was an important source of variation 
+in our experiments. We conjecture that the observed variations are caused by instruction cache mappzng 
+conj?icts. Soft­ware encapsulation changes the mapping of instruc­tions to cache lines, hence changing 
+the number of in­struction cache conflicts. A number of researchers have investigated minimizing instruction 
+cache conflicts to reduce execution time [McF89, PH90, Sam88]. One researcher reported a 2070 performance 
+gain by sim­ply changing the order in which the object files were linked [PH90]. Samples and Hilfinger 
+report signif­ icantly improved instruction cache miss rates by re­ arranging only 3% to 8!Z0 of an application 
+s basic blocks [Sam88]. Beyond this effect, there were statistically significant differences among programs. 
+on average, programs which contained a significant percentage of floating point operations incurred less 
+overhead. On the DEC-MIPS the mean overhead for floating point intensive benchmarks is 2.5 %0, compared 
+to a mean of 5.6% for the remaining benchmarks. All of our benchmarks are DEC-~lIPS DEC-ALPHA Fault Protection 
+Reserved Instruction Fault Fault Protection Benchmark Isolation Overhead Register Count Isolation Isolation 
+Overhead Overhead Overhead Overhead Overhead Overhead (predicted) 052. alvinn FP 1.4% 33.4% -0.3% 19.4% 
+0.2% 8.1% 35.5% bps FP 5.6% 15.5% -0.1% 8.9% 5.7% 4.7% 20.3% cholesky FP 0.0% 22.7% 0.5% 6.5% -1.5% 0.0% 
+9.3% 026.compress INT 3.3% 13.3% 0.0% 10.9% 4.4% -4.3% 0.0% 056, ear FP -1.2% 19.1% 0.2% 12.4% 2.2% 3.7% 
+18.3% 023.eqntott INT 2.9% 34.4% 1.0% 2.7% 2.2% 2.3% 17.4% 008.espresso INT 12.4% 27.0% -1.6% 11.8% 10.5% 
+13.3% 33.6% ooi.gcci.35 INT 3.1% 18.7% -9.4% 17.0% 8.9% NA NA 022.li INT 5.1% 23.4 % 0.3% 14.9% 11.4% 
+5.4% 16.2% locus INT 8.7% 30.4% 4,3% 10.3% 8.6% 4.3% 8.7% mp3d FP 10.7% 10.7% 0.0% 13.3% 8.7% 0.0% 6.7% 
+psgrind INT 10.4% 19.5% 1.3% 12.1 % 9.9% 8.0% 36.0% qcd FP 0.5% 27.0% 2.0% 8.8% 1.2% -0.8% 12.1% 072.sc 
+INT 5.6% 11.2% 7.0% 8.0% 3.8% NA NA tracker INT -0.8% 10.5% 0.4% 3.9% 2.1% 10.9% 19.9% water FP 0.7% 
+7.4% 0.3% 6.7% 1.5% 4.3% 12.3% Average 4.3% 21.8 %0 0.4 %0 10.5% 5.070 4.3% 17.6 Zo Table 1: Sandboxing 
+overheads for DEC-MIPS and DEC-ALPHA platforms. The benchmarks OOi.gccl.35 and 072.sc are dependent ona 
+pointer size of32 bits and do not compile on the DEC-ALPHA. The predicted fault isolation overhead for 
+choleskyis negative due to conservative interlocking on the MIPS floating-point unit. compute intensive. 
+Programs that perform significant amounts of 1/0 will incur less overhead. 5.2 Fault Domain Crossing 
+We now turn to the cost of cross-fault-domain RPC. Our RPC mechanism spends most of its time saving and 
+restoring registers. As detailed in Section 4, only registers that are designated by the architecture 
+to be preserved across procedure calls need to be saved. In addition, if no instructions in the callee 
+fault domain modify a preserved register then it does not need to be saved. Table 2 reports the times 
+for three versions of a NULL cross-fault-domain RPC. Column 1 lists the crossing times when all data 
+registers are caller saved. Column 2 lists the crossing times when the preserved integer registers are 
+saved. Finally, the times listed in Column 3 include saving all preserved floating point registers. In 
+many cases crossing times could be further reduced by statically partitioning the registers between domains. 
+For comparison, we measured two other calling mechanisms. First, we measured the time to perform a C 
+procedure call that takes no arguments and returns no value. Second, we sent a single byte between two 
+address spaces using the pipe abstraction provided by the native operating system and measured the round­trip 
+time. These times are reported in the last two columns of Table 2. On these platforms, the cost of cross-address-space 
+calls is roughly three orders of magnitude more expensive than local procedure calls. Operating systems 
+with highly optimized RPC im­plementations have reduced the cost of cross-address­space RPC to within 
+roughly two orders of magni­tude of local procedure calls. On Mach 3.0, cross­address-space RPC on a 
+25Mhz DECstation 5000/200 is 314 times more expensive than a local procedure call [Ber93]. The Spring 
+operating system, running on a 40Mhz SPARCstation2, delivers cross-address-space RPC that is 73 times 
+more expensive than a local leaf procedure call [H K93]. Software enforced fault isola­tion is able to 
+reduce the relative cost of cross-fault­domain RPC by an order of magnitude over these sys­tems. 5.3 
+Using Fault Domains in POSTGRES To capture the effect of our system on application performance, we added 
+software enforced fault do­mains to the PO STGRES database management system, and measured POSTGRES running 
+the Sequoia 2000 benchmark [SFGIV193]. The Sequoia 2000 benchmark Cross Fault-Domain RPC Platform Caller 
+Save Save c Pipes Save Integer Integer+ Float Procedure Registers Registers Registers Call DEC-MIPS l.llps 
+1.81ps 2.83ps O.lops 204.72ps DEC-ALPHA o.75ps 1.35ps 1.80ps 0.06ps 227.88ps Table2: Cross-fault-domain 
+crossing times. Sequoia 2000 Untrusted Soft ware-Enforced Number DEC-MIPS-PIPE Query Function Manager 
+Fault Isolation Cross-Domain Overhead Overhead Overhead Calls (predicted) Query 6 1.4% 1.7% 60989 18.6% 
+Query 7 5.0% 1.8% 121986 38.6% Query 8 9.0% 2.7% 121978 31.2% Query 10 9.6% 5.7% 1427024 31.9% Table 
+3: Fault isolation overhead for POSTGRES running Sequoia 2000 benchmark. contains queries typical of 
+those used by earth scien-5.4 Analysis tists in studying the climate. To support these kinds For the 
+POSTGRES experiment software encapsulation of non-traditional queries, PO STGRES provides a user­ provided 
+substantial savings over using native operat­ extensible type system. Currently, user-defined types ing 
+system services and hardware address spaces. In are written in conventional programming languages, general, 
+the savings provided by our techniques over such as C, and dynamically loaded into the database hardware-based 
+mechanisms is a function of the per­ manager. This has long been recognized to be a serious centage of 
+time spent in distrusted code (td), the per­ safety problem [Sto88]. centage of time spent crossing among 
+fault domains Four of the eleven queries in the Sequoia 2000 bench­ (ic), the overhead of encapsulation 
+(h), and the ratio, mark make use of user-defined polygon data types. We r, of our fault domain crossing 
+time to the crossing measured these four queries using both unprotected time of the competing hardware-based 
+RPC mecha­ dynamic linking and software-enforced fault isolation. nism. Since the POSTGRES code is trusted, 
+we only sand­boxed the dynamically loaded user code. For this savzngs = (1 T)tc ht~ experiment, our cross-fault-domain 
+RP C mechanism saved the preserved integer registers (the variant cor-these The Figure 5 graphically 
+depicts trade-offs. responding to Column 2 in Table 2). In addition, we axis gives the percentage of 
+time an application spends instrumented the code to count the number of cross­ crossing among fault domains. 
+The Y axis reports the fault-domain RPCS so that we could estimate the per­ relative cost of software 
+enforced fault-domain cross­formance of fault isolation based on separate address ing over hardware address 
+spaces. Assuming that the spaces. execution time overhead of encapsulated code is 4.3Y0, Table 3 presents 
+the results. Untrusted user-defined the shaded region illustrates when software enforced functions in 
+POSTGRES use a separate calling mecha-fault isolation is the better performance alternative. nism from 
+built-in functions. Column 1 lists the over­ Software-enforced fault isolation becomes increas­head of 
+the untrusted function manager without soft­ ingly attractive as applications achieve higher degrees 
+ware enforced fault domains. All reported overheads in of fault isolation (see Figure 5). For example, 
+if an ap-Table 3 are relative to original POSTGRES using the un­ plication spends 3070 of its time crossing 
+fault domains, trusted function manager. Column 2 reports the mea­ our RPC mechanism need only perform 
+1O$ZObetter sured overhead of software enforced fault domains. Us­ than its competitor. Applications 
+that currently spend ing the number of cross-domain calls listed in Column 3 as little as 10YOof their 
+time crossing require only a and the DEG-MIPS-PIPE time reported in Table 2, Col­ 39 %0 improvement in 
+fault domain crossing time. As umn 4 lists the estimated overhead using conventional reported in Section 
+5.2, our crossing time for the DEC­hardware address spaces. MIPS is l.10~s and for the DEC-ALPHA 0.75~s. 
+Hence, 1on% . .. $5$3 .$$s$$ 8$$ Percentage of Execution Time Spent Crossing Figure 5: The shaded region 
+represents when soft­ ware enforced fault isolation provides the better per­ formance alternative. The 
+X axis represents per­ centage of time spent crossing among fault domains (t.). The Y axis represents 
+the relative RPC crossing speed (r). The curve represents the break even point: (l r)tc = htd. In this 
+graph, h = 0.043 (encapsulation overhead on the DEC-MIPS and DEC-ALPHA). for this latter example, a hardware 
+address space cross­ ing time of 1.80ps on the DEC-MIPS and 1.23ps on the DEC-ALPHA would provide better 
+performance than software fault domains. As far as we know, no pro­ duction or experimental system currently 
+provides this level of performance. Further, Figure 5 assumes that the entire applica­tion was encapsulated. 
+For many applications, such as PO STGRES, this assumption is conservative. Figure 6 transforms the previous 
+figure, assuming that 50 %0 of total execution is spent in distrusted extension code. Figures 5 and 6 
+illustrate that software enforced fault isolation is the best choice whenever crossing overhead is a 
+significant proportion of an applica­tion s execution time. Figure 7 demonstrates that overhead due to 
+software enforced fault isolation re­mains small regardless of application behavior. Fig­ure 7 plots 
+overhead as a function of crossing behavior and crossing cost. Crossing times typical of vendor­supplied 
+and highly optimized hardware-based RPC mechanisms are shown. The graph illustrates the rel­at ive performance 
+stability of the software solution. This stability allows system developers to ignore the performance 
+effect of fault isolation in choosing which modules to place in separate fault domains.   Related Work 
+Many systems have considered ways of optimizing RPC performance [vvST88, TA88, Bla90, SB90, HK93, BALL90, 
+BALL91]. Traditional RPC systems based Figure 6: The shaded region represents when soft­ware enforced 
+fault isolation provides the better per­formance alternative. The X axis represents per­centage of time 
+spent crossing among fault domains (t.). The Y axis represents the relative RPC crossing speed (r). The 
+curve represents the break even point: (1 r)t. = htd. In this graph, h = 0.043 (encapsulation overhead 
+on the DEC-MIPS and DEC-ALPHA). 100%, I / ILJltrix 4.2 Context Switch 40% DECstation 5000 Software o% 
+o 10 20 # Crossings/Millisecond Figure 7: Percentage of time spent in crossing code versus number of 
+fault domain crossings per millisec­ond on the DEC-MIPS, The hardware minimum cross­ing number is taken 
+from a cross-architectural study of context switch times [ALBL9 1]. The Ultrix 4.2 con­text switch time 
+is as reported in the last column of Table 2. on hardware fault isolation are ultimately limited by the 
+minimal hardware cost of taking two kernel traps and two hardware cent ext switches. L RPC was one of 
+the first RPC systems to approach this limit, and our prototype uses a number of the techniques found 
+in LRPC and later systems: the same thread runs in both the caller and the callee domain, the stubs are 
+kept as simple as possible, and the crossing code jumps directly to the called procedure, avoiding a 
+dispatch in the callee domain. Unlike these systems, software­based fault isolation avoids hardware context 
+switches, substantially reducing crossing costs. Address space identifier tags can be used to reduce 
+hardware context switch times. Tags allow more than one address space to share the TLB; otherwise the 
+TLB must be flushed on each context switch. It was estimated that 25T0 of the cost of an LRPC on the 
+Firefly (which does not have tags) was due to TLB misses [BALL90]. Address space tags do not, however, 
+reduce the cost of register management or system calls, operations which are not scaling with integer 
+perfor-mance[ALBL91]. An important advantage of software­based fault isolation is that it does not rely 
+on special­ized architectural features such as address space tags. Restrictive programming languages 
+can also be used to provide fault isolation. Pilot requires all kernel, user, and library code to be 
+written in Mesa, a strongly typed language; all code then shares a single address space [RDH+ 80]. The 
+main disadvantage of relying on strong typing is that it severely restricts the choice of programming 
+languages, ruling out conventional languages like C, C++, and assembly. Even with strongly-typed languages 
+such as Ada and Modula-3, programmers often find they need to use loopholes in the type system, undercutting 
+fault isolation. In con­trast, our techniques are language independent. Deutsch and Grant built a system 
+that allowed user-defined measurement modules to be dynamically loaded into the operating system and 
+executed directly on the processor [D Gi 1]. The module format was a stylized native object code designed 
+to make it easier to statically verify that the code did not violate pro­tection boundaries. An interpreter 
+can also provide failure isolation. For example, the BSD UNIX network packet filter utility defines a 
+language which is interpreted by the operat­ing system network driver. The interpreter insulates the 
+operating system from possible faults in the cus­tomization code. Our approach allows code written in 
+any programming language to be safely encapsulated (or rejected if it is not safe), and then executed 
+at near full speed by the operating system. Anonymous RPC exploits 64-bit address spaces to provide low 
+latency RPC and probabdtstzc fault iso­lation [YBA93]. Logically independent domains are placed at random 
+locations in the same hardware ad­dress space. Calls between domains are anonymous, that is, they do 
+not reveal the location of the caller or the callee to either side. This provides probabilis­tic protection 
+ it is unlikely that any domain will be able to discover the location of any other domain by malicious 
+or accidental memory probes. To pre­serve anonymity, a cross domain call must trap to pro­tected code 
+in the kernel; however, no hardware con­text switch is needed. 7 Summary We have described a software-based 
+mechanism for portable, programming language independent fault isolation among cooperating software modules. 
+By providing fault isolation within a singIe address space, this approach delivers cross-fault-domain 
+communica­tion that is more than an order of magnitude faster than any RPC mechanism to date. To prevent 
+distrusted modules from escaping their own fault domain, we use a software encapsulation technique, called 
+sandboxing, that incurs about 4~0 execution time overhead. Despite this overhead in executing distrusted 
+code, software-based fault isola­tion will often yield the best overall application per­formance, Extensive 
+kernel optimizations can reduce the overhead of hardware-based RPC to within a fac­tor of ten over our 
+software-based alternative. Even in this situation, software-based fault isolation will be the better 
+performance choice whenever the overhead of using hardware-based RPC is greater than 570. 8 Acknowledgements 
+We thank Brian Bershad, Mike Burrows, John Hen­nessy, Peter Kessler, Butler Lampson, Ed Lazowska, Dave 
+Patterson, John Ousterhout, Oliver Sharp, Richard Sites, Alan Smith and Mike Stonebraker for their helpful 
+comments on the paper. Jim Larus pro­vided us with the profiling tool qpt. We also thank Mike Olson and 
+Paul Aoki for helping us with POST-GRES.  References [ACD74] T.L. Adam, K.M. Chandy, and J.R. Dickson. 
+A comparison of list schedules for parallel pro­ cessing systems. Communications of the A CM, 17(12):685 
+690, December 1974. [ALBL91] Thomas Anderson, Henry Levy, Brian Ber­ shad, and Edward Lazowska. 1 he 
+interaction of Architecture and Operating System Design. 214 [Ass91] [ASU86] [BALL90] [BALL91] [Ber93] 
+[BL92] [Bla90] [BN84] [Cla92] [DG71] [Dig] [Dys92] [FP93] [HC92] In Proceedings of the ~th International 
+Confer­ence on Architectural Support for Programming Languages and Operating Systems, pages 108­120, 
+April 1991. Administrator: National Computer Graphics Association. SPEC Newsletter, 3(4), December 1991. 
+Alfred V. Aho, Ravi Sethi, and Jeffrey D. Unm­an. Compilers, Principles, Techniques, and Tools. Addison-Wesley 
+Publishing Company, 1986. Brian Bershad, Thomas Anderson, Edward La­zowska, and Henry Levy. Lightweight 
+Remote Procedure Call. ACM Transactions on Com­puter Systems, 8(l), February 1990. Brian Bershad, Thomas 
+Anderson, Edward La­zowska, and Henry Levy. User-Level Interpro­cess Communication for Shared-Memory 
+Mul­tiprocessors. ACM Transactions on Computer Systems, 9(2), May 1991. Brian Bershad, August 1993. Private 
+Commu­ nication. Thomas BaJl and James R. Larus. OptimaJly profiling and tracing. In Proceedings of the 
+Conference on Principles of Programming Lan­ guages, pages 59-70, 1992. David Black. Scheduling Support 
+for Concur­rency and Parallelism in the Mach Operating System. IEEE Computer, 23(5):35 43, May 1990. 
+Andrew Birrell and Bruce Nelson. Implement­ing Remote Procedure Calls. ACM Transac­tions on Computer 
+Systems, 2(1):39 59, Febru­ary 1984. J.D. Clark. Window Programmer Guide To OLE/DDE. Prentice-Hall, 1992. 
+ L. P. Deutsch and C. A. Grant. A flexible mea­surement tool for software systems. In IFIP Congress, 
+1971.  Digit al Equipment Corporation, Ultrix W/.2 Pixie Manual Page. Peter Dyson. Xtensions for Xpress: 
+Modular Software for Custom Systems. Seybold Report on Desktop Publwhing, 6(10):1 21, June 1992. Kevin 
+FaJl and Joseph PasquaJe. Exploiting in­ kernel data paths to improve 1/0 throughput and CPU a vailabilit 
+y. In Proceedings of the 1993 Winter USENIX Conference, pages 327 333, January 1993. Keiran Harty and 
+David Cheriton. Application-controlled physi­caJ memory using external page-cache manage­ment. In Proceedings 
+of the 5th International Conference on Architectural Support for Pro­gramming Languages and Operating 
+Systems, October 1992. [HK93] Graham Hamilton and Panes Kougiouris. The Spring nucleus: A microkernel 
+for objects. In Proceedings of the Summer USENIX Confer­ ence, pages 147 159, June 1993. [HKM+88] J. 
+Howard, M. Kazar, S. Menees, D. Nichols, M. Satyanarayanan, R. Sidebotham, and M. West. Scale and Performance 
+in a Dis­tributed File System. ACM Transactions on Computer Sgstems, 6(1):51-82, February 1988. [Int86] 
+Intel Corporation, Santa Clara, California. Intel 803 86 Programmer s Reference Manual, 1986. [JRT85] 
+Michael B. Jones, Richard F. Rashid, and Mary R. Thompson. Matchmaker: An in­terface specification language 
+for distributed processing. In Proceedings of the 12th ACM SIGA CT-SIGPLAN Symposium on Principles of 
+Programming Languages, pages 225 235, January 1985. [Kar89] Paul A. Karger. Using Registers to Optimize 
+Cross-Domain CaJl Performance. In Proceed­ings of the %-d International Conference on Architectural Support 
+for Programming Lan­guages and Operating Systems, pages 194 204, April 3-61989. [Kle86] Steven R. Kleiman. 
+Vnodes: An Architecture for Multiple File System Types in SUN UNIX. In Proceedings of the 1986 Summer 
+USENIX Conference, pages 238-247, 1986. [LB92] James R. Larus and Thomas Ball. Rewrit­ing executable 
+files to measure program be­havior. Technical Report 1083, University of Wisconsin-Madison, March 1992. 
+[McF89] Scott McFarling. Program optimization for instruction caches. In Proceedings of the In­ternational 
+Conference on Archztecturai Sup­port for Programming Languages and Operat­ing Systems, pages 183 191, 
+April 1989. [MJ93] Steven McCanne and Van Jacobsen. The BSD Packet Filter: A New Architecture for User-Level 
+Packet Capture. In Proceedings of the 1993 Wznter USENIX Conference, January 1993. [MRA87] J. C. Mogul, 
+R. F. Rashid, and M. J. Ac­cetta. The packet filter: An efficient mecha­nism for user-level network code. 
+In Proceed­ings of the Sgmposium on Operating System Principles, pages 39-51, November 1987. [PH90] Karl 
+Pettis and Robert C. Hansen. Profile guided code positioning. In Proceedings of the Conference on Programming 
+Language De­sign and Implementation, pages 16 27, White Plains, New York, June 1990. Appeared as SIGPLAN 
+NOTICES 25(6j. [RDH+ 80] David D. RedelJ, Yogen K. DaJaJ, Thomas R. Horsley, Hugh C. Lauer, William C. 
+Lynch, Paul R. McJones, Hal G. Murray, and Stephen C, Purcell. Pilot: An Operating Sys­temfora Personal 
+Computer. Communications of the ACM, 23(2):81 92, February 1980. [Sam88] A. Dain Samples. Code reorganization 
+for in­struction caches. TechnicaJ Report UCB/CSD 88/447, University of California, Berkeley, Oc­tober 
+1988. [SB90] Michael Schroeder and Michael Burrows. Per­formance of Firefly RPC. ACM Tmnsckc­tions on 
+Computer S~stems, 8(1):1-17, Febru­ary 1990. [SCK+ 93] Richard L. Sites, Anton Chernoff, Matthew B. Kirk, 
+Maurice P. Marks, and Scott G. Robin­son. Binary translation. Cornmunzcat~ons of the ACM, 36(2):69 81, 
+February 1993. (SFGM931 M. Stonebraker, J. Frew, K. Gardels, and J. Meridith. The Sequoia 2000 Benchmark. 
+In Proceedings of the ACM SIGMOD Inter­national Conference on Management of Data, May 1993. [Sto87] Michael 
+Stonebraker. Extensibility in POST-GRES. IEEE Database Engineering, Septem­ber 1987. [Sto88] Michael 
+Stonebraker. Inclusion of new types in relational data base systems. In Michael Stone­braker, editor, 
+Readings in Database Systems, pages 480 487. Morgan Kaufmann Publishers, Inc., 1988. [SWG91] J. P. Singh, 
+W. Weber, and A. Gupta. Splash: Stanford parallel applications for shared-memory. Technical Report CSL-TR-91­469, 
+Stanford, 1991. [TA88] Shin-Yuan Tzou and David P. Anderson. A Performance Evaluation of the DASH Message-Passing 
+System. Technical Report UCB/CSD 88/452, Computer Science Division, University of California, Berkeley, 
+October 1988. [Thi92] Thinking Machines Corporation, CM-5 Net­work Interface Programmer s Guide, 1992. 
+[vCGS92] T. von Eicken, D. Culler, S. Goldstein, and K. Schauser. Active Messages: A Mechanism for Integrated 
+Communication and Computa­tion, In Proceedings of the 19th Annual Symp­osium on Computer-Architecture, 
+1992. [VVST88] Robbert van Renesse, Hans van St averen, and Andrew S. Tanenbaum. Performance of the World 
+s Fastest Distributed Operating System. (@wzt;?zg systems Review, 22(4) ;25 34, Octo­ ber 1988. [Web93] 
+Neil Webber. Operating System Support for Portable Filesystem Extensions. In Proceed­ings of the 1993 
+Winter USENIX Conference, January 1993. [YBA93] Curtis Yarvin, Richard Bukowski, and Thomas Anderson. 
+Anonymous RPC: Low Latency Protection in a 64-Bit Address Space. In Pro­ceedings of the Summer USENIX 
+Conference, June 1993. 
+			

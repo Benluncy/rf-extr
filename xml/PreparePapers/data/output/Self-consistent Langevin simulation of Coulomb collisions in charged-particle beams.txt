@@ -1,0 +1,250 @@
+
+ Self-Consistent Langevin Simulation of Coulomb Collisions in Charged-Particle Beams Ji Qiang*,Robert 
+D. Ryne*, and Salman Habib * LANSCE-1, LANSCE Division, MS H817, Los Alamos National Laboratory, Los 
+Alamos, New Mexico 87545 T-8, Theoretical Division, MS B285, Los Alamos National Laboratory, Los Alamos, 
+New Mexico 87545 In many plasma physics and charged-particle beam dynamics problems, Coulomb collisions 
+are modeled by a Fokker-Planck equation. In order to incorporate these collisions, we present a three­dimensional 
+parallel Langevin simulation method using a Particle-In-Cell (PIC)approach imple­mented on high-performance 
+parallel computers. We perform, for the .rst time, a fully self-consistent simulation, in which the friction 
+and di.usion coe.cients are computed from .rst principles. We employ a two-dimensional domain decomposition 
+approach within a message passing programming paradigm along with dynamic load balancing. Object oriented 
+programming is used to encapsulate details of the communication syntax as well as to enhance reusability 
+and extensibility. Performance tests on the SGI Origin 2000, IBM SP RS/6000 and the Cray T3E-900 have 
+demonstrated good scal­ability. As a test example, we demonstrate the collisional relaxation to a .nal 
+thermal equilibrium of a beam with an initially anisotropic velocity distribution. PACS numbers: 52.75 
+I. INTRODUCTION Coulomb collisions play an important role in many areas of plasma physics, accelerator 
+physics, and astro­physics. The long-range nature of the force leads to a fundamental di.erence between 
+how such collisions need to be treated compared to the Boltzmann approach fa­miliar when dealing with 
+dilute neutral gases. Since most collisions occur at large impact parameters, the particle de.ection 
+per collision is small. Moreover, at any given time, a particular particle is interacting with many other 
+particles. For these reasons, a simple Boltzmann picture of the collisions is not applicable (the Boltzmann 
+collision integral diverges at large distances)* . When soft collisions such as those described above 
+are encountered, the appropriate transport equation is of the Fokker-Planck form [1]. For the case of 
+Coulomb col­lisions between charged particles, the derivation of the appropriate Fokker-Planck equation 
+is somewhat deli­cate. Depending on one s taste and notions of rigor, several di.erent methods may be 
+employed: the funda­mental Boltzmann kernel may be expanded in powers of momentum transfer and e.ectively 
+linearized [2]; the BBGKY formalism may be utilized with an expansion in powers of the Coulomb logarithm 
+used to truncate the expansion at second order [3]; and a simple master equation-like argument may also 
+be used to derive the Fokker-Planck collision kernel [1]. Fortunately, all these derivations lead to 
+essentially the same .nal result. In many cases of physical interest, such as intense beams, one needs 
+to take into account the mean force .eld of all other particles on the particle of interest (the * 0-7803-9802-5/2000/$10.00 
+(c)2000 IEEE. Vlasov-Poisson equation) as well as account for the soft collisions. The inclusion of a 
+Fokker-Planck collision term on the right hand side of the Vlasov equation gives rise to the Landau equation. 
+The Landau equation is a partial di.erential equation with self-consistently deter­mined systematic force 
+terms as well as external .elds, if present, and self-consistent friction and di.usion coef­.cients arising 
+from the Fokker-Planck treatment of col­lisions. Determination of all the self-consistent contribu­tions 
+requires the computation of convolution integrals in either real or velocity space. A successful approach 
+to modeling the Vlasov-Poisson equation is the popular PIC technique where simulation particles are used 
+to indirectly represent the phase space distribution function and the Poisson equa­tion is solved on 
+a spatial grid. The advantages of the PIC method include its relative conceptual simplicity, high performance 
+resulting from fast Poisson solvers, rel­atively low memory cost for the grid (O(Lk)where k is the number 
+of spatial dimensions), and insensitivity to the generation of small-scale structure in the distribution 
+function. Moreover, PIC simulations for accelerator ap­plications have been implemented e.ciently on 
+parallel computing platforms [4]. Fokker-Planck collisions can be included in the PIC method via the 
+addition of friction and (multiplicative) stochastic forces in the equations of motion for the simulation 
+particles: This is the Langevin approach to incorporating soft collisions. It should be kept in mind 
+that numerical collisions are present in any PIC simulation of the type just described. Thus, it is appropriate 
+to include the physical collisions only when the numerical collisions are strongly suppressed in the 
+original Vlasov-Poisson simulation. This condition can be met in some situations of interest [5]. The 
+main di.culty in carrying out the Langevin PIC program is the fact that the self-consistent friction 
+and di.usion coe.cients themselves depend on the veloc­ity, thus, in principle, for every simulation 
+particle one needs to carry out two convolution integrals in velocity space followed by appropriate derivatives, 
+also in velocity space. Given the PIC point of view, one would wish to introduce a velocity grid associated 
+with each spatial grid cell, carry out the convolutions on the velocity grid and then use interpolation 
+to determine the appropriate fric­tion and di.usion coe.cients for the simulation particles belonging 
+to that particular spatial grid cell. These tasks have been viewed as being much too di.cult to actually 
+carry out: either the Spitzer approximation has been em­ployed [6] or an isotropic velocity distribution 
+has been assumed for the scattering particles [7]. However, on modern parallel machines these prob­lems 
+can be overcome (in large part) and the fully self­consistent friction and di.usion coe.cients obtained 
+nu­merically for any distribution. The purpose of the present paper is to explain and demonstrate how 
+this can be achieved. In short, the key points are that the veloc­ity grids need not be very large (we 
+found 323 to be su.cient), one may associate a single velocity grid not with a single spatial grid cell 
+but with some number of them (a form of coarse-graining), the number of particles associated with each 
+spatial super-cell is large enough to guarantee low sampling noise in velocity space, and .nally, the 
+convolution and interpolation strategies al­ready implemented for the spatial part of the Vlasov-Poisson 
+equation may be directly extended to velocity space. This paper is organized as follows. The Landau equation 
+and the numerical methods are presented in Section 2. The parallel implementation is outlined in Section 
+3, performance tests given in Section 4, and re­sults reported in Section 5. II. THE LANDAU EQUATION 
+AND ITS NUMERICAL SOLUTION The Landau equation for the evolution of the single­particle distribution 
+function f is of the form [3]: .f .f F .f . 1 .2 + v · + · = -· Fdf +: Df .t .r m.v .v 2 .v.v (1) where 
+t is the time, r is the spatial vector, v is the veloc­ity vector, m is the mass of particle, Fd is the 
+dynamic friction coe.cient and D is the di.usion coe.cient. The transport coe.cients are de.ned via 4 
+Fd = ne..H (2) 4pE20m2 .v 4 D = ne..G (3) 4pE20m2 .v.v mv2.D . = ln( ) (4) 2e2 f(r, v ) H =2d3v (5) 
+|v - v | G =d3v f(r, v )|v - v | (6) with n being the particle density, . being the Coulomb J logarithm, 
+and .D = kT/E0ne, the Debye length. Here, k is the Boltzmann constant, T is the temperature, E0 is the 
+vacuum dielectricity, e is thechargeof parti­cle. The force F includes both the external force and the 
+self-generated mean .eld space charge force which can be obtained from the Poisson equation: .(r) .2f(r)= 
+- E0 (7) and .(r)= d3vf(r, v) (8) Here, f is the electric potential and . is thechargeden­sity. The 
+stochastic (multiplicative noise) particle equa­tions of motion that follow from the Landau equation 
+are (Cf. Ref. [8]) ' r= v, (9) F ' v=+ Fd + Q · G(t), (10) m where G(t) are Gaussian random variables 
+with (Gi(t)) =0, (11) (Gi(t)Gj(t')) = dijd(t - t'). (12) The matrix Q is related to the di.usion coe.cient 
+D by Dij = QikQjk. The Qik can be obtained using an orthogonal transformation, taking the positive root 
+of the eigenvalues and then transforming back. The friction and di.usion coe.cients follow from Eqns. 
+(2) -(6). Computation of H and G requires carrying out convolution integrals. To do this we em­ploy a 
+PIC charge deposition onto a velocity grid using a linear scheme to get the distribution function f on 
+the grid. This is followed by a FFT-based convolution which requires doubling the computational grid 
+in each veloc­ity direction in order to correctly impose open boundary conditions [9]. The friction and 
+di.usion coe.cients can now be computed on the grid using second-order central .nite di.erences. These 
+coe.cients are then reinterpo­lated back onto the particles using the original linear PIC scheme. The 
+self-generated space charge forces are also calculated by depositing particles onto a spatial grid fol­lowing 
+the PIC approach. The scalar potential in the Poisson equation is solved following the same FFT-based 
+method explained above and the force on the particles ob­tained by numerical di.erentiation and reinterpolation. 
+This force together with the external force .eld and the forces due to dynamic friction force and di.usion 
+are used to advance the charged particles for one time-step using a (stochastic) leap-frog algorithm. 
+III. OBJECT-ORIENTED PARALLEL IMPLEMENTATION We employ a two-dimensional domain decomposi­tion approach 
+following Refs. [10]. A schematic plot of the two-dimensional decomposition on the y-z plane is shown 
+in Fig. 1. The solid grid lines de.ne the compu­tational domain grids. The dashed lines de.ne the local 
+computational domain on each processor. The bound­ary grids are the outer-most grids inside the physical 
+boundary. Guard grids are used for temporary storage of grid quantities from neighboring processors. 
+The physi­cal computational domain is de.ned as a 3-dimensional rectangular box with range xmin = x = 
+xmax, ymin = y = ymax,and zmin = z = zmax. This domain is de­composed on the y - z plane into a number 
+of small rectangular blocks and these blocks are mapped to a log­ical two-dimensional Cartesian processor 
+grid, one rect­angular block per processor. The range of a block on a single processor is de.ned as xmin 
+= x = xmax, ylcmin = y = ylcmax ,and zlcmin = z = zlcmax.The subscripts lcmin and lcmax specify local 
+minima and maxima. The mesh grid stores .eld-related quantities such as charge density and electric .eld. 
+The number of grid points along three dimensions on a single processor is de.ned as: Nxlocal = int[(xmax 
+- xmin)/hx] + 1 (13) Nylocal = int[(ylcmax - ymin)/hy] - int[(ylcmin - ymin)/hy]+ Ng (14) Nzlocal = int[(zlcmax 
+- zmin)/hz] - int[(zlcmin - zmin)/hz]+ Ng (15) where hx, hy,and hz are the mesh sizes along the x, y 
+and z directions, respectively. The quantity Ng refers to the number of guard grids in Nylocal and Nzlocal 
+. Ng = 2 if the number of processors in that dimension is greater than 1; otherwise, Ng = 1. Particles 
+with spa­tial positions within the local computational boundary are assigned to the processor containing 
+that part of the physical domain. The parallel computation starts with constructing a 2-D logical Cartesian 
+processor grid, reading input data from processor 0 and broadcasting it to the other proces­sors, setting 
+upthe local initial computational domain, initializing objects, and generating particles from the ini­tial 
+distribution function. The particles generated on each processor advance following each time step. If 
+a particle moves outside the local computational domain, it is sent to the corresponding processor where 
+it is now located. A particle manager function handles explicit communication using MPI. The y and z 
+positions of ev­ery particle on each processor are checked. The particle is copied to one of its four 
+bu.ers and sent to one of its four neighboring processors when its y or z position is outside the local 
+computational domain. After a proces­sor receives the particles from its neighboring processors, it decides 
+among those particles whether some of them will be further sent out or not. The outgoing particles are 
+counted and copied into four temporary arrays. The remaining particles are copied into another temporary 
+array. This process is repeated until there is no outgo­ing particle found on all processors. Finally, 
+the particles in the temporary storage along with the particles left in the original particle array are 
+copied into a new particle array. FIG. 1. Schematic of the the 2-D domain decomposition in the y - z 
+domain. After each particle moves to its local computational domain, a linear particle-deposition scheme 
+is carried out for all processors to obtain the charge density on the grid. Particles located between 
+the boundary grid and computational domain boundary will also contribute to the charge density on the 
+boundary grids of neighboring processors. Hence, explicit communication is required to send thechargedensity 
+on theguard grids, which isfrom the local particle deposition, to the boundary grids of neighboring processors 
+to sum up the total charge density on the boundary grids. With the charge density on the grids, Hockney 
+s FFT algorithm [9] is used to solve the Poisson equation with open boundary conditions. This algorithm 
+requires the original grid number to be doubled in each dimension. The charge density on the original 
+grid is kept the same, and the charge density elsewhere is set to 0. The Green s function on the original 
+grid is de.ned as 1 Gp,q,r = J , (hx(p- 1))2 +(hy(q - 1))2 +(hz(r - 1))2 (16) where p =1,...,Nx +1, q 
+=1,...,Ny +1, r = 1,...,Nz + 1. Here, Nx, Ny, Nz are the total com­putation grid numbers without including 
+guard grids in all three dimensions. For points outside the original grid, symmetry is used to de.ne 
+the Green s function accord­ing to Gp,q,r = G2Nx-p+2,q,r, (17) Gp,q,r = Gp,2Ny-q+2,r, (18) Gp,q,r = Gp,q,2Nz-r+2, 
+(19) where p = Nx +2,...,2Nx, q = Ny +2,...,2Ny, r = Nz+2,...,2Nz. Communication is required to dou­ble 
+the original distributed 3-dimensional grid explicitly. This can be avoided by including this process 
+into the 3-dimensional FFT. In the 3-dimensional parallel FFT, we have taken advantage of the undistributed 
+dimension along the x dimension, where a local serial FFT can be done in that dimension for all processors. 
+A local tem­porary two-dimensional array with size (2Nx,Nylocal)is de.ned to contain part of the charge 
+density at .xed z. Thechargedensity on theoriginal grid is copied into the (Nx,Nylocal) part of the temporary 
+array. The rest of the temporary array is .lled with 0. In regard to the FFT of the Green s function, 
+symmetry can again be used to obtain the values of the Green s function in the region (Nx +2,Nylocal). 
+After the local two-dimensional FFT along x is done, it is copied back to a slice of a new 3­dimensional 
+array with size (2Nx,Nylocal,Nzlocal). A loopthrough Nzlocal gives the FFT along x for the three dimensional 
+array. This is followed by a transpose to switch the x and y indices. Now, the 3-dimensional ma­ '' trix 
+has size (Ny,Nx ,Nzlocal)where Nx is the locallocal new local number of grids in the x dimension along 
+the y dimension processors. A similar procedure yields the FFT along the y direction for a doubled grid 
+of size ' (2Ny,Nx ,Nzlocal ). Another transpose is used to local switch the y and z indices and a local 
+FFT along z with a double-size grid is done on all processors to .nish the 3-dimensional FFT for the 
+double-size grid in all three dimensions. During the inverse parallel FFT, a reverse process is employed 
+to obtain the potential on the origi­nal grids. From the potential on the grid, we calculate the elec­tric 
+.eld using central .nite di.erences. To calculate the electric .eld on a boundary grid, the potential 
+on a boundary grid of neighboring processors is required. A communication pattern similar to that employed 
+in the charge density summation on the boundary grids is used to send the potential from the boundary 
+grids to the guard grids of neighboring processors. After the elec­tric .eld on the grids is obtained, 
+the local particle-push requires interpolation from the grids onto the local parti­cles. Since we have 
+used a linear PIC scheme, the electric .eld of particles between the boundary grid and compu­tational 
+domain boundary will also depend on the electric .eld on the boundary grid of neighboring processors. 
+A similar communication pattern is used to send the elec­tric .eld from the boundary grids to the guard 
+grids of the neighboring processors. With the electric .eld on grids local to each processor, interpolation 
+is done for all processors to obtain the space-charge force on every particle. The dynamic friction coe.cient 
+and di.usion coe.cient are calculated on each processor. The local computational grids are lumped into 
+a small number of subdomains (the super-cells). Particles within each sub­domain will have the same friction 
+and di.usion coe.­cients. A three-dimensional velocity grid is built on each subdomain for all particles 
+in this domain. Following the scheme described in Section 2, we compute the friction and di.usion coe.cients 
+on all processors and reinterpo­late them back to the local particles. The local particles are then updated 
+in velocity space. Dynamic load balancing is employed with adjustable frequency to keep the number of 
+particles on each pro­cessor approximately equal. A density function is de.ned to .nd the local computational 
+domain boundary so that the number of particles on each processor is roughly bal­anced. This number depends 
+on the local integration of the charge density on each processor. To determine the local boundary, .rst, 
+the three-dimensional charge den­sity is summed upalong the x direction on each processor to obtain a 
+two-dimensional density function. This func­tion is distributed locally among all processors. Then, the 
+two-dimensional density function is summed upalong the y direction to get the local one-dimensional charge 
+density function along z. This density function is broad­cast to the processors along the y direction. 
+The local charge density function is gathered along z and broad­cast to processors along the z direction 
+to get a global z direction charge density distribution function on each processor. Using this global 
+z direction density distri­bution, the local computational boundary in the z di­mension can be determined 
+assuming that each proces­sor contains a fraction of the total number of particles, about equal to 1/nprocz,where 
+nprocz is the number of processors along the z direction in the two-dimensional Cartesian processor grid. 
+A similar process is used to determine the local computational boundary in the y di­rection. Strictly 
+speaking, the above algorithm will work correctly for a two-dimensional density distribution func­tion 
+which can be separated as a product of two one­dimensional functions along each direction. However, our 
+experience has been that this algorithm works reasonably well for a broad range of distributions. The 
+simulation implemented uses object-oriented programming in C++. Based on our previous experi­ence of 
+object-oriented software design for linear acceler­ator beam dynamics simulations, we have de.ned a par­ticle 
+manager class, Ptclmger.C to move particles among the processors, a .eld data exchanger class, Fldexch.C, 
+to communicate the neighboring data, a utility class, Utility, to manage global communication in the 
+matrix transpose, a input-output handler class, InOut.C to inter­face with the outside environment, and 
+a two-dimensional 9 Cartesian processor class, Pgrid2d.C. These classes work 8 together as a low level 
+class to encapsulate communica­tion details used in the parallel message passing program-7 ming paradigm. 
+High level application classes, the beam 6 class, .eld class and beam line element class, are built on 
+topof the low level classes without knowing the details of the communication. Polymorphism is used to 
+access con­crete beam line elements, e.g. quadrupole, in the beam line element class de.nition. A simulation 
+manager class, AccSimulator.C, is de.ned to run the simulation. IV. PERFORMANCE TESTING 500 speedup 
+5 4 3 2 1 33.54 4.55 5.5 6 6.57 log(PEs) FIG. 3. Speed-up as a function of processor number for two di.erent 
+problem sizes. 450 400 350 300 250 200 150 100 50 log(PEs) V. RESULTS As a test case we applied our 
+method to compute the friction and di.usion coe.cients for a Maxwellian veloc­ity distribution, the results 
+of which are shown in Figs. 4 -6. The asymptotic fall-o. in Fd/v as 1/v3 at large v is seen nicely in 
+Fig. 6. An important point that is also clearly demonstrated is the modest number of particles needed 
+per spatial super-cell to reach convergence of the computed quantities. 1.2 D (normalized) 0.6 0.4 0.2 
+0 -0.2 0 2e-05 4e-05 6e-05 8e-05 0.0001 0.00012 v FIG. 4. Diagonal and o.-diagonal di.usion coe.cients 
+for a Maxwellian distribution as a function of velocity. The ex­pected fall-o. in the velocity is clearly 
+seen and excellent re­sults are obtained even for a small number of sampled parti­cles (there is essentially 
+no di.erence between 3000 and 1.25 million particles). FIG. 2. Time cost as a function of number of processors 
+on 1 the Origin 2000 and the T3E-900. 0.8 The parallel performance of the simulation code was tested 
+on a distributed memory machine, the Cray T3E­ 900, and and on two distributed shared memory ma­ chines, 
+the SGI Origin 2000 and IBM SP RS/6000. Fig. 2 gives the time cost as a function of number of processors 
+on these machines. The total numerical particle number is two million with a 64 ×64 ×64 spatial grid 
+for the elec­tric .eld solver, 82 super-cells and a 32 × 32 × 32 velocity grid for the dynamic friction 
+and di.usion coe.cients. Good scalability is obtained on all three machines. The slightly better performance 
+on the SGI Origin may be due to the much larger secondary cache (4 MB) than that of the Cray T3E (100 
+KB) and a faster clock speed (250 MHz) than that of the IBM SP (200 MHz). To in­vestigate the e.ect of 
+problem size on the scalability, we tested the code withanincreased spatial grid83 for the dynamic friction 
+and di.usion coe.cients. Fig. 3 gives the speedup (normalized by the time on eight processors) on the 
+SGI Origin 2000 as a function of number of pro­cessors for two di.erent problem sizes. Increasing the 
+problem size improves the scalability of the code. lution of of an electron beam with initially anisotropic 
+1.2 velocity distribution. The beam has a uniform spatial distribution in a three-dimensional square 
+box with a size 1 3 -3 of 3.53 cm. The particle density is 1012cm. The ini­tial velocity distribution 
+is also a stepfunction. Fig. 7 0.8 displays the initial velocity distribution along the trans­verse and 
+longitudinal directions. The two distributions 0.6 have di.erent amplitudes since they have di.erent 
+initial temperature. Fig. 8 shows the transverse and longitudi­ 0.4 nal distributions after 60 steps. 
+Here, one step is 10-9 seconds. 0.2 0 1 Fd/v (normalized) v FIG. 5. The friction coe.cient divided 
+by velocity as a function of velocity for the same cases as Fig. 4. 0.8 normalized distribution 0.6 0.4 
+10 1 0.2 0.1 0 Fd (normalized) -0.005 -0.004 -0.003 -0.002 -0.001 0 0.001 0.002 0.003 0.004 0.005 v 
+0.01 FIG. 8. Transverse and longitudinal initial distributions af­ter 60 steps. 0.001 0.0001 We see that 
+the velocity distributions along both directions approach the thermal Gaussian distributions. 1e-05 v 
+Fig. 9 shows the time evolution of the temperature in the transverse and the longitudinal directions 
+as a function FIG. 6. The friction coe.cient divided by velocity as a of time. function of velocity shown 
+on a log-log scale demonstrating the expected 1/v3 asymptotic fall-o.. 1 0.9 1.4  0.3 0.4 0.2 0 2e-08 
+4e-08 6e-08 8e-08 1e-07 time 0.2 0 FIG. 9. Transverse and longitudinal temperature as a func­ -0.003 
+-0.002 -0.001 0 0.001 0.002 0.003 v tion of time. 0.8 1.2 normalized termperature 0.7 1 0.6 0.5 0.4 normalized 
+distribution 0.8 0.6 FIG. 7. Transverse and longitudinal initial velocity distri­butions. We observe 
+that, due to the intra-beam Coulomb collisions, the longitudinal temperature gradually de-We have also 
+solved numerically for the time evo-creases, and the transverse temperature gradually in­ creases, till 
+both reach a common value. The .nal state corresponds to an (equipartitioned) thermal equilibrium. ACKNOWLEDGMENTS 
+This work was performed on the IBM SP RS/6000, SGI/Cray T3E at NERSC, LBNL, and the SGI Origin 2000 at 
+the ACL, LANL. We acknowledge support from the DOE Grand Challenge in Computational Accelerator Physics 
+and the Los Alamos Accelerator Code Group. [1] E.M. Lifshitz and L.P. Pitaevskii, Physical Kinetics (Pergamon 
+Press, New York, 1981). [2] See, e.g., E.C. Shoub, Phys. Fluids 30, 1340 (1987). [3] D.R. Nicholson, 
+Introduction to Plasma Theory (Wiley, New York, 1983). [4] See, e.g., J. Qiang, R.D. Ryne, S. Habib, 
+and V. Decyk, SC99 Technical Paper; J. Comp. Phys. (in press). [5] S. Habib, (unpublished). [6] M.E. 
+Jones, D.S. Lemons, R.J. Mason, V.A. Thomas, and D.Winske, J. Comp.Phys. 123, 169 (1996). [7] W.M. Manheimer, 
+M. Lampe, and G. Joyce, J. Comp. Phys. 138, 563 (1997). [8] H. Risken, The Fokker-Planck Equation: Methods 
+of So­lution and Applications (Springer, New York, 1996). [9] R.W. Hockney and J.W. Eastwood, Computer 
+Simula­tion Using Particles (Adam Hilger, New York, 1988). [10] P.C. Liewer and V.K. Decyk, J. Comp. 
+Phys. 85, 302 (1989).
+			

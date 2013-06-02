@@ -1,0 +1,713 @@
+
+ Incoop: MapReduce for Incremental Computations Pramod Bhatotia, Alexander Wieder, Rodrigo Rodrigues, 
+Umut A. Acar, Rafael Pasquini Max Planck Institute for Software Systems (MPI-SWS) and Faculdade de Computação 
+-Universidade Federal de Uberlândia (FACOM/UFU) {bhatotia, awieder, rodrigo, umut, pasquini}@mpi-sws.org 
+ ABSTRACT Many online data sets evolve over time as new entries are slowly added and existing entries 
+are deleted or modi.ed. Taking advantage of this, systems for incremental bulk data processing, such 
+asGoogle sPercolator, canachievee.cient updates. To achieve this e.ciency, however, these systems lose 
+compatibility with the simple programming models of­fered by non-incremental systems, e.g., MapReduce, 
+and more importantly, requires the programmer to implement application-speci.c dynamic algorithms, ultimately 
+increas­ing algorithm and code complexity. In this paper, we describe the architecture, implementa­tion, 
+and evaluation ofIncoop, agenericMapReduceframe­work for incremental computations. Incoop detects changes 
+to the input and automatically updates the output by em­ploying an e.cient, .ne-grained result reuse 
+mechanism. To achieve e.ciency without sacri.cing transparency, we adopt recent advancesin the area ofprogramminglanguages 
+to identify the shortcomings of task-level memoization ap­proaches, andto address these shortcomingsby 
+using several novel techniques: a storage system, a contraction phase for Reduce tasks, and an a.nity-based 
+scheduling algorithm. WehaveimplementedIncoopbyextendingtheHadoopframe­work, and evaluated it by considering 
+several applications and case studies. Our results show signi.cant performance improvements without changing 
+a single line of application code. Categories andSubject Descriptors H.3.4 [Information Systems]: Systems 
+and Software Batch processing systems, Distributed systems GeneralTerms Algorithms, Design, Experimentation, 
+Performance  Keywords Self-adjusting computation, memoization, stability Permission to make digital 
+or hard copies of all or part of this work for personal or classroom use is granted without fee provided 
+that copies are not madeordistributedforpro.t or commercial advantage and that copies bearthisnoticeand 
+thefull citation onthe .rstpage.Tocopy otherwise,to republish, topost on servers or to redistribute tolists, 
+requiresprior speci.c permissionand/or afee. SOCC 11, October27 28,2011,Cascais,Portugal. Copyright2011ACM978-1-4503-0976-9/11/10 
+...$10.00. 1. INTRODUCTION As organizations produce and collect increasing amounts of data, analyzing 
+it becomes an integral part of improv­ing their services and operation. TheMapReduceparadigm o.ers the 
+ability to process data using a simple program­ming model, which hides the complexity of the infrastruc­ture 
+required for parallelization, data transfer, scalability, fault tolerance and scheduling. Animportantpropertyofthe 
+workloadsprocessedbyMap-Reduce applications is that they are often incremental; i.e., MapReducejobs often 
+run repeatedly with small changesin their input. For instance, search engines will periodically crawl 
+the Web and perform various computations on this input, such as computing a Web index or the PageRank 
+metric, often with very small modi.cations, e.g., at a ratio of10Xto1000Xinthe overallinput[19,14]. This 
+incremental nature of workloads suggests that per­forming large-scale computationsincrementally canimprove 
+e.ciency dramatically. Broadly speaking there are two ap­proaches to achieve such e.cient incremental 
+updates. The .rst approach is to devise systems that provide the pro­grammer with facilities to store 
+and use state across succes­sive runs so that only sub-computations that are a.ected by the changes to 
+the input need to be executed. This is pre­cisely the strategy taken by major Internet companies who 
+developed systems like Percolator [19] or CBP [14]. This approach, however, requires adopting a new programming 
+model and a new API that di.ers from the one used by MapReduce. Thesenewprogramming APIsalso requirethe 
+programmer to devise a way to process updates e.ciently, which canincrease algorithmic and software complexity. 
+Re­search in the algorithms community on algorithms for pro­cessing incrementally changing data shows 
+that such algo­rithms can be very complex even for problems that are rel­atively straightforwardinthe 
+non-incremental case[6,9]. The second approach would be to develop systems that can reuse the results 
+of prior computations transparently. This approach would shift the complexity of incremental processing 
+from the programmer to the processing system, essentially keeping the spirit of high-level models such 
+as MapReduce. Afewproposalshavetakenthis approach. For example,inthe context of theDryad system,DryadInc[20] 
+and Nectar [10] provide techniques for task-level or LINQ expression-level memoization. In this paper 
+we present a system called Incoop, which allows existing MapReduce programs, not designed for in­cremental 
+processing, to execute transparently in an incre­mental manner. In Incoop, computations can respond auto­matically 
+and e.ciently tomodi.cationstotheirinputdata by reusing intermediate results from previous runs, and 
+in­crementally updating the output according to the changesin the input. To achieve e.ciency, Incoop 
+relies on memoiza­tion, butgoesbeyond the straightforward task-level applica­tion of this technique by 
+performing a stable partitioning of the input and by reducing the granularity of tasks to maxi­mize result 
+reuse. These techniques were inspired by recent advances on self-adjusting computation(e.g.,[2,1,12]). 
+To further improve performance, Incoop also employs a.nity­based scheduling techniques. Our contributions 
+include the following. Incremental HDFS. Instead of storing the input of MapReduce jobs on HDFS, we 
+devise a .le system called Inc-HDFS that provides mechanisms to iden­tify similarities in the input data 
+of consecutive job runs. The idea is to split the input into chunks whose boundaries depend on the .le 
+contents so that small changes to the input do not change all chunk bound­aries. Whilepreserving compatibility 
+withHDFS(by o.ering the same interface and semantics), Inc-HDFS partitions the input to maximize the 
+opportunities for reusing results from previous runs.  Contraction phase. We propose techniques for 
+con­trolling thegranularity of tasksby dividinglargetasks into smaller subtasks, which can be reused 
+even when thelargetaskscannot. Thisisparticularly challenging for Reduce tasks, whose granularity depends 
+solely on their input. To control granularity we propose a new Contraction phase that leverages Combiner 
+functions, normally used to reducenetwork tra.cby anticipating a small part of the processing done by 
+Reduce tasks.  Memoization-aware scheduler. To improve the e.ectiveness of memoization, we propose an 
+a.nity­based scheduler that uses a work stealing algorithm to minimize the amount of data movement across 
+ma­chines. Our new scheduler strikes a balance between exploiting the locality of previously computed 
+results and executing tasks on available machines.  Use cases. We employ Incoop to demonstrate two important 
+use cases of incremental processing: incre­mental log processing, where we use Incoop to build a framework 
+to incrementally process logs as more en­tries are added to them; and incremental query pro­cessing, 
+where we layer the Pig framework on top of Incoop to enable relational query processing on con­tinuously 
+arriving data.  We implemented Incoop and evaluated it using .ve Map-Reduce applications and the two 
+use cases. Our results show that we achieve signi.cant performance gains, while incur­ring only a modest 
+penalty during runs that cannot take advantage of memoizing previous results, namely the initial run 
+of aparticularjob. The results also show the e.ective­ness of the individual techniques we propose. The 
+rest of this paper is organized as follows. Section 2 presents an overview of Incoop. The system design 
+is de­tailed in Sections 3, 4, and 5. We present an analysis in Section 6, and an experimental evaluation 
+in Section 7. Re­lated work and conclusions are discussed in Section 8 and Section9, respectively. Finally, 
+we coverthe two case studies in Appendix A and the proofs for the analytic performance study in Appendix 
+B.  2. SYSTEM OVERVIEW This sectionpresentsthegoals,basic approach, and main challenges underlying the 
+design of Incoop. 2.1 Goals Our goal is to devise a system for large-scale data pro­cessing thatis ableto 
+realizetheperformancebene.tsofin­cremental computations, while keeping the application com­plexity and 
+development e.ort low. Speci.cally, this trans­lates to the following two goals. Transparency. Atransparentsolution 
+canbe applied to existing bulk data processing applications without changing them. This (i) makes the 
+approach auto­matically applicable to all existing applications while preserving thefullgenerality, and(ii) 
+requiresnoad­ditional e.ort from the programmer to devise and im­plement an e.cient incremental update 
+algorithm.  E.ciency. Onelessons totake awayfrom self-adjusting computation work for incrementalization 
+[2] is that thistransparentincrementalprocessing canbeasymp­totically moree.cient(oftenby alinearfactor) 
+than complete,from-scratch re-computation. Atthe scale of thebulkdataprocessingjobsthat runintoday sdata 
+centers, these asymptotic improvements can translate to huge speedups and cluster utilization savings. 
+We aim to realize such speedups in practice.  Even though it would be possible to devise solutions that 
+work with various types of data processing systems, in this paper, we target the MapReduce model, which 
+has emerged as a de facto standardforprogrammingbulkdataprocessing jobs. The remainder of this section 
+presents an overview of the challenges in the design of Incoop, an extension of Hadoop thatprovidestransparentincremental 
+computation of bulk data processingjobs. Our design adapts the principles of self-adjusting com­putation 
+(Section 8) to the MapReduce paradigm and the Hadoopframework. Theideaof self-adjusting computations 
+is to track dependencies between the inputs and outputs of di.erentparts of a single-machine computation, 
+andin sub­sequent runs, only rebuild the parts of the computation af­fectedbychangesin theinput. Acomputationgraph 
+records thedependenciesbetween data and(sub)computations. No­des of the computation graph represent sub-computations 
+and edgesbetween nodes represent update-use relationships, i.e., dependencies, between computations: 
+there is an edge from one node to another if the latter sub-computation uses some data generated by the 
+former. To change the input dynamically, the programmer indicates which parts of the input were added, 
+deleted, and modi.ed (using a special­purposeinterface) and the computationgraphis used tode­terminethe 
+sub-computations(nodes) that are a.ectedby these changes. The a.ected sub-computations are then ex­ecuted, 
+which can recursively a.ect other sub-computations. Results ofsub-computationsthat remain una.ected are 
+reus­ed by a form of computation memoization. Although the work on self-adjusting computation o.ers a 
+general-purpose framework for developing computations that can perform incremental updates e.ciently, 
+it has not INCREMENTAL HDFS MEMOIZATION SERVER  Figure 1: Basic design of Incoop been applied to a distributed 
+setting. In addition, the ap­proachdoes notsupport transparency, andits e.ciency crit­ically depends 
+on certain properties of the computation. In the rest of this section, we brie.y outline these challenges 
+and how we overcome them. 2.2 Challenges: Transparency Self-adjusting computationtraditionally requiresthepro­grammerto 
+annotateprograms with speci.clanguageprim­itives. These primitives help the compiler and the run-time 
+system identify dependencies between data and computa­tions. The interface for making changes to the 
+input is also changedinaway thathelpsidentify the edits totheinput, i.e., how the input changes. To adapt 
+this approach to the MapReduce model while maintaining transparency, we need to address some important 
+questions. Input changes. Ourgoal oftransparency, coupled with the fact that the .le system used to store 
+inputs to MapReduce computations(HDFS) isanappend-only .lesystem,makes it impossible to convey generic 
+modi.cations to an existing input. To maintain a backwards-compatible interface, but still allow for 
+incremental processing of generic workloads, we allow for both the inputs and the outputs of consecutive 
+runs to be stored in separate HDFS .les. An alternative, which we considerinAppendixA,istoforcenewdatatobe 
+only appended totheinput,whichis well-suitedfor ourcase study of periodically processing a log that grows 
+through­out the system lifetime. Another alternative mechanism, which we do not explore in this paper, 
+is to store the input in a structured data store such as HBase, which supports versioning of individual 
+data items, and therefore allows for keeping track of which table cells have changed. Through­out the 
+paper we will consider the .rst approach, since it is more general. Programmer annotations. To eliminateprogrammer 
+an­notations that help identify dependencies, we exploit the structure ofMapReduce computations. Speci.cally, 
+welever­agethefactthat,intheMapReduceparadigm,thedata .ow graph has a .xed structure, and the framework 
+implicitly keeps track of this structure by maintaining the dependen­cies between the various tasks, 
+which form a natural unit of sub-computation. Based on these ideas, we arrive at a simple design that 
+we use as a starting point, which is depicted in Figure 1, and can be described at a high level as follows. 
+We add a memoization server that aids in locating the results of previous sub-computations. The role 
+ofthis serveris to store a mapping from the input of a previously run task to the location of the respective 
+output. During a run, whenever a task completes, its output is stored persistently, and a mapping from 
+the input to the location of the output is stored in the memoization server. Then, whenever a task runs, 
+the memoization serverisqueried to checkif theinputs to thetask matchthose of aprevious run ofthe computation. 
+If so, wereusetheoutputsthat werekeptfromthatprevious run. This way only the parts of the computation 
+a.ected by input changes are re-computed. Finally, we periodically identify and purge old entries from 
+the memoization server, and the respective results from persistent storage, to ensure that storage does 
+not grow without bounds.  2.3 Challenges: Ef.ciency To achieve e.cientdynamic updates, we mustensure 
+that MapReduce computations remain stable under smallchanges to their input. Speci.cally, we de.ne stability 
+as follows. Consider performing MapReduce computations with inputs I and I ' and consider the set of 
+tasks that are executed, denoted T and T ' respectively. We say that a task t . T ' is not matched if 
+t .. T , i.e., the task that is performed with the second inputs I ' is not performed with the .rst input. 
+We say that a MapReduce computation is stable if the time required to execute the unmatched tasks is 
+small, ideally, sub-linear in the size of the input. More informally, a MapReduce computation is stable 
+if, when executed with similar inputs, the set of tasks that are executed are also similar, i.e., many 
+tasks are repeated. AchievingstabilityinMapReduce requires overcoming sev­eral important challenges: 
+(a) making a small change to the input can change the input to many tasks, ultimately lead­ing to alarge 
+number of unmatched tasks;(b) evenif a small numberof tasksis a.ected,thetasksthemselvescan require a 
+long time to execute. To solve these problems, we pro­pose techniques for (1) performing a stable partitioning 
+of theinput;(2) controlling thegranularity and stability of the Map andReducetasks; and(3) .nding e.cientscheduling 
+mechanisms taking into account the location of results that can be reused. We brie.y summarize our design 
+decisions below. Stableinputpartitions. To see whythe standardMapRe­duce approach to input partitioning 
+leads to unstable com­putations, considerinsertinga single record in thebeginning of aninput .le. Sincetheinputispartitionedinto 
+.xed-sized chunks by HDFS, this small change will shift each partition point by one record, e.ectively 
+changing the input to each map task. In general, when the record is inserted at some position, all chunks 
+that follow that position will have to shift by one, and thus on average nearly half of all tasks will 
+be unmatched. The problem only gets more complicated as we allow more complex changes, where for example 
+the order of records maybepermuted; such changes canbe com­mon, for instance, if a crawler uses a depth-.rst 
+strategy to crawl theweb, and asinglelink changing can movean entire subtree s position in the input 
+.le. One possible solution to this problem would be to compute the di.erences between thetwoinputs .lesand 
+somehowupdatethecomputationby using this di.erence directly. This would, however, require running apolynomial-time 
+algorithm(e.g., an edit-distance algorithm) to .nd the di.erence.  (a)Fixed-size chunking in HDFS (b)Content 
+chunking in Inc-HDFS (c)Example of stable partitioning Figure 2: File chunking strategies in HDFS and 
+Inc-HDFS We use a stable partitioning technique that enables max­imal overlap between the set of data 
+chunks created with similarinputs. Maximizingthe overlapbetweendata-chunks in turn enables maximizing 
+the number of matched Map tasks. To support stable partitioning we propose a .le sys­tem, called Inc-HDFS, 
+that we describe in Section 3. Granularity control. We maximize the overlap between Map tasks by using 
+a stable partitioning technique for cre­ating theinputdata chunks. Theinput to theReduce tasks, however, 
+is directly determined by the outputs of the Map tasks, because the key-value pairs with the same key 
+are processed together by the same Reduce task. This raises a problemif,for example, a singlenewkey-valuepairis 
+added to a Reduce task that processes a large number of values, which forces the entire task to be re-computed. 
+Further­more, even if we found a way of dividing large Reduce tasks into multiple smaller tasks, this 
+would not solve theproblem if such tasks depended on each other, like what would hap­pen if the input 
+of each task depended on the output of the previous one. Thus, we need a way to reduce not only the task 
+sizebut also eliminatepotentially long(possibly linear­size) dependencies between parts of the Reduce 
+tasks. In other words, we need to controlgranularity withoutincreas­ing the number of unmatched tasks. 
+We solve this problem by performing an additional Con­traction phase, where Reduce tasks are combined 
+hierarchi­cally in a tree-like fashion; this both controls the task size and ensures that no long dependencies 
+between tasks arise, since allpathsinthetree willbe oflogarithmiclength. Sec­tion 4 describes our proposed 
+approach. Scheduling. To enable e.cientreuse of matched sub-comp­utations, it is important to schedule 
+a task on the machine that stores the memoized results to be reused. We achieve this by extending the 
+scheduling algorithm used by Hadoop with a notion of a.nity. In this scheme the scheduler takes into 
+account a.nities between machines and tasks by keep­ing arecord of which nodeshaveexecuted which tasks. 
+This enables us to minimize the movement of memoized interme­diate results, but at the cost of a potential 
+degradation of job performance. This is because it increases the chances of introducing stragglers [22], 
+since a strict a.nity of tasks results in deterministic scheduling and prevents a lightly loaded node 
+from stealing work from the task queue of a slow node. Wethereforepropose ahybrid schedulingpolicy that 
+strikes a balance between work stealing and a.nity to the memoized results. Section5provides adetaileddescrip­tion 
+of the modi.ed scheduler.  3. INCREMENTALHDFS WeproposeIncrementalHDFS(Inc-HDFS), adistributed .le 
+system that assists Incoop in performing incremental computations e.ciently. Inc-HDFSextends theHadoopdis­tributed 
+.le system (HDFS) to enable stable partitioning of the input via content-based chunking, which was intro­ducedin 
+LBFS[16] fordatadeduplication. Atahigh-level, content-based chunkingde.nes chunkboundaries onlybased 
+onthecontentsofinput,instead of .xed-sizechunksaspro­vided by HDFS. As a result, insertions and deletions 
+cause minimal changes to the set of chunks and hence the inputs to MapReduce tasks remain stable, i.e., 
+similar to those of the previous run. Figure 2 illustrates a comparison of the chunking strategies of 
+standard HDFS and Inc-HDFS. Toperformcontent-based chunking wescantheentire .le using a .xed-width sliding 
+window. For each .le position, we read the window contents, and compute its Rabin .n­gerprint. Then if 
+the .ngerprint matches a certain pattern, which we term a marker, weplace a chunkboundary atthat position. 
+A limitation of this approach is that it may create chunks that are too small or too large, given that 
+markers will not be evenly spaced, and that the chunk size depends solely ontheinput(and onlythe average 
+size canbe con­trolled by the system). This variance in the chunk size for tasks maydegradeoveralljobperformance. 
+To addressthis, we constrain the minimum and maximum chunk sizes. Thus, after we .nd a marker mi atposition 
+pi, we skip a .xed o.set O in the input sequence and continue to search for a marker starting atposition 
+pi +O. In addition, we bound the chunk length by setting a marker after M content bytes when no marker 
+was found before that. Despite the possibility of af­fecting stability by either missing important markers 
+due to skipping the initial o.set, or consecutively using the maxi­mum length in an unaligned manner, 
+we found this scheme to work wellinpractice. This wasbecause such occurrences were very rare and onlyhad 
+a minorimpact onperformance. Chunking could be performed either during the creation of the input or when 
+the input is read by the Map task. We chose the former approach for two main reasons. First, the additional 
+cost for chunking can be amortized when the chunking and the actual generation of the input data can 
+be performed in parallel. This is particularly advantageous when the process for input data generation 
+is not limited by the storage throughput. The second reason is that when the input is .rst written to 
+HDFS, it is already present in the main memory of the node that writes the input, and hencethis node 
+canperformthe chunkingwithout additional accesses to the data. In order to leverage the common availability 
+of multicores during the chunking process, we parallelized the search for markers in the input data. 
+Our implementation uses multi­ple threads thateach searchfor markersin theinput starting atdi.erentpositions. 
+Themarkersthat arefound cannotbe usedimmediately tode.nethe chunkboundaries, since some (a)First run 
+(b)Incremental run Figure 3: Incremental Map tasks of them mighthavetobe skippeddueto the minimum chunk 
+size requirement. Instead, we collect the markers in a list, and iterate over the list to determine the 
+markers that are skipped and those that de.ne the actual chunk boundaries. Our experimental evaluation(Section7.4)highlights 
+theim­portance of these optimizations in keeping the performance of Inc-HDFS very close to that of its 
+HDFS counterpart. 4. INCREMENTAL MAPREDUCE We describe the incremental MapReduce part of the in­frastructure 
+by separately discussing how Map and Reduce tasks handle incremental inputs. Incremental Map. Given thatInc-HDFSalreadyprovides 
+the necessary control over the alignment and granularity of theinput chunksthat areprovided toMap tasks,thejob 
+of the incremental Map tasks becomes simpli.ed, since they can implement task-level memoization without 
+having to worry about .nding opportunities for reusing previous re­sults at a .ner granularity, using 
+another alignment, or at other locations of the input. Speci.cally, after a Map task runs, we storeits 
+resultspersistently(instead ofdiscarding them after the job execution) and insert a corresponding reference 
+to the result in the memoization server. Instances of incrementalMap tasks take advantage ofpre­viously 
+stored results by querying the memoization server. If they .nd that the result has already been computed, 
+they fetch the result from the node storing it, and conclude. Fig­ure3illustratesthis:part(a) describesthe 
+.rstrunofan Incoopjob andpart(b) describesthe subsequent run where split2is modi.ed(hence replacedby 
+split4) and theMap tasks for splits 1 and 3 need not be re-executed. Incremental Reduce. The Reduce function 
+processes the output of theMap functiongroupedby thekeys ofthegen­erated key-value pairs. For a subset 
+of all keys, each Re­duce retrieves thekey-valuepairsgeneratedbyallMap tasks and applies the Reduce function. 
+For e.ciency, we perform memoization of Reduce tasks at two levels: .rst as a coarse­grained memoization 
+of entire Reduce tasks, and second as a .ne-grained memoization of sub-computations of a novel Contraction 
+phase as described below. As with Map tasks, we remember the results of a Reduce task by persistently 
+storing them and inserting a mapping from hash of the input to the location of the results in the memoization 
+server. Since a Reduce task possibly receives input from the n Map tasks, the key of that mapping con­sists 
+of collision-resistant hashes of the outputs from all n Map tasks that collectively form the input to 
+the Reduce task. When executing a Reduce task, instead of immedi­ately copying the output from the n 
+Map tasks, the Reduce task retrieves the output hashes from these Map tasks to determine if the Reduce 
+task has already been computed in aprevious run. If so, the output is directly fetched from the location 
+stored in the memoization server, which avoids the re-execution of that task. Thistask-levelmemoizationhasacruciallimitation: 
+small changesintheinput cancauseafull andpotentiallylarge Reduce task to be re-executed, which results 
+in ine.cient incremental updates. Furthermore, the larger the task, the more likely that its input will 
+include some changed data, and thus the less likely that the task output will be reused. Since each Reduce 
+task processes all values that are pro­duced for a given key and since the number of such values depends 
+only on the computation and its input, we cannot control the size of the input to Reduce tasks under 
+the cur­rent model. This ultimately hinders stability, and we there­fore need a way todecreasethegranularity 
+ofReducetasks. We must do so while avoiding creating a long dependence chain between the smaller tasks 
+ such dependencies will force the execution of many subtasks, ultimately failing to achieve the initial 
+goal. To reduce the granularity of Reduce tasks e.ectively, we propose a new Contraction Phase, which 
+is run by Reduce tasks. To this end, we take advantage of Combiners, a fea­ture of the original MapReduce 
+and Hadoop frameworks[8], which wasdesignedfor a completelydi.erentpurpose. Com­biners are meant to savebandwidthby 
+o.oadingpart of the computationperformedby theReduce task to theMap task. With this mechanism, the programmer 
+speci.es a separate Combiner function, which is executed on the machine that runs the Map task, and pre-processes 
+various (key,value) pairs, merging them into a smaller number of pairs. The combiner function takes as 
+input an argument of the same type as its output: a sequence of (key,value)pairs. Notably, Combiners 
+and Reducers often perform very similar work. We use Combiners to break up large Reduce tasks into many 
+applications of theCombinefunction, which allows us to perform memoization at a much .ner granularity. 
+More precisely, we split the Reduce input into chunks, and apply the Combine function to each chunk. 
+Then we again form chunks from the aggregate result of all the Combine invoca­tions and recursively apply 
+the Combine function to these new chunks. The data size gets smaller in each iteration, and .nally, we 
+apply the Reduce function to the output of the last level of Combiners. This approach enables us to memoize 
+the results of the Combiners and therefore, when theinputtotheContractionphaseis changed, only asubset 
+of the Combiners have to be re-executed rather than a full Reduce task. This new usage of Combiners is 
+syntactically compatible with the original Combiner interface, since both input and output of Combiners 
+is a set of tuples that can be passed to the Reduce task. However, semantically, Combiners were only 
+designed to run at most once, and therefore the cor­rectness of the MapReduce computation is only required 
+to be maintained across a single Combiner invocation, that is: R .C .M = R .M where R, C, and M represent 
+the Reduce, Combiner and Map function, respectively. Our new usage of Combiner functions requires a slightly 
+di.erent property: R .Cn .M = R .M, .n> 0 Even though it is theoretically possible to write a Com­biner 
+that meets the original requirement but not the new one, in practice, all of the Combiner functions we 
+have ana­lyzed obey the new requirement. Stability of the Contraction phase. An important de­signquestionishow 
+topartition theinputtotheContraction phase into chunks that are processed by di.erent Combin­ers. In 
+this case, the same issue that arose at the Map phase needs to be handled: if a part of the input to 
+the Contraction phase is removed or a new part is added, then a .xed-size partitioning of the input would 
+undermine the stability of thedependencegraph, since a small change could cause a large re-computation. 
+This problem is illustrated in Figure 4, which shows two consecutive runs of the same Re­ducetask, where 
+a new maptask(#2) is addedtothe set of map tasks that produce values associated with the key being processed 
+by this Reduce task. In this case, a simple partitioning of theinput,e.g.,intogroupswith a .xed num­ber 
+of input .les, would cause all groups of .les to become di.erent from one run to the next, due to the 
+insertion of one new .le near the beginning of the sequence. To solve this, we again rely on content-based 
+chunking, and apply it to every level of the tree of combiners that forms the Contraction phase. The 
+way we perform content­basedchunkingin theContractionphasedi.ers slightlyfrom the approach we took in 
+Inc-HDFS, for both e.ciency and simplicity reasons. In particular, given that the Hadoop framework splits 
+theinputto the contractionphaseinto mul­tiple .les coming from di.erent Mappers, we require chunk boundaries 
+to be at .le boundaries, i.e., chunking can only group entire .les. This way we leverage the existing 
+par­titioning of the input, which simpli.es the implementation and avoids re-processing this input: we 
+use the hash of each input .le to determine if a marker is present, i.e., if that input .leshouldbethelastof 
+asetof .lesthatisgiventoa single Combiner. In particular, we test if the hash modulo a pre-determined 
+integer M is equal to a constant k<M. This way the input .le contents do not need to be scanned to partition 
+the input. Figure 4 also illustrates how content-based chunking ob­viates the alignment problem. In this 
+example, the content­based marker that delimits the boundaries between groups ofinput .lesispresentinoutputs#5,7, 
+and14,but notthe remaining ones. Therefore, inserting a new map output will change the .rst group of 
+inputs but none of the remaining ones. In this .gure we can also see how this change propa­gatestothe 
+.nal output. Inparticular,thischangewilllead toexecuting anewCombiner(labelled1-2-3-5),and the .nal Reducer. 
+The results for all of the remaining Combiners are reused without needing to re-execute them. This technique 
+is then repeated across all levels of the tree. 5. MEMOIZATION-AWARESCHEDULER The Hadoop scheduler assigns 
+Map and Reduce tasks to nodes for e.cient execution, taking into account machine availability, cluster 
+topology, and the locality of input data. The Hadoop scheduler, however, is not well-suited for in­cremental 
+computations because it does not consider the locality of memoized results. To enable e.cient reuse of 
+previously computed interme­diate results, tasks shouldpreferentially be scheduled on the node where 
+some or all of the memoized results they use are stored. This is important, for instance, in case the 
+Con­traction phase needs to run using a combination of newly computed and memoized results, which happens 
+when only a part of its inputs has changed. In addition to this design goal, the scheduler also has to 
+provide some .exibility by allowing tasks to be scheduled on nodes that do not store memoized results, 
+otherwise it can lead to the presence of stragglers, i.e., individual poorly performing nodes that can 
+drasticallydelay the overalljob completion[22]. Basedonthese requirements,Incoopincludesanewmemo­ization-aware 
+scheduler that strikes a balance between ex­ploiting the locality of memoized results and incorporating 
+some .exibility to minimize the straggler e.ect. The sched­uler tries toimplement alocation-awarepolicy 
+thatprevents the unnecessary movement of data, but at the same time it implements a simple work-stealing 
+algorithm to adapt to varying resource availability. The scheduler works by main­taining a separate taskqueuefor 
+each nodein the cluster(in­stead of a singletaskqueuefor all nodes), where eachqueue contains the tasks 
+that should run on that node in order to maximally exploit the location of memoized results. When­ever 
+a node requests more work, the scheduler dequeues the .rst task from the corresponding queue and assigns 
+the task to the node for execution. In case the corresponding queue for the requesting node is empty, 
+the scheduler tries to steal work from other task queues. The scheduling al­gorithm searches the task 
+queues of other nodes, and steals a pending task from the task queue with maximum length. If there are 
+multiple queues of maximum length, the sched­uler steals the task that has the least amount of memoized 
+intermediate results. Our scheduler thus takes the location of the memoized results into account, but 
+falls back to a work stealing approach to avoid stragglers and nodes run­ningidle. Our experimental evaluation(Section7.6) 
+shows the e.ectiveness of our approach.  6. ANALYSISOFINCOOP In this section we analyze the asymptotic 
+e.ciency of In­coop. We consider two di.erent runs: the initial run of an Incoop computation, where we 
+perform a computation with some input I, and a subsequent run or a dynamic update where we change the 
+input from I to I ' and perform the same computationwith thenewinput. Inthecommon case, we perform a 
+single initial run followed by many dynamic updates. For the initial run, we de.ne the overhead as the 
+slow­down of Incoop compared to a conventional implementation of MapReduce such as with Hadoop. We show 
+that the overhead depends on communication costs and, if these are independent of the input size, which 
+they often are, then it is also constant. Ourexperiments(Section7) con.rmthat the overhead is relatively 
+small. We show that dynamic up­dates are dominated by the time it takes to execute fresh tasks that are 
+a.ected by the changes to the input data, which,for a certain class of computations and small changes, 
+is logarithmic in the size of the input. In the analysis, we use the following terminology to re­fer 
+to the three di.erent types of computational tasks that form an Incoop computation: Map tasks, Contraction 
+tasks (applications of the Combiner function in the Contraction New Map Output  MAP OUTPUT CONTRACTION 
+REDUCE (c)Incremental run  Figure 4: Stability of the Contraction phase phase), and Reduce tasks. Since 
+Incoop computes hashes to e.ciently check if results can be reused, this computation needs to be factored 
+in the total cost. We write th for the time it takes to hash data and tm for the time it takes to send 
+a short message (one that does not contain entire in­putsand outputsof tasks). Ourboundsdepend onthetotal 
+number of map tasks, written NM and the total number of reduce tasks written NR. We write ni and nO to 
+denote the total size of the input and output respectively, nm to de­notethetotal number ofkey-valuepairs 
+outputby theMap phase, and nmk to denote the set of distinctkeys emitted by the Map phase. For our time 
+bounds, we will additionally assume that each Map, Combine, and Reduce function performs work that is 
+asymptotically linear in the size of their inputs. Fur­thermore, we will assume thattheCombinefunctionis 
+mono­tonic, i.e., it produces an output that is no larger than its input. This assumption is satis.ed 
+in most applications, be­cause Combiners often reduce the size of the data (e.g., a Combine function 
+to compute the sum of values takes mul­tiple values and outputs a single value). In this section we state 
+only our .nal theorems, and the complete proofs are contained in Appendix B. Theorem 1 (Initial Run:Time 
+and Overhead). Assuming that Map, Combine, and Reduce functions take time asymptotically linear in their 
+input size and that Com­bine functions are monotonic, the total time for performing an incremental MapReduce 
+computation in Incoop with an input of size ni, where nm key-value pairs are emitted by the Map phase 
+is O(tmemo · (NM +NR +NC ))= O(tmemo · (ni + nm)). This results in an overhead of O(tmemo)= O(th +tm) 
+over conventional MapReduce. Theorem 2 (Initial Run: Space). The total storage space for performing an 
+Incoop computation with an input of size ni, where nm key-value pairs are emitted by the Map phase, and 
+where Combine is monotonic is O(ni +nm +nO). Theorem 3 (Dynamic Update: Space and Time). In Incoop, a 
+dynamic update with fresh tasks F requires time L Otmemo (NM + NC + NR)+t(a). a.F Theorem 4 (Number 
+of Fresh Tasks). If the Map functiongenerates k key-valuepairsfrom a singleinput record, and the Combine 
+function is monotonic, then the number of fresh tasks, |F |, is at most O(k lognm + k). Taken together 
+the last two theorems suggest that small changes to data will lead to the execution of only a small number 
+of fresh tasks, and based on the tradeo. between the memoization costs and the cost of executing fresh 
+tasks, speedups can be achieved in practice.  7. IMPLEMENTATIONANDEVALUATION Weevaluatethee.ectivenessofIncoopfor 
+avariety of ap­plications implemented in the traditional MapReduce pro­gramming model. Inparticular,wewill 
+answerthefollowing questions: HowdoesIncoop sInc-HDFSperformance compareto HDFS?(§7.4)  Whatperformancebene.tsdoesIncoopprovideforin­cremental 
+workloads compared to the unmodi.edHad­oop implementation? (§7.5)  How e.ective are the optimizations 
+we propose in im­proving the overall performance of Incoop? (§7.6)  What overheads does the memoization 
+in Incoop im­pose when tasks are executed for the .rst time? (§7.7)  7.1 Implementation Webuiltourprototype 
+ofIncoopbased onHadoop-0.20.2. WeimplementedInc-HDFSby extendingHDFS with stable input partitioning, 
+and incremental MapReduce by extend­ing Hadoop with a .ner granuality control mechanism and the memoization-aware 
+scheduler. The Inc-HDFS .le system provides the same semantics andinterfacefor accessing all nativeHDFS 
+calls. It employs a content-based chunking scheme which is computationally more expensive than the .xed-size 
+chunking used by HDFS. As described in §3, the implementation minimizes the over­head using two optimizations: 
+(i) we skip parts of the .le contents when searching for chunk markers, in order to re­duce the number 
+of .ngerprint computations and enforce a minimum chunk size; and (ii) we parallelize the search for markers 
+across multiple cores. To implement these opti- The total storage requirement is the same as an initial 
+run. mizations, the data uploader client skips a .xed number of  Application Description   KNN 
+ K-nearest neighbors classi.es objects based on the closest training examples in a feature space.  BiCount 
+ Bigram count measures the prevalence of each subsequence of two items within a given sequence.  Table 
+1: Applications used in the performance evaluation bytes after the last marker is found, and then spawns 
+mul­tiple threads that each compute the Rabin .ngerprints over a sliding window on di.erent parts of 
+the content. For our experiments, we set the number of bytes skipped to 40MB unless otherwise stated. 
+We implemented the memoization server using a wrap­per aroundMemcachedv1.4.5, whichprovides anin-memory 
+key-value store. Memcached runs as a daemon process on the name node machine that acts as a directory 
+server in Hadoop. Intermediate results memoized across runs are stored on Inc-HDFS with the replication 
+factor set to 1, and, in case of data loss, the intermediate results are recom­puted. A major issue with 
+any implementation of memoiza­tion is determining which intermediate results to remember and whichintermediate 
+resultstopurge. Asinself-adjusting computation approaches, our approach is to cache the fresh results 
+from the last run , i.e., those results that were gen­erated or usedby thelast execution, andpurge all 
+the other obsolete results. This su.ces to obtain the e.ciency im­provements shown in §7.7. We implement 
+this strategy us­ing a simple garbage collector that visits all cache entries and purges the obsolete 
+results. Finally, the Contraction phase is implemented by aggre­gating all keys that are processed by 
+each node, instead of at a per-key granularity, since this is closer to the original Hadoop implementation. 
+ 7.2 ApplicationsandDataGeneration For the experimental evaluation, we use a set of appli­cations in 
+the .elds of machine learning, natural language processing,pattern recognition,anddocument analysis. 
+Ta­ble 1 lists these applications. We chose these applications to demonstrateIncoop sability toe.ciently 
+executebothdata intensive (WordCount, Co-Matrix, BiCount), and compu­tation intensive(KNN and K-Means)jobs. 
+In all cases, we did not make any changes to the original code. The three data-intensive applications 
+take as input docu­ments written in a natural language. In our benchmarks, we use a publicly available 
+dataset with the contents of Wikipedia.1 The computation-intensive applications take as input a set of 
+points in a d-dimensional space. Wegener­ate this data synthetically by uniformly randomly selecting 
+points from a 50-dimensional unit cube. To ensure reason­able running times, we chose all the input sizes 
+such that the running time of eachjob wouldbe around onehour. 7.3 Measurements Work and(parallel) time. 
+For comparing di.erent runs, we consider two types of measures, work and time, which are 1 Wikipedia 
+data-set: http://wiki.dbpedia.org/ standard measures for comparing e.ciency in parallel ap­plications. 
+Work refers to the total amount of computation performed by all tasks and measured as the total running 
+time of all tasks. (Parallel) Time refers to the amount of (end-to-end)time that it takes to complete 
+a parallel com­putation. It is well-known that under certain assumptions a computation with W work can 
+be executed on P pro­cessors in W time plus some scheduling overheads; this is P sometimes called the 
+work-time principle. Improvements in total work often directly lead to improvements in time but also 
+in the consumption of other resources, e.g., processors, power, etc. Aswedescribeinourexperiments,ourapproach 
+reduces work by avoiding unnecessary computations, which translates to improvements in run-time (and 
+use of other resources). Initial run and dynamic update. The most impor­tant measurements we perform 
+involve the comparison of the execution of a MapReduce job with Hadoop vs. with Incoop. For the Incoop 
+measurements, we consider two dif­ferent runs. The initial run refers to a run starting with an empty 
+memoization server that has no memoized results. Sucha run executes all tasks andpopulates the memoization 
+serverby storing theperformed computations andtheloca­tion of their results. The dynamic update refers 
+to a run of the samejob with a modi.edinput,butthathappens after the initial run, avoiding re-computation 
+when possible. Speedup. To assess the e.ectiveness of dynamic updates, we measurethe work andtime after 
+modifying varyingper­centages of the input data and comparing them to those for performing the same computation 
+with Hadoop. We re­fer to the ratio of the Hadoop run to the incremental run (Incoopdynamic update) as 
+speedup (in workand in time). When modifying p% of the input data, we randomly chose p% of the input 
+chunks and replaced them with new chunks of equal size and newly generated content. Hardware. Our measurements 
+were gathered using a clus­ter of20 machines, runningLinux withkernel2.6.32in64-bit mode, connected withgigabit 
+ethernet. The name nodeand thejob tracker ran on a master machine which was equipped with a12-coreIntelXeonprocessor 
+and12GB ofRAM.The data nodes and task trackers ran on the remaining 19 ma­chines equipped withAMDOpteron-252processors,4GB 
+of RAM, and 225GB drives. We con.gured the task trackers to use two Map and two Reduce slots per worker 
+machine. 7.4 Incremental HDFS To evaluate the overhead introducedby the content-based chunking in Inc-HDFS, 
+we compare the throughput when uploading a dataset of 3 GB for HDFS and Inc-HDFS. In HDFS the chunk size 
+is .xed at 64 MB, while in Inc-HDFS, 1000 HDFS -34.41 20 32.67 Incremental HDFS 40 34.19 60 32.04 100 
+Table 2: Throughput of HDFS and Inc-HDFS Speedup (w.r.t. Hadoop) 10 we vary the number of skipped bytes. 
+The uploading client machine was co-located with the name node of the cluster, and we con.gured the parallel 
+chunking code in Inc-HDFS to use 12 threads, i.e., one thread per core. The results of the experiments, 
+shown in Table 2, illustrate the e.ective­ness of our performance optimizations. Compared to plain HDFS, 
+Inc-HDFS introduces only a minor throughput re­duction due to the .ngerprint computation that is required 
+for content-based chunking. For the smallest skip o.set of20MB,Inc-HDFSintroduces a more noticeable overhead 
+because Rabin .ngerprints are computedfor alargerfraction of thedata, which resultsin a reduction of 
+overall throughput. When usingthelargest skip o.set of 60MB, we again see a small throughput reduction, 
+despite the smaller computational overhead for .ngerprint­ing. This is due to the fact that a larger 
+skip o.set increases the average chunk size, resulting in a lower total number of chunks for an input 
+.le. As a consequence, less work can be done in parallel towards the end of the upload. For a skip o.set 
+of 40MB, however, the Inc-HDFS throughput is similar to HDFS because it strikes a balance between the 
+computational overhead of .ngerprint computations and op­portunities for parallel processing of data 
+blocks during the upload to the distributed .le system. 7.5 Run-timeSpeedups Figure 5 and Figure 6 show 
+the work and time speedups, which are computed as ratio between the work and time of a dynamic run using 
+Incoop and those of Hadoop. From these experimental results we can observe the following: (i) Incoop 
+achieves substantial performance gains for all ap­plications when there are incremental changes to the 
+input data. In particular, work and time speedups vary between 3-fold and 1000-fold for incremental modi.cations 
+ranging from 0% to 25% of data. (ii) We observe higher speedups for computation-intensive applications(K-Means, 
+KNN)than fordata-intensive applications(WordCount, Co-Matrix, and BiCount). This is consistent with the 
+approach (and the analysis in Appendix B), because for computation-intensive tasks the approach avoids 
+unnecessary computations by re­using results. (iii)Bothwork and time speedupsdecrease as the size of 
+the incremental change increases, because larger changes allow fewer computation results from previous 
+runs tobe reused. Withvery small changes,however, speedupsin total work are not fully translated into 
+speedups in parallel time; this is expected because decreasing the total amount of work dramatically 
+(e.g., by a factor 1000) reduces the amount of parallelism, causing the scheduling overheads to be larger. 
+As the size of the incremental change increases, the gap between the work speedup and time speedup closes 
+quickly. The previous examples all consider .xed-size inputs. We experimented with otherinput sizes, 
+and similar resultshold. 1 0 5 10 15 20 25 Incremental Changes (%) Figure 5: Work speedups versus change 
+size. 0 5 10 15 20 25 Incremental Changes (%) Figure 6: Time speedups versus change size. This is shown 
+in Figure 7, which illustrates the time to run Incoop and Hadoop using the Co-Matrix application, and 
+for a modi.cation of a single chunk. This .gure shows that the relative improvements hold for various 
+di.erent input sizes.  7.6 EffectivenessofOptimizations We evaluate the e.ectiveness of the optimizations 
+in im­proving theoverallperformance ofIncoop by considering(i) thegranularity control with theintroduction 
+of theContrac­tionphase; and(ii)the scheduler modi.cations to minimize unnecessary data movement. Granularity 
+control. To evaluate the e.ectiveness of the Contraction phase, we consider the two di.erent levels of 
+memoization in Incoop: (i) the coarse-grained, task-level memoization performed in the implementation, 
+denoted as Task, and(ii)the .ne-grained approach that adds the Con­traction phase in the implementation, 
+denoted as Contrac­tion. Figure8 showsourtimemeasurementswith CoMatrix as a data-intensive application 
+and KNN as a computation­intensive application. The e.ect of the Contraction phase is negligible with 
+KNN but signi.cant in CoMatrix. The reason for negligible improvements with KNN is that in this applica­tion, 
+Reduce tasks perform relatively inexpensive work and thus bene.t little from the Contraction phase. Thus, 
+even when not helpful, the Contraction phase does not degrade e.ciency. Scheduler modi.cation. We now 
+evaluate the e.ective­   Incremental changes (%) Incremental changes (%) (a)Co-occurrence Matrix(b)k-NN 
+Classi.er Figure 8: Performance gains comparison between Contraction and task variants 40 1.4 Normalized 
+runtime (w.r.t. Hadoop) 35 30 25 20 15 10 5 Runtime (Hadoop normalized = 1) 1.2 1 0.8 0.6 0.4 0.2 01248 
+16 Normalized input size Figure 7: Co-Matrix: Time versus input size ness of the scheduler modi.cations 
+in improving the per­formance of Incoop. The Incoop scheduler avoids unneces­sary data movementby scheduling 
+tasks on the nodes where intermediate results from previous runs are stored. Also, the scheduler employs 
+a work stealing algorithm that allows some task scheduling .exibility to prevent nodes from run­ning 
+idle when runnable tasks are waiting. We show the performance comparison of the Hadoop scheduler with 
+the Incoop scheduler in Figure 9, where the Y-axis shows run­time relative to theHadoop scheduler. TheIncoopscheduler 
+saves around 30% of time for data-intensive applications, and almost 15% of time for compute-intensive 
+applications, which supports the necessity and e.ectiveness of location­aware scheduling for memoization. 
+ 7.7 Overheads The memoizationperformedinIncoopintroduces runtime overheads for the initial run when 
+no results from previous runs can be reused. Also, memoizing intermediate task re­sults imposes an additional 
+space usage. We measured both types,performance and spaceoverhead,for each application and present the 
+results in Figure 10. Performance overhead. We measure the worst-case per­formance overhead by capturing 
+the runtime for the initial run. Figure 10(a) depicts the performance penalty for both 0K-Means WordCount 
+KNN CoMatrix BiCount Applications Figure 9: E.ectiveness of scheduler optimizations. the Task andthe 
+Contraction memoizationbased approach. The overhead varies from 5% - 22%, and, as expected, it is lower 
+for computation intensive applications such as K-Means and KNN, since their run-time is dominated by 
+the actual processing time rather than storing, retrieving and transferring data. For the data intensive 
+applications such as WordCount, Co-Matrix and BiCount, the .rst run with Task level memoization is faster 
+than Contraction memo­ization. This di.erence in performance can be attributed to the extra processing 
+overheads for all levels of the tree formed in the Contraction phase. Importantly, this perfor­mance 
+overhead is a one-time cost and the subsequent runs bene.t from a high speedup. Space overhead. We measure 
+the space overheadbyquan­tifying the space used for remembering the intermediate computationresults. 
+Figure10(b)illustratesthespaceover­headas afactor oftheinput size withTask-andContraction­level memoization. 
+The results show that the Contraction­level memoization requires more space, which was expected becauseit 
+stores resultsfor alllevels of theContraction tree. Overall, space overhead varies substantially depending 
+on the application, and can be as high as 9X (CoMatrix ap­plication). However, our approach for garbage 
+collection prevents the storage utilization from growing over time. Performance overhead w.r.t Hadoop 
+(%) 30 25 20 15 10 5 0   K-Means WordCount KNN CoMatrix BiCount K-Means WordCount KNN CoMatrix BiCount 
+Applications Applications (a)Performance overhead for the .rst job run (b)Space overhead Figure 10: 
+Overheads imposed by Incoop in comparison to Hadoop  8. RELATEDWORK Our work builds on contributions 
+from several di.erent .elds, which we brie.y survey. Dynamic algorithms. In the algorithms community, 
+re­searchers designed dynamic algorithms that permit modi.­cations or dynamic changes to their input, 
+and e.ciently update their output when such changes occur. Several sur­veys discuss the vast literature 
+on dynamic algorithms [9] Thisresearch showsthatdynamicalgorithms canbeasymp­totically, often by a near-linear 
+factor, more e.cient than their conventional counterparts. In large-scale systems, this asymptotic di.erence 
+can yield signi.cant speedups. Dy­namic algorithms can, however, be di.cult to develop and implement 
+even for simple problems; some problems took years of research to solve and many remain open. Programming 
+language-based approaches. In thepro­gramming languages community, researchers developed in­cremental 
+computation techniques to achieve automatic in­crementalization (e.g. [21]). This approach is automatic 
+and hides the mechanism for incrementalization, and can thus dramatically simplify software development. 
+Recent advances on self-adjusting computation made signi.cantpro­gress ontheproblemofincremental computationbypropos­inggeneral-purposetechniquesthat 
+can achieveoptimal up­datetimes(e.g.,[2,1,12]). Ourwork usesideas andtech­niques from self-adjusting 
+computation to ensure e.ciency, e.g., the ideas of stable input partitions and stable contrac­tion trees 
+andthetechniquesfor achievingthese. Algorithms for parallel self-adjusting computation have also been 
+pro­posed[11] butthey have notbeenimplemented; most work on self-adjusting computation assumes sequential 
+execution. Incremental database view maintenance. There is substantial work from the database community 
+on incre­mentally updating a database view (i.e., a predetermined queryon thedatabase) as thedatabase 
+contents evolve. The techniques used by these systems can either directly oper­ate on the database internals 
+to perform these incremental updates, or rely on SQL queries that e.ciently compute the modi.cations 
+to the database view, and that are issued uponthe execution of adatabasetrigger[5]. Eventhough Incoop 
+shares the same goals and principles as incremental view maintenance, it di.ers substantially in the 
+techniques that are employed, since thelatter exploitsdatabase-speci.c mechanisms and semantics. Large-scaleincrementalparalleldataprocessing. 
+Th­ere are several systems for performing incremental paral­lel computations with large data sets. We 
+broadly divide them into two categories: non-transparent and transpar­ent approaches. Examples of non-transparent 
+systems in­cludeGoogle sPercolator[19] which requirestheprogram­mer to write a program in an event-driven 
+programming model based on observers. Observers are triggered by the system whenever user-speci.eddata 
+changes. Similarly, con­tinuous bulk processing (CBP) [14] proposes a new data­parallelprogrammingmodel, 
+which o.ersprimitivestostore and reuse prior state for incremental processing. There are two drawbacks 
+to these approaches, both of which are ad­dressed by our proposal. The .rst is that they depart from 
+the MapReduce programming paradigm and therefore re­quire changes to the large existing base of MapReduce 
+pro­grams. The second, morefundamentalproblemisthatthey require that programmer to devise a dynamic algorithm 
+in order to e.ciently process data in an incremental manner. Examples oftransparentapproachesincludeDryadInc[20], 
+which extends Dryad to automatically identify redundant computations by caching previously executed tasks. 
+One limitation of this basic approach is that it can only reuse common identical sub-DAGs of the original 
+computation, which canbeinsu.cient to achieve e.cient updates. Toim­prove e.ciency thepaper suggeststheprogrammers 
+specify additional merge functions. Another similar system called Nectar[10] cachesprior results atthe 
+coarsergranularity of entire LINQ sub-expressions. The technique used to achieve thisistoautomatically 
+rewrite LINQprogramstofacilitate caching. Finally, although notfully transparent,Haloop[4] providestask-level 
+memoizationtechniquesfor memoization inthe context ofiterativedataprocessing applications. The major 
+di.erence between the aforementioned transparent approaches and ourproposalisthat we use a well-understood 
+set of principles from related work to eliminate the cases where task-level memoization provides poor 
+e.ciency. To this end, we provide techniques for increasing the e.ective­ness of task-level memoization 
+via stable input partitions andby using amore .ne-grained memoization strategy than the granularity of 
+Map and Reduce tasks. Our implemen­tation does not support currently incremental execution for iterative 
+computations; however, the framework can easily be extended to support iterative computations. Our own 
+shortpositionpaper[3] makesthe casefor ap­plying techniques inspired by self-adjusting computation to 
+large-scale data processing in general, and uses MapReduce as an example. Thispositionpaper,however, 
+modelsMapRe­duce in a sequential, single-machine implementation of self­adjusting computation calledCEAL[12], 
+anddoes not o.er anything close to a full-scale distributed design and imple­mentation such as we describe 
+here. TheHadooponlineprototype(HOP)[7] extendstheHadoop framework to support pipelining between the map 
+and re­duce tasks, so that reducers start processing data as soon as it is produced by mappers. This 
+enables two new features in the framework. First, it can generate an approximate an­swerbeforethe end 
+of thecomputation(online aggregation) and second, it can support continuous queries, where jobs run continuously, 
+and process new data as it arrives. Stream processing systems. Comet[13] introduces the BatchedStreamProcessing(BSP), 
+whereinputdatais mod­eled as a stream, with queries being triggered upon bulk appends to the stream. 
+The interface provided by Comet enables exploitingtemporal and spatial correlationsin recur­ring computations 
+by de.ning the notion of a query series. Within aquery series, the execution will automaticallylever­age 
+the intermediate results of previous invocations of the same query on an overlapping window of the data, 
+thereby exploiting temporal correlations. Further,byaligning multi­ple query series to execute together 
+when new bulk updates occur, Comet exploits spatial correlations by removing re­dundant I/O or computation 
+across queries. In contrast to Comet, we are compatible with the MapReduce model and focus on several 
+issues like controlling task granularity or input partitioning that do not arise in Comet s model. NOVA 
+[17] is a work.ow manager recently proposed by Yahoo!, designed for the incremental execution of Pig 
+pro­grams upon continually-arriving data. NOVA introduces a new layer called the work.ow manager on top 
+of the Pig/ Hadoopframework. Muchliketheworkonincrementalview maintenance, the work.ow manager rewrites 
+the computa­tion to identify the parts of the computation a.ected by incrementalchanges andproduce the 
+necessary updatefunc­tion that runs on top of the existingPig/Hadoopframework. However, as noted by the 
+authors of NOVA, an alterna­tive, more e.cient design would be to modify the under­lying Hadoop system 
+to support this functionality. In our work, and particularly with our case study of incremental processing 
+of Pig queries, we explore precisely this alterna­tivedesign of addinglower-level supportfor reusingprevious 
+results. Furthermore, our work is broader in that it trans­parentlybene.ts allMapReduce computations, 
+andnot only continuous Pig queries. 9. CONCLUSION In this paper, we presented Incoop, a novel MapReduce 
+framework forlarge-scale incremental computations. Incoop isbasedon several novel techniques to maximize 
+the reuse of results from a previous computation. In particular, Incoop incorporates content-based chunking 
+to the .le system to detectincremental changesintheinput .leand topartition thedata so as to maximize 
+reuse;it adds aContractionphase to control thegranularity oftasksintheReducephase, and a new scheduler 
+that takes the location of previously com­puted results into account. We implemented Incoop as an extension 
+to Hadoop. Our performance evaluation shows thatIncoop canimprove e.ciencyinincremental runs(the commoncase),atamodestcostintheinitial,.rst 
+run(un­common case) where no computations can be reused. Acknowledgments Weappreciatethedetailed andhelpfulfeedbackfromRemzi 
+Arpaci-Dusseau, Rose Hoberman, Jens Dittrich, and the Sysnetsgroupmembers atMPI-SWS.We wouldliketothank 
+Daniel Porto for helping us to set up the PigMix experi­ments. 10. REFERENCES [1] U. A. Acar, G. E. Blelloch, 
+M. Blume, R. Harper, and K. Tangwongsan. An experimental analysis of self-adjusting computation. ACM 
+Trans. Programming Languages and Systems, 32(1):1 53, 2009. [2] U. A. Acar, G. E. Blelloch, and R. Harper. 
+Adaptive functional programming. ACM Trans. Programming Languages and Systems, 28(6):990 1034, 2006. 
+[3] P. Bhatotia, A. Wieder, I. E. Akkus, R. Rodrigues, and U. A. Acar. Large-scale incremental data processing 
+with change propagation. In USENIX Workshop on Hot Topics in Cloud Computing (HotCloud 11). [4] Y. Bu, 
+B. Howe, M. Balazinska, and M. D. Ernst. HaLoop: E.cient iterative data processing on large clusters. 
+In 36th International Conference on Very Large Data Bases, Singapore, September 14 16, 2010. [5] S. Ceri 
+and J. Widom. Deriving production rules for incremental view maintenance. In Proceedings of the 17th 
+International Conference on Very Large Data Bases, pages 577 589, 1991. [6] Y.-J. Chiang and R. Tamassia. 
+Dynamic algorithms in computational geometry. Proceedings of the IEEE, 80(9):1412 1434, 1992. [7] T. 
+Condie, N. Conway, P. Alvaro, J. M. Hellerstein, K. Elmeleegy, and R. Sears. Mapreduce online. In Proc. 
+7th Symposium on Networked systems design and implementation(NSDI 10). [8] J. Dean and S. Ghemawat. Mapreduce: 
+simpli.ed data processing on large clusters. In Proc. 6th Symposium on Operating Systems Design and Implementation(OSDI 
+04). [9] C. Demetrescu, I. Finocchi, and G. Italiano. Handbook on Data Structures and Applications. 
+CRC, 2005. [10] P. K. Gunda, L. Ravindranath, C. A. Thekkath, Y. Yu, and L. Zhuang. Nectar: Automatic 
+management of data and computation in data centers. In Proc. 9th Symp. Operating Systems Design and Implementation(OSDI 
+10). [11] M. Hammer, U. A. Acar, M. Rajagopalan, and A. Ghuloum. A proposal for parallel self-adjusting 
+computation. In DAMP 07: Proceedings of the .rst workshop on Declarative Aspects of Multicore Programming, 
+2007. [12] M. A. Hammer, U. A. Acar, and Y. Chen. CEAL: A C-based language for self-adjusting computation. 
+In Proceedings of the 2009 ACM SIGPLAN Conference on Programming Language Design and Implementation, 
+June 2009. [13] B. He, M. Yang, Z. Guo, R. Chen, B. Su, W. Lin, and L. Zhou. Comet: batched stream processing 
+for data intensive distributed computing. In Proc. 1st Symposium onCloud computing(SoCC 10). [14] D. 
+Logothetis, C. Olston, B. Reed, K. C. Webb, and K. Yocum. Stateful bulk processing for incremental analytics. 
+In 1st Symp. on Cloud computing(SoCC 10). [15] D. Logothetis, C. Trezzo, K. C. Webb, and K. Yocum. In-situ 
+mapreduce for log processing. In Proceedings of the 2011 USENIX conference on USENIX annual technical 
+conference, USENIXATC 11, 2011. [16] A. Muthitacharoen, B. Chen, and D. Mazi`eres. A low-bandwidth network 
+.le system. In Proc. 18th Symp. onOperating systemsprinciples(SOSP 01). [17] C. Olston and et.al. Nova: 
+continuous pig/hadoop work.ows. In Proceedings of the 2011 international conference on Management of 
+data, SIGMOD, 2011. [18] C. Olston, B. Reed, U. Srivastava, R. Kumar, and A. Tomkins. Pig latin: a not-so-foreign 
+language for data processing. In SIGMOD 08: Proceedings of the 2008 ACM SIGMOD international conference 
+on Management of data, pages 1099 1110, 2008. [19] D. Peng and F. Dabek. Large-scale incremental processing 
+using distributed transactions and noti.cations. In Proc. 9th Symposium on Operating SystemsDesign andImplementation(OSDI 
+10). [20] L. Popa, M. Budiu, Y. Yu, and M. Isard. DryadInc: Reusing work in large-scale computations. 
+In Worksh. on Hot Topics in Cloud Computing(HotCloud 09). [21] G. Ramalingam and T. Reps. A Categorized 
+Bibliography on Incremental Computation. In Proc. 20thSymp. Princ.of Progr.Languages(POPL 93). [22] M. 
+Zaharia, A. Konwinski, A. D. Joseph, R. Katz, and I. Stoica. Improving mapreduce performance in heterogeneous 
+environments. In Proceedings of the 8th USENIX conference on Operating systems design and implementation, 
+OSDI 08, 2008. APPENDIX  A. CASESTUDIES The success ofMapReduceparadigm enables our approach to transparently 
+bene.t an enormous variety of bulk data processing work.ows. In particular, and aside from the large 
+numberof existing MapReduceprograms,MapReduce is also being used as an execution engine for other systems. 
+Inthis case,Incoop will alsotransparently bene.tprograms written for these systems. In this section, 
+we showcase two work.ows where we use Incoop to transparently bene.t systems from e.cient incre­mental 
+processing in their context, namely incremental log processing and incremental query processing. A.1 
+IncrementalLogProcessing Log processing is an essential work.ow in Internet com­panies, where various 
+logs are often analyzed in multiple ways on adailybasis[15]. For example,inthe area of click log analysis, 
+traces collected from various web server logs are aggregated in a single repository and then processed 
+for 10 1 0 5 10 15 20 25 Incremental log appends (%) Figure 11: Speedup for incremental log processing 
+various purposes, from simple statistics like counting clicks per user, or more complex analyses like 
+click sessionization. To perform incremental log processing, we integrated In­coop with Apache Flume 
+2 a distributed and reliable ser­vice for e.ciently collecting, aggregating, and moving large amounts 
+of log data. In our setup, Flume aggregates the data and dumps it into the Inc-HDFS repository. Then, 
+In­coop performs the analytic processing incrementally, lever­aging previously computed intermediate 
+results. Speedup (w.r.t. Hadoop) We evaluate the performance of using Flume in conjunc­tion with Incoop 
+for incremental log processing by compar­ing its runtime with the corresponding runtime when us­ing Hadoop. 
+For this experiment, we perform document analysis on an initial set of logs, and then append new log 
+entries to the input, after which we process the resulting larger collection of logs incrementally. In 
+Figure 11, we de­pictthespeedup for runningIncoop as afunction of thesize of the new logs that are appended 
+after the .rst run. In­coop achieves a speedup of a factor of 4 to 2.5 with respect to Hadoop when processing 
+incremental log appends of a size of 5% to 25% of the initial input size, respectively. A.2 IncrementalQueryProcessing 
+We showcaseincrementalqueryprocessingas another work­.owthat exempli.esthepotentialbene.tsofIncoop. Incre­mental 
+query processing is an important work.ow in Inter­net companies, where the samequeryisprocessedfrequently 
+for anincrementally changinginputdata set[17]. Weinte­grated Incoop with Pig to evaluate the feasibility 
+of incre­mentalqueryprocessing. Pig[18] is aplatformto analyze large data sets built upon Hadoop. Pig 
+provides Pig Latin, an easy-to-usehigh-levelquerylanguage similar toSQL.The ease ofprogramming and scalability 
+ofPig madethe system very popular for very large data analysis tasks, which are conducted by major Internet 
+companies today. Since Pig programs are compiled down to multi-staged MapReduce jobs, the integration 
+of Incoop with Pig was seamless, just by using Incoop as the underlying execution engine for incrementally 
+executing the multi-staged MapRe­ducejobs. WeevaluatetwoPigapplications,word count and thePigMix3 scalabilitybenchmark, 
+to measure the e.ective­ness of Incoop. We observe a runtime overhead of around 2 Apache Flume: https://github.com/cloudera/flume 
+3 Apache PigMix: http://wiki.apache.org/pig/PigMix 15% for .rst run, and a speedup of a factor of around 
+3 for an incremental run with unmodi.ed input. The detailed result breakdown is shown in Table 3. Application 
+Features M/R stages Overhead Speedup Word Count Group by, Order by, Filter 3 15.65 % 2.84 PigMix scalabilty 
+benchmark Group by, Filter 1 14.5 % 3.33 Table 3: Results for incremental query processing  B. ANALYSISOFINCOOP(PROOFS) 
+Theorem 5 (Initial Run:Time and Overhead). Assuming that Map, Combine, and Reduce functions take time 
+asymptotically linear in their input size and that Com­bine functions are monotonic, total time for performing 
+an incremental MapReduce computation in Incoop with an in­put of size ni, where nmkey-value pairs are 
+emitted by the Map phase is O(tmemo · (NM +NR +NC ))= O(tmemo · (ni + nm)). This results in an overhead 
+of O(tmemo)= O(th +tm) over conventional MapReduce. Proof. Memoizing a task requires1) computingthehash 
+of each input, and 2) sending a message to the memoization server containing the triple consisting of 
+the task id, the input hash and the location of the computed result. Given the time for hashing an input 
+chunk th and the time for sending a message tm, this requires tmemo = th+tm . O(th+ tm) time for each 
+task of the job. Memoization therefore causes O(th +tm)per taskslowdown. To compute the total slowdown 
+we bound the number of tasks. The number ofMap andReducetasksin aparticularjob canbederivedfrom theinput 
+size andthe number ofdistinct keys that are emitted by the Map function: the Map func­tion is applied 
+to splits that consist of one or more input chunks, and each application of the Map function is per­formed 
+by one Map task. Hence, the number of Map tasks NM isin the order ofinput size O(ni). In theReducephase, 
+each Reduce task processes all previously emitted key-value pairsfor atleastonekey, which resultsin at 
+most NR = nmk reduce tasks. To bound the number of contraction tasks, we note that the contraction phase 
+builds a tree whose leaves are the output data chunks of the Map phase, whose inter­nal nodes each has 
+at least two children. Since there are at most nmpairs outputby theMapphase,thetotal numberof reduce 
+tasks is bounded by nm. Hence the total number of contraction tasks NC . O(nm). Since the number of reduce 
+tasks is bounded by nmk = nm , the total number of tasks is O(ni +nm). Theorem 6 (Initial Run: Space). 
+Total storage space for performing an Incoop computation with an input of size ni, where nmkey-value 
+pairs are emitted by the Map phase, and where Combine is monotonic is O(ni + nm + nO). Proof. In addition 
+to the input and the output, Incre­mental MapReduce requires additionally storing the output of the map, 
+contraction, and reduce tasks. SinceIncooponly keepsdatafromthemostrecent run(initial ordynamicrun), 
+we use storage for remembering only the task output from the most recent run. The output size of the 
+map tasks is bounded by nm. With monotonic Combine functions, the size of the output of Combine tasks 
+is bounded by O(nm). Finally, the storage needed for reduce tasks is bounded by the size of the output. 
+Theorem 7 (Dynamic Update: Space and Time). In Incoop, a dynamic update requires time L Otmemo (NM +NC 
++NR)+ t(a) . a.F The total storage requirement is the same as an initial run. Proof. Consider Incoop 
+performing an initial run with input I and changing the input to I ' and then performing a subsequent 
+run (dynamic update). During the dynamic update, tasks with the same type and input data will re-use 
+the memoized result of the previous runs, avoiding recom­putation. Thus, only the fresh tasks need to 
+be executed, ()L which takes Ot(a), where F is the set of changed or a.F new (fresh) Map, Contract and 
+Reduce tasks, respectively, and t(·) denotes the processing time for a given task. Re­using tasks will, 
+however, require an additional check with the memo server, and hence we will pay a cost of tmemo for 
+all re-used tasks. Inthe common case, we expectthe execution offreshtasks to dominate the time for dynamic 
+updates, because tmemo is a relatively small constant. The time for dynamic update is therefore likely 
+to be determined by the number of fresh tasks that are created as a result of a dynamic change. It is 
+in general di.cult to bound the number of fresh tasks, because it depends on the speci.cs of the application. 
+As atrivial example, consider,inserting a singlekey-valuepair intotheinput. Inprinciple,the newpair canforcetheMap 
+function to generate a very large number of new key-value pairs, which can then require performing many 
+new reduce tasks. In many cases, however, small changes to the input lead only to small changes in the 
+output of the Map, Com­bine, and Reduce functions, e.g., the Map function can use one key-value pair 
+to generate several new pairs, and the Combine function will typically combine these, resulting in a 
+relatively small number of fresh tasks. As a speci.c case, assume that the Map function generates k key-value 
+pairs from a single input record, and that the Combine function monotonically reducesthe number ofkey-valuepairs. 
+Theorem 8 (Number of Fresh Tasks). If the Map functiongenerates k key-valuepairsfrom a singleinput record, 
+and the Combine function is monotonic, then the number of fresh tasks is at most O(k lognm + k). Proof. 
+At most k contraction tasks at each level of the contraction tree will be fresh, and k fresh reduce tasks 
+will be needed. Since thedepth of the contraction treeis nm, the total number of fresh tasks will therefore 
+be O(k lognm + k)= O(k lognm).   
+			

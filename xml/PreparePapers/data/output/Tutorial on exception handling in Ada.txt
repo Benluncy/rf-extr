@@ -1,0 +1,222 @@
+
+ TUTORIAL ON EXCEPTION HANDLING IN ADA (R) Tuesday, March 25, 1986 Washington Ada Symposium Benjamin 
+M. Brosgol Alsys, Inc. 1432 Main Street Waltham, Mass. 02154 (617) 890-0030 (R) Ada is a registered 
+trademark of the U.S. Government (AJPO) COPYRIGHT 1986 BY THE ASSOCIATION FOR COMPUTING MACHINERY, INC. 
+Permission to copy without fee all or part of this material is granted provided that the copies are not 
+made or distributed for direct commercial advantage, the ACM copyright notice and the title of the publication 
+and its date appear, and notice is given that copying is by permission of the Association for Computing 
+Machinery. To copy otherwise, or to republish, requires a fee and/or specific permission. 179 o Motivation 
+and Basic Principles  o Exception Handlers and How to Find Them  o Programming with Exceptions  o 
+Tasking and Exceptions  o Exceptions and Optimizations  o Conclusions  O Control structure to deal 
+with run-time situations that are: o Rare o Inconvenient to test for at the point of occurrence o Not 
+going to require that control return to the point of occurrence O Typically error conditions O An ~ is 
+a name for such a situation o Predefined: CONSTRAINT_ERROR Situation: Array subscript out of bounds o 
+User-declared: TABLE_FULL Situation: Inserting an"element when no more room O Activities comprise: o 
+EA~ the exception -- Indicating that the gituation has occurred o ~ the exception -- Executing some actions 
+in response 181 O Appropriate to application domain of real-time programming o Typical program is infinite 
+loop, interacting with external environment o Even rare events will eventually occur O Promotes program 
+readability and efficiency o Program text shows the main processing clearly, cluttered with checking 
+of status flags not O Helps avoid language complexity o No need for "wild goto" or procedures passing 
+of error-handling O Steelman required it 182 An exception may be raised with no explicit indication 
+in the source program Examples: X := Y+Z; --NUMERIC_ERROR if Y+Z overflows x := Y/Z; --NUMERIC_ERROR 
+if Z=0 I: POSITIVE := J; --CONSTRAINT_ERROR if J <= X: array (i..10) of INTEGER; X(J) := ~; --CONSTRAINT_ERROR 
+if J not in i..10 type PTR is access INTEGER; P: PTR; P.all := 0; --CONSTRAINT_ERROR if P = null There 
+may or may not be run-time code to check for the condition that will raise the exception O NUMERIC_ERROR 
+O Trap on overflow o Check a status flag O CONSTRAINT_ERROR for access value dereference o Trap on 
+address fault  o Check vs. specific null value  Often the compiler can guarantee that there is no 
+possibility for the condition to occur that will raise the exception: I: INTEGER range 0..10 := 5; and 
+thus no checking code need be generated This is done by a raise statement: raise exception_name; The 
+exception name may be predefined: raise TASKING_ERROR; Or, more commonly, it may be a name declared 
+by the programmer: raise TABLE_FULL; Regardless of whether the exception is raised ~ (by a raise statement) 
+or ~ , the effect is the same: o Abandon~j£~j~9/l of the construct that caused the exception to be raised 
+ o Try to find a handler for the exception, where execution will resume   CONSTRAINT_ERROR o Violation 
+of range, index, discriminant constraint  o Dereferencing a null access value   NUMERIC_ERROR o Predefined 
+numeric operation that cannot deliver correct value  PROGRAM_ERROR o "Access before elaboration"  
+o Reaching the end of a function   STORAGE_ERROR o Exhausting storage during a declaration, allocation, 
+subprogram call, task activation TASKING_ERROR o Failure of task activation or communication An exception 
+handler specifies the actions to be taken in response to the raising of an exception It occurs as part 
+of a frame --a block statement or the body of a subprogram, package, task, or generic unit; e.g., begin 
+ Sequence of Statements --Statement Part exception --Exception Part: when E1 i E2 => Sequence of 
+Statements --Handler 1 when E3 => Sequence of Statements --Handler 2 when others => Sequence of Statements 
+--Handler 3 end; O ! An exception name is not allowed to appear clauses of the same exception part 
+twice in the when O An others choice, when clause if present, must appear alone in the last O A goto 
+statement cannot outside (e.g., from the transfer statement control part) into a handler from O A goto 
+statement statement in the cannot transfer statement part control from a handler to a O Nesting is permitted: 
+a handler frames that have handlers may itself contain inner Consider the context in which the exception 
+was raised: 0 In a statement in the statement part of a frame 0 In a statement in an exception handler 
+ 0 In a declaration Consider also the kind of unit in which the exception was raised: o Block  o Package 
+body  o Subprogram body  o Task body (Ignore this case for now)  o Library package specification 
+ Simple case: Exception ALPHA is raised in the statement part, and a handler for ALPHA or for others 
+appears in the frame's exception part Effect: O Abandon execution of the statement part O Go to the 
+sequence of statements in the appropriate handler Note: If no exception is raised in the statement 
+part, then none of the handlers in the exception part is executed Compute the "Dot Product" of a vector 
+with itself. If overflow occurs, write the error to an error file and return the maximum value for the 
+element type. type ELEMENT_TYPE is range -MAX_VAL .. MAX_VAL; type VECTOR is array (NATURAL range <>) 
+of ELEMENT_TYPE; function DOT_SELF(V: VECTOR) return ELEMENT_TYPE is SUM: ELEMENT_TYPE := 0; begin for 
+I in V'RANGE loop SUM := SUM + V(I)**2; end loop; return SUM; exception when NUMERIC_ERROR ~ CONSTRAINT_ERROR 
+=> TEXT_IO.PUT_LINE(ERROR_FILE, "ERROR IN DOT_SELF"); return ELEMENT_TYPE'LAST; end DOT_SELF; A less 
+simple case: Exception BETA is raised in the statement part of a frame, but there is a handler neither 
+for BETA nor for others in the frame's exception part Effect: o Abandon execution of the statement 
+part of the frame  o the ~ in these cases, based on the kind of frame:  o Block or package body -- 
+Raise BETA after the block or package body  o Subprogram body -- Raise BETA after the point of call 
+   --Find the largest integer <= N whose factorial can be computed function FIND_MAX_FACTORIALIZABLE(N: 
+NATURAL) return NATURAL is I: NATURAL := i; begin declare FACT: NATURAL := i; begin while I <= N loop 
+ FACT := FACT * I; I := I + i; end loop; end; return N; --Here if loop completed normally exception 
+when NUMERIC_ERROR => return I; --Here if exception raised in loop end FIND_MAX_FACTORIALIZABLE; procedure 
+PUSH(MY_ELEMENT: ELEMENT; MY_STACK: in out STACK) is begin if STACK_FULL(MY_STACK) then raise OVERFLOW; 
+end if; STACK_INDEX := STACK_INDEX + i; MY_STACK(STACK_INDEX) := MY_ELEMENT; end PUSH; If MY_STACK 
+is full, then OVERFLOW is raised but not handled: o Execution of PUSH is abandoned  o OVERFLOW is raised 
+immediately after the call of PUSH, with the caller determined dynamically  O Exception raised in subprogram 
+call: Handle in caller, not callee declare procedure HAMLET(I: NATURAL) is ... end HAMLET; begin eee 
+ HAMLET(-1); --Raise CONSTRAINT_ERROR here end; O Exception raised in function return: Handle in the 
+function, if possible function OPHELIA return NATURAL is begin eee return -I; --Raise CONSTRAINT_ERROR 
+here e end OPHELIA; O Exception raised on procedure return (assignment to copy-out parameter): Handle 
+in caller, not callee declare I: INTEGER range 0..10 := 6; procedure POLONIUS(PARM: in out INTEGER) 
+is begin PARM := 2*PARM; return; * ................. exception when CONSTRAINT_ERROR => PARM := 0; end 
+POLONIUS; begin POLONIUS (I) : exception when CONSTRAINT_ERROR => < ............ I := I; end; If an 
+exception is propagated out of a procedure, then out and in out parameters passed by copy are not updated 
+ Scalar and Access Types: procedure CLAUDIUS(I: in out INTEGER) is begin I := 0; raise CURTAIN; --Actual 
+parameter not updated end CLAUDIUS; procedure GERTRUDE(I: in out INTEGER) is begin I := 0; raise 
+CURTAIN; exception when others => null; --Actual parameter updated end GERTRUDE; Array and Record 
+Types o Compiler may choose either reference or copy  o Program erroneous if it matters  declare 
+ SWORD: EXCEPTION; subtype STRINGLET is STRING(I..4); S: STRINGLET := "ABCD"; procedure LAERTES(STR: 
+out STRINGLET) is begin STR := "SOFT"; raise SWORD; end LAERTES; begin LAERTES(S); exception when 
+SWORD => if S = "SOFT" then PUT_LINE("By Reference"); else PUT_LINE("By Copy"); end if; end; procedure 
+PUSH(MY_ELEMENT: ELEMENT; MY_STACK: in out STACK) is begin STACK_INDEX := STACK_INDEX + i; MY_STACK(STACK_INDEX) 
+:= MY_ELEMENT; exception when CONSTRAINT_ERROR => raise OVERFLOW; end PUSH; When the stack is full, 
+CONSTRAINT_ERROR is raised by one of the statements in PUSH's statement part The statement part is abandoned, 
+and the handler for CONSTRAINT_ERROR in PUSH's exception part is executed This in turn raises OVERFLOW, 
+which is not handled by any inner handler Thus OVERFLOW is propagated (to the point of subprogram call) 
+ A special form of raise statement, can be used only within a handler omitting the exception name, Its 
+effect is to propagate kind of frame the "current exception", based on the It is useful in a handler 
+for others; e.g., procedure GO_FOR_IT begin is elo exception when CONSTRAINT_ERROR => ... --Take appropriate 
+action and return when others => PUT_LINE("Unexpected exception in GO_FOR_IT"); raise; end GO_FOR_IT; 
+ o Look for the innermost If one exists, then: frame containing the declaration. Abandon handler execution 
+of the frame --in this frame's exception do not part look for a o Propagate the exception based on the 
+kind of frame o If there is no such innermost frame, then the declaration occurs within a library package 
+specification; thus: o Abandon elaboration of the package specification o Propagate the exception to 
+the environment (the main subprogram does not get called) task declare procedure WHY_NOT is N: INTEGER 
+range 0..10 := 20; --CONSTRAINT_ERROR--- ALPHA: array (I..N) of FLOAT; begin ooo exception when CONSTRAINT_ERROR 
+=> ALPHA := (I..N => 0.0); end WHY_NOT; begin WHY_NOT; return; exception when CONSTRAINT_ERROR => PUT_LINE("No 
+problem"); end; This example shows why Ada rules do not allow an exception raised in a declaration 
+to be handled in the same frame An exception declaration looks somewhat like an object declaration, 
+and has similar namescope properties, but there are important differences: o There are only a static 
+number of exceptions -- If an exception is declared in a recursive subprogram, one exception is created 
+ Rationale: run-time efficiency o Exceptions are not permitted as components of arrays or records; they 
+cannot be passed as parameters Rationale: no need for added generality It can happen! E.g., procedure 
+YOU_ASKED_FOR_IT is GLORP: EXCEPTION; begin raise GLORP; end YOU_ASKED_FOR_IT; Why allow this? o Disallowing 
+it would add complexity, run-time cost  o Exceptions are not error situations --they are names for error 
+situations  o Leaving the scope of an exception does not make the error condition disappear  o The 
+propagated exception may still be handled by an others handler   PROGRAMMING WITH EXCEPTIONS - OVERVIEW 
+o Handle a Terminating Condition o Try Alternative Technique o Retry an Operation o Clean-Up ("Last Wishes") 
+o Use with Data Abstraction Example: Looking up an item in a sequential file and returning its frequency 
+count package MUMBLE_SEQ_IO is new SEQUENTIAL_IO(MUMBLE); use MUMBLE_SEQ_IO; function COUNT_MUMBLES(MUMBLE_FILE: 
+FILE_TYPE; PATTERN: MUMBLE) return NATURAL is COUNT: NATURAL := 0; CURRENT_MUMBLE: MUMBLE; begin --Assume 
+that MUMBLE_FILE has already been opened loop READ(MUMBLE_FILE, CURRENT_MUMBLE); --Raises END_ERROR 
+when attempting to read EOF if CURRENT_MUMBLE = PATTERN then COUNT := COUNT + i; end if; end loop; 
+exception when END_ERROR => return COUNT; --Uses an exception as a normal condition for termination, 
+--not as an error end COUNT_MUMBLES ; Find average of an array of INTEGER values; result is a FLOAT. 
+Use integer arithmetic, for efficiency, to sum the values. Use floating point arithmetic if get integer 
+overflow. type VECTOR is array (NATURAL range <>) of INTEGER; function AVERAGE(SAMPLES: VECTOR) return 
+FLOAT is SUM: INTEGER := 0; begin if SAMPLES'LENGTH = 0 then return ~.0; end if; for INDEX in SAMPLES'RANGE 
+loop SUM := SUM + SAMPLES(INDEX); end loop; return FLOAT(SUM)/FLOAT(SAMPLES'LENGTH); exception when 
+NUMERIC_ERROR => declare REAL_SUM: FLOAT := @.0; begin for INDEX in SAMPLES'RANGE loop REAL_SUM 
+:= REAL_SUM + FLOAT(SAMPLES(INDEX)); end loop; return REAL_SUM/FLOAT(SAMPLES'LENGTH); end; end AVERAGE; 
+ Example: Try to read a block of data from a tape. If unsuccessful after ten tries, raise MALFUNCTION. 
+ for I in 1..10 loop begin READ_TAPE(DATA); exit; exception when TAPE_ERROR => if I = 10 then raise 
+MALFUNCTION; else BACKSPACE; end if; end; end loop; Example: Allow a procedure to perform "last wishes" 
+before propagating an exception: Leave world in a consistent state for the caller First approximation: 
+procedure OPERATE(NAME: STRING) is FILE: FILE_TYPE; begin --(i) Initial actions OPEN(FILE, INOUT_FILE, 
+NAME); --(2) Perform work on the file CLOSE(FILE); --(3) Final actions end OPERATE; Problem: If an 
+exception is raised during (2), FILE is left open A Better Approach: procedure SAFE_OPERATE(NAME: STRING) 
+is FILE: FILE_TYPE; begin --(i) Initial actions OPEN(FILE, INOUT_FILE, NAME); begin -- (2) Perform work 
+on the file exception when others => CLOSE(FILE); raise; end; CLOSE(FILE); -- (3) Final actions end SAFE_OPERATE; 
+ An ~ data type is a (private) type declared in a package specification together with the subprograms 
+that operate on data of that type o Declare exceptions that will be raised when the subprograms cannot 
+complete normally  o Comment each subprogram specification by documenting both its normal and abnormal 
+behavior  Declare functions that the package user can call to see if an exception would be raised 
+o Program the visible subprograms so that they do not propagate anonymous or predefined exceptions; 
+instead, propagate an explicitly declared exception with STACK_INIT_PCKG; package STACK_PCKG is type 
+STACK is private; OVERFLOW, UNDERFLOW: EXCEPTION; procedure PUSH(MY_ELEMENT: ELEMENT; MY_STACK: in out 
+STACK); --Normal return: pushes MY_ELEMENT onto MY_STACK --Abnormal return: raises OVERFLOW if stack 
+is full function IS_FULL(MY_STACK: STACK) return BOOLEAN; --Normal return: TRUE iff MY_STACK is full 
+--Abnormal return: none ... --Analogous declarations for POP, IS_EMPTY, TOP private MAX_STACK_SIZE: 
+constant INTEGER := STACK_INIT_PCKG.MAX; type STACK is array (1..MAX_STACK_SIZE) of ELEMENT; end STACK_PCKG; 
+ o Exceptions raised during task activation  o Exceptions raised during execution of task statements 
+ o Exceptions raised during task communication  o Calling an entry of a completed task  o Exception 
+raised during execution of an accept statement  o Communication with an "abnormal" task   Review 
+of activation semantics O Parent unit suspended just after the O Activation: elaborate declarative parts 
+of child tasks O Parent unit awakened, may execute in parallel with statements of children O What if 
+an exception is raised during activation of one (or more) of the children? O The child task becomes 
+completed O When parent unit is awakened, TASKING_ERROR is raised (just after the b_~) O If several children 
+raise exceptions during their activation, TASKING_ERROR is raised only once declare task ALPHA; task 
+body ALPHA is S: STRING(I..10) := "HI"; --CONSTRAINT_ERROR --CONSTRAINT_ERROR --> TASKING_ERROR begin 
+ eee exception when CONSTRAINT ERROR => ...; end ALPHA; begin --Activate ALPHA here --When CONSTRAINT_ERROR 
+is raised during activation, --propagate TASKING_ERROR to this point *----.... --..... . eeo exception 
+ __ .... _____ .... ________ when TASKING_ERROR => ... end; 0 An exception raised in a declarative is 
+never handled in that unit part of a (task) unit => Divide task execution into two phases O If an exception 
+is raised in the declarative part of a task body, the parent unit should be notified that activation 
+did not complete successfully => Activate just after the o But do not raise an exception asynchronously 
+=> Suspend parent at the activation of children tasks O And don't exceptions forget that children tasks 
+during their activation may raise different => Raise TASKING_ERROR in parent o If an exception in a 
+task body, that task body is raised during execution of the statements look for a handler in the exception 
+part of o If a handler is not found, the task becomes a completed task o Do to not propagate either the 
+parent unit that exception or TASKING_ERROR back Why not? Because we do not want to raise exceptions 
+asynchronously It is good style to put a when others exception part of a task body, perhaps error reporting 
+task choice in the to rendezvous with an 217 After a server task completes its execution, TASKING_ERROR 
+is raised in any task attempting to call the server's entries task SERVER is entry UPDATE(THIS_ITEM: 
+in out ITEM); end SERVER; task body SERVER is ooo begin ooo accept UPDATE(THIS_ITEM: in out ITEM) 
+do ... --actions to update the item end UPDATE; oeo end SERVER; task USER; task body USER is MY_ITEM: 
+ITEM; begin ooo SERVER.UPDATE(MY_ITEM); --TASKING_ERROR raised if SERVER completes without --accepting 
+this call ooo end USER; 2'18 task SERVER is task USER; entry SYNCH; end SERVER; task body SERVER 
+is task body USER is eee begin begin eee accept SYNCH do SERVER.SYNCH; ... raise GERBILS; * ............ 
+> eee I end SYNCH; l end USER; I < end SERVER; o Propagate the raised exception both to caller 
+and callee, at the points following the call and accept  o Important that both be notified of the failure 
+ o The propagation is not asynchronous (caller was suspended)   o In each task, look for handler via 
+normal search rules  219 "An abort statement causes one or more tasks to become ~J~[19d~, thus preventing 
+any further rendezvous with such tasks" --Ada Reference Manual, Section 9.10, Paragraph 1 Semantics 
+of rendezvous with abnormal tasks has interaction with exception facility Syntax of abort statement: 
+abort task_name {, task_name}; Effect: O Each named task (and dependents) not yet terminated becomes 
+abnormal O An abnormal task becomes completed when it is suspended at any of several tasking operations 
+ Note-. O Aborting a task does not necessarily cause immediate (or even eventual) termination O Use the 
+abort statement sparingly; e.g., for "rogue" tasks or to prevent deadlock o If a task calls an entry 
+of an abnormal task, TASKING_ERROR is raised in the caller o What if a task becomes abnormal during 
+the rendezvous? o Finish execution of the accept statement  o Then, effect depends on whether it is 
+the user  (calling) task or the server (called) task that is abnormal o If user task becomes abnormal: 
+ o No effect on server  o User task becomes completed   o If server task becomes abnormal:  o TASKING_ERROR 
+raised in user  o Server task becomes completed   o Elimination of unnecessary o Pragma SUPPRESS 
+o Compiler optimization checks techniques o "Termination" rather than "Resumption" model o Allowed code 
+motions by compiler o Allowed machine instruction o When to test overflow o Widening intermediate effects 
+ranges o Time-critical applications code that checks for error may require conditions absence of generated 
+type VECTOR is array (1..100) of INTEGER; pragma SUPPRESS(INDEX_CHECK, ON => VECTOR); --Now no explicit 
+index check when subscripting --slicing objects of type VECTOR or o Checks for CONSTRAINT_ERROR: ACCESS_CHECK 
+DISCRIMINANT_CHECK LENGTH_CHECK RANGE_CHECK INDEX_CHECK o Checks for NUMERIC_ERROR: DIVISION_CHECK OVERFLOW_CHECK 
+o Check for PROGRAM_ERROR: ELABORATION_CHECK o Check for STORAGE_ERROR: STORAGE_CHECK o Program is ~ 
+check is absent if error situation occurs and run-time o Inclusion of pragma SUPPRESS does not guarantee 
+that the exception will not be raised o It may be raised by hardware o Pragma SUPPRESS simply advises 
+compiler not to generate code to check for the error situation 0 Reference: Ada Reference Manual, Section 
+11.6 0 Code motion must not introduce otherwise have been raised: an exception that would not ALPHA: 
+array (I..N) of FLOAT; oeo for I in ALPHA'RANGE loop ALPHA(I) := ALPHA(I) end loop; / FLOAT(ALPHA'LENGTH) 
+cannot be transformed into ALPHA: array (I..N) of FLOAT; ego <TEMP> := 1.0 / FLOAT(ALPHA'LENGTH); for 
+I in ALPHA'RANGE loop ALPHA(I) := ALPHA(I) * <TEMP>; end loop; unless compiler can ensure that range 
+not null o Code that may raise an exception must not be moved to a place that would cause a different 
+handler to be invoked (unless the program effect remains the same) o Programmer should be careful about 
+assuming where in the statements a particular exception was raised begin I := I; J := Expr; --may raise 
+NUMERIC_ERROR exception when others => PUT(I) ; --I = 1 end; may be transformed into: begin <TEMP> 
+:= Expr; --may raise NUMERIC_ERROR I := I; J := <TEMP>; exception when others => PUT(I); --I/=i end; 
+ OPERATOR/OPERAND ASSOCIATIONS O An expression may be rearranged to yield a correct mathematical result, 
+even though this may cause an to be raised exception O Programmer may prevent such rearrangements by 
+parenthesizing O Example: I + J + K Assume I = I, J = -i, K = INTEGER'LAST Then the compiler may choose 
+to evaluate (I + K) + J though this raises NUMERIC_ERROR this as ALLOWED MACHINE INSTRUCTION EFFECTS 
+ o If an exception is raised in an assignment statement, the target variable must not be modified Thus, 
+compiling the statement J := J + I; is an issue, if the machine INCREMENT instruction modifies the variable 
+before giving an overflow indication (can't use such an instruction) Programmer can help here by declaring 
+J in a subrange o Widening the range of an intermediate result  I, J, K: INTEGER; eee I := (I * J) 
+/ K; --May compute I * J as LONG_INTEGER, to take --advantage of MULTIPLY and DIVIDE instructions Exception 
+handling is a useful control facility for dealing with rare run-time events (usually error conditions) 
+ 0 When an exception is raised, the current action is abandoned and a handler is sought 0 Search rules 
+take into account where the exception is raised and the kind of enclosing unit 0 User-declared exceptions 
+are valuable part of data abstraction 0 Interactions between exceptions and tasking have been carefully 
+considered; exceptions always synchronous 0 Optimizers are permitted reasonable flexibility in transforming 
+programs that may raise exceptions 0  
+			

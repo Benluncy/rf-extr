@@ -1,0 +1,890 @@
+
+ A Type System for Certi.ed Binaries* Zhong Shao Bratin Saha Valery Trifonov Nikolaos Papaspyrou Department 
+of Computer Science, Yale University New Haven, CT 06520-8285, U.S.A. {shao, saha, trifonov, nickie}@cs.yale.edu 
+ Abstract A certi.ed binary is a value together with a proof that the value satis.es a given speci.cation. 
+Existing compilers that generate cer­ti.ed code have focused on simple memory and control-.ow safety 
+rather than more advanced properties. In this paper, we present a general framework for explicitly representing 
+complex proposi­tions and proofs in typed intermediate and assembly languages. The new framework allows 
+us to reason about certi.ed programs that involve effects while still maintaining decidable typechecking. 
+We show how to integrate an entire proof system (the calculus of inductive constructions) into a compiler 
+intermediate language and how the intermediate language can undergo complex transforma­tions (CPS and 
+closure conversion) while preserving proofs rep­resented in the type system. Our work provides a foundation 
+for the process of automatically generating certi.ed binaries in a type­theoretic framework. 1 Introduction 
+Proof-carrying code (PCC), as pioneered by Necula and Lee [30, 28], allows a code producer to provide 
+a machine-language pro­gram to a host, along with a formal proof of its safety. The proof can be mechanically 
+checked by the host; the producer need not be trusted because a valid proof is incontrovertible evidence 
+of safety. The PCC framework is general because it can be applied to cer­tify arbitrary data objects 
+with complex speci.cations [29, 2]. For example, the Foundational PCC system [3] can certify any property 
+expressible in Church s higher-order logic. Harper et al. [19, 7] call all these proof-carrying constructs 
+certi.ed binaries (or deliv­erables [7]). A certi.ed binary is a value (which can be a function, a data 
+structure, or a combination of both) together with a proof that the value satis.es a given speci.cation. 
+Unfortunately, little is known on how to construct or generate certi.ed binaries. Existing certifying 
+compilers [31, 9] have fo­cused on simple memory and control-.ow safety only. Typed inter­mediate languages 
+[21] and typed assembly languages [27] are ef­fective techniques for automatically generating certi.ed 
+code; how­ *This research is based on work supported in part by DARPA OASIS grant F30602­99-1-0519, NSF 
+grant CCR-9901011, and NSF ITR grant CCR-0081590. Any opin­ions, .ndings, and conclusions contained in 
+this document are those of the authors and do not re.ect the views of these agencies. Permission to make 
+digital or hard copies of all or part of this work for per­sonal or classroom use is granted without 
+fee provided that copies are not made or distributed for pro.t or commercial advantage and that copies 
+bear this notice and the full citation on the .rst page. To copy otherwise, to re­publish, to post on 
+servers or to redistribute to lists, requires prior speci.c permission and/or a fee. POPL 02, Jan. 16-18, 
+2002 Portland, OR, USA c . 2002 ACM ISBN 1-58113-450-9/02/01...$5.00 ever, none of these type systems 
+can rival the expressiveness of the actual higher-order logic as used in some PCC systems [3]. In this 
+paper, we present a type-theoretic framework for con­structing, composing, and reasoning about certi.ed 
+binaries. Our plan is to use the formulae-as-types principle [23] to represent propositions and proofs 
+in a general type system, and then to in­vestigate their relationship with compiler intermediate and 
+assem­bly languages. We show how to integrate an entire proof system (the calculus of inductive constructions 
+[34, 11]) into an intermedi­ate language, and how to de.ne complex transformations (CPS and closure conversion) 
+of programs in this language so that they pre­serve proofs represented in the type system. Our paper 
+builds upon a large body of previous work in the logic and theorem-proving community (see Barendregt 
+et al. [5, 4] for a good summary), and makes the following new contributions: We show how to design 
+new typed intermediate languages that are capable of representing and manipulating proposi­tions and 
+proofs. In particular, we show how to maintain decidability of typechecking when reasoning about certi.ed 
+programs that involve effects. This is different from the work done in the logic community which focuses 
+on strongly nor­malizing (primitive recursive) programs.  We maintain a phase distinction between compile-time 
+type­checking and run-time evaluation. This property is often lost in the presence of dependent types 
+(which are necessary for representing proofs in predicate logic). We achieve this by never having the 
+type language (see Section 3) dependent on the computation language (see Section 4). Proofs are instead 
+always represented at the type level using dependent kinds.  We show how to use propositions to express 
+program invari­ants and how to use proofs to serve as static capabilities. Fol­lowing Xi and Pfenning 
+[44], we use singleton types [22] to support the necessary interaction between the type and computation 
+languages. We can assign an accurate type to unchecked vector (or array) access (see Section 4.2). Xi 
+and Pfenning [44] can achieve the same using constraint check­ing, but their system does not support 
+arbitrary propositions and (explicit) proofs, so it is less general than ours.  We use a single type 
+language to typecheck different com­piler intermediate languages. This is crucial because it is im­practical 
+to have separate proof libraries for each intermedi­ate language. We achieve this by using inductive 
+de.nitions to de.ne all types used to classify computation terms. This in turn nicely .ts our work on 
+(fully re.exive) intensional type analysis [39] into a single system.  We show how to perform CPS and 
+closure conversion on our intermediate languages while still preserving proofs repre­  sented in the 
+type system. Existing algorithms [27, 20, 25, 6] all require that the transformation be performed on 
+the entire type language. This is impractical because proofs are large in size; transforming them can 
+alter their meanings and break the sharing among different languages. We present new tech­niques that 
+completely solve these problems (Sections 5 6). Our type language is a variant of the calculus of inductive 
+constructions [34, 11]. Following Werner [41], we give rig­orous proofs for its meta-theoretic properties 
+(subject reduc­tion, strong normalization, con.uence, and consistency of the underlying logic). We also 
+give the soundness proof for our sample computation language. See Sections 3 4, the ap­pendix, and the 
+companion technical report [37] for details. As far as we know, our work is the .rst comprehensive study 
+on how to incorporate higher-order predicate logic (with inductive terms and predicates) into typed intermediate 
+languages. Our re­sults are signi.cant because they open up many new exciting pos­sibilities in the area 
+of type-based language design and compila­tion. The fact that we can internalize a very expressive logic 
+into our type system means that formal reasoning traditionally done at the meta level can now be expressed 
+inside the actual language it­self. For example, much of the past work on program veri.cation using Hoare-like 
+logics may now be captured and made explicit in a typed intermediate language. From the standpoint of 
+type-based language design, recent work [21, 44, 13, 15, 40, 39] has produced many specialized, increasingly 
+complex type systems, each with its own meta­theoretical proofs, yet it is unclear how they will .t together. 
+We can hope to replace them with one very general type system whose meta theory is proved once and for 
+all, and that allows the de.nition of specialized type operators via the general mechanism of induc­tive 
+de.nitions. For example, inductive de.nitions subsume and generalize earlier systems on intensional type 
+analysis [21, 14, 39]. We have started implementing our new type system in the FLINT compiler [35, 36], 
+but making the implementation realis­tic still involves solving many remaining problems (e.g., ef.cient 
+proof representations). Nevertheless, we believe our current contri­butions constitute a signi.cant step 
+toward the goal of providing a practical end-to-end compiler that generates certi.ed binaries. 2 Approach 
+Our main objectives are to design typed intermediate and low-level languages that can directly manipulate 
+propositions and proofs, and then to use them to certify realistic programs. We want our type system 
+to be simple but general; we also want to support complex transformations (CPS and closure conversion) 
+that preserve proofs represented in the type system. In this section, we describe the main challenges 
+involved in achieving these goals and give a high-level overview of our main techniques. Before diving 
+into the details, we .rst establish a few naming conventions that we will use in the rest of this paper. 
+Typed inter­mediate languages are usually structured in the same way as typed .-calculi. Figure 1 gives 
+a fragment of a richly typed .-calculus, organized into four levels: kind schema (kscm) u, kind ., type 
+t, and expression (exp) e. If we ignore kind schema and other exten­sions, this is just the polymorphic 
+.-calculus F. [18]. We divide each typed intermediate language into a type sub­language and a computation 
+sub-language. The type language con­tains the top three levels. Kind schemas classify kind terms while 
+kinds classify type terms. We often say that a kind term . has kind schema u, or a type term t has kind 
+.. We assume all kinds used to classify type terms have kind schema Kind, and all types used to classify 
+expressions have kind .. Both the function type t1 .t2 THE TYPE LANGUAGE: (kscm) u ::= Kind |... (kind) 
+. ::= .1 ..2 |. |... (type) t ::= t |.t: .. t |t1 t2 |t1 .t2 |.t: .. t |... THE COMPUTATION LANGUAGE: 
+(exp) e ::= x |.x: t.e |e1 e2 |.t: ..e |e[t] |... Figure 1: Typed .-calculi a skeleton and the polymorphic 
+type .t : .. t have kind .. Following the tradition, we sometimes say a kind . to imply that . has kind 
+schema Kind, a type t to imply that t has kind ., and a type constructor t to imply that t has kind ..···... 
+Kind terms with other kind schemas, or type terms with other kinds are strictly referred to as kind terms 
+or type terms. The computation language contains just the lowest level which is where we write the actual 
+program. This language will eventu­ally be compiled into machine code. We often use names such as computation 
+terms, computation values, and computation functions to refer to various constructs at this level. 2.1 
+Representing propositions and proofs The .rst step is to represent propositions and proofs for a particular 
+logic in a type-theoretic setting. The most established technique is to use the formulae-as-types principle 
+(a.k.a. the Curry-Howard correspondence) [23] to map propositions and proofs into a typed .-calculus. 
+The essential idea, which is inspired by constructive logic, is to use types (of kind .) to represent 
+propositions, and expressions to represent proofs. A proof of an implication P .Q is a function object 
+that yields a proof of proposition Q when applied to a proof of proposition P. A proof of a conjunction 
+P .Q is a pair (e1,e2) such that e1 is a proof of P and e2 is a proof of Q.A proof of disjunction P .Q 
+is a pair (b, e) a tagged union where b is either 0 or 1 and if b=0, then e is a proof of P;if b=1 then 
+e is a proof of Q. There is no proof for the false proposition. A proof of a universally quanti.ed proposition 
+.x.B.P(x) is a function that maps every element b of the domain B into a proof of P(b) where P is a unary 
+predicate on elements of B. Finally, a proof of an existentially quanti.ed proposition .x.B.P(x) is a 
+pair (b, e) where b is an element of B and e is a proof of P(b). Proof-checking in the logic now becomes 
+typechecking in the corresponding typed .-calculus. There has been a large body of work done along this 
+line in the last 30 years; most type-based proof assistants are based on this fundamental principle. 
+Baren­dregt et al. [5, 4] give a good survey on previous work in this area. 2.2 Representing certi.ed 
+binaries Under the type-theoretic setting, a certi.ed binary S is just a pair (v, e) that consists of: 
+ a value v of type t where v could be a function, a data struc­ture, or any combination of both;  and 
+a proof e of P(v) where P is a unary predicate on ele­ments of type t.  Here e is just an expression 
+with type P(v). The predicate P is a dependent type constructor with kind t ... The entire package S 
+has a dependent strong-sum type Sx: t.P(x). For example, suppose Nat is the domain for natural numbers 
+and Prime is a unary predicate that asserts an element of Nat as a prime number, we introduce a type 
+nat representing Nat, and a type constructor prime (of kind nat..) representing Prime.We can build a 
+certi.ed prime-number package by pairing a value v (a natural number) with a proof for the proposition 
+prime(v); the resulting certi.ed binary has type Sx : nat. prime(x). Function values can be certi.ed 
+in the same way. Given a func­tion f that takes a natural number and returns another one as the result 
+(i.e., f has type nat . nat), in order to show that f always maps a prime to another prime, we need a 
+proof for the following proposition: .x.Nat. Prime(x) . Prime(f(x)) In a typed setting, this universally 
+quanti.ed proposition is repre­sented as a dependent product type: .x : nat. prime(x) . prime(f(x)) The 
+resulting certi.ed binary has type Sf : nat . nat. .x : nat. prime(x) . prime(f(x)) Here the type is 
+not only dependent on values but also on function applications such as f(x), so verifying a certi.ed 
+binary involves typechecking the proof which in turn requires evaluating the under­lying function application. 
+ 2.3 The problems with dependent types The above scheme unfortunately fails to work in the context of 
+typed intermediate (or assembly) languages. There are at least four problems with dependent types; the 
+third and fourth are present even in the general context. First, real programs often involve effects 
+such as assignment, I/O, or non-termination. Effects interact badly with dependent types. In our previous 
+example, suppose the function f does not ter­minate on certain inputs; then clearly, typechecking which 
+could involve applying f would become undecidable. It is possible to use the effect discipline [38] to 
+force types to be dependent on pure computation only, but this does not work in some typed .-calculi; 
+for example, a pure term in Girard s .U [18] could still diverge. Even if applying f does not involve 
+any effects, we still have more serious problems. In a type-preserving compiler, the body of the function 
+f has to be compiled down to typed low-level lan­guages. A few compilers perform typed CPS conversion 
+[27], but in the presence of dependent types, this is a very dif.cult prob­lem [6]. Also, typechecking 
+in low-level languages would now re­quire performing the equivalent of ß-reductions on the low-level 
+(assembly) code; this is awkward and dif.cult to support cleanly. Third, it is important to maintain 
+a phase distinction between compile-time typechecking and run-time evaluation. Having de­pendent strong-sum 
+and dependent product types makes it harder to preserve this property. It is also dif.cult to support 
+.rst-class certi.ed binaries. Finally, it would be nice to support a notion of subset types [10, 32]. 
+A certi.ed binary of type Sx : nat. prime(x) contains a natural number v and a proof that v is a prime. 
+However, in some cases, we just want v to belong to a subset type {x : nat | prime(x)}, i.e., v is a 
+prime number but the proof of this is not together with v; instead, it can be constructed from the current 
+context. 2.4 Separating the type and computation languages We solve these problems by making sure that 
+our type language is never dependent on the computation language. Because the actual computation term 
+has to be compiled down to assembly code in any case, it is a bad idea to treat it as part of types. 
+This separation immediately gives us back the phase-distinction property. To represent propositions and 
+proofs, we lift everything one level up: we use kinds to represent propositions, and type terms for proofs. 
+The domain Nat is represented by a kind Nat; the predicate Prime is represented by a dependent kind term 
+Prime which maps a type term of kind Nat into a proposition. A proof for proposition Prime(n) certi.es 
+that the type term n is a prime number. To maintain decidable typechecking, we insist that the type lan­guage 
+is strongly normalizing and free of side effects. This is pos­sible because the type language no longer 
+depends on any runtime computation. Given a type-level function g of kind Nat.Nat,we can certify that 
+it always maps a prime to another prime by build­ing a proof tp for the following proposition, now represented 
+as a dependent product kind: .t : Nat.Prime(t) .Prime(g(t)). Essentially, we circumvent the problems 
+with dependent types by replacing them with dependent kinds and by lifting everything (in the proof language) 
+one level up. To reason about actual programs, we still have to connect terms in the type language with 
+those in the computation language. We follow Xi and Pfenning [44] and use singleton types [22] to relate 
+computation values to type terms. In the previous example, we in­troduce a singleton type constructor 
+snat of kind Nat ... Given a type term n of kind Nat, if a computation value v has type snat(n), then 
+v denotes the natural number represented by n. A certi.ed binary for a prime number now contains three 
+parts: a type term n of kind Nat, a proof for the proposition Prime(n), and a computation value of type 
+snat(n). We can pack it up into an existential package and make it a .rst-class value with type: .n : 
+Nat..t : Prime(n).snat(n). Here we use . rather than S to emphasize that types and kinds are no longer 
+dependent on computation terms. Under the erasure semantics [16], this certi.ed binary is just an integer 
+value of type snat(n) at run time. A value v of the subset type (for prime numbers) would simply have 
+type snat(n) as long as we can construct a proof for Prime(n) based on the information from the context. 
+We can also build certi.ed binaries for programs that involve effects. Returning to our example, assume 
+again that f is a func­tion in the computation language which may not terminate on some inputs. Suppose 
+we want to certify that if the input to f is a prime, and the call to f does return, then the result 
+is also a prime. We can achieve this in two steps. First, we construct a type-level function g of kind 
+Nat . Nat to simulate the behavior of f (on all inputs where f does terminate) and show that f has the 
+following type: .n : Nat. snat(n) . snat(g(n)) Here following Figure 1, we use . and . to denote the 
+polymor­phic and function types for the computation language. The type for f says that if it takes an 
+integer of type snat(n) as input and does not loop forever, then it will return an integer of type snat(g(n)). 
+Second, we construct a proof tp showing that g always maps a prime to another prime. The certi.ed binary 
+for f now also con­tains three parts: the type-level function g, the proof tp, and the computation function 
+f itself. We can pack it into an existential package with type: .g : Nat.Nat. .p :(.t : Nat.Prime(t) 
+.Prime(g(t))). .n : Nat. snat(n) . snat(g(n)) Notice this type also contains function applications such 
+as g(n), but g is a type-level function which is always strongly normalizing, so typechecking is still 
+decidable. 2.5 Designing the type language We can incorporate propositions and proofs into typed intermedi­ate 
+languages, but designing the actual type language is still a chal­lenge. For decidable typechecking, 
+the type language should not depend on the computation language and it must satisfy the usual meta-theoretical 
+properties (e.g. strong normalization). But the type language also has to ful.ll its usual responsibil­ities. 
+First, it must provide a set of types (of kind .) to classify the computation terms. A typical compiler 
+intermediate language supports a large number of basic type constructors (e.g., integer, ar­ray, record, 
+tagged union, and function). These types may change their forms during compilation, so different intermediate 
+languages may have different de.nitions of .; for example, a computation function at the source level 
+may be turned into CPS-style, or later, to one whose arguments are machine registers [27]. We also want 
+to support intensional type analysis [21] which is crucial for type­checking runtime services [26]. Our 
+solution is to provide a general mechanism of inductive de.nitions in our type language and to de.ne 
+each such . as an inductive kind. This was made possible only recently [39] and it relies on the use 
+of polymorphic kinds. Taking the type language in Figure 1 as an example, we add kind variables k and 
+polymorphic kinds .k : u. ., and replace . and its associated type constructors with inductive de.nitions 
+(not shown): (kscm) u ::= Kind |... (kind) . ::= .1 ..2 |k |.k : u. . |... (type) t ::= t |.t : .. t 
+|t1 t2 |.k : u. t |t [.] |... At the type level, we add kind abstraction .k : u. t and kind appli­cation 
+t [.]. The kind . is now inductively de.ned as follows (see Sections 3 4 for more details): Inductive 
+.: Kind := . :. .. .. |.. :.k : Kind. (k ..) .. . . . Here . and . are two of the constructors (of .). 
+The polymorphic type .t : .. t is now written as . [.](.t : .. t ); the function type t1 .t2 is just 
+. t1t2. Inductive de.nitions also greatly increase the programming power of our type language. We can 
+introduce new data objects (e.g., integers, lists) and de.ne primitive recursive functions, all at the 
+type level; these in turn are used to help model the behaviors of the computation terms. To have the 
+type language double up as a proof language for higher-order predicate logic, we add dependent product 
+kind .t : .1..2, which subsumes the arrow kind .1 ..2; we also add kind-level functions to represent 
+predicates. Thus the type language naturally becomes the calculus of inductive constructions [34]. 2.6 
+Proof-preserving compilation Even with a proof system integrated into our intermediate lan­guages, we 
+still have to make sure that they can be CPS-and closure-converted down to low-level languages. These 
+transforma­tions should preserve proofs represented in the type system; in fact, they should not traverse 
+the proofs at all since doing so is impracti­cal with large proof libraries. These challenges are non-trivial 
+but the way we set up our type system makes it easier to solve them. First, because our type lan­guage 
+does not depend on the computation language, we do not have the dif.culties involved in CPS-converting 
+dependently typed .-calculi [6]. Second, all our intermediate languages share the same type language 
+thus also the same proof library; this is possible because the . kind (and the associated types) for 
+each intermediate language is just a regular inductive de.nition. Finally, a type-preserving program 
+transformation often re­quires translating the source types (of the source . kind) into the target types 
+(of the target . kind). Existing CPS-and closure­conversion algorithms [27, 20, 25] all perform such 
+translation at the meta-level; they have to go through every type term (thus every proof term in our 
+setting) during the translation, because any type term may contain a sub-term which has the source . 
+kind. In our framework, the fact that each . kind is inductively de.ned means that we can internalize 
+and write the type-translation function in­side our type language itself. This leads to elegant algorithms 
+that do not traverse any proof terms but still preserve typing and proofs (see Sections 5 6 for details). 
+ 2.7 Putting it all together A certifying compiler in our framework will have a series of in­termediate 
+languages, each corresponding to a particular stage in the compilation process; all will share the same 
+type language. An intermediate language is now just the type language plus the cor­responding computation 
+terms, along with the inductive de.nition for the corresponding . kind. In the rest of this paper, we 
+.rst give a formal de.nition of our type language (which will be named as TL from now on) in Section 
+3; we then present a sample computa­tion language .H in Section 4; we show how .H can be CPS-and closure-converted 
+into low-level languages in Sections 5 6; .nally, we discuss related work and then conclude.  3 The 
+Type Language TL Our type language TL resembles the calculus of inductive construc­tions (CIC) implemented 
+in the Coq proof assistant [24]. This is a great advantage because Coq is a very mature system and it 
+has a large set of proof libraries which we can potentially reuse. For this paper, we decided not to 
+directly use CIC as our type language for three reasons. First, CIC contains some features designed for 
+program extraction [33] which are not required in our case (where proofs are only used as speci.cations 
+for the computation terms). Second, as far as we know, there are still no formal studies covering the 
+entire CIC language. Third, for theoretical purposes, we want to understand what are the most essential 
+features for modeling cer­ti.ed binaries. Motivations Following the discussion in Section 2.5, we orga­nize 
+TL into the following three levels: (kscm) u ::= z |.t : .. u |.k : u1.u2 |Kind (kind) . ::= k |.t : 
+.1..2 |.[t ] |.k : u. . |.1 .2 |.t : .1..2 |.k : u. . |.z : Kscm.. |Ind(k : Kind){T.}|Elim[.',u](t ){T.} 
+(type) t ::= t |.t : .. t |t1 t2 |.k : u. t |t [.] |.z : Kscm.t |t [u] |Ctor (i, .) |Elim[.',.](t'){Tt 
+} Here kind schemas (kscm) classify kind terms while kinds classify type terms. There are variables 
+at all three levels: kind-schema variables z, kind variables k, and type variables t. We have an ex­ternal 
+constant Kscm classifying all the kind schemas; essentially, TL has an additional level above kscm, of 
+which Kscm is the sole member. A good way to comprehend TL is to look at its .ve . con­structs: there 
+are three at the kind level and two at the kind-schema level. We use a few examples to explain why each 
+of them is neces­sary. Following the tradition, we use arrow terms (e.g., .1 ..2)as a syntactic sugar 
+for the non-dependent . terms (e.g., .t: .1..2 is non-dependent if t does not occur free in .2). Kinds 
+.t : .1..2 and .1 . .2 are used to typecheck the type-level function .t : .. t and its application form 
+t1 t2. Assuming . and Nat are inductive kinds (de.ned later) and Prime is a predicate with kind schema 
+Nat . Kind,we can write a type term such as .t :..t which has kind . . ., a type-level arithmetic function 
+such as plus which has kind Nat . Nat . Nat, or the universally quanti.ed proposition in Section 2.2 
+which is represented as a kind .t: Nat.Prime(t) .Prime(g(t)). Kinds .k : u. . and u . . are used to typecheck 
+the type­level kind abstraction .k : u. t and its application form t[.]. As mentioned in Section 2.5, 
+this is needed to support inten­sional analysis of quanti.ed types [39]. It can also be used to de.ne 
+logic connectives and constants, e.g. True : Kind =.k : Kind.k .k False : Kind =.k : Kind.k True has 
+the polymorphic identity as a proof: id : True = .k : Kind..t: k. t but False is not inhabited (this 
+is essentially the consistency property of TL which we will show later). Kind .z : Kscm.. is used to 
+typecheck the type-level kind­schema abstraction .z : Kscm.t and its application form t[u]. This is not 
+in the core calculus of constructions [11]. We use it in the inductive de.nition of . (see Section 4) 
+where both the . Kscm and . Kscm constructors have kind .z : Kscm. (z ..) ... These two constructors 
+in turn allow us to typecheck predicate-polymorphic computation terms, which occur fairly often since 
+the closure-conversion phase turns all functions with free predicate variables (e.g, Prime) into predicate-polymorphic 
+ones.  Kind schemas .t : .. u and . . u are used to typecheck the kind-level type abstraction .t: .1..2 
+and its application form .[t]. The predicate Prime has kind schema Nat . Kind. A predicate with kind 
+schema .t : Nat. Prime(t) .Kind is only applicable to prime numbers. We can also de.ne e.g. a binary 
+relation:  LT : Nat.Nat.Kind so that LT t1 t2 is a proposition asserting that the natural number represented 
+by t1 is less than that of t2. Kind schemas .k : u1.u2 and u1 . u2 are used to type­check the kind-level 
+function .k : u. . and its application form .1 .2. We use it to write higher-order predicates and logic 
+connectives. For example, the logical negation operator can be written as follows: Not : Kind . Kind 
+= .k : Kind. (k .False) The consistency of TL implies that a proposition and its nega­tion cannot be 
+both inhabited otherwise applying the proof of the second to that of the .rst would yield a proof of 
+False. TL also provides a general mechanism of inductive de.ni­tions [34]. The term Ind(k : Kind){T.} 
+introduces an inductive kind k containing a list of constructors whose kinds are speci­.ed by T.. Here 
+k must only occur positively inside each .i Inductive Bool : Kind := true : Bool | false : Bool Inductive 
+Nat : Kind := zero : Nat | succ : Nat.Nat plus : Nat.Nat.Nat plus(zero)= .t: Nat.t plus(succ t)= .t ' 
+: Nat. succ ((plus t) t ' ) ifez : Nat .(.k : Kind.k .(Nat.k) .k) ifez(zero)= .k : Kind..t1 : k. .t2 
+: Nat.k. t1 ifez(succ t)= .k : Kind..t1 : k. .t2 : Nat.k. t2 t le : Nat .Nat.Bool le(zero)= .t: Nat. 
+true le(succ t)= .t ' : Nat. ifez t ' Bool false (le t) lt : Nat.Nat.Bool lt = .t: Nat. le (succ t) Cond 
+: Bool .Kind.Kind.Kind Cond(true)= .k1 : Kind..k2 : Kind.k1 Cond(false)= .k1 : Kind..k2 : Kind.k2 Figure 
+2: Examples of inductive de.nitions (see Appendix A for the formal de.nition of positivity). The term 
+Ctor (i, .) refers to the i-th constructor in an inductive kind ..For presentation, we will use a more 
+friendly syntax in the rest of this paper. An inductive kind I = Ind(k : Kind){T.} will be written as: 
+Inductive I : Kind := c1 :[I/k].1 | c2 :[I/k].2 . . . | cn :[I/k].n We give an explicit name ci to each 
+constructor, so ci is just an abbreviation of Ctor (i, I). For simplicity, the current version of TL 
+does not include parameterized inductive kinds, but supporting them is quite straightforward [41, 34]. 
+TL provides two iterators to support primitive recursion on in­ductive kinds. The small elimination Elim[. 
+' ,.](t ' ){Tt} takes a type term t ' of inductive kind . ' , performs the iterative operation speci.ed 
+by Tt (which contains a branch for each constructor of . ' ), and returns a type term of kind .[t ' ] 
+as the result. The large elimi­nation Elim[. ' ,u](t){T.} takes a type term t of inductive kind . ' , 
+performs the iterative operation speci.ed by T., and returns a kind term of kind schema u as the result. 
+These iterators generalize the Typerec operator used in intensional type analysis [21, 14, 39]. Figure 
+2 gives a few examples of inductive de.nitions including the inductive kinds Bool and Nat and several 
+type-level functions which we will use in Section 4. The small elimination for Nat takes the following 
+form Elim[Nat,.](t ' ){t1; t2}. Here, . is a dependent kind with kind schema Nat . Kind; t ' is the argument 
+which has kind Nat. The term in the zero branch, t1, has kind .[t ' ]. The term in the succ branch, t2, 
+has kind Nat . .[t ' ] . .[t ' ]. TL uses the .-reduction to perform the iterator operation. For example, 
+the two .-reduction rules for Nat work as follows: Elim[Nat,.](zero){t1; t2} r. t1 Elim[Nat,.](succ t){t1; 
+t2} r. t2 t (Elim[Nat,.](t){t1; t2}) The general .-reduction rule is de.ned formally in Appendix A. In 
+our examples, we take the liberty of using the pattern-matching (sort) s ::= Kind |Kscm |Ext (var) X 
+::= z |k |t (ptm) A, B ::= s |X |.X : A. B |AB |.X : A. B |Ind(X : Kind){AT}|Ctor (i, A) |Elim[A ' ,B 
+' ](A){BT} Figure 3: Syntax of the type language TL syntax (as in ML) to express the iterator operations, 
+but they can be easily converted back to the Elim form. In Figure 2, plus is a function which calculates 
+the sum of two natural numbers. The function ifez behaves like a switch statement: if its argument is 
+zero, it returns a function that selects the .rst branch; otherwise, the result takes the second branch 
+and applies it to the predecessor of the argument. The function le evaluates to true if its .rst argument 
+is less than or equal to the second. The function lt performs the less-than comparison. The de.nition 
+of function Cond, which implements a condi­tional with result at the kind level, uses large elimination 
+on Bool. It has the form Elim[Bool,u](t ){.1; .2}, where t is of kind Bool; both the true and false branches 
+(.1 and .2) have kind schema u. Formalization We want to give a formal semantics to TL and then reason 
+about its meta-theoretical properties. But the .ve . constructs have many redundancies, so in the rest 
+of this paper, we will model TL as a pure type system (PTS) [4] extended with in­ductive de.nitions. 
+Intuitively, instead of having a separate syntac­tical category for each level, we collapse all kind 
+schemas u, kind terms ., type terms t , and the external constant Kscm into a single set of pseudoterms 
+(ptm), denoted as A or B. Similar constructs can now share typing rules and reduction relations. Figure 
+3 gives the syntax of TL, written in PTS style. There is now only one . construct (.X : A. B), one .-abstraction 
+(.X : A. B), and one application form (AB); two iterators for inductive de.nitions are also merged into 
+one (Elim[A ' ,B ' ](A){BT}). We use X and Y to represent generic variables, but we will still use t, 
+k, and z if the class of a variable is clear from the context. TL has the following PTS speci.cation 
+which we will use to derive its typing rules: S = Kind, Kscm, Ext A = Kind : Kscm, Kscm : Ext R = (Kind, 
+Kind), (Kscm, Kind), (Ext, Kind) (Kind, Kscm), (Kscm, Kscm) Here Scontains the set of sorts used to denote 
+universes. We have to add the constant Ext to support quanti.cation over Kscm. Our names for the sorts 
+re.ect the fact we lifted everything one level up; they are related to other systems via the following 
+table: Systems Notations TL Kind Kscm Ext Werner [41] Set Type Ext Coq/CIC [24] Set,Prop Type(0) Type(1) 
+Barendregt [4] * 0 D The axioms in the set Adenote the relationship between different sorts; an axiom 
+s1 : s2 means that s2 classi.es s1. The rules in the set Rare used to de.ne well-formed . constructs, 
+from which we can deduce the set of well-formed .-de.nitions and applica­tions. For example, the .ve 
+rules for TL can be related to the .ve . constructs through the following table: PTS rules\ptm .X : A. 
+B .X : A. B AB (Kind, Kind) .t : .1..2 .t : .. t t1 t2 (Kscm, Kind) .k : u. . .k : u. t t [.] (Ext, Kind) 
+.z : Kscm.. .z : Kscm.t t [u] (Kind, Kscm) .t : .. u .t : .1..2 .[t ] (Kscm, Kscm) .k : u1.u2 .k : u. 
+. .. ' We de.ne a context . as a list of bindings from variables to pseu­doterms: (ctxt) . ::= ·|.,X 
+: A The typing judgment for the PTS-style TL now takes the form . f A : A ' meaning that within context 
+., the pseudoterm A is well­formed and has A ' as its classi.er. We can now write a single typing rule 
+for all the . constructs: . f A : s1 .,X : A f B : s2 (s1,s2) .R (PROD) . f .X : A. B : s2 Take the rule 
+(Kind, Kscm) as an example. To build a well-formed term .X : A. B, which will be a kind schema (because 
+s2 is Kscm), we need to show that A is a well-formed kind and B is a well-formed kind schema assuming 
+X has kind A. We can also share the typing rules for all the .-de.nitions and applications: .,X : A f 
+B : B ' . f .X : A. B ' : s (FUN) . f .X : A. B :.X : A. B ' . f A :.X : B ' .A ' . f B : B ' (APP) . 
+f AB :[B/X]A ' The reduction relations can also be shared. TL supports the stan­dard ß-and .-reductions 
+(denoted as rß and r.) plus the previ­ously mentioned .-reduction (denoted as r.) on inductive objects 
+(see Appendix A). We use 1ß, 1., and 1. to denote the relations that correspond to the rewriting of subterms 
+using the relations rß, r., and r. respectively. We use r and 1 for the unions of the above relations. 
+We also write = ß.. for the re.exive-symmetric­transitive closure of 1. The complete typing rules for 
+TL and the de.nitions of all the reduction relations are given in Appendix A. Following Werner [41] and 
+Geuvers [17], we have shown that TL satis.es all the key meta-theoretic properties including subject 
+reduction, strong normalization, Church-Rosser (and con.uence), and consis­tency of the underlying logic. 
+The detailed proofs for these proper­ties are given in the companion technical report [37].  4 The Computation 
+Language .H The language of computations .H for our high-level certi.ed in­termediate format uses proofs, 
+constructed in the type language, to verify propositions which ensure the runtime safety of the program. 
+Furthermore, in comparison with other higher-order typed calculi, the types assigned to programs can 
+be more re.ned, since program invariants expressible in higher-order predicate logic can be rep­resented 
+in our type language. These more precise types serve as more complete speci.cations of the behavior of 
+program compo­nents, and thus allow the static veri.cation of more programs. One approach to presenting 
+a language of computations is to encode its syntax and semantics in a proof system, with the bene.t of 
+obtaining machine-checkable proofs of its properties, e.g. type safety. This appears to be even more 
+promising for a system with a type language like CIC, which is more expressive than higher­order predicate 
+logic: The CIC proofs of some program properties, embedded as type terms in the program, may not be easily 
+repre­sentable in meta-logical terms, thus it may be simpler to perform (exp) e ::= x |n |tt |. |f |.x 
+x: A.f |ee ' |e[A] |(X = A, e: A ')|open e as (X, x)in e ' |(e0,... en-1)|sel[A](e, e ' ) |e aop e ' 
+|e cop e ' |if[A, A ' ](e, X1.e1,X2.e2) where n .N (fun) f ::= .x: A.e |.X : A. f (arith) aop ::= + |... 
+(cmp) cop ::= < |... Figure 4: Syntax of the computation language .H . all the reasoning in CIC. However 
+our exposition of the language TL is focused on its use as a type language, and consequently it does 
+not include all features of CIC. We therefore leave this possi­bility for future work, and give a standard 
+meta-logical presentation instead; we address some of the issues related to adequacy in our discussion 
+of type safety. In this section we often use the unquali.ed term to refer to a computation term (expression) 
+e, with syntax de.ned in Figure 4. Most of the constructs are borrowed from standard higher-order typed 
+calculi. To simplify the exposition we only consider con­stants representing natural numbers (n is the 
+value representing n .N) and boolean values (tt and .). The term-level abstraction and application are 
+standard; type abstractions and .xed points are restricted to function values, with the call-by-value 
+semantics in mind and to simplify the CPS and closure conversions. The type variable bound by a type 
+abstraction, as well as the one bound by the open construct for packages of existential type, can have 
+either a kind or a kind schema. Dually, the type argument in a type ap­plication, and the witness type 
+term A in the package construction (X = A, e: A ')can be either a type term or a kind term. The constructs 
+implementing tuple operations, arithmetic, and comparisons have nonstandard static semantics, on which 
+we focus in section 4.1, but their runtime behavior is standard. The branch­ing construct is parameterized 
+at the type level with a proposition (which is dependent on the value of the test term) and its proof; 
+the proof is passed to the executed branch. Dynamic semantics We present a small step call-by-value op­erational 
+semantics for .H in the style of Wright and Felleisen [42]. The values are de.ned as v ::= n |tt |. |f 
+|.x x: A.f |(X = A, v: A ')|(v0,... vn-1) The reduction relation .is speci.ed by the rules (.x: A.e) 
+v . [v/x]e (R-ß) (.X : B. f)[A] . [A/X]f (R-TY-ß) sel[A]((v0,... vn-1),m) . vm (m<n) (R-SEL) open (X 
+' = A, v: A ')as (X, x)in e (R-OPEN) . [v/x][A/X]e (.x x: A.f) v . ([.x x: A.f/x]f) v (R-FIX) (.x x: 
+A.f)[A ' ] . ([.x x: A.f/x]f)[A ' ] (R-TYFIX) m+ n . m + n (R-ADD) m < n . tt (m<n) (R-LT-T) m< n . . 
+(m =n) (R-LT-F) if[B, A](tt,X1.e1,X2.e2) . [A/X1]e1 (R-IF-T) if[B, A](.,X1.e1,X2.e2) . [A/X2]e2 (R-IF-F) 
+An evaluation context E encodes the call-by-value discipline: E ::= |Ee |vE |E[A] |(X = A, E: A ') |open 
+E as (X, x)in e |open v as (X, x)in E |(v0, ...vi,E, ei+2, ..., en-1)|sel[A](E, e) |sel[A](v, E) |E aop 
+e |v aop E |E cop e |v cop E |if[A, A ' ](E, X1.e1,X2.e2) The notation E{e}stands for the term obtained 
+by replacing the hole in E by e. The single step computation e}to .relates E{E{e ' }when e .e ' , and 
+. * is its re.exive transitive closure. As shown the semantics is standard except for some additional 
+passing of type terms in R-SEL and R-IF-T/F. However an inspec­tion of the rules shows that types are 
+irrelevant for the evaluation, hence a type-erasure semantics, in which all type-related operations and 
+parameters are erased, would be entirely standard. 4.1 Static semantics The static semantics of .H shows 
+the bene.ts of using a type lan­guage as expressive as TL. We can now de.ne the type construc­tors of 
+.H as constructors of an inductive kind ., instead of having them built into .H . As we will show in 
+Section 5, this property is crucial for the conversion to CPS, since it makes possible trans­forming 
+direct-style types to CPS types within the type language. Inductive .: Kind := snat : Nat.. |sbool : 
+Bool .. |.:. .. .. . |tup : Nat.(Nat..) .. |..Kind :.k: Kind. (k..) .. |..Kind :.k: Kind. (k..) .. |..Kscm 
+:.z: Kscm. (z..) .. |..Kscm :.z: Kscm. (z..) .. Informally, all well-formed computations have types of 
+kind ., in­cluding singleton types of natural numbers snat A and boolean val­ues sbool B, as well as 
+function, tuple, polymorphic and existential types. To improve readability we also de.ne the syntactic 
+sugar A .B =. . AB .sX : A. B =. s A (.X : A.B) where s .{Kind, Kscm} .sX : A. B =. s A (.X : A.B) and 
+often drop the sort s when s = Kind; e.g. the type void, con­taining no values, is de.ned as .t:..t =..Kind 
+.(.t:..t). Using this syntactic sugar we can give a familiar look to many of the formation rules for 
+.H expressions and functional values. Figure 5 contains the inference rules for deriving judgments of 
+the form .; G f e : A, which assign type A to the expression e in a context . and a type environment 
+G de.ned by (type env) G ::= ·|G,x: A We introduce some of the notation used in these rules in the course 
+of the discussion. Rules E-NAT,E-TRUE, and E-FALSE assign singleton types to numeric and boolean constants. 
+For instance the constant 1 has type snat (succ zero) in any valid environment. In rule E-NAT we use 
+the meta-function i· to map natural numbers n . N to their representations as type terms. It is de.ned 
+inductively by i0= zero and n= n,so . f ni: Nat holds for all valid . and n+1 succ in .N. . fKind : 
+Kscm . fG ok . fG ok (TE-MT) (E-VAR) (E-TRUE) . f·ok .; G fx:G(x) .;G ftt : sbool true . fG ok . fA:. 
+. fG ok . fG ok (TE-EXT) (E-NAT) (E-FALSE) . fG,x: A ok .; G fn: snat ni.; G f. : sbool false . fA:. 
+.;G,x: A ff : A .; G fe: snat A .; G fe ' : snat A ' (E-FIX) '' (E-ADD) .; G f.x x: A.f : A .; G fe+ 
+e : snat (plus AA ) . fA:. .;G,x: A fe: A ' '' .; G fe: snat A .; G fe : snat A (E-FUN) ' (E-LT) .; 
+G f.x: A.e: A.A '' .; G fe< e : sbool (lt AA) .; G fe1 : A.A ' .; G fe2 : A for all i<n .; G fei : Ai 
+ (E-APP) .; G fe1 e2 : A ' .; G f(e0, ... en-1) (E-TUP) : tup ni(nth (A0:: ...::An-1::nil)) . fB : s 
+.,X: B;G ff : A X/.. (E-TFUN) s '' '' = Ext .; G f.X: B.f : .sX: B.A.; G fe: tup AB .; G fe : snat 
+A . fA: LT A ' A '' (E-SEL) .; G fe: .sX: B.A ' . fA: B = Ext) .;G fsel[A](e,e .; G fe[A]:[A/X]A ' . 
+fB : Bool .Kind .; G fe: sbool A '' . fA: B . fB : s '' ' (s (E-TAPP) ' ): BA ' . fA: BA .,X1 : B true;G 
+fe1 : A .; G fe:[A/X]A ' '' (E-IF) (E-PACK) . fA :. .,X2 : B false;G fe2 : A(s = Ext) .; G f(X= A, e: 
+A ' ): .sX: B.A '' .; G fif[B,A](e, X1.e1,X2.e2) : A .; G fe: .sX ' : B.A . fA ' :. '' .; G fe: AA= 
+ß.. A . fA :. ' '' .,X: B;G,x:[X/X ]A fe : A X/.. (E-OPEN) ' (E-CONV) .; G fe: A .; G fopen eas (X, 
+x)in e ' : A 's = Ext Figure 5: Static semantics of the computation language .H. Singleton types play 
+a central role in re.ecting properties of values in the type language, where we can reason about them 
+con­structively. For instance rules E-ADD and E-LT use respectively the type terms plus and lt (de.ned 
+in Section 3) to re.ect the semantics of the term operations into the type level via singleton types. 
+However, if we could only assign singleton types to computa­tion terms, in a decidable type system we 
+would only be able to typecheck terminating programs. We regain expressiveness of the computation language 
+using existential types to hide some of the too detailed type information. Thus for example one can de.ne 
+the usual types of all natural numbers and boolean values as nat :.= .t: Nat.snat t bool :.= .t: Bool.sbool 
+t For any term ewith singleton type snat Athe package (t= A, e: snat t)has type nat. Since in a type-erasure 
+semantics of .H all types and operations on them are erased, there is no runtime overhead for the packaging. 
+For each n .N there is a value of this type denoted by ni=(t = n, n : snat t). iOperations on terms of 
+type nat are derived from operations on terms of singleton types of the form snat A; for example an addition 
+function of type nat .nat .nat is de.ned as the expression add = .x1 : nat..x2 : nat. open x1 as (t1, 
+x ' 1)in open x2 as (t2, x ' 2)in (t= plus t1 t2, x1 ' + x2 ' : snat t) Rule E-TUP assigns to a tuple 
+a type of the form tup AB,in which the tup constructor is applied to a type A representing the tuple 
+size, and a function B mapping offsets to the types of the tuple components. This function is de.ned 
+in terms of operations on lists of types: Inductive List : Kind := nil : List |cons :. .List.List nth 
+: List .Nat.. nth nil = .t: Nat.void nth (cons t1 t2)= .t: Nat.ifez t . t1 (nth t2) Thus nth L nireduces 
+to the n-th element of the list L when n is less than the length of L, and to void otherwise. We also 
+use the in.x form A::A ' =cons AA ' . The type of pairs is derived: A× A ' =tup i2(nth (A::A ' ::nil)). 
+Thus for instance ·;·f (42,7): snat 442 ×snat i7 is a valid judgment. The rules for selection and testing 
+for the less-than relation (the only comparison we discuss for brevity) refer to the kind term LT with 
+kind schema Nat .Nat .Kind. Intuitively, LT represents a binary relation on kind Nat,so LT in is the 
+kind of type terms m irepresenting proofs of m<n. LT can be thought of as the param­eterized inductive 
+kind of proofs constructed from instances of the axioms .n.N.0 <n+1 and .m,n .N.m<n.m+1 <n+1: Inductive 
+LT : Nat .Nat.Kind := ltzs :.t: Nat.LT zero (succ t) '' ' |ltss :.t: Nat..t : Nat.LT tt .LT (succ t)(succ 
+t ) To simplify the presentation of our type language, we allowed in­ductive kinds of kind scheme Kind 
+only. Thus to stay within the scope of this paper we actually use a Church encoding of LT (see Appendix 
+C for details); this is suf.cient since proof objects are never analyzed in .H, so the full power of 
+elimination is not nec­essary for LT. In the component selection construct sel[A](e,e ' ) the type A 
+represents a proof that the value of the subscript e ' is less than the size of the tuple e. In rule 
+E-SEL this condition is expressed as an application of the type term LT. Due to the consistency of the 
+logic represented in the type language, only the existence and not the structure of the proof object 
+A is important. Since its existence is ensured statically in a well-formed expression, Awould be elim­inated 
+in a type-erasure semantics. The branching construct if[B,A](e, X1.e1,X2.e2) takes a type term A representing 
+a proof of the proposition encoded as ei­ther B true or B false, depending on the value of e. The proof 
+is passed to the appropriate branch in its bound type variable (X1 or X2). The correspondence between 
+the value of e and the kind of A is again established through a singleton type. Note that unlike Xi and 
+Harper [43] we allow imprecise information .ow into the branches by not restricting B false to be the 
+negation of B true.In particular this makes possible the encoding of the usual oblivious (in proof-passing 
+sense) if using B = .t:Bool.True.  4.2 Example: bound check elimination A simple example of the generation, 
+propagation, and use of proofs in .H is a function which computes the sum of the components of any vector 
+of naturals. Let us .rst introduce some auxiliary types and functions. The type assigned to a homogeneous 
+tuple (vector) of n terms of type A is ß..-convertible to the form vec i nA for vec : Nat .... vec = 
+.t:Nat..t ' :..tup t (nth (repeat tt ' )) where repeat : Nat ...List repeat zero = .t ' :..nil '' ' 
+repeat (succ t)= .t :..t ::(repeat t) t Then we can de.ne a term which sums the elements of a vector 
+with a given length as follows: sumVec : .t:Nat.snat t . vec t nat . nat = .t:Nat..n:snat t..v :vec t 
+nat. (.x loop :nat . nat . nat. .i :nat..sum:nat. open i as (t ' , i ' )in if[LTOrTrue t ' t,ltPrf t 
+' t] (i ' < n, t1.loop (add i i1) (add sum (sel[t1](v,i ' ))), t2 .sum))i0i0 where LTOrTrue : Nat.Nat.Bool 
+.Kind LTOrTrue = .t1 :Nat..t2 :Nat..t:Bool.Cond t (LT t1 t2)True ' '' and ltPrf of kind .t : Nat..t : 
+Nat.LTOrTrue tt (lt tt) is a type term de.ned in Appendix C. The comparison i ' < n, used in this example 
+as a loop termina­tion test, checks whether the index i ' is smaller than the vector size n. If it is, 
+the adequacy of the type term lt with respect to the less­than relation ensures that the type term ltPrf 
+t ' t represents a proof of the corresponding proposition at the type level, namely LT t ' t. This proof 
+is then bound to t1 in the .rst branch of the if, and the sel construct uses it to verify that the i 
+' -th element of v exists, thus avoiding a second test. The type safety of .H (Theorem 1) guaran­tees 
+that implementations of sel need not check the subscript at run­time. Since the proof t2 is ignored in 
+the else branch, ltPrf t ' t is de.ned to reduce to the trivial proof of True when the value of i ' is 
+not less than that of n. The usual vector type, which keeps the length packaged with the content, is 
+' '' vector :...= .t:...t :Nat.snat t ×vec t t. Now we can write a wrapper function for sumVec with the 
+standard type vector nat . nat; we leave the details to the reader. 4.3 Type safety The type safety 
+of .H is a corollary of its properties of progress and subject reduction. A pivoting element in proving 
+progress (Lemma 4 in Appendix B) is the connection between the existence of a proof (type) term of kind 
+LT in, provided by rule E-SEL, and m ithe existence of a (meta-logical) proof of the side condition m<n, 
+required by rule R-SEL. Similarly, subject reduction (Lemma 5 in Appendix B) in the cases of R-ADD and 
+R-LT-T/F relies on the adequate representation of addition and comparison by plus and lt. Lemma 1 (Adequacy 
+of the TL representation of arithmetic) 1. For all m,n . N, plus mini= ß.. . m+n. 2. For all m,n . N, 
+lt in ß.. true if and only if m<n. m i= 3. For all m,n . N, m<n if and only if there exists a type A 
+such that ·f A : LT in. m i Proof sketch (3) For the forward direction it suf.ces to observe that the 
+structure of the meta-logical proof of m<n (in terms of the above axioms of ordering) can be directly 
+re.ected in a type term of kind LT in. The inverse direction is shown by examining m i the structure 
+of closed type terms of this kind in normal form. 0 Theorem 1 (Safety of .H) If ·;·f e : A, then either 
+e . * v and ·;·f v : A,or e diverges (i.e., for each e ' ,if e . * e ' , then there exists e '' such 
+that e ' . e '' ). Proof sketch Follows from Lemmas 4 and 5 (Appendix B). 0 Since CIC and TL are more 
+expressive than higher-order predi­cate logic, adequacy of the representations of meta-proofs does not 
+hold in general; in particular, the ability to eliminate inductive kinds in TL allows analysis of proof 
+derivations to be used in proof con­struction, a technique not employed in standard meta-reasoning. This 
+issue does not arise for .rst-order proof representations like LT (where no constructors have parameters 
+of a function kind), and we do not expect it to be a concern in practice. In cases when it does arise, 
+it could be resolved by using the underlying consistent logic of CIC instead of the meta-logic; for instance 
+in our presentation the question of adequacy is raised because the operational seman­tics of .H is de.ned 
+in meta-logical terms, but this question would be moot if .H and its semantics were de.ned as CIC terms. 
+To eliminate the interaction with the meta-logic, this approach should be applied all the way down to 
+the hardware speci.cation (as done in some PCC system [3]); we plan to pursue this in the future.  
+5 CPS Conversion In this section we show how to perform CPS conversion on .H while still preserving proofs 
+represented in the type system. This stage transforms all unconditional control transfers, including 
+func­tion invocation and return, to function calls and gives explicit names to all intermediate computations. 
+The basics of our ap­proach, i.e. the target language and the transformation of types, are shown in this 
+section. The static semantics of the target language and the transformation of terms are given in Appendix 
+D. We call the target calculus for this phase .K, with syntax: (val) v ::= x | n | tt | . |(X = A, v 
+: A ' )|(v0,... vn-1) | .x x ' [X1 : A1, ...Xn : An](x : A).e (exp) e ::= v[A1, ...An](v ' ) | let x 
+= v in e | let (X, x) = open v in e | let x = sel[A](v, v ' ) in e | let x = v aop v ' in e | let x = 
+v cop v ' in e | if[A, A ' ](v, X1.e1,X2.e2) Expressions in .K consist of a series of let bindings followed 
+by a function application or a conditional branch. There is only one ab­straction mechanism, .x, which 
+combines type and value abstrac­tion. Multiple arguments may be passed by packing them in a tuple. .K 
+shares the TL type language with .H. The types for .K all have kind .K which, as in .H, is an inductive 
+kind de.ned in TL. The .K kind has all the constructors of . plus one more (func). Since functions in 
+CPS do not return values, the function type constructor of .K has a different kind: . :.K . .K We use 
+the more conventional syntax A .. for . A. The new constructor func forms the types of function values: 
+func :.K . .K Every function value is implicitly associated with a closure envi­ronment (for all the 
+free variables), so the func constructor is useful in the closure-conversion phase (see Section 6). Typed 
+CPS conversion involves translating both types and com­putation terms. Existing algorithms [20, 27] require 
+traversing and transforming every term in the type language (which would include all the proofs in our 
+setting). This is impractical because proofs are large in size, and transforming them can alter their 
+meanings and break the sharing among different intermediate languages. To see the actual problem, let 
+us convert the .H expression (X = A, e : B) to CPS, assuming that it has type .X : A ' .B.We use Ktyp 
+to denote the meta-level translation function for the type language and Kexp for the computation language. 
+Under existing algorithms, the translation also transforms the witness A: Kexp [[(X = A, e : B)]] = .k: 
+Ktyp[[.X : A ' .B ]]. Kexp [[e]] (.x : Ktyp[[[A/X]B ]]. k (X = Ktyp[[A]],x : Ktyp[[B ]])) Here we CPS-convert 
+e and apply it to a continuation, which puts the result of its evaluation in a package and hands it to 
+the return continuation k. With proper de.nition of Ktyp and assuming that Ktyp[[X ]] = X on all variables 
+X, we can show that the two types Ktyp[[[A/X]B ]] and [Ktyp[[A]]/X](Ktyp[[B ]]) are equivalent (under 
+= ß..). Thus the translation preserves typing. But we do not want to touch the witness A, so the translation 
+function should be de.ned as follows: Kexp [[(X = A, e : B)]] = .k: Ktyp[[.X : A ' .B ]]. Kexp [[e]] 
+(.x : Ktyp[[[A/X]B ]]. k (X = A, x : Ktyp[[B ]])) To preserve typing, we have to make sure that the two 
+types Ktyp[[[A/X]B ]] and [A/X](Ktyp[[B ]]) are equivalent. This seems impossible to achieve if Ktyp 
+is de.ned at the meta level. Our solution is to internalize the de.nition of Ktyp in our type language. 
+We replace Ktyp by a type function K of kind . . .K. For readability, we use the pattern-matching syntax, 
+but it can be easily coded using the Elim construct. K (snat t)= snat t K (sbool t)= sbool t K (t1 . 
+t2)= func ((K(t1) × Kc(t2)) ..) K (tup t1 t2)= tup t1 (.t : Nat. K(t2 t)) K (. Kind kt)= func (. Kind 
+k (.t1 : k. Kc(tt1)..)) K (. Kind kt)= . Kind k (.t1 : k. K(tt1)) K (. Kscm zt)= func (. Kscm z (.k : 
+z. Kc(tk)..)) K (. Kscm zt)= . Kscm z (.k : z. K(tk)) Kc = .t :.. func (K(t)..) The de.nition of K is 
+in the spirit of the interp function of Crary and Weirich [14]. However interp cannot be used in de.ning 
+a sim­ilar CPS conversion, because its domain does not cover (nor is there an injection to it from) all 
+types appearing in type annotations. In .H these types are in the inductive kind . and can be analyzed 
+by K. We can now prove K ([A/X]B)=ß.. [A/X](K (B)) by .rst reducing B to the normal form B ' . Clearly, 
+K ([A/X]B)=ß.. K ([A/X]B ' ) and [A/X](K (B ' )) = ß.. [A/X](K (B)).We then prove K ([A/X]B ' )=ß.. [A/X](K 
+(B ' )) by induction over the structure of the normal form B ' . The complete CPS-conversion algorithm 
+is given in Appendix D. 6 Closure Conversion In this section we address the issue of how to make closures 
+explicit for all the CPS terms in .K. This stage rewrites all functions so that they contain no free 
+variables. Any variables that appear free in a function value are packaged in an environment, which together 
+with the closed code of the function form a closure. When a function is applied, the closed code and 
+the environment are extracted from the closure and then the closed code is called with the environment 
+as an additional parameter. Again, the basics of our approach are shown in this section and more details 
+are given in Appendix E. Our approach to closure conversion is based on Morrisett et al. [27], who adopt 
+a type-erasure interpretation of polymorphism. We use the same idea for existential types. The language 
+that we use for this phase is called .C with syntax: (val) v ::= x | n | tt | . | .x x ' [X1 : A1, ...Xn 
+: An](x : A).e | v[A] |(v0,... vn-1)|(X = A, v : A ' ) (exp) e ::= vv ' | let x = v in e | let x = sel[A](v, 
+v ' ) in e | let (X, x) = open v in e | let x = v aop v ' in e | let x = v cop v ' in e | if[B, A](v, 
+X1.e1,X2.e2) .C is similar to .K, the main difference being that type applica­tion and value application 
+are again separate. Type applications are values in .C re.ecting the fact that they have no runtime ef­fect 
+in a type-erasure interpretation. We use the same kind of types .K as in .K. We de.ne the transformation 
+of types as a function Cl :.K . .K . .K, the second argument of which represents the type of the environment. 
+As in CPS conversion, we write Cl as a TL function so that the closure-conversion algorithm does not 
+have to traverse proofs represented in the type system. Cl (snat t)= .t ' :.K. snat t Cl (sbool t)= .t 
+' :.K. sbool t Cl (t ..)= .t ' :.K. (t ' × Cl (t) .) .. Cl (func t)= .t ' :.K. .t1 :.K. (Cl (t) t1 × 
+t1) Cl (tup t1 t2)= .t ' :.K. tup t1 (.t '' : Nat. Cl (t2 t '' ) t ' ) Cl (. Kind kt)= .t ' :.K. . Kind 
+k (.t1 : k. Cl (tt1) t ' ) Cl (. Kind kt)= .t ' :.K. . Kind k (.t1 : k. Cl (tt1) t ' ) Cl (. Kscm zt)= 
+.t ' :.K. . Kind z (.k : z. Cl (tk) t ' ) Cl (. Kscm zt)= .t ' :.K. . Kscm z (.k : z. Cl (tk) t ' ) 
+7 Related Work Our type language is a variant of the calculus of constructions [11] extended with inductive 
+de.nitions (with both small and large elim­ination) [34, 41]. We omitted parameterized inductive kinds 
+and dependent large elimination to simplify our presentation, however, all our meta-theoretic proofs 
+carry over to a language that includes them. We support .-reduction in our language while the of.cial 
+Coq system does not. The proofs for the properties of TL are adapted from Geuvers [17] and Werner [41] 
+(which in turn bor­rows ideas from Altenkirch [1]); the main difference is that our language has kind-schema 
+variables and a new product formation rule (Ext, Kind) which are not in Werner s system. The Coq proof 
+assistant provides support for extracting pro­grams from proofs [34]. It separates propositions and sets 
+into two distinct universes Prop and Set. We do not distinguish be­tween them because we are not aiming 
+to extract programs from our proofs, instead, we are using proofs as speci.cations for our computation 
+terms. Burstall and McKinna [7] proposed the notion of deliverables, which is essentially the same as 
+our notion of certi.ed binaries. They use dependent strong sums to model each deliverable and give its 
+categorical semantics. Their work does not support programs with effects and has all the problems mentioned 
+in Section 2.3. Xi and Pfenning s DML [44] is the .rst language that nicely combines dependent types 
+with programs that may involve effects. Our ideas of using singleton types and lifting the level of the 
+proof language are directly inspired by their work. Xi s system, however, does not support arbitrary 
+propositions and explicit proofs. It also does not de.ne the . kind as an inductive de.nition so it is 
+un­clear how it interacts with intensional type analysis [39] and how it preserves proofs during compilation. 
+We have discussed the relationship between our work and those on PCC, typed assembly languages, and intensional 
+type analysis in Section 1. Inductive de.nitions subsume and generalize earlier systems on intensional 
+type analysis [21, 14, 39]; the type-analysis construct in the computation language can be eliminated 
+using the technique proposed by Crary et al. [16]. Concurrently with our work, Crary and Vanderwaart 
+[12] re­cently proposed a system called LTT which also aims at adding explicit proofs to typed intermediate 
+languages. LTT uses Linear LF [8] as its proof language. It shares some similarities with our system 
+in that both are using singleton types [44] to circumvent the problems of dependent types. However, since 
+LF does not have inductive de.nitions and the Elim construct, it is unclear how LTT can support intensional 
+type analysis and type-level primitive recur­sive functions [15]. In fact, to de.ne . as an inductive 
+kind [39], LTT would have to add proof-kind variables and proof-kind poly­morphism, which could signi.cantly 
+complicate the meta-theory of its proof language. LTT requires different type languages for different 
+intermediate languages; it is unclear whether it can pre­serve proofs during CPS and closure conversion. 
+The power of linear reasoning in LTT is desirable for tracking ephemeral prop­erties that hold only for 
+certain program states; we are working on adding such support into our framework. 8 Conclusions We presented 
+a general framework for explicitly representing propositions and proofs in typed intermediate or assembly 
+lan­guages. We showed how to integrate an entire proof system into our type language and how to perform 
+CPS and closure conversion while still preserving proofs represented in the type system. Our work is 
+a .rst step toward the goal of building realistic infrastruc­ture for certi.ed programming and certifying 
+compilation. Our type system is fairly concise and simple with respect to the number of syntactic constructs, 
+yet it is powerful enough to express all the propositions and proofs in the higher-order predicate logic 
+(extended with induction principles). In the future, we would like to use our type system to express 
+advanced program invariants such as those involved in low-level mutable recursive data structures. Our 
+type language is not designed around any particular pro­gramming language. We can use it to typecheck 
+as many different computation languages as we like; all we need is to de.ne the cor­responding . kind 
+as an inductive de.nition. We hope to evolve our framework into a realistic typed common intermediate 
+format.  Acknowledgment We would like to thank Thorsten Altenkirch, Gilles Barthe, Thierry Coquand, 
+Antony Courtney, Karl Crary, Christopher League, Zhao­hui Luo, Christine Paulin-Mohring, Stefan Monnier, 
+Henrik Nils­son, Walid Taha, and anonymous referees for discussions and com­ments on an earlier version 
+of this paper. Benjamin Werner helped us understand the intricacies in the strong-normalization proof 
+for the core calculus of inductive constructions. References [1] T. Altenkirch. Constructions, Inductive 
+Types and Strong Normaliza­tion. PhD thesis, University of Edinburgh, UK, 1993. [2] A. W. Appel and E. 
+W. Felten. Models for security policies in proof­carrying code. Technical Report CS-TR-636-01, Princeton 
+Univ., Dept. of Computer Science, March 2001. [3] A. W. Appel and A. P. Felty. A semantic model of types 
+and machine instructions for proof-carrying code. In Proc. 27th ACM Symp. on Principles of Prog. Lang., 
+pages 243 253. ACM Press, 2000. [4] H. P. Barendregt. Lambda calculi with types. In S. Abramsky, D. Gab­bay, 
+and T. Maibaum, editors, Handbook of Logic in Computer Sci­ence (volume 2). Oxford Univ. Press, 1991. 
+[5] H. P. Barendregt and H. Geuvers. Proof-assistants using dependent type systems. In A. Robinson and 
+A. Voronkov, editors, Handbook of Automated Reasoning. Elsevier Sci. Pub. B.V., 1999. [6] G. Barthe, 
+J. Hatcliff, and M. Sorensen. CPS translations and applica­tions: the cube and beyond. Higher Order and 
+Symbolic Computation, 12(2):125 170, September 1999. [7] R. Burstall and J. McKinna. Deliverables: an 
+approach to program development in constructions. Technical Report ECS-LFCS-91-133, Univ. of Edinburgh, 
+UK, 1991. [8] I. Cervesato and F. Pfenning. A linear logical framework. In Proc. 11th IEEE Symp. on Logic 
+in Computer Science, pages 264 275, July 1996. [9] C. Colby, P. Lee, G. C. Necula, F. Blau, M. Plesko, 
+and K. Cline. A certifying compiler for Java. In Proc. 2000 ACM Conf. on Prog. Lang. Design and Impl., 
+pages 95 107, New York, 2000. ACM Press. [10] R. Constable. Constructive mathematics as a programming 
+logic I: Some principles of theory. Ann. of Discrete Mathemathics, 24, 1985. [11] T. Coquand and G. Huet. 
+The calculus of constructions. Information and Computation, 76:95 120, 1988. [12] K. Crary and J. Vanderwaart. 
+An expressive, scalable type theory for certi.ed code. Technical Report CMU-CS-01-113, School of Com­puter 
+Science, Carnegie Mellon Univ., Pittsburg, PA, May 2001. [13] K. Crary, D. Walker, and G. Morrisett. 
+Typed memory management in a calculus of capabilities. In Proc. 26th ACM Symp. on Principles of Prog. 
+Lang., pages 262 275. ACM Press, 1999. [14] K. Crary and S. Weirich. Flexible type analysis. In Proc. 
+1999 ACM SIGPLAN Int l Conf. on Functional Prog., pages 233 248. ACM Press, Sept. 1999. [15] K. Crary 
+and S. Weirich. Resource bound certi.cation. In Proc. 27th ACM Symp. on Principles of Prog. Lang., pages 
+184 198. ACM Press, 2000. [16] K. Crary, S. Weirich, and G. Morrisett. Intensional polymorphism in type-erasure 
+semantics. In Proc. 1998 ACM SIGPLAN Int l Conf. on Functional Prog., pages 301 312. ACM Press, Sept. 
+1998. [17] H. Geuvers. Logics and Type Systems. PhD thesis, Catholic University of Nijmegen, The Netherlands, 
+1993. ´ res dans l Arithm´etique d Ordre Sup´erieur. PhD thesis, University of Paris VII, 1972. [18] 
+J.-Y. Girard. Interpr´etation Fonctionnelle et Elimination des Coupu­ [19] R. Harper. The practice of 
+type theory. Talk presented at 2000 Alan J. Perlis Symposium, Yale University, New Haven, CT, April 2000. 
+[20] R. Harper and M. Lillibridge. Explicit polymorphism and CPS con­version. In Proc. 20th ACM Symp. 
+on Principles of Prog. Lang., pages 206 219. ACM Press, 1993. [21] R. Harper and G. Morrisett. Compiling 
+polymorphism using inten­sional type analysis. In Proc. 22nd ACM Symp. on Principles of Prog. Lang., 
+pages 130 141. ACM Press, 1995. [22] S. Hayashi. Singleton, union and intersection types for program 
+ex­traction. In A. R. Meyer, editor, Proc. International Conference on Theoretical Aspects of Computer 
+Software, pages 701 730, 1991. [23] W. A. Howard. The formulae-as-types notion of constructions. In To 
+H.B.Curry: Essays on Computational Logic, Lambda Calculus and Formalism. Academic Press, 1980. [24] G. 
+Huet, C. Paulin-Mohring, et al. The Coq proof assistant reference manual. Part of the Coq system version 
+6.3.1, May 2000. [25] Y. Minamide, G. Morrisett, and R. Harper. Typed closure conversion. In Proc. 23rd 
+ACM Symp. on Principles of Prog. Lang., pages 271 283. ACM Press, 1996. [26] S. Monnier, B. Saha, and 
+Z. Shao. Principled scavenging. In Proc. 2001 ACM Conf. on Prog. Lang. Design and Impl., pages 81 91, 
+New York, 2001. ACM Press. [27] G. Morrisett, D. Walker, K. Crary, and N. Glew. From System F to typed 
+assembly language. In Proc. 25th ACM Symp. on Principles of Prog. Lang., pages 85 97. ACM Press, Jan. 
+1998. [28] G. Necula. Proof-carrying code. In Proc. 24th ACM Symp. on Princi­ples of Prog. Lang., pages 
+106 119, New York, Jan 1997. ACM Press. [29] G. Necula. Compiling with Proofs. PhD thesis, School of 
+Computer Science, Carnegie Mellon Univ., Sept. 1998. [30] G. Necula and P. Lee. Safe kernel extensions 
+without run-time check­ing. In Proc. 2nd USENIX Symp. on Operating System Design and Impl., pages 229 
+243. USENIX Assoc., 1996. [31] G. Necula and P. Lee. The design and implementation of a certifying compiler. 
+In Proc. 1998 ACM Conf. on Prog. Lang. Design and Impl., pages 333 344, New York, 1998. ACM Press. [32] 
+B. Nordstrom, K. Petersson, and J. Smith. Programming in Martin­L¨of s type theory. Oxford University 
+Press, 1990. [33] C. Paulin-Mohring. Extracting F. s programs from proofs in the Cal­culus of Constructions. 
+In Proc. 16th ACM Symp. on Principles of Prog. Lang., pages 89 104, New York, Jan 1989. ACM Press. [34] 
+C. Paulin-Mohring. Inductive de.nitions in the system Coq rules and properties. In M. Bezem and J. Groote, 
+editors, Proc. TLCA. LNCS 664, Springer-Verlag, 1993. [35] Z. Shao. An overview of the FLINT/ML compiler. 
+In Proc. 1997 ACM SIGPLAN Workshop on Types in Compilation, June 1997. [36] Z. Shao, C. League, and S. 
+Monnier. Implementing typed intermedi­ate languages. In Proc. 1998 ACM SIGPLAN Int l Conf. on Functional 
+Prog., pages 313 323. ACM Press, 1998. [37] Z. Shao, B. Saha, V. Trifonov, and N. Papaspyrou. A type 
+system for certi.ed binaries. Technical Report YALEU/DCS/TR-1211, Dept. of Computer Science, Yale University, 
+New Haven, CT, March 2001. [38] M. A. Sheldon and D. K. Gifford. Static dependent types for .rst class 
+modules. In 1990 ACM Conference on Lisp and Functional Programming, pages 20 29, New York, June 1990. 
+ACM Press. [39] V. Trifonov, B. Saha, and Z. Shao. Fully re.exive intensional type analysis. In Proc. 
+2000 ACM SIGPLAN Int l Conf. on Functional Prog., pages 82 93. ACM Press, September 2000. [40] D. Walker. 
+A type system for expressive security policies. In Proc. 27th ACM Symp. on Principles of Prog. Lang., 
+pages 254 267, 2000. [41] B. Werner. Une Th´eorie des Constructions Inductives. PhD thesis, A L Universit´e 
+Paris 7, Paris, France, 1994. [42] A. K. Wright and M. Felleisen. A syntactic approach to type sound­ness. 
+Information and Computation, 115(1):38 94, 1994. [43] H. Xi and R. Harper. A dependently typed assembly 
+language. In Proc. 2001 ACM SIGPLAN Int l Conf. on Functional Prog., pages 169 180. ACM Press, September 
+2001. [44] H. Xi and F. Pfenning. Dependent types in practical programming. In Proc. 26th ACM Symp. on 
+Principles of Prog. Lang., pages 214 227. ACM Press, 1999. A Formalization of TL (Details) In this appendix 
+we supply the rest of the details involved in the formalization of our type language TL. Most of our 
+notations and de.nitions are directly borrowed from Werner [41]. In addition to the symbols de.ned in 
+the syntax, we will also use C to denote general terms, Y and Z for variables, and I for inductive de.ni­tions. 
+In order to ensure that the interpretation of inductive de.nitions remains consistent, and they can be 
+interpreted as terms closed un­der their introduction rules, we impose positivity constraints on the 
+constructors of an inductive de.nition. The positivity constraints are de.ned in De.nition 2 and 3. De.nition 
+2 A term A is strictly positive in X if A is either X or .Y : B. A ' , where A ' is strictly positive 
+in X, X does not occur free in B, and X = Y . De.nition 3 A term C is a well-formed constructor kind 
+for X (written wfcX (C)) if it has one of the following forms: 1. X; 2. .Y : B. C ' , where Y = X, X 
+is not free in B, and C ' is a well-formed constructor kind for X;or 3. A . C ' , where A is strictly 
+positive in X and C ' is a well­formed constructor kind for X.  Note that in the de.nition of wfcX (C), 
+the second clause covers the case where C is of the form A . C ' , and X does not occur free in A. Therefore, 
+we only allow the occurrence of X in the non-dependent case. In the rest of this paper we often write 
+the well-formed con­structor kind for X as .TB.X. We also denote terms that are Y : Tstrictly positive 
+in X by .YT: TB. B. X, where X is not free in T De.nition 4 Let C be a well-formed constructor kind for 
+X. Then C is of the form .YT: TIf all the Y s are t s, that is, C is of A. X. the form .Tt: T A. X, then 
+we say that C is a small constructor kind (or just small constructor when there is no ambiguity) and 
+denote it as small(C). Our inductive de.nitions reside in Kind, whereas a small construc­tor does not 
+make universal quanti.cation over objects of type Kind. Therefore, an inductive de.nition with small 
+constructors is a predicative de.nition. While dealing with impredicative induc­tive de.nitions, we must 
+forbid projections on universes equal to or bigger than the one inhabited by the de.nition. In particular, 
+we restrict large elimination to inductive de.nitions with only small constructors. Next, we de.ne the 
+set of reductions on our terms. The de.­nition of ß-and .-reduction is standard. The .-reduction de.nes 
+primitive recursion over inductive objects. De.nition 5 Let C be a well-formed constructor kind for X 
+and let A ' , B ' , and I be pseudoterms. We de.ne FX,I,B. (C,A ' ) re­cursively based on the structure 
+of C: def '' FX,I,B. (X,A )= A def FX,I,B. (.Y : B.C ' ,A ' )= .Y : B.FX,I,B. (C ' ,A ' Y ) def FX,I,B. 
+((.YT: B.XT) .C ' ,A ' )= .Z:(.YT: T,A ' Y : T(ZT B.I).FX,I,B. (C ' Z (.TB.B ' Y ))) De.nition 6 The 
+reduction relations on our terms are de.ned as: (.X: A.B) A ' rß [A ' /X]B .X : A.(BX) r. B, if X/.FV 
+(B) Elim[I,A '' ](Ctor (i,I) AT){BT} r. (FX,I,B. (Ci,Bi)) ATT I = Ind(X : Kind){C} where B ' '' T = .Y 
+: I.(Elim[I,A ](Y ){B}) By 1ß, 1., and 1. we denote the relations that correspond to the rewriting of 
+subterms using the relations rß, r., and r. respec­tively. We use r and 1 for the unions of the above 
+relations. We also write = ß.. for the re.exive-symmetric-transitive closure of 1. Let us examine the 
+.-reduction in detail. In Elim[I,A '' ](A){BT}, the term A of type I is being analyzed. The sequence 
+BTcontains the set of branches for Elim, one for each constructor of I. In the case when Ci = X, which 
+implies that A is of the form Ctor (i,I), the Elim just selects the Bi branch: T Elim[I,A '' ](Ctor (i,I)){B} 
+r. Bi Y : Tin BT, then A must be in the form Ctor (i,I) ATwith Ai of type Bi. None of the arguments are 
+recursive. Therefore, the Elim should just select the Bi branch and pass the constructor arguments to 
+it. Accordingly, the reduction yields (by expanding the F macro): In the case when Ci =.TB.X where X 
+does not occur free T Elim[I,A '' ](Ctor (i,I) AT){BT} r. Bi A The recursive case is the most interesting. 
+For simplicity assume Y : BT'' : BT'' that the i-th constructor has the form .T.X ..YT.X. Therefore, 
+A is of the form Ctor (i,I) ATwith A1 being the re­cursive component of type .YT: BT' .X, and A2 ...An 
+being non­recursive. The reduction rule then yields: T Elim[I,A '' ](Ctor (i,I) AT){B} T r. Bi A1 (.YT: 
+BT' .Elim[I,A '' ](A1 YT){B}) A2 ...An The Elim construct selects the Bi branch and passes the arguments 
+A1,...,An, and the result of recursively processing A1. In the general case, it would process each recursive 
+argument. De.nition 7 de.nes the . macro which represents the type of the large Elim branches. De.nition 
+8 de.nes the . macro which represents the type of the small elimination branches. The different cases 
+follow from the .-reduction rule in De.nition 6. De.nition 7 Let C be a well-formed constructor kind 
+for X and let A ' and I be two terms. We de.ne .X,I (C,A ' ) recursively based on the structure of C: 
+def .X,I(X,A ' )= A ' def .X,I(.Y : B.C ' ,A ' )=.Y : B..X,I(C ' ,A ' ) C ' def ' '' .X,I(A.,A ) =[I/X]A.[A 
+/X]A..X,I(C ' ,A ) where X is not free in B and A is strictly positive in X. De.nition 8 Let C be a well-formed 
+constructor kind for X and let A ' , I, and B ' be terms. We de.ne .X,I (C,A ' ,B ' ) recursively based 
+on the structure of C: def .X,I(X,A ' ,B ' )= A ' B ' def .X,I(.Y : B.C ' ,A ' ,B ' ) =.Y : B..X,I(C 
+' ,A ' ,B ' Y ) .X,I(.TB.X .C ' ,A ' ,B ' )= Y : Tdef .Z:(.YT: TY : T' (ZT,A ' ,B ' B.I)..TB.(AY )) ..X,I(C 
+' Z) where X is not free in B and BT. De.nition 9 We use .|t,k to denote that the environment does not 
+contain any z variables. Here are the complete typing rules for TL. The three weakening rules make sure 
+that all variables are bound to the right classes of terms in the context. There are no separate context-formation 
+rules; a context . is well-formed if we can derive the judgment . f Kind : Kscm (notice we can only add 
+new variables to the context via the weakening rules). ·fKind : Kscm (AX1) ·fKscm : Ext (AX2) . fC : 
+Kind . fA : Bt/.Dom(.) (WEAK1) .,t: C fA : B . fC : Kscm . fA : Bk/.Dom(.) (WEAK2) .,k: C fA : B . fC 
+: Ext . fA : Bz/.Dom(.) (WEAK3) .,z: C fA : B . fKind : Kscm X .Dom(.) (VAR) . fX :.(X) .,X: A fB : B 
+' . f.X: A.B ' : s (FUN) . f.X: A.B :.X: A.B ' . fA :.X : B ' .A ' . fB : B ' (APP) . fAB :[B/X]A ' . 
+fA : s1 .,X : A fB : s2 (s1,s2) .R (PROD) . f.X: A.B : s2 for all i .,X : Kind fCi : Kind wfcX (Ci) (IND) 
+T . fInd(X : Kind){C}: Kind T . fI : Kind where I = Ind(X: Kind){C} (CON) . fCtor (i,I):[I/X]Ci . fA 
+: I . fA ' : I .Kind for all i . fBi : .X,I(Ci,A ' ,Ctor (i,I)) (ELIM) T . fElim[I,A ' ](A){B}: A ' 
+A T where I = Ind(X : Kind){C} . fA : I .|t,k fA ' : Kscm for all i small(Ci). fBi :.X,I (Ci,A ' ) (L-ELIM) 
+. fElim[I,A ' ](A){BT}: A ' T where I = Ind(X : Kind){C} . f A:B . f B ' :s . f B :sB = ß.. B ' (CONV) 
+ . f A:B ' Next we state the formal properties of TL. We omit the proofs due to lack of space and refer 
+the reader to the companion technical report [37] for the details. Our proofs are mostly adapted from 
+Werner [41] and Geuvers [17], but we have to add support for kind­schema variables which is not part 
+of Werner s system. Theorem 10 (Subject reduction) If the judgment . f A:B is derivable, and if A1 A 
+' and .1 . ' , then the following are derivable: . f A ' :B and . ' f A:B. Theorem 11 (Strong normalization) 
+All well typed terms are strongly normalizing. Theorem 12 (Church-Rosser) Let . f A:B and . f A ' :B 
+be two derivable judgments. If A= ß.. A ' , and if Aand A ' are in normal form, then A=A ' . Theorem 
+13 (Consistency of the logic) There exists no term A for which ·f A:False. B Properties of .H The proof 
+of the following lemma is by induction on the structure of typing derivations. Lemma 2 If .,X:B;G f e:A 
+' and . f A:B, then .;G f [A/X]e :[A/X]A ' . We also need a proposition guaranteeing that equivalence 
+of con­structor applications implies equivalence of their arguments; it is a corollary of the con.uence 
+of TL (Theorem 12). ' ' ' Lemma 3 If Ctor (i,I)AT= ß.. Ctor (i,I )AT', then i =i and ' I = ß.. I ' and 
+AT= ß.. AT. Lemma 4 (Progress) If ·;·f e:A, then either eis a value, or there exists e ' such that e. 
+e ' . Proof sketch By standard techniques [42] using induction on computation terms. Due to the transitivity 
+of = ß.. any derivation of .;G f e :Acan be converted to a standard form in which there is an application 
+of rule E-CONV at its root, whose .rst premise ends with an instance of a rule other than E-CONV, all 
+of whose term derivation premises are in standard form. We omit the proofs for the cases of standard 
+constructs and the induction on the structure of evaluation contexts. The interesting case is that of 
+the dependently typed sel. If e = sel[A ' ](v,v ' ), by inspection of the typing rules the derivation 
+of ·;·f e :Ain standard form must have an instance of rule E-SEL in the premise of its root. Hence the 
+subderivation for v must assign to it a tuple type, and the whole derivation has the form DD ' E ''' 
+' ·;·f v :tup A2 A ·;·f v :snat A1 ·f A :LT A1 A2 ·;·f sel[A ' ](v,v ' ):A '' A1 ·;·f sel[A ' ](v,v ' 
+):A where A = ß.. A '' A1. By inspection of the typing rules, rules otherthan E-CONV assigntoallvaluestypeswhichareapplications 
+of constructors of .. Since the derivation D is in standard form, it ends with an E-CONV, in the premise 
+of which another rule assigns va type ß..-equivalent to tup A2 A '' . Then by Lemma 3 this type must 
+be an application of tup, and again by inspection the only rule which applies is E-TUP, which implies 
+v = (v0, ... vn-1), and the derivation D must have the form Di .i<n '' i ·;·f vi :A1 i ·;·f (v0,...vnA 
+'' n-1) :tup i1 Also by Lemma 3 A2 = ß.. ni. Similarly the only rule assigning to a value a type convertible 
+to that in the conclusion of D ' is E-NAT, hence A1 = ß.. mifor some m . N, and v ' = m. Then, by adequacy 
+of LT (Lemma 1(3)), the conclusion of E implies that m<n. Hence by rule R-SEL e. vm. 0 Lemma 5 (Subject 
+Reduction) If ·;·f e :Aand e. e ' , then ·;·f e ' :A. Proof sketch Since evaluation contexts bind no 
+variables, it suf­.ces to prove subject reduction for . and a standard term substi­tution lemma. We show 
+only some cases of redexes involving sel and if. The derivation for e = sel[A ' ]((v0,... vn-1),m)in 
+stan­dard form has the shape ' ]((v0, ... v Di .i<n ·;·f vi :A1 i '' i D ' '' ·;·f (TnA1v) :tup i·;·f 
+(Tv) :tup A2 A '' ·;·f m:snat mi·;·f m:snat A1 E ·f A ' :LT A1 A2 '' ·;·f sel[A n-1),m):AA1 ·;·f sel[A 
+' ]((v0, ... vn-1),m):A '' '' where A= ß.. AA1, A1 = ß.. A '' , and A1 = ß.. mi. Since e. e ' only by 
+rule R-SEL, we have m<nand e ' =vm,so '' '' '' from Dm and A1 mi= ß.. Ami= ß.. AA1 = ß.. A we obtain 
+a derivation of ·;·f e ' :A. In the case of if the standard derivation D of ·;·f if[B,A ' ](tt,X1.e1,X2.e2) 
+:A ends with an instance of E-CONV, preceded by an instance of E-IF. Using the notation from Figure 5, 
+from the premises of this rule it follows that we have a derivation E of ·f A ' : BA '' , and A '' = 
+ß.. true (since rule E-TRUE assigns sbool true to tt), hence we have ·f A ' :B true by CONV. By Lemma 
+2 from E and the derivation of X1 :B true;·f e1 :A(provided as another premise), since X1 is not free 
+in A(ensured by the premise ·f A:.) we obtain a derivation of ·;·f [A ' /X1]e1 :A. 0 C Example of Proof 
+Construction Here we show the type term ltPrf which generates the proof of the proposition LTOrTrue t 
+' t (lt t ' t), needed in the sumVec exam­ple in Section 4. We .rst present a Church encoding of the 
+kind term LT and its constructors ltzs and ltss. LT : Nat.Nat.Kind LT =.t:Nat..t ' :Nat. .R:Nat.Nat.Kind. 
+(.t:Nat.R zero (succ t)). '' ' (.t:Nat..t :Nat.R t t .R (succ t)(succ t )). Rtt ' ltzs :.t: Nat.LT zero 
+(succ t) ltzs = .t: Nat..R: Nat.Nat.Kind. .z:(.t: Nat.R zero (succ t)). '' ' .s:(.t: Nat..t : Nat.R t 
+t .R (succ t)(succ t )). zt ltss :.t: Nat..t ' : Nat.LT tt ' .LT (succ t)(succ t ' ) ltss = .t: Nat..t 
+' : Nat..p: LT tt ' ..R: Nat.Nat.Kind. .z:(.t: Nat.R zero (succ t)). '' ' .s:(.t: Nat..t : Nat.R t t 
+.R (succ t)(succ t )). stt ' (pRzs) Next we de.ne dependent conditionals on kinds Nat and Bool. dep ifez 
+:.t: Nat..k: Nat.Kind. k zero .(.t ' : Nat.k (succ t ' )) .kt dep ifez zero = .k: Nat.Kind..t1 : k zero. 
+.t2 :(.t ' : Nat.k (succ t ' )).t1 dep ifez (succ t)= .k: Nat.Kind..t1 : k zero. .t2 :(.t ' : Nat.k (succ 
+t ' )).t2 t dep if :.t: Bool..k: Bool .Kind.k true.k false .kt dep if true = .k: Bool .Kind..t1 : k 
+true..t2 : k false.t1 dep if false = .k: Bool .Kind..t1 : k true..t2 : k false.t2 Finally, some abbreviations, 
+and then the proof generator itself. LTcond : Nat .Nat.Kind ' '' LTcond = .t : Nat..t: Nat.LTOrTrue tt 
+(lt tt) LTimp : Nat .Nat.Bool .Kind LTimp = .t ' : Nat..t: Nat..t '' : Bool. ' ''' LTOrTrue t tt '' .LTOrTrue 
+(succ t )(succ t) t ltPrf :.t ' : Nat..t: Nat.LTcond t ' t ltPrf = .t ' : Nat. ' '' Elim[Nat,.t 1 : Nat..t1 
+: Nat.LTcond t1 t1](t ){.t1 : Nat.dep ifez t1 (LTcond zero) id ltzs; .t1 ' : Nat..tP :(.t1 : Nat.LTcond 
+t1 ' t1)..t1 : Nat. dep ifez t1 (LTcond (succ t1' )) id (.t1 : Nat.dep if (lt t1 ' t1) (LTimp t1 ' t1) 
+(ltss t1 ' t1) (id True) (tP t1))} D CPS Conversion (Details) We start by de.ning a version of .H using 
+type-annotated terms. ¯ By f and e¯we denote the terms without annotations. Type annota­tions allow us 
+to present the CPS transformation based on syntactic instead of typing derivations. (exp) e ::= ¯e A 
+e¯::= x|n|tt |. |f |.x x: A.f |ee ' |e[A] |(X= A, e: A ' )|open eas (X, x)in e ' |(e0, ... en-1)|sel[A](e,e 
+' ) |eaop e ' |ecop e ' |if[A,A ' ](e, X1.e1,X2.e2) f¯A (fun) f ::= ¯ f ::= .x: A.e|.X: A.f The target 
+language .K of the CPS conversion stage has been de­.ned in Section 5. We use the following syntactic 
+sugar to de­note non-recursive function de.nitions and value applications in .K (here x ' is a fresh 
+variable): .x: A.e=.x x ' [](x: A).e vv ' =v[](v ' ) .X1 : A1. ....Xn : An..x: A.e =.x x ' [X1 : A1, 
+...Xn : An](x: A).e In the static semantics of .K we use two forms of judgments. As in .H , the judgment 
+.; G fK v : Aindicates that the value v is well formed and of type Ain the type and value contexts . 
+and G respectively. Moreover, .; G fK e indicates that the expression eis well formed in . and G. In 
+both forms of judgments, we omit the subscript from fK when it can be deduced from the context. The static 
+semantics of .K is speci.ed by the following forma­tion rules (we omit the rules for environment formation, 
+variables, constants, tuples, packages, and type conversion on values, which are the same as in .H ): 
+for all i .{1 ...n} . f Ai : si .,X1 : A1 ...,Xn : An f A:. .,X1 : A1 ...,Xn : An;G,x ' : A ' ,x: A f 
+e (K-FIX) .; G f .x x ' [X1 : A1, ...Xn : An](x: A).e: A ' where A ' = func (.s1 X1 : A1.....sn Xn : 
+An.A..) for all i .{1 ...n} . f Ai : Bi .; G fv ' : func (.s1 X1 : B1.....sn Xn : Bn.A..) (K-APP) .; 
+G f v :[A1/X1] ...[An/Xn]A .; G f v ' [A1, ...An](v) .; G f v : A .; G,x: A f e (K-VAL) .; G f let x= 
+v in e '' '' .; G f v : tup AB .; G f v : snat A ''' ' . f A: LT AA .; G,x: BA f e (K-SEL) .; G f let 
+x= sel[A](v,v ' ) in e .; G f v : .sY : B.A .,X: B;G,x:[X/Y]A f e X/.. (K-OPEN) .; G f let (X, x)= open 
+v in e s= Ext .; G f v : snat A .; G f v ' : snat A ' .; G,x: snat (plus AA ' ) f e (K-ADD) .; G f let 
+x= v+ v ' in e .; G f v : snat A .; G f v ' : snat A ' .; G,x: sbool (lt AA ' ) f e (K-LT) .; G f let 
+x= v< v ' in e . f B : Bool .Kind . f A: BA ' .; G f v : sbool A ' (K-IF) .,X1 : B true;G f e1 .,X2 
+: B false;G f e2 .; G f if[B,A](v, X1.e1,X2.e2) Except for the rules K-FIX and K-APP, which must take 
+into ac­count the presence of func, the static semantics for .K is a natural consequence of the static 
+semantics for .H . The de.nition of the CPS transformation for computation terms of .H to computation 
+terms of .K is given in Figure 6, where we use the abbreviations introduced in Section 5. Proposition 
+14 (Type Correctness of CPS Conversion) If ·;·fH e: A, then ·;·fK Kexp [[ ¯e A ]] : func (Kc(A)..). Kfval[[( 
+.x: A.eB)A.B]] = .xarg : K(A) × Kc(B). let x= sel[ltPrf i0 i2 ](xarg,0) in let k = sel[ltPrf i1 i2 ](xarg,1) 
+in Kexp [[ e B]] k ).sX:A.B Kfval[[(. X: A.fB]] = .X: A..k: Kc(B).k (Kfval[[ fB]]) Kexp [[ ¯e A]] = .k: 
+Kc(A).k (¯e) A snat nisbool true , .sbool false for e¯A one of x,n , ttKexp [[ fA]] = .k: Kc(A).k (Kfval[[ 
+fA)]] Kexp [[( .x x: A.fA)A]] = .k: Kc(A).k (.x x[](k: Kc(A)).k (Kfval[[ fA]])) A.BA Kexp [[( e1 e2 )B]] 
+= .k: Kc(B). Kexp [[ e1 A.B]] ( .x1 : K(A. B). Kexp [[ e2 A]] ( .x2 : K(A). x1 (x2,k))) . s Kexp [[( 
+e A. B[A])BA]] = .k: Kc(BA). . s ' Kexp [[ e A. B]] ( .x: K(. s AB). x[A](k)) A0 n-1 Kexp [[ (e , ...e 
+A)A]] = .k: Kc(A). 0 n-1 Kexp [[ e A0 0 ]] ( .x0 : K(A0). . . . An-1 ]] ( .xk (x0, ...xn-1)) ...) Kexp 
+[[ en-1 n-1 : K(An-1). tup A. B snat A. )BA. Kexp [[ sel[A](e1,e2 ]] = ' tup A. B'' .k: Kc(BA ).Kexp[[ 
+e1]] ( .x1 : K(tup AB). snat A. ' Kexp[[ e2 ]] ( .x2 : K(snat A ). let x ' = sel[A](x1,x2) in k x ' )) 
+Kexp [[ (X= A, e[A/X]B: B)A. ]] = ' [A/X]B .k: Kc(A ).Kexp [[ e]] ( .x: K([A/X]B) . k (X= A, x: K(B))) 
+.sY:A.B Kexp [[( open e1 as (X, x) in e2 A)A]] = .sY:A.B' .k: Kc(A).Kexp[[ e1 ]] ( .x1 : K(.sY : A .B). 
+let (X, x) = open x1 in Kexp[[ e2 A]] k) snat Asnat A. )snat (plus AA) ]] Kexp [[( e1 + e2 = .k: Kc(snat 
+(plus AA ' )).Kexp [[ e1 snat A]] ( .x1 : K(snat A). snat A. Kexp [[ e2 ]] ( .x2 : K(snat A ' ). let 
+x ' = x1 + x2 in k x ' )) snat Asnat A. )sbool (lt AA) ]] Kexp [[( e1 < e2 = .k: Kc(sbool (lt AA ' )).Kexp 
+[[ e1 snat A]] ( .x1 : K(snat A). snat A. Kexp [[ e2 ]] ( .x2 : K(snat A ' ). let x ' = x1 < x2 in k 
+x ' )) A. A. sbool A. ))A. Kexp [[( if[B,A](e ,X1.e1 ,X2.e2 ]] = ' sbool A. '' .k: Kc(A ).Kexp [[ e ]] 
+( .x: K(sbool A ). A. A. if[B,A](x, X1.Kexp [[ e1 ]] k,X2.Kexp [[ e2 ]] k)) Figure 6: CPS conversion: 
+from .H to .K. E Closure Conversion (Details) The main difference in the static semantics between .K 
+and .C is that in the latter the body of a function must not contain free type or term variables. This 
+is formalized in the rule C-FIX below. The rules C-TAPP and C-APP corresponding to the separate type 
+and Cval[[ v]] = v, for vone of x, n, tt, . Cval[[ (v0, ... vn-1)]] = (Cval[[ v0 ]] , ...Cval[[ vn-1 
+]] ) Cval[[ (X= A, v: B)]] = (X= A, Cval[[ v]] : Cl (B) .) Cval[[ .x x ' [X1 : A1, ...Xn: An](x: A).e]] 
+= (X= Aenv, (vcode[Y1] ...[Ym],venv): AX)where AX = A ' X × X A ' X = .s1 X1 : A1.....sn Xn: An.(X × 
+Cl (A) .) .. A. A. 0 k-1 {x , ...x } = FV (e) -{x, x ' } 0 k-1 {YB. 1 , ...YB. m } = 1 m FTV (.x x ' 
+[X1 : A1, ...Xn: An](x: A).e) '' Aenv = Cl (tup ik (nth (A 0:: ...Ak-1::nil))) . venv = (x0 ...xk-1) 
+vcode = .x v.x[Y1 : B ' 1, ...Ym: B ' m,X1 : A1, ...Xn: An] (xarg : Aenv × Cl (A) .). let xenv = sel[ltPrf 
+i0 i2 ](xarg,0) in let x= sel[ltPrf i1 i2](xarg,1) in let x ' = (X= Aenv, (v.x[Y1] ...[Ym],xenv): AX) 
+in let x0 = sel[ltPrf i0 ik](xenv,0) in ... k- 1 i let xk-1 = sel[ltPrf nk](xenv,k- 1) in Cexp[[ e]] 
+Cexp[[ v1[A1, ...An](v2)]] = let (Xenv,xarg) = open Cval[[ v1 ]] in let xcode = sel[ltPrf i0 i2](xarg,0) 
+in let xenv = sel[ltPrf i1 i2](xarg,1) in xcode[A1] ...[An] (xenv,Cval[[ v2 ]] ) Cexp[[ let x= v in e]] 
+= let x= Cval[[ v]] in Cexp[[ e]] Cexp[[ let x= sel[A](v,v ' ) in e]] = let x= sel[A](Cval[[ v]] ,Cval[[ 
+v ' ]]) in Cexp[[ e]] Cexp[[ let (X, x) = open v in e]] = let (X, x) = open Cval[[ v]] in Cexp[[ e]] 
+Cexp[[ let x= v1 + v2 in e]] = let x= Cval[[ v1 ]] + Cval[[ v2 ]] in Cexp[[ e]] Cexp[[ let x= v1 < v2 
+in e]] = let x= Cval[[ v1 ]] < Cval[[ v2 ]] in Cexp[[ e]] Cexp[[ if[B,A](v, X1.e1,X2.e2)]] = if[B,A](Cval[[ 
+v]] ,X1.Cexp[[ e1 ]] ,X2.Cexp[[ e2 ]] ) Figure 7: Closure conversion: from .K to .C. value application 
+in .C are standard. for all i<n ·f Ai : si ·,X1 : A1 ...,Xn: An f A:. ·,X1 : A1 ...,Xn: An; ·,x ' : B,x: 
+A f e (C-FIX) .; G f .x x ' [X1 : A1, ...Xn: An](x: A).e: B where B = .s1 X1 : A1.....sn Xn: An.A.. ' 
+' .; G f v : .sX: A.B . f A: A .; G f v[A]: [A/X]B (C-TAPP) .; G f v1 : A.. .; G f .; G v1 v2 f v2 : 
+A (C-APP) The de.nition of the closure transformation for the computation terms of .K is given in Figure 
+7. Proposition 15 (Type Correctness of Closure Conversion) If ·;·fK v : A, then ·;·fC Cval[[ v]] : Cl 
+(A) ..  
+			

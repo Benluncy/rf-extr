@@ -1,0 +1,535 @@
+
+ A Characterization of Ten Rasterization Techniques Nader Gharachorloo Robert F. Sproull Satish Gupta 
+Ivan E. Sutherland IBM Thomas J. Watson Research Center Sutherland, Sproull, and Associates, Inc. Yorktown 
+Heights, NY 10598 4516 Henry Street, Pittsburgh, PA 15213 Abstract With widespread use of raster scan 
+displays and the ever-increasing desire for faster interactivity, higher image com-plexity, and higher 
+resolution in displayed images, several techniques have been proposed for rasterizing primitive graphical 
+objects. This paper characterizes the performance of these techniques and shows how they evolve for more 
+complex images on higher resolution displays. This charac- terization will not only show the strengths 
+and deficiencies of existing rasterization techniques, but will also reveal new ar-chitectures for future 
+raster graphics systems. Introduction The raster-scan display is now the most popular computer output 
+device because of the rapid decrease in the cost of semiconductor memories and the low cost of raster-scan 
+CRTs. Such displays are now used in a wide range of appli- cations, from home computers to engineering 
+design to flight simulation. Raster-scan displays are most commonly driven by a frame buffer, a memory 
+that stores the color value for every picture element on the screen and refreshes the display continuously. 
+The process of generating these picture clement values from a geometric description of the image is known 
+as rasterization. The principal strength of the frame buffer is that it can show an arbitrary image on 
+the display with an arbitrary number of primitive objects, subject only to the limit of spatial and in-tensity 
+resolution of the display device. The weakness of a frame buffer is that a great many bits must be changed 
+to change the picture. Because of their large size, frame buffers are usually implemented using the highest 
+density, and hence the slowest, memory chips. The difficulty of accessing pixel data rapidly in such 
+frame-buffer memories can be overcome by several different techniques. This paper will characterize ten 
+such techniques. These techniques will be characterized along three aspects of the display user's desires: 
+interactivity, image complexity, and resolution. Interactivity is determined by how rapidly the im- Permission 
+to copy without fee all or part of this material is granted provided that the copies are not made or 
+distributed for direct commercial advantage, the ACM copyright notice and the title of the publication 
+and its date appear, and notice is given that copying is by permission of the Association for Computing 
+Machinery. To copy otherwise, or to republish, requires a fee and/or specific permission. age is updated 
+and hence how rapidly the user can interact with his application. Image complexity is characterized by 
+the number of the primitive objects (shaded triangles, vectors, characters) displayed. Resolution refers 
+strictly to the number of pixels on the display device and will provide a measure of how these techniques 
+are likely to evolve as resolution in-creases. Examining the full spectrum of rasterization tech-niques 
+will help predict the evolution of future graphics architectures.  Background Figure 1 shows a typical 
+rasterization system based on the frame buffer. The host computer generates graphical primi- tives, the 
+rasterization processor converts these primitives into pixel values and stores them in the frame buffer, 
+which is ac- cessed continuously to refresh the screen. Any rasterization system must be able to receive 
+graphical primitives, rasterize these primitives, and continuously refresh the raster display. Given 
+that all rasterization systems must satisfy these common input and output requirements, the only fundamental 
+differ-ence among rendering systems is the frame-buffer memory organization and the rasterization processor 
+to match it. Before examining the details of different rasterization tech-niques, it is necessary to 
+have an understanding of the primi- tives being rasterized, the sources of parallelism in the rendering 
+problem, and the organization of the rasterization processor. Rasterization Primitives We have chosen 
+three primitives for characterization: Gouraud-shaded three-dimensional triangles, two-dimensional vectors, 
+and characters. With the advent of windowing sys- tems, it is desirable that the same rasterization system 
+be ca- pable of efficiently rendering all three types of primitives on the same screen. Higher-level 
+curve and surface primitives can be broken down into these basic primitives, i.e. polylines and triangular 
+meshes. Three-dimensional triangles are represented by three vertices, each of which is described by 
+x,y,z screen coordinates and an r,g,b color triplet. The triangle is rasterized by linearly in- terpolating 
+the depth and color values for each pixel inside the triangle and conditionally updating the frame buffer 
+and the z-buffer values only if the triangle is visible [25]. Most systems use 8 or 24 bits per pixel 
+for storing color values and 16 or more bits per pixel for storing depth information. Given P triangles 
+of average pixel area A, a total of P x A pixels must be accessed to render the scene. Assuming the &#38;#169;1989 
+ACM -0-89791-312-4/89/007/0355 $00.75  ,~~SIGG RAPH'89, Boston, 31 July-4 August, 1989 Primitives J 
+Rasterization 7 Processor ~ Pixels Host  Computer Frame Videos Screen Buffer -L 1  Rasterization System 
+Figure 1. Prototypical frame buffer system. scene covers a screen of N pixels and that each triangles 
+are overlaid in D layers everywhere, we have [33]: PxA=NxD where D is the depth complexity. The average 
+height or width of a triangle is proportional to Average width = Averageheight = v'~ = v/~/P For performance 
+comparisons, the average values are good approximations to the actual area and height distributions. 
+The average depth complexity, D, is dependent upon the type of scene being rendered: tesselated or non-tesselated. 
+Con-sider rendering a scene composed of several spheres, each of which is rendered with 100 triangles. 
+Tesselating the sphere into smaller triangles (say 1000) will increase the number of triangles while 
+reducing the area of each triangle. In this case, D remains constant, while P increases and A decreases. 
+Zooming out will have a similar effect. On the other hand, adding more spheres to the scene will increase 
+the depth com-plexity, but will not change the average area of each triangle in the scene. This is a 
+non-tesselated scene, where P and D change without affecting A. Typical scenes mix tesselated and non-tesselated 
+characteristics and the response time is bounded by the response time for these two extremes. Two-dimensional 
+vectors are represented by a pair of xd, endpoints. Vectors are rasterized by drawing a digitized line 
+between the endpoints [5]. The performance of the various rasterization techniques is sensitive to the 
+angular distribution of the vectors. We consider two types of angular vector dis- tributions: uniform 
+and the 25/25/50 distribution. For some applications, all angles are equally likely and the angular dis- 
+tribution is uniform. For applications that do not allow rota- tion (such as electrical circuit design), 
+we will assume that 25% of the vectors are horizontal, 25% are vertical, and the remaining 50% have an 
+equal probability over all angles with a slight preference for 45 degrees, which we will ignore. We will 
+assume that there are V vectors with an average length of L pixels. For characters, we will assume that 
+they tesselate the whole screen, and hence the area of each character is N/C, where C is the number of 
+characters on the screen. Parallelism in Rasterization To meet the requirements of interactive systems 
+that demand response in less than a second, or even less than a tenth of a second, rasterization must 
+use parallel processing. Different kinds of parallelism can be exploited, such as: Pixel Level: Parallelism 
+within a pixel to access and in- terpolate up to six parameters in parallel: xd,,z,r,g,b. Primitive Level: 
+Parallelism within a triangle to access several pixels along a horizontal span or in a rectangu- lar 
+region. Multiple Primitive Level: Parallelism obtained by rasterizing several primitives at once. Frame 
+Level: Parallelism within a frame to process se- veral sub-frames or full frames at once. Effective exploitation 
+of parallelism requires tradeoffs due to overhead computations associated with parallelizing any problem. 
+Optimal solutions minimize the parallelization overhead and maximize the speedup. We assume that the 
+overhead processing can be overlapped with the parallel rasterization and hence make no attempt to compare 
+overhead costs. In some cases, the overhead due to parallelism may ex- ceed the speedup. Rasterization 
+Processors For low-performance applications, a general-purpose processor can be used for rasterization. 
+Somewhat greater performance can be achieved with "graphics processors" which have specialized instructions 
+for rasterization [3, 23]. These processors usually require several instruction cycles to compute the 
+value of each pixel to be stored, thus limiting the update rate. Equally limiting is the update rate 
+of the frame- buffer memory designs used with these processors. If only a single pixel can be written 
+in a memory cycle, performance is low. Clearing the million pixels on a 1024 x 1024 screen will take 
+1/4 second, assuming each memory cycle requires 250 ns. Although the speed of the frame-buffer memory 
+can be increased by using Static RAM memory chips, these are more expensive and bulkier than conventional 
+Video RAMs. A first step in parallel rasterization is to design a special processor that computes one 
+pixel value in every clock cycle. Wide data paths are used to access the parameters of the ge- ometry 
+primitive (xy~,r,g,b) in parallel, rather than sequen-tially as required in a conventional microprocessor. 
+To achieve even greater performance, pixel values for several pixels in the same graphics primitive are 
+computed in parallel.  TEN RASTERIZATiON TECHNIQUES I I I I Frame Buffer Virtual Buffer Object Oriented 
+Standard Memory Custom Memory Sca.rdine Buffer ] F --L] I I I a _ e Figure 2. Ten rasterization techniques. 
+High-performance rasterization requires special rasterization processors and special frame-buffer organizations. 
+The mem-ory is designed to access more than one pixe! in a single cycle, and the processor uses parallelism 
+to compute pixel values fast enough to keep the frame-buffer memory busy. These struc- tures use primitive-level 
+parallelism. The response time increases linearly with the number of prim- itives (P, V, or C). The rasterization 
+time for each primitive is the sum of two pieces: the constant setup time for the primi- tive rasterization 
+loop and the iteration time for the rasterization loop, which is proportional to the size of the primitive. 
+If setup and iteration are overlapped, the total time is the maximum of the setup and the iteration time. 
+Systems with fast setup hardware do best on small size primitives, while systems with fast iteration 
+hardware do best on larger primi- tives. Although scenes are composed of both small and large primitives, 
+the rasterization of an average primitive is typically dominated by the iteration time. Henceforth, we 
+will charac- terize only the average iteration time and assume the setup time is performed in parallel 
+or is negligible. Taxonomy Figure 2 shows a taxonomy of ten rasterization techniques surveyed in this 
+paper. The three primary branches categorize the techniques based on their underlying pixel memory model: 
+Frame-buffer techniques that allocate a memory lo-cation for every pixel in the frame and rasterize all 
+primitives into this random-access memory. Virtual-buffer or partial-buffer techniques that rasterize 
+primitives into a small portion of the screen memory and reuse this virtual portion repeatedly to construct 
+the full frame. Object-oriented techniques that refresh the display di- rectly from computations on each 
+primitive and there- fore may operate without a frame buffer. Frame-Buffer Techniques The frame buffer 
+is a two-ported memory: the refresh port is used to read the pixel values in serial order for displaying 
+the raster image and the update port is used by the rasterization processor to change the picture at 
+arbitrary locations on the screen. Before the introduction of Video RAM chips [24], single-ported dynamic 
+RAM chips were used to implement frame buffers. In these frame buffers the refresh port con-sumed a significant 
+fraction of the frame-buffer bandwidth. The Video RAM augments the dynamic RAM with an on-chip shift 
+register that can be loaded in a single memory cycle and can be shifted out asynchronously to refresh 
+the CRT, freeing the random-access port for use by the rasterization processor. High-performance systems 
+often contain two frame buffers, where one is used to display the current frame while the other is used 
+to render the next frame. Today, most frame buffers are implemented using 256 Kilotbit and 1 Megabit 
+Video RAM chips [39]. The 256K Video RAM is organized as a 64Kx4 RAM with 4 bits available in parallel 
+both at the random and the serial ports. These chips have random-acess cycle times of Tcyc (typically 
+250 nsec), with faster "Page mode" access to locations in the same page (256 bit bank for 64K x 4 RAMs), 
+namely Tpm (typically 125 nsec). For read-modify-write cycles, we will assume a cycle time of Trmw (typically 
+375 nsec). The serial port has a cycle time of Tser (typically 40 nsec). As memory chips become more 
+dense, high-performance rasterizers become more difficult to design because the mem- ory bandwidth does 
+not increase as fast as the memory capac- ity. For example, switching from 64Kx4 Video RAMs to 256K x 
+4 Video RAMs results in a factor of four reduction in maximum available memory bandwidth for equivalent 
+memory capacity. Techniques that obtain high performance by operat- ing many memory chips in parallel 
+are less effective for fewer memory chips. To counteract this problem, designers turn to more exotic 
+memory organizations or to special-purpose memory chips that do some of the rasterization processing 
+on-chip. '~.~SIGGRAPH '89, Boston, 31 July-4 August, 1989 The frame-buffer techniques described in 
+this section differ in the number of pixels that are accessed in each cycle and in the geometric configuration 
+of the pixels in each access. The single-pixel organization accesses a single pixel in each cycle. The 
+linear array organization accesses a few pixels that lie to- gether on the same horizontal scan line. 
+The square array or- ganization accesses in one cycle a small square of pixels. In each of these structures, 
+only a modest number of pixels are accessed in parallel (up to about 100) and the rasterization processor 
+or processors are distinct from the memory. Achieving greater performance requires specially-designed 
+memory chips that integrate the memory and rasterization processors. The scan-line access memory (SLAM) 
+accesses all pixeis on a single scan-line in one cycle, while the Pixel- Planes design accesses every 
+pixel in the frame buffer in one cycle. Single Pixel Access The single-pixel technique organizes the 
+frame buffer to access one pixel in each memory cycle. Although normal updates will require full memory 
+cycles, if successive updates lie on the same scanline, page-mode cycles can be used to increase rasterization 
+speed. For three-dimensional primitives, we assume that the frame buffer is augmented by a z-buffer that 
+provides one depth value each memory cycle. For the rasterization of three-dimensional primitives, we 
+need to read, compare, and write the depth value for every pixel in the primitive. Using the read-modify-write 
+memory cycle, a pixel can be updated in time Trmw. When the scan conversion is done in raster order, 
+faster page-mode cycles can be used. An even faster technique that uses VRAMs to implement the z -buffer 
+is shown in Fig- ure 3. The depth value stored in the z-buffer is read from the serial port, compared, 
+and written back into the update port in page mode such that the average pixel update time is re- duced 
+to Tpm[40] . Note that the pixel value write is over- lapped with z-buffer write. Linear ,4 rray ,4 ccess 
+ A linear-array frame buffer is organized so that each cycle accesses W pixels that lie along a continuous 
+part of a hori- zontal scanline of the image. Successive sets of W pixels are called words; boundaries 
+between words occur after every multiple of W pixels in the scanline. Access is normally to a particular 
+word, though it is possible to access W pixels start- ing at any arbitrary pixel location by using different 
+parts of two consecutive words. Such arbitrary access requires provid- ing different memory chips with 
+one or the other of two con- secutive addresses [4, 31, 32]. Although pixel-aligned access can provide 
+a performance advantage over word-aligned ar-rays, computing two memory addresses can lead to a longer 
+memory cycle, and hence can offset the gain in performance. The linear array is potentially capable of 
+a W-fold speedup over the single-pixel structure. However, this maximum speedup can be achieved only 
+if the primitives being rasterized are parallelizable such that Whorizontal pixels can be updated in 
+every memory cycle. Since this may not be the case, the speedup must be discounted by an efficiency factor, 
+which is a function of both W and the average number of horizontal pixels (span) in the primitive being 
+rasterized. Figures 4a and Z-Buffer i Update Port  OId-Zw-Z i Rasterization Processor ~l New-RGB 
+Update Port ~ Frame ~-Video Buffer Figure 3. Fast Z-buffer. 4b plot the speedup Slint, for the word 
+and pixel aligned linear array organizations for typical character and triangle span sizes (8 and 32) 
+against different word sizes. For the word aligned case, the point of diminishing returns is at word 
+sizes that are greater than twice the average span size, and for pixel aligned case it is achieved when 
+the word size is greater than the average span size. If the spans are sufficiently big relative to the 
+word size, then the speedup is independent of the word aligned or pixel aligned memory organization. 
+For vectors, the speedup provided by the linear array memory organization depends on the angular distribution 
+of the vec-tors. Figures 4c and 4d show the vector speedup Slinv for dif- ferent word sizes. Figure 4c 
+shows vector speedup for a 25/25/50 distribution of vectors. This distribution exhibits a rapid increase 
+in vector drawing speed with larger word sizes due to the speedup of horizontal and nearly horizontal 
+vectors. FOr uniformly distributed vectors, shown in Figure 4d, the performance increase with increasing 
+word size is less dra- matic. To realize the maximum speedup of vectors in the linear array organization 
+requires that a full horizontal run be generated in every memory cycle. An algorithm for generating lines 
+by run-length has been described by Bresenham [6, 7]. For a pixel-aligned linear array with W = 16, the 
+speedup for uni- formly distributed vectors would be 2.3 and would increase to 5.3 for the 25/25/50 distribution 
+because of the greater frac- tion of horizontal vectors. Square Array Access Based on the belief that 
+graphical objects are no more likely to be short and wide than tall and thin, several frame buffers have 
+been built to access a square array of M x M pixels in each memory cycle [9, 27, 32, 36]. Such an organization 
+can take advantage of two-dimensional locality in the scan con-version of primitives. As an example, 
+a character 8 pixels wide and 12 pixels high could be stored in two memory cycles in an 8 x 8 organization, 
+but would require 12 memory cycles in a linear array. The techniques used for providing pixel aligned 
+  addressing for linear arrays can be extended to square arrays [321. As for the linear organization, 
+the potential performance of the square organization must be reduced by an efficiency fac- tor, which 
+is a function of the size of the square, M, and the average area of the primitives being rasterized. 
+Figures 5a and 5b show the possible speedup Ssqt, i.e., the average number of pixels that can be written 
+in each memory cycle, for differ- ent word sizes (M x M) for typical character and triangle sizes (8 
+and 32). Notice that pixel alignment has a higher payoff as the square size approaches the size of the 
+primitives. The square organization achieves speedup for vectors of any orientation, while the linear 
+organization is able to achieve parallelism only for horizontal vectors. The overall speedup ( Ssqv) 
+achieved is shown in Figures 5c and 5d. A 4 x 4 pixel- aligned square array will increase vector-generation 
+speed by a factor of four for any distribution of vector orientations. In an M x M array, vector generation 
+can be done either by generating M pixels sequentially in the time required by one memory cycle, or by 
+using an algorithm that chooses from a set of predefined M x M strokes [18, 30]. Scan Line Access The 
+Scan Line Access Memory (SLAM) architecture is the extreme case of a linear array where the array size 
+is equal to the width of the screen, and a scanline of pixel processors work in parallel to update the 
+memory [ 11]. SLAM implements on one chip a modified Video RAM and pixel processors that can update horizontal 
+spans of any size in each memory cycle, SLAM is a memory chip architecture that can be used as a component 
+to implement single, linear, or square frame-buffer accesses. Since each individual memory chip accesses 
+only a few bits of every pixel, this memory design cannot be easily extended to 3D z-buffer algorithms. 
+The performance of SLAM is like that of the linear array with W = ~-. Since SLAM can write an arbitrary 
+horizontal span of a triangle in a single cycle, Slint = v~--, the width of a tri- angle. For vectors, 
+SLAM's speedup is Slinv, like that for the linear array but somewhat better because of the larger value 
+of W. Performance on characters is limited by the rate with which font data can be delivered to the SLAM 
+and whether more than one character can be written in a single cycle. We have chosen to characterize 
+SLAM's character performance equal to that of the linear array. Full Frame Access At the extreme in 
+parallel access, a frame buffer that can ac-cess all N pixels on the screen in a single cycle can write 
+any object in a single cycle. Such a structure generally requires N pixel processors as well. Parameters 
+describing a graphics primitive are broadcast to all processors, and each processor computes a pixel 
+value to store in its associated pixel, or de- cides that the primitive does not affect its pixel, and 
+leaves the current value unchanged. This technique is implemented in Pixel-Planes [ 12]. A triangle is 
+described by three plane equations ~(x~v) = Aix + B~ + C i = 0 . The plane equation coeffi-cients, A,B,C 
+are broadcast bit serially to bit-serial pixel processors that evaluate the F~ to determine which pixels 
+lie inside the polygon. Each pixel location has sufficient bits to store depth and color values. The 
+interior pixels then evaluate Z(x,y) = A,x + By + CCz and compare the value to the stored value to determine 
+which pixels are visible, Finally, the red, green, and blue intensities are calculated in three passes 
+by evaluating three equations of the form R(x,y) = A,x + By + Cr. For a triangle, a total of about 300 
+bits are broadcast serially to the pixel processors. The number of bits is proportional to log N and 
+can hence be considered a constant. The response time is independent of screen resol-ution, but depends 
+on the number of triangles on the screen and the speed of serial broadcast. Virtual- Buffer Techniques 
+Virtual buffer techniques rasterize primitives into a band buffer and use the band buffer repeatedly 
+to construct the whole image a piece at a time. The primary motivation for a virtual buffer memory is 
+to exchange the large and slow frame buffer memory for a smaller and faster virtual buffer memory to 
+increase performance. The virtual buffer organization for a 1024 x 1024 screen ranges anywhere from a 
+1024 x 1 scanline buffer, or 1024 x 16 band buffer, or 32 x 32 square virtual buffer. Larger virtual 
+buffers such as a 1024 x 512 half-frame buffer or a 512 x 512 quarter-frame buffer have been implemented 
+primarily to save memory rather than to increase performance. Virtual buffers have been used to pre- 
+pare raster images for laser printers [35]. Virtual buffers may be used in two distinct ways: in a sweep 
+algorithm or as a pixel cache. Sweep algorithms make one pass over the entire image, assigning the virtual 
+buffer to successive portions of the image in turn. For each assignment, the virtual buffer is cleared, 
+primitives are rasterized into it, and the vir- tual buffer is then output, either in real time to a 
+display or laser printer, or in near real time to a full-frame buffer. Alter- natively, a virtual buffer 
+can be used as a pixel cache, a fast window on a conventional frame buffer [2]. In the course of rasterizing 
+a scene, the contents of the virtual buffer may be exchanged with those in the frame buffer many times. 
+The strategies for sorting primitives into bands for rasterization are strongly influenced by the size 
+of the virtual buffer. To best realize the advantages of virtual buffer tech- niques, the primitives 
+must be structured so that all primitives corresponding to each virtual buffer can be rasterized to-gether. 
+For large virtual buffers (i.e. 1024 x 512) it is ac- ceptable to make two passes over the primitives, 
+where in the first pass all primitives are clipped to the top half of the screen and in the second pass 
+they are clipped to the bottom half. For smaller virtual buffers, multipass strategies fail because of 
+the large transformation and clipping overhead. A common technique is to sort primitives according to 
+the topmost line on which the primitive is activated. A Watkins-style [37] active edge list algorithm 
+is then implemented, where new primitives are activated by insertion and rasterized primitives are deacti- 
+vated by deletion. Alternatively, an active polygon ring [16] can generate all the horizontal spans for 
+the current line in the virtual buffer before proceeding to spans in the next line. The smaller the virtual 
+buffer, the larger the overhead of dealing with leftover primitive information that must be saved for 
+the next buffer. A full discussion of sorting strategies and over-head is beyond the scope of this paper. 
+Our characterizations    ~L.,,~~SIGGRAPH '89, Boston, 31 July-4 August, 1989 VIRTUAL BUFFER TECHNIQUES 
+I I Scanline Buffer Band Buffer Square Buffer  I I I I I I I I I I, o d t/3 Figure 6. Taxonomy of Virtual 
+Buffers. of performance assume that these activities are overlapped with rasterization, and are therefore 
+ignored. As the examples suggest, there are three possible virtual buffer organizations: scan line virtual 
+buffers, multiple scan line vir- tual buffers, and square virtual buffers. Figure 6 shows the taxonomy 
+for all possible virtual buffer techniques. This paper will characterize only the scanline virtual buffer 
+technique. Scan Line Virtual Buffer The scanline virtual buffer uses a single scan line buffer for rasterization. 
+For every scanline on the display, the rasterization processor updates the contents of the current scanline, 
+while the previous scanline is either being directly shifted out to the screen or into an intermediate 
+frame buffer as shown in Figure 7. If the screen is being updated directly, then the next scanline must 
+be shifted in while the current scanline is being updated. The virtual buffer technique is best utilized 
+when the time taken to update a scanline is compara- ble to or greater than the time taken to shift the 
+scanline in or out. It is better used in a sweep algorithm than as a pixel cache. Transfer of the virtual 
+buffer contents to the frame buffer does not cause any memory bottlenecks because the frame buffer can 
+be updated serially (possibly through the video port) and requires only one access per pixel to the frame 
+buffer. Multiple memory accesses caused by overlapping objects (D times for triangles) are handled within 
+the virtual buffer, and only the final image is sent to the frame buffer. The z values are never needed 
+for the whole image and hence exist only in the virtual buffer, As in the case of frame buffers, a scanline 
+virtual buffer can be updated either as a single pixel at a time [20], in a hori-zontal word with Wpixels 
+[35], or using a processor for every pixel of the scan line [16]. The response time for single and W 
+pixel updates is the same as for frame buffers, improved only by the faster memory cycle of the virtual 
+buffer Tvb. Us-ing fast static memories, these could potentially lead to a two- to ten-fold performance 
+improvement over the frame buffer. Super Buffer The Super Buffer [15, 16] takes advantage of VLSI chip 
+technology by constructing a linear systolic array of pixel processors to rasterize horizontal span primitives 
+into an on- chip virtual scan line buffer. A complementary active polygon ring generates all the horizontal 
+span primitives for each scan line from polygon descriptions. The highly pipelined structure and the 
+systolic communication of the rasterization processors allow the system to be clocked as fast as 40 nsec. 
+The Super Buffer has sufficient processing power to rasterize the image in real time so that the frame 
+buffer can be avoided. However, without a frame buffer, any virtual-buffer architecture will have a limit 
+on the complexity of the image it can display. In the case of the Super Buffer, the limit is that the 
+number of spans per scanline cannot exceed the number of pixets in a Scanline Z-Cache I Z 3D Rasterization 
+ p ri m it ive s-'----.4~,' Processor RGB "  I Scanline RGB-Cache I RGB Frame I VideoBuffer I Figure 
+7. Scan Line Virtual Buffer. m.. scanline. The use of a frame buffer allows the system to de- grade 
+gracefully with increasing image complexity. Object-Oriented Techniques Object-oriented techniques refresh 
+the display directly from processors that compute in real time how to display each primitive and therefore 
+operate without any pixel memory. Object-oriented techniques can be broken down into two cat- egories: 
+techniques that deal only with non-overlapping ob- jects, and techniques that resolve object overlap 
+according to a preassigned priority or by performing depth comparisons. Character~Sprite Displays The 
+most common object-oriented display is the character display, where the screen is split into a fixed 
+number of non- overlapping character boxes. The display is generated from a list of characters sorted 
+in raster order. For each character in the list, the corresponding image is read from a character lookup 
+table to generate a video signal in real time [21]. By making the character definitions loadable, arbitrary 
+ge- ometric shapes such as lines and polygons can be shown. For each character box, the vectors and polygons 
+must first be clipped against the box and then rasterized to the pixel resol- ution of the box. If a 
+similar box exists in the lookup table, then that character is referenced, otherwise a new character 
+must be loaded into the lookup table. The size of the character lookup table limits the complexity of 
+images that can be dis- played. The response time for displaying such images is lim- ited by the coding 
+of the images into loadable character definitions rather than by the update of the display list. Note 
+that as the size of the lookup table approaches the size of the corresponding frame buffer, arbitrarily 
+complex images can be displayed. By allowing the character boxes to have arbitrary size, to ap- pear 
+anywhere on the screen, and to overlap, geometric images can be generated more easily. Such character 
+boxes are often called sprites and are commonly used in video games. These systems are typically limited 
+to two to eight sprites and use logic to select the pixels from the frontmost nonempty sprite for display 
+on the screen. Processor per Polygon Maximum parallelism can be extracted from the scene by as- signing 
+a processor to every polygon. As the image is being rasterized, each of the P processors incrementally 
+computes and reports its color and depth at that pixel. For pixels outside the polygon, the processor 
+reports the maximum depth. The pixel with the minimum depth will have its color displayed on the screen. 
+The minimum depth can be found by using a comparator tree of size P log P[14, 38]. The number of required 
+polygon processors can be reduced significantly by assigning a processor to only those polygons that 
+are active on a given scanline [10]. Scanlines are com-puted by pipelining a pixel stream through the 
+processors and overwriting pixel values that are deeper than the interpolated depth for the local polygon. 
+This avoids the need for a separate comparator tree. Furthermore, by using a frame buffer as a frame 
+store device and recirculating the pixel stream through the processors, the system can virtually rasterize 
+scenes of any complexity with a fixed number of polygon processors. The response time for triangles is 
+independent of the number of triangles and is NTppoly where Tppoly is the clock rate for the polygon 
+processor, assuming there are enough processors to accommodate all triangles on the most complex scan 
+line. If Tpp is less than or equal to the pixel clock, the display can be refreshed directly, otherwise 
+the image must be stored in a frame buffer. Vectors are converted to polygons and then rendered. Frame 
+Parallelism All of the rasterization techniques we have surveyed may be configured to use frame parallelism, 
+that is, to rasterize with separate parallel processor/memory configurations separate subparts of the 
+frame [13, 22, 28, 29]. A video signal is generated by scanning out pixel values from the subframes in 
+an appropriate order. The effectiveness of this approach is reduced because objects may not be distributed 
+uniformly over the screen and some overhead will be incurred by objects that cross subframe boundaries 
+and must be examined by more than one subframe. However, frame parallelism overcomes a key problem with 
+heavy use of primitive parallelism, namely that the number of pixels accessed in one memory cycle may 
+vastly exceed the number of pixels in a single primitive, thus wasting memory bandwith and rasterization 
+processor power. At the extreme, full-frame access of a million pixels is largely wasted to rasterize 
+a 100-pixel triangle. The Pixel-planes 5 architecture [13] is an example of a square virtual buffer that 
+uses frame parallelism. Pixels in the virtual buffer are accessed using the processor per pixel technique, 
+using logic-enhanced memory chips similar to those in the earlier Pixel-Planes systems. The buffer is 
+128x128 pixels in size, and because most polygons will fit within a given 128x128 region of the screen, 
+the virtual buffer can provide a performance similar to the earlier processor per pixel frame buffer 
+systems. The full systems contains a number of such virtual buffers, operating on separate streams of 
+polygon input data. The screen is divided into a number of 128x128 regions, and the virtual buffers are 
+dynamically allocated to these re- gions in such a way that the virtual buffers process equal numbers 
+of polygons, and loading is balanced. Performance Characterization Our taxonomy has shown ten different 
+techniques that will rasterize a given set of primitives to yield identical images. From the user's point 
+of view, the key parameter that differ- entiates the techniques is response time. Although other sys- 
+tem parameters such as cost, size, power, available technology, and design effort cannot be ignored, 
+we believe response time serves well as a common metric for making first-order com- parisons among different 
+techniques. There are many imple- mentation factors that influence the response time of any system, but 
+our main interest is to know the theoretical per- formance limit thai a given technique can achieve under 
+com- parable operating conditions. Figure 8 presents expressions for response times for each of the ten 
+different techniques. The expressions are given in terms of a small set of parameters that characterize 
+the image being rasterized. They allow us to understand how the per-   :c-,~~ SIGGRAPH '89, Boston, 
+31 July-4 August, 1989 Tesselated Triangles Non- Tesselated Triangles Vectors Characters Frame Buffer 
+Techniques Single Pixel NDTpm PA Tpm VL Tcyc NTpm Linear Array (I4I) ND Tcyc Slint PA Tcyc Slint VL Tcyc 
+Slin v NTcyc Slint Square Array (M x M) ND Tcyc Ssqt PA Tcyc Ssqt VL Tcyc Ssqv NTcyc Ssqt SLAM v@D P 
+Tcyc P~ Tcyc VL Tcyc Slinv _ Pixel-Planes 300PTpp 300PTpp 300 VTpp - Scan Line Virtual Buffer Techniques 
+Single Pixel NDTvb PA Tvb VL Tvb NTvb Linear Array (W) NDTvb S lint PA Tvb S lint VL Tvb S lin v NTvb 
+S lint Super Buffer Nv@~ Tsb Pv/ A Tsb VLTsb Slinv _ Object-Oriented Techniques Character Display C Tcyc 
+Processor/Polygon NTppoly NTppoly VTppoly Notations Tcyc = Frame buffer cycle time Tpm = Frame buffer 
+page mode cycle time Tpp = Pixel-Planes clock speed Tvb = Virtual buffer cycle time Tsb = Super buffer 
+clock speed Tppoly = Processor~polygon clock speed Slint = Speedup for Triangles with Linear Access Slinv 
+= Speedup for Vectors with Linear Access Ssqt = Speedup for Triangles with Square Access Ssqv = Speedup 
+for Vectors with Square Access N = Number ofpixel on screen D = Average depth complexity of 3D images 
+P = Number of 3D triangles A = Average pixel area of triangles V = Number of vectors in image L = Average 
+pixel length of vectors C = Number of characters in image W = Word Size for Linear Access M = Word Size 
+for Square Access Figure 8. Response time for the ten rasterization techniques. formance of the techniques 
+changes when the parameters are Three-Dimensional Triangles changed. They help determine how the response 
+wiLl change We list two expressions for response times for triangle primi- when the number of primitives 
+increases, the average size of tives: the tesselated case, in which P and A may change but triangles 
+changes, the technology parameters such as memory D remains constant, so N x D pixels are updated; and 
+the cycle times decrease, or the screen resolution increases. The non-tesselated case, in which A remains 
+constant but P and D reader is cautioned that these expressions are approximate, may change, so P x A 
+pixels are updated. In both cases,and ignore a great many important factors in actual imple- P x A = 
+N x D. For single-pixel access, the response time is mentations. Our characterization is intended to 
+illustrate gross the number of pixels updated, multiplied by the cycle time for performance effects, 
+and does not precisely evaluate any of the each pixel. The response time for the linear and square frame 
+techniques. buffer organizations is similar to the single pixel case except @ ~ Computer Graphics, Volume 
+23, Number 3, July 1989 Single Linear Linear Square Square Word Pixel Word Pixel aligned aligned aligned 
+aligned FB Access lxl 16xl 16xl 4x4 4x4 FRAME BUFFER Tcyc 250 nsec 250 nsec 250 nsec 250 nsec 250 nsec 
+Polygons/sec Large (32x32) 4K 43K 62K 52K 62K Small (8x8) 62 K 390K 500K 562 K 1, O00K Vectors~see Uniform 
+(32) 125K 245K 290K 350K 500K 25/25/50 (32) 125K 490K 662K 405K 500K VIRTUAL BUFFER Tvb 1 O0 nsec 1 O0 
+nsec 1 O0 nsec 1 O0 nsec 1 O0 nsec Polygons/ sec Large (32x32) IOK 1 IOK 155K 130K 155K Small (8x8) 155K 
+975K 1,250K 1,405K 2,500K Veetors /sec Uniform (32) 312K 612K 720K 875K 1,250K 25/25/50 (32) 312K 1,225K 
+1,665K 1,012K 1,250K Figure 9. Peak Performance for Single, Linear, and Square Memory Organizations. 
+ that a speedup factor of Slint or Ssqt is applied. SLAM per- formance is the same as that of the linear 
+array, with Slint = Averagewidth = v/A-. Pixel-Planes broadcasts about 300 bits to render each triangle 
+and hence has a response time of 300PTpp independent of the size of the triangles. The re- sponse time 
+for virtual buffer single, linear, and Super Buffer organizations is given by substituting the virtual 
+buffer access time for the corresponding frame buffer cases. The processor per polygon has a fixed response 
+time of NTppoly, which is independent of the area and number of polygons in the scene. If Tppoly is less 
+than or equal to the pixel clock then the display can be refreshed directly in real time, otherwise the 
+image needs to be buffered in a frame store. Vectors The analysis for vectors is similar to that for 
+non-tesselated triangles, but the number of pixels updated is the product of V, the number of vectors 
+displayed, and L, the vector length. Since the vector response time is linearly proportional to vec- 
+tor length, as opposed to quadratic sensitivity of polygon re- sponse to polygon height or width, we 
+have chosen to characterize non-tesselated vectors only. However, the vector response time is strongly 
+sensitive to the angular distribution of vectors, which is reflected in the speedup factors Slin for 
+the techniques that can update more than one pixel along a scanline and Ssq for the techniques that update 
+rectangular arrays of pixels. Characters We assume that characters tesselate the entire screen and thus 
+require that all N pixels be updated for a new page of text. The difference between the architectures 
+is primarily the different memory update speeds and the speedup factors Slint and Ssqt, which depend 
+on the size of the memory word and the size of the characters. Observations Given so many techniques 
+to choose from, now does one de- cide which one to use? The exact decision for a system de- signer is 
+invariably based on the intended application, and the cost and performance requirements. This characterization 
+of the various possible techniques can be used only as a guideline for system design. Three key observations 
+emerge from this characterization: Updating pixels in parallel is an effective means of in- creasing 
+the performance of rasterization. However, parallelism beyond the average size of the primitives is inefficient. 
+For all the techniques and primitives, the response time is always directly proportional to the memory 
+cycle time. The faster response time of virtual buffer tech- niques is due purely to the fact that they 
+use smaller and faster memory parts than their frame-buffer counterparts, which results in a performance 
+gain of 2-10 times. s GGRAPH '89, Boston, 31 July-4 August, 1989 Lastly, an increase in screen resolution, 
+i.e. from N1 = 512 × 512 to N2 = 1024 × 1024 will slow down the vector response time by a factor of v/N2/Ni 
+= 2, whereas the triangle response time drops by a factor of Nz/N~ = 4. SLAM and Super Buffer are exceptions 
+because their performance is not sensitive to triangle width, so their performance degrades by a factor 
+of v/ Nz/ N, = 2.  Case Study To understand the performance limits of different techniques, we have 
+tabulated the performance for single, linear, and square access frame buffers in Figure 9. For the parallel 
+access cases, we have chosen to access 16 pixels in parallel as a 16 × 1 linear array or as a4 x 4 square. 
+Using the polygon and vector speedup factors from Figures 4 and 5, and the performance equations in Figure 
+8, we can predict the maxi- mum theoretical performance for each of these cases. Observe that switching 
+from single pixel access to parallel pixel access increases the performance by a factor of 2 to 16. However, 
+within the different parallel techniques, the performance does not vary by more than a factor of 2.5. 
+The performance numbers are directly influenced by memory cycle times. Virtual buffer techniques may 
+use fast memory cycle times in the 25-100 nsec range, which will directly in- crease the performance 
+by factors of 2.5-10 over their corre- sponding frame buffer counterparts. It is interesting to compare 
+the predicted peak performance with the actual performance of some commercial graphics systems. The Silicon 
+Graphics 4D GT Graphics Workstation is rated at 400K short vectors/see and 100K-120K 100-pixel polygons/see 
+[1]. It has a screen resolution of 1280x1024, using 5 x 4 word-aligned square frame buffer organization, 
+Tcyc = 250nsec for vectors, and Trmw = 500nsec for polygons. The table predicts a peak vector performance 
+of 350K-405K vectors/see. After correcting for the longer memory cycle, the table predicts a peak polygon 
+performance of 26K large polygons/sec and 280K small polygons/sec which translates to about 180K 100-pixel 
+polygons/sec. A closer look at the machine architecture reveals that it is not strictly a 5 x 4 square 
+organization, but more like 5 inde- pendent sets of 1 × 4 image processors. If we assume that each column 
+receives one span out of every five then the ar- chitecture behaves more like a single 1 x 20 linear 
+array, and the table predicts a peak performance of 195K small polygons/see, or about 125K 100-pixel 
+polygons/see. Another interesting case is the HP 320 SRX, which is rated at 300K vectors/see and 16K 
+large polygons/sec [17, 34] It has a screen resolution of 1280 x 1024, 4 x 4 word-aligned square organization 
+for vectors (Tcyc---360nsec), that is switched to a 1 × I single-pixel access into a linear virtual buffer 
+(pixel cache) for polygons (Tvb = 60nsec). Correcting for the cycle times, the table predicts 240K-300K 
+vectors/see and a peak polygon performance of 260K small and 17K large polygons/see. The Future of Rasterization 
+Users of graphics systems will continue to require higher levels of performance and function in the future. 
+Semiconductor technologies will continue to make this feasible. New and better rasterization techniques 
+will be required to provide for the needs of future systems. The characterization of the cur- rent techniques 
+provide a framework to develop future tech- niques. To achieve higher rendering performance, it is necessary 
+to overcome the frame buffer bandwidth bottleneck. Semicon-ductor technology will soon enable us to design 
+video memory chips with 4 megabit densities and logic chips with over one million transistors. At such 
+high circuit densities, interchip communication bandwidth becomes the primary bottleneck, forcing designers 
+to integrate the rasterization processor and frame buffer memory onto the same chip. One may choose to 
+enhance the video memory with rasterization logic, which is the message carried by SLAM and Pixel Planes, 
+or enhance the rasterization processor with fast local memory, which is the message of virtual buffer 
+techniques. Higher circuit densities, combined with integrating the rasterization processor and frame 
+buffer memory will lead to lower size and cost. A 512 × 512 frame buffer with 8 bits/pixel will occupy 
+only half of a 4 megabit VRAM chip. The other half could be used to implement the rasterization processor. 
+The result will be a high performance single chip rasterization system. Still greater performance can 
+be achieved by operating several such chips in parallel, partitioning the frame buffer into several planes 
+or spatially into rectangles or bands. Rendering algorithms will continue to use larger numbers of bits 
+per pixel to provide higher levels of functionality. Graphics systems have already made a transition 
+from 1 bit/pixel to 8 and 24 bits/pixel to provide color and smooth shading. Double buffering doubles 
+the number of bits per pixel to obtain smooth animation. Z -buffers require an addi- tional 16-32 bits 
+per pixel, resulting in a total of up to 100 bits/pixel. The trend of using larger number of bits per 
+pixel to provide higher functionality will continue and force graphics systems to provide multiple sets 
+of buffers totalling to 100 -1000 bits per pixel. The extra memory could be used to pro- vide realtime 
+video capture, anti-aliasing, transparency, tex- ture mapping, image composlting, direct CSG rendering, 
+and shadows. On the other hand, providing such a large number of bits per pixel with physical memory 
+may become prohib- itively expensive. Virtual buffer techniques have demon-strated that a fast small 
+physical memory can be reused to execute algorithms requiring a large number of bits per pixel. Our characterization 
+suggests that designers are going to face stiff problems getting another factor of 4-10 in rasterization 
+performance. Bulk memory speeds will not grow by this factor. Improving the speed of rasterization techniques 
+surveyed here requires integrating on one chip logic and small fast memories, a capability not well supported 
+by today's ASIC design and fabrication techniques. Nevertheless, we should expect to see more designs 
+using "pixel caches" or virtual buffers for the same reason caches are used on all high performance comput- 
+ers: small memories have fast response. Another general approach to achieving high performance is to 
+divide the screen spatially into multiple non-overlapping sub- frame buffers or multiple overlapping 
+frame buffers and rasterize the primitives into each buffer independently in par- allel. While the cost 
+of these approaches rises at least linearly with performance, the engineering is straightforward. We 
+can see these structures emerging as an important part of high performance systems [13]. It is very likely 
+that the rasterization systems of the future will not be based on any one single technique, but will 
+use a crea- tive combination of the best features of known techniques to obtain even higher levels of 
+performance.  Acknowledgements We would like to thank John Eyles and Henry Fuchs for con- tributing 
+to the section on Pixel Planes.  Bibliography 1. K. Akeley and T. Jermoluk. High Performance Polygon 
+Rendering. Proceedings of SIGGRAPH, 22(4):239-246, August 1988. 2. B. Apgar, B. Bersack, and A. Mammen. 
+A Display System for the Stellar Graphics Supercomputer Model GS 1000. Proceedings of SIGGRA PH, 22(4):255-268, 
+August 1988. 3. Mike Asai, Graham Short, Tom Preston, Richard Simpson, Derek Roskell, and Karl Guttag. 
+The TI34010 Graphics System Processor. Computer Graphics and Applications, 6(10):24-39, October 1986. 
+ 4. A. Bechtolsheim and F. Baskett. High-Performance Raster Graphics for Microcomputer Systems. Com-puter 
+Graphics, 14(3):43-47, July 1980. 5. J.E. Bresenham. Algorithm for computer control of a digital plotter. 
+IBM Systems Journal, 4(l):25-30, July 1965.  , J.E. Bresenham. Raster Line Run Length Slice Al- gorithm, 
+IBM System Communication Division, TR 29.0180, Research Triangle Park, North Carolina. January 1978. 
+7. J.E. Bresenham. Incremental Line Compaction. The Computer Journal, 25(1):116-120, 1982. 8. J.H. Clark. 
+The Geometry Engine: A VLS1 Geom- etry System for Graphics. Computer Graphics, 16(3):127-133, July 1982. 
+ 9. J.H. Clark and M.R. Hannah. Distributed Processing in a High-Performance Smart Image Memory. LAMBDA 
+(Now VLSI Design), (4th. Quarter):40-45, 1980.  10. M. Deering, S. Winner, B. Schediwy, C. Duffy, and 
+N. Hunt. The Triangle Processor and Normal Vector Shader: A VLS! System for High Performance Graphics. 
+Proceedings of S1GGRAPH, 22(4):21-30, August 1988. II. S. Demetrescu. High Speed Image Rasterization 
+Using Scan Line Access Memories. Proc. 1985 Chapel Hill Conference on VLSI, pages 221-243, Computer Science 
+Press, 1985. 12. H. Fuchs and J. Poulton. Pixel Planes: A VLSI-Oriented Design for a Raster Graphics 
+Engine. VLSI Design, 2(3):20-28, 3rd. Quarter 1981. 13. H. Fuchs, J. Poulton, J. Eyles, T. Greer, J. 
+Goldfeather, D. Ellsworth, S. Molnar, G. Turk, B. Tebbs, and L. Israel. A Heterogeneous Multi-processor 
+Graphics System Using Processor-Enhanced Memories. Proceedings of SIGGRAPH, 1989. 14. D. Fussell and 
+B.D. Rathi. A VLSI-Oriented Archi- tecture for Real-Time Raster Display of Shaded Polygons. Proc. of 
+Graphics Interface, pages 373-380, 1982. 15. N. Gharachorloo, S. Gupta, E. Hokenek, P. Balasubramanian, 
+B. Bogholtz, C. Mathieu, and C. Zoulas. Subnanosecond Pixel Rendering with Million Transistor Chips. 
+Proceedings of SIGGRAPH, 22(4):41-49, August 1988. 16. N. Gharachorloo and C. Pottle. SUPER BUFFER: 
+A Systolic VLSI Graphics Engine for Real Time Raster Image Generation. Proc. 1985 Chapel Hill Conference 
+on VLSI, pages 285-305, Computer Sci- ence Press, 1985. 17. A. Goris, B. Fredrickson, and H. Baeverstad. 
+A Configurable Pixel Cache for Fast Image Gener-ation. IEEE CG&#38;A, pages 24-32, 1987. 18. S. Gupta. 
+Architectures and Algorithms for Parallel Updates of Raster Scan Displays, Computer Science Department, 
+Carnegie-Mellon University, CMU-CS-82-111, Pittsburgh, PA. December 1981. 19. S. Gupta, R.F. Sproull, 
+and I.E. Sutherland. A VLSI Architecture for Updating Raster Scan Display. Computer Graphics, 15(3):71-78, 
+July 1981. 20. J.H. Jackson. Dynamic Scan-converted Images with a Frame Buffer Display Device. Proceedings 
+of S1GGRAPH, page 163, 1980. 21. B.W. Jordan, Jr. and R.C. Barrett. A Cell Organized Raster Display 
+for Line Drawings. Comm. of the ACM, 17(2):676, Febraury 1974.  '89, Boston, 31 July-4 August, 1989 
+22. M. Kaplan and D. Greenberg. Parallel Processing techniques for Hidden Surface Removal. Proceedings 
+of SIGGRAPH, page 300, August 1979. 23. L. Kohn and S.W. Fu. A 1,000,000 Transistor Microprocessor. 
+ISSCC, pages 54-55, February 1989, 24. R. Matick, D.T. Ling, S. Gupta, and F.H. Dill. All Points Addressable 
+Raster Display Memory. IBM Journal of Res. and Dev., 28(4):379-382, July 1984. 25. W.M, Newmann and 
+R.F. Sproull. Principles of Interactive Computer Graphics. McGraw Hill, 1973. 26. H. Niimi, Y. Imai, 
+M. Murakami, S. Tomita, and H. Hagiwara. A Parallel Processor System for Three Dimensional Color Graphics. 
+Proceedings of SIGGRAPH, page 67, July 1984. 27. I. Page. Disarray: A 16 x 16 RasterOp processor. Eurographics 
+83, pages 367-377, Amsterdam: North Holland, 1983. 28. F.I. Parke. Simulation and Expected Performance 
+Analysis of Multiple Processor Z-Buffer Systems. Siggraph, pages 48-56, 1980.  29. R. Schumacker. A 
+New Visual System Architecture. Proc. of Second lnterservice / lndustry Training Equipment Conf., page 
+1, November 1982. 30. R.F. Sproull. Using Program Transformations to Derive Line-Drawing Algorithms. 
+A CM Trans-actions on Graphics, 1(4):259-273, 1982. 31. R.F. Sproull. Frame Buffer Display Architectures. 
+Annual Review of Computer Science, 1 : 19-46, Annual Reviews Inc., 1986.  32. R.F. Sproull, I.E. Sutherland, 
+A. Thompson, and S. Gupta. The 8 by 8 Display. ACM Transactions on Graphics, 2(1 ):32-56, January 1983. 
+ 33. I.E. Sutherland, R.F. Sproull, and R.A. Schumacker. A Characterization of Ten Hidden-Surface Algo-rithms. 
+Computing Surveys, 6(1): 1, March 1974. 34. R.W. Swanson and L.J. Thayer. A Fast Shaded-Polygon Renderer. 
+Proceedings of SIGGRAPH, pages 95-102, 1986. 35. C.P. Thacker, E.M. McCreight, B.W. Lampson, R.F. Sproull, 
+and D.R. Boggs. Alto: A Personal Com- puter". Computer Structures: Readings and Examples, McGraw Hill, 
+1981. 36. A.M. Walsby. Fast colour raster graphics using an array processor. Eurographics 80, pages 
+303-313, Amsterdam: North Holland, 1980. 37. G.S. Watkins. A Real Time Visible Surface Algo- rithm, 
+University of Utah, UTEC-CSC-70-101, June 1970. 38. R. Weinberg. Parallel Processing Image Synthesis 
+and Anti-Aliasing. Proceedings of SIGGRAPH, pages 147-154, July 1982. 39. M.C. Whitton. Memory Design 
+for Raster Graphics Displays. Computer Graphics and Applications, 4(3):48-65, March 1984. 40. Paul Winser. 
+3D Graphics for Consumer Applica- tions-How Realistic Does it Have to Be?. Eurographics, 1988.   
+			

@@ -13,7 +13,7 @@ typedef struct _CitationNode
 	char institution[150];
 	char volume[50];
 	char location[50];
-	char pages[50]; // TODO : may int pages[2];?
+	char pages[50];
 	char date[50];
 	char url[50];
 	char isbn[50];

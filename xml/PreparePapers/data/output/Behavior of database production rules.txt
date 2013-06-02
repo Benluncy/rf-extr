@@ -1,0 +1,517 @@
+
+ Behavior of Database Production Rules: Termination, Confluence, and Observable Determinism Alexander 
+Aiken Jennifer Widom Joseph M. Hellerstein IBM Almaden Research Center 650 Harry Road San Jose, CA 95120 
+{aiken, widom}Wlmaden.ibm.tom, joey@postgres.berkeley. edu Abstract. Static analysis methods are given 
+for determin­ing whether arbitrary sets of database production rules are (1) guaranteed to terminate; 
+(2) guaranteed to produce a unique final database state; (3) guaranteed to produce a unique stream of 
+observable actions. When the analysis de­termines that one of these properties is not guaranteed, it 
+isolates the rules responsible for the problem and determines criteria that, if satisfied, guarantee 
+the property. The anal­ysis methods are presented in the context of the Starburst Rule System; they will 
+form the basis of an interactive devel­opment environment for Starburst rule programmers. 1 Introduction 
+Production rules in database systems allow specification of data manipulation operations that are executed 
+auto­matically whenever certain events occur or conditions are met, e.g. [GJ91,Han89,MD89, SJGP90,WF90]. 
+Database production rules provide a general and powerful mecha­nism for integrity constraint enforcement, 
+derived data maintenance, triggers and alerters, authorization check­ing, and versioning, as well as 
+providing a platform for large and efficient knowledge-bases and expert systems. However, it can be very 
+difficult in general to predict how a set of database production rules will behave. Rule pro­cessing 
+occurs as a result of arbitrary database changes; certain rules are triggered initially, and their execution 
+can trigger additional rules or trigger the same rules ad­ditional times. The unstructured, unpredictable, 
+and often nondeterministic behavior of rule processing can be a nightmare for the database rule programmer. 
+A significant step in aiding the database rule program­mer is to provide information about the following 
+three properties of rule behavior: Termination: 1s rule processing guaranteed to termi­nate after any 
+set of changes to the database in any state? *Current address: CS Division, Department of EECS, university 
+of California, Berkeley, CA 94720 Permission to copy without fee all or part of this material is granted 
+provided that the copies are not made or distributed for direct commercial advantage, the ACM copyright 
+notice and the title of the publication and its date appear, and notice is given that copying is by permission 
+of the Association for Computing Machinery. To copy otherwise, or to republish, requires a fee and/or 
+spacific permission. 1992 ACM SIG MOD -6/92/CA, USA a 1992 ACM 0.89791 -522-4/92 /0005 /0059 . ..$1 .50 
+Confluence: Can the execution order of non-priori­tized rules make any difference in the final database 
+state? That is, if multiple rules are triggered at the same time during rule processing, can the final 
+database state at termination of rule processing de­pend on which is considered first? If not, the rule 
+set is confluent. Observable Determinism: If a rule action is visible to the environment (e.g., if it 
+performs data retrieval or a rollback statement), then we say it ia observable. Can the execution order 
+of non-prioritized rules make any difference in the order or appearance of observ­able actions? If not, 
+the rule set is observably deter­ministic. These properties can be very difficult or impossible to decide 
+in the general case. We have developed conserva­tive static analysis algorithms that: guarantee that 
+a set of rules will terminate or say that it may not terminate;  guarantee that a set of rules is confluent 
+or say that it may not be confluent;  guarantee that a set of rules is observably determinis­tic or 
+say that it may not be observably deterministic.  Furthermore, when the answer is may not for any of 
+these properties, the analysis algorithms isolate the rules responsible for the problem and determine 
+criteria that, if satisfied, guarantee the property. Hence the analysis can form the basis of an interactive 
+environment where the rule programmer invokes the analyzer to obtain infor­mation about rule behavior. 
+If termination, confluence, or observable determinism ia desired but not guaranteed, then the user may 
+verify that the necessary criteria are satisfied or may modify the rule set and try again. Our analysia 
+methods have been developed and are presented in the context of the Starburst Rule Sys­tem [WCL91], a 
+fully functional production rules fw cility integrated into the Starburst extensible relational DBMS 
+prototype at the IBM Almaden Research Center [HCL+90]. Although some aspects of the analysis are dependent 
+on Starburst rules, we have tried to remain as general as possible and our methods certainly can be adapted 
+to other database rule languages. 1.1 Related Work Most previous work in static analysis of production 
+rules [HH91,Ras90,ZH90] differs from ours in two ways. First, it considers simplified versions of the 
+OPS5 production rule language [BFKM85]. OPS5 haa a quite different model of rule processing than most 
+database production rule systems, including the St arburst Rule System. Sec­ond, the goal of previous 
+work is to impose restrictions and/or orderings on OPS5 rule sets such that unique fixed points are guaranteed. 
+Our goal, on the other hand, is to permit arbitrary rule sets and provide useful in­formation about their 
+behavior in the database setting. In Section 9 we make some additional, more technical, comparisons, 
+and explain how our analysis techniques subsume results in [HH91 ,Ras90,ZH90]. In [KU91], the issue of 
+rule set termination is dis­cussed, along with the issue of conflicting updates­determining when one 
+rule may undo changes made by a previous rule. Although models and a problem-solving architecture for 
+rule analysis are proposed, no algorithms are given. In [AS91], issues of termination and unique fixed 
+points are considered in the context of various extensions to Dat alog. In addition to the very differ­ent 
+semantics of Datalog (logic) and production rules, [AS91] does not address the issue of determining whether 
+a given rule set exhibits certain properties (as we do), but rather states results about whether all 
+rule sets in a given language are guaranteed to exhibit the properties. In [CW90] we presented initial 
+methods for analyzing termination in the context of deriving production rules for integrity constraint 
+maintenance; these methods form the basis of our approach to termination in this paper.  1.2 Outline 
+of Paper As an introduction to database production rule lan­guages and to establish a basis for our analysis 
+tech­niques, in Section 2 we give the syntax and semantics of Starburst production rules. In Section 
+3 we introduce initial notation and definitions, and we describe some straightforward preliminary y analysis 
+of rule sets. In Sec­tion 4 we present a model of rule processing to be used as the formal basis for 
+our analysis algorithms. Termi­nation analysis is covered in Section 5 and confluence in Section 6. In 
+Section 7 we give methods for analyz­ing partial confluence, which specifies that a rule set is confluent 
+with respect to a portion of the database. Ob­servable determinism is covered in Section 8. Finally, 
+in Section 9 we draw conclusions and discuss future work. 2 The Starburst 13.ule System We provide a 
+brief overview of the set-oriented, SQL­based Starburst production rule language. Further de­tails and 
+numerous examples appear in [WCL91,WF90]. Starburst production rules are based on the notion of transitions. 
+A transition is a database state change resulting from execution of a sequence of data manipu­lation 
+operations. Rules consider only the net effect of transitions, meaning that: (1) if a tuple is updated 
+sev­eral times, only the composite update is considered; (2) if a tuple is updated then deleted, only 
+the deletion is considered; (3) if a tuple is inserted then updated, this is considered as inserting 
+the updated tuple; (4) if a tuple is inserted then deleted, this is not considered at all. A formal theory 
+of transitions and their net effects appears in [WF90]. The syntax for defining a rule is: create rule 
+name on table when transition predicate [if condition ] then action [ precedes rule-list] [ follows rule-list] 
+ The transition predicate specifies one or more trigger­ing operations on the rule s table:inserted, 
+deleted, or updated(cl, . . . . en), where c1, . . . . cn are column names. The rule is triggered by 
+a given transition if at least one of the specified operations occurred in the net effect of the transition. 
+The optional condition spec­ifies an SQL predicate. The action specifies an arbitrary sequence of SQL 
+data manipulation operations to be exe­cuted when the rule is triggered and its condition is true. The 
+optional precedes and follows clauses are used to induce a partial ordering on the set of defined rules. 
+If a rule rl specifies a rule rz in its precedes list, or if rz specifies rl in its follows list, then 
+rl is higher than rz in the ordering. (We also say that rl has precedence or ptiorit y over r2.) When 
+no direct or transitive ordering is specified between two rules, their order is arbitrary. A rule s condition 
+and action may refer to the cur­rent state of the database through top-level or nested SQL select operations. 
+In addition, rule conditions and actions may refer to transition tables, which are logical tables reflecting 
+the changes to the rule s table that have occurred during the triggering transition. At the end of a 
+given transition, transition table inserted in a rule refers to those tuples of the rule s table that 
+were in­serted by the transition, transition table deleted refers to those tuples that were deleted, 
+and transition tables new-updated and old-updated refer to the new and old values (respectively) of the 
+updated tuples. A rule may refer only to transition tables corresponding to its triggering operations. 
+Rules are activated at rule assertion points. There is an assertion point at the end of each transaction, 
+and there may be additional user-specified assertion points within a transaction. We describe the semantics 
+of rule processing at an arbitrary assertion point. The state change resulting from the user-generated 
+database oper­ ations executed since the last sssertion point (or start of the transaction) creates the 
+first relevant transition, and some set of rules are triggered by this transition. A triggered rule r 
+is chosen from this set for consideration. Rule r must be chosen so that no other triggered rule haa 
+precedence over r. If r haa a condition, then it is checked. If r s condition is false, then another 
+triggered rule is chosen for consideration. Otherwise, if r has no condition or its condition is true, 
+then r s action is ex­ ecuted. After execution of r s action, all rules not yet considered are triggered 
+only if their transition predi­ cates hold with respect to the composite transition cre­ ated by the 
+initial transition and subsequent execution of r s action. That is, these rules see r s action as if 
+it were executed as part of the initial transition. Rules al­ ready considered (including) have already 
+processed theinitial transition; thus, they aretriggered again only if their transition predicate holds 
+with respect to the transition created by r s action. From the new set of triggered rules, a rule r is 
+chosen for consideration such that no other triggered rule has precedence over r . Rule processing continues 
+in this fashion. At an arbitrary time in rule processing, a given rule is triggered if its transition 
+predicate holds with respect to the (composite) transition since the last time it was considered. If 
+it has not yet been considered, it is trig­gered if its transition predicate holds with respect to the 
+transition since the last rule assertion point or start of the transaction. The values of transition 
+tables in rule conditions and actions always reflect the rule s trigger­ing transition. Rule processing 
+terminates when there are no triggered rules. The analysis techniques we present are based on this language 
+and rule processing semantics, but with modifi­cations they also could apply to other similar languages; 
+see Section 9. 3 Definitions and Preliminary Analysis Let R={rl, r2, ..., rn } denote an arbitrary set 
+of Star­burst production rules to be analyzed. Analysis is per­formed on a fixed set of rules when the 
+rule set is changed, analysis must be repeated. (Incremental meth­ods are certainly possible; see Section 
+9.) Let P denote the set of user-defined priority orderings on rules in R (as specified by their precedes 
+and follows clauses), includ­ing those implied by transitivity y. P = {ri > ? j, Tk > rl, . . .}, where 
+ri > rj denotes that rule ri has prece­dence over rj. Let T = {tl, t2, . . . . tm} denote the tables 
+in the database schema, and let C = {ti. Cj, tk.c~, . . .} denote the columns of tables in T. Finally, 
+let O denote the set of database modification operations: 0 = {(I, i)lt GT}u{(D, t)lt GT}u {(u, t.c) 
+\ t.c E c} (I, t)denotes insertions into tablet, (D, t)denotes dele­tions from table t, and (U, -t.c) 
+denotes updates to col­umn c of table t. The following definitions are computed using straight­forward 
+preliminary analysis of the rules in R: Triggered-By takes a rule r and produces the set of operations 
+in O that trigger r. Triggered-By is trivial to compute based on rule syntax.  Performs takes a rule 
+r and produces the set of op­erations in O that may be performed by r s action. Performs is trivial to 
+compute based on rule syntax.  Triggers takes a rule r and produces all rules r that can become triggered 
+as a result of r s ac­tion (possibly including r itself). Triggers(r) = {r G R I Performs(r) n Triggered-By(r 
+) # 0}.  Reads takes a rule r and produces all columns in C that may be read by r in its condition or 
+action.  Reads(r) contains every t.creferenced in a select or where clause in r~s condition or action. 
+In addi­tion, for every (tram) .C referenced, where (trams) is one of inserted, deleted, new-updated, 
+or old­updated, t .c is in Reads(r) for r s triggering table t. (Recall from Section 2 that inserted, 
+deleted, new-updated, and old-updated are transition t a­bles based on changes to t.)1 Can-Untrigger 
+takes a set of operations O ~ O and produces all rules that can be untriggered as a result of operations 
+in O . A rule is untriggered if it is triggered at some point during rule processing but not chosen for 
+consideration, then subsequently no longer triggered because all triggering changes were undone by other 
+rules.z Can-lJntrigger(O ) = {r cRI(D,t)EO and(I,t) or(U,t,c)cTrig­gered-lly(r) for some tG T, t.c c 
+C}. Choose takes a set of triggered rules R ~ R and produces a subset of R indicating those rules eligible 
+for consideration (based on priorities). Choose(R ) = {ri / ri c R and there is no rj E R such that I 
+j > ? i CP}. Observable takes a rule r and indicates whether r s action may be observable. In St arburst, 
+a rule s ac­tion may be observable iff it includes a selector roll­back statement. Execution Model We 
+now define a formal model of execution-time rule processing. The model is based on execution graphs and 
+accurately captures the semantics of rule processing de­scribed in Section 2. Note that execution graphs 
+are used to discuss and to prove the correctness of our analysis techniques, but they are not part of 
+the analysis itself. A directed execution graph has a distinguished ini­tial state representing the start 
+of rule processing (at any rule assertion point) and zero or more final states representing termination 
+of rule processing. The paths in the graph represent all possible execution sequences during rule processing; 
+branches in the graph result from choosing different rules to consider when more than one is eligible. 
+(Hence any graph for a totally ordered rule set has no branches.) The graph may have infinitely long 
+paths, possibly due to cycles, and these represent nontermination of rule processing. More formally, 
+a state (node) Sin an execution graph has two components: (1) a database state D; (2) a set TR containing 
+each triggered rule and its associated transition tables. We denote this state as S = (D, T R). The initial 
+state I is created by an initial transition, which results from a sequence of user-generated database 
+operations. Hence, I = (Dz, TR1) where DI k a data­ 1Note that, unlike in 0PS5, there is no distinction 
+be­tween reading values positively and negatively in thw rule language. 2As an example, a rule rl might 
+be triggered by insertions, but another rule TZ might delete M inserted tuples before rl is chosen for 
+consideration. Unt riggering is rare in practice. base state and there is some (possibly empty) set of 
+op­erations 0 &#38; O such that: TR1 = {r c R I O n Triggered-l?y(? ) # !?J} 0 are the operations producing 
+the initial transition, and TRI contains the rules triggered by those opera­tions. A final state 1? is 
+some (DF, 0), since no rules are triggered when rule processing terminates. Each directed edge in an 
+execution graph is labeled with a rule r and represents the consideration of r during rule processing. 
+(This includes determining whether r s condition is true and, if so, executing r s action.) Using definitions 
+from Section 3, the following lemma states certain properties that hold for all execution graphs. The 
+lemma is stated without proof it follows directly from the semantics of rule processing described in 
+Section 2. Lemma 4.1 (Properties of Execution Graphs) Consider any execution graph edge from a state 
+(ill, TR1 ) to a state (D2, TR2) labeled with a rule r. Then: r c Choose( TR1)  There is some (possibly 
+empty) set of operations O ~ Performs(r) such that the triggered rules in TRz can be derived from the 
+triggered rules in TR1 by: 1. removing rule r 2. removing some subset of the rules in Can-Untragger(O 
+)  3. adding all rules r c R such that O n Trzggered-l?y(r ) # 0 0   The operations in O are those 
+executed by r s action. If r s condition is false then 0 is empty. If r s condition is true then O still 
+maybe a proper subset of Performs(r) since, by the semantics of SQL, for most operations there are certain 
+database states on which they have no effect. Finally, note that although rule r is removed in step 1, 
+r may be added again in step 3 if O (l Triggered-By(r) # 0. The properties in Lemma 4.1 are guaranteed 
+for all execution graphs. By performing more complex analysis on rule conditions and actions, by incorporating 
+proper­ties of database states, and by considering a variety of special cases, we probably can identify 
+additional prop­erties of execution graphs. Since our analysis techniques are based on execution graph 
+properties, more accu­rate properties may result in more accurate rule anal­ysis. We believe that the 
+properties used here, although somewhat conservative, are sufficiently accurate to yield strong analysis 
+techniques. 5 Termination We want to determine whether the rules in R are guar­ anteed to terminate. 
+That is, we want to determine if for all user-generated operations and initial database states, rule 
+processing always reaches a point at which there are no triggered rules to consider. We take as an assump­ 
+tion that individual rule actions terminate. Hence, in terms of execution graphs, the rules in R are 
+guaranteed to terminate iff all paths in every execution graph for R are finite. As suggested in [CW90], 
+termination is analyzed by constructing a directed h-zggerzng graph for the rules in R, denoted TGR. 
+The nodes in TGR represent the rules in R and the edges represent the Triggers relationship. That is, 
+there is an edge from ri to rj in TGB W rj E Triggem(r~). Theorem 5.1 (Termination) If there are no cycles 
+in TGR then the rules in R are guaranteed to terminate. Proof Omitted due to space constraints; see [AWH92]. 
+Hence, to determine whether the rules in R are guaranteed to terminate, triggering graph TGR k con­structed 
+and checked for cycles. Although this may ap­pear to be a very conservative approach, by considering 
+only the known properties of our execution graph model (Lemma 4.1), we see that whenever there is a cycle 
+in the triggering graph, our analysis cannot rule out the possi­bility that there is an execution graph 
+with an infinite path. Clearly, however, there are a number of special csses in which there is a cycle 
+in the triggering graph but other properties (not captured in Lemma 4. 1) guar­antee termination. Examples 
+are: The action of some rule r on the cycle only deletes from a tablet, and no other rules on the cycle 
+insert into t.Eventually r s action has no effect.  The action of some rule r on the cycle only performs 
+a monotonic update (e.g. increments values), guar­anteeing that the condition of some rule r) on the 
+cycle eventually becomes false (e.g. some value is less than 10).  Although some such cases may be detected 
+automati­cally, for now we assume that they are discovered by the user through the interactive analysis 
+process: Once the analyzer has built the triggering graph for the rules in R, the user is notified of 
+all cycles (or strong components). If the user is able to verify that, on each cycle, there is some rule 
+r such that repeated consideration of the rules on the cycle guarantee that r s condition eventually 
+be­comes false or r s action eventually haa no effect, then the rules in R are guaranteed to terminate. 
+As part of a case study, we used this approach to es­tablish termination for a set of rules in a power 
+network design application [CW90]. 6 Confluence Next we want to determine whether the rules in R are 
+confluent. That is, we want to determine if the final database state at termination of rule processing 
+can de­ pend on which rule is chosen for consideration when mul­ tiple non-prioritized rules are triggered. 
+In terms of ex­ ecution graphs, the rules in R are confluent if every ex­ ecution graph for R haa at 
+most one final state. (Recall that all final states in an execution graph have an empty set of triggered 
+rules, so two different final states cannot represent the same database state.) Confluence for production 
+rules is a particularly diffi­ cult problem because, in addition to the standard prob­ lems associated 
+with confluence [Hue80], we must take into account the interactions between rule triggering and rule 
+priorities. For example, it is not sufficient to simply consider the combined effects of two rule actions; 
+it also A 1. ri inserts into a tablet and rj deletes from t,but the s tuples inserted by ri never satisfy 
+the delete condition r~ Tj OfTj, or Figure 1: Commutative rules is necessary to consider all rules that 
+can become trig­gered, directly or indirectly, by those actions, and the relative ordering of these triggered 
+rules. These issues are discussed as we develop our requirements for conflu­ence in Section 6.3. As preliminaries, 
+we first introduce the notion of rule cornrnutatavity, and we make a useful observation about execution 
+graphs. 6.1 Rule Commutativit y We say that two rules ri and rj are commutative (or ri and rj commute) 
+if, given any state S in any execution graph, considering rule ri and then rule rj from state S produces 
+the same execution graph state S as consider­ing rule rj and then rule r~; this is depicted in Figure 
+1. If this equivalence does not always hold, then ri and rj are noncommutatzve (or ri and rj do not commute). 
+Each rule clearly commutes with itself. Based on the definitions of Section 3, we give a set of conditions 
+for analyzing whether pairs of distinct rules commute. Lemma 6.1 For distinct rules ri and rj, if any 
+of the following conditions hold then ri and rj maybe noncom­mutative; otherwise they are commutative: 
+1. rj E Triggers, i.e. ri can cause rj to become trig­gered 2. ? j E Can-Untrigger(Per~orms( ri)), i.e. 
+rj can untrig­ger Tj  3. (I, t), (D, t),or (U, t.c)is in Per~orms(ri) and t.c k in Reads(rj ) for some 
+t .c E C, i.e. ri s operations can affect what rj reads 4. (I, t) is in Performs and (D, t) or (U, t.c) 
+is in  Performs for some tE T or t.c E C, Le. ri s insertions can affect what rj updates or deletes3 
+ 5. (U, t.c) is in both Performs and Performs, i.e. ri s updates can affect rj S updates  6. any of 
+1 5 with ri and rj reversed 0 We leave it to the reader to verify that if a pair of rules does not satisfy 
+any of 1-6 then the rules are guaranteed to commute. The conditions in Lemma 6.1 are somewhat conserva­tive 
+and probably could be refined by performing more complex analysis on rule conditions and actions and 
+by  considering a variety of special caaes. As two examples of this, consider rules ri and rj such that: 
+31n SQL it is possible to delete from or update a table without reading the table, which is why cases 
+4 and 5 are d~tinct from case 3. 2. ri and rj update the same table but never the same tuples. In the 
+first example, ri and rj are noncommutative ac­cording to condition 4 of Lemma 6.1, but they do ac­tually 
+commute. In the second example, ri and rj are noncommutative according to condition 5 but do com­mute. 
+Although some such cases may be detected au­tomatically, for now we assume that they are specified by 
+the user during the interactive analysis process: We allow the user to declare that pairs of rules that 
+ap­pear noncommutative according to Lemma 6.1 actually do commute, The analysis algorithms then treat 
+these rules as commutative.  6.2 Observation We say that two rules ri and rj are unordered if neither 
+ri > Tj nor ? j > Ti is in P. (Similarly, we say two rules ri and rj are ordered if ri > rj or rj > ri 
+is in P.) Based on our execution graph model, we make the following observation about possible states, 
+which is used in the next section to develop our criteria for confluence. Observation 6.2 Consider any 
+two unordered rules ri and rj in R. It is very likely that there is an execu­tion graph with a state 
+that has (at least) two outgoing edges, one labeled r~ and one labeled rj. (Informally, there is very 
+likely a scenario in which both ri and rj are triggered and eligible for consideration. Recall that a 
+triggered rule r is eligible for consideration iff there is no other triggered rule with precedence over 
+r.) Justification: Let O = Tkiggered-By(ri) U Triggered­l?~(rj ). Consider an execution graph for which 
+the op­erations in 01 are the initial user-generated operations, so that ri and rj are both triggered 
+in the initial state. Consider any path of length O or more from the initial state to a state S = (D, 
+TR) in which there are no rules rcTRsuchthat r>riorr>rjisinl ,i.e.thereare no triggered rules with precedence 
+over ri or rj. 4 State S has at least two outgoing edges, one labeled ri and one labeled rj. D 6.3 Analyzing 
+Confluence We now return to the question of confluence. We want to determine if every execution graph 
+for R is guaranteed to have at most one final state. For two execution graph states Si and S j, let fli 
++ Sj denote that there is an edge in the execution graph from state Si to state S j and let Si $ Sj denote 
+that there is a path of length O or more from Si to Sj. (~ is the reflexive-transitive closure of +.) 
+Our first Lemma establishes conditions for confluence based on ~: 4Such a path does not exist if r; or 
+r, is untriggered along all potential paths, or if rules with precedence over r, or rj are considered 
+indefinitely along all potential paths. These are Klghly unlikely (and probably undesirable) circumst 
+antes, but are why this is an observation rather than a theorem. ** ss( 3nn Q Q ri Vj **  S.j Sjb% 
+Sj ** s s (a) Based on paths (b) Based on edges Figure 2: Conditions for confluence &#38;&#38; Lemma 
+6.3 (Path Confluence) Consider an arbi­ trary execution graph EG and suppose that for any three states 
+S, S i, and Sj in EG such that S ~ Si and S ~ Sj, there is a fourth state S such that S~ % S and Sj ~ 
+St (Figure 2a). Then EG has at most one final state.5 Proof Suppose, for the sake of a contradiction, 
+that EG has two distinct final states, F1 and F2. Let I be the ini­tial state, so I ~ F1 and I ~ F2. 
+Then, by assumption, there must be a fourth state S such that F1 z S and F2 $ S. Since FI and F2 are 
+both final states, S = F1 and S = Fz, contradicting F1 # Fz. 0 It is quite difficult in general to determine 
+when the sup­position of Lemma 6.3 holds, since it is based entirely on arbitrarily long paths. The following 
+Lemma gives a somewhat weaker condition that is easier to verify and implies the supposition of Lemma 
+6.3; it does, however, add the requirement that rule processing is guaranteed to terminate: Lemma 6.4 
+(Edge Confluence) Consider an arbi­trary execution graph EG with no infinite paths. Sup­pose that for 
+any three states S, Si, and Sj in EG such that S + Si and S ~ Sj, there is a fourth state S such that 
+Si % S and Sj ~ S (Figure 2b). Then for any three states S, Si, and Sj in EG such that S ~ Si and S $ 
+Sj, there is a fourth state St such that Si % S and Sj% S . Proof Classic result; see e.g. [Hue80]. We 
+use Lemma 6.4 as the bssis for our analysis tech­niques. Based on this Lemma (along with Lemma 6.3), 
+we can guarantee confluence for the rules in R if we know 1. there are no infinite paths in any execution 
+graph for R (i.e., the rules in R are guaranteed to terminate), and 2. in any execution graph for R, 
+for any three states S, Si, and Sj such that S + Si and S -+ Sj, there is a  fourth state S such that 
+Si -f+ S and Sj ~ S. We assume that the first condition has been established through the analysis techniques 
+of Section 5; we focus 5Sometimes the term confluence is used to denote the sup­position of this Lemma 
+[Hue80], which then implies conflu­ence in the sense that we ve defined it. Figure 3: Paths towards common 
+state S our attention on analysis techniques for establishing the second condition. Consider any execution 
+graph for R and any three states S, Si, and Sj such that S + S; and S -+ Sj. This configuration is produced 
+by every state S that has at least two unordered triggered rules that are eligible for consideration. 
+Let ri be the rule labeling edge S + Si and rj be the rule labeling edge S ~ Sj, as in Figure 2b. We 
+want to prove that there is a fourth state S such that Si ~ S and Sj ~ S . It is tempting to assume that 
+if ri and rj are commutative, then rj can be considered from state Si and ri from Sj, producing a common 
+state S as in Figure 1. Unfortunately, this is not always possible: If ri causes a rule r with precedence 
+over rj to become triggered, then rj is not eligible for consideration in state Si (similarly for ri 
+in state Sj ). Since the new triggered rule r must be considered before rule rj, r mud commute with rj. 
+Furthermore, r may cause additional rules with precedence over rj to become triggered. With this in mind, 
+we motivate the requirements for the existence of a common state S that is reachable from both Si and 
+Sj. We do this by attempting to build valid paths from Si and Sj towards S ; call these paths PI and 
+PZ, respectively. From state Si, triggered rules with prec,e&#38;nCerj are considered until rj is eligible; 
+call over these rules RI. Similarly, from Sj triggered rules with precedence over ri are considered until 
+ri is eligible; call these rules R2. After this, rj can be considered on path pl and ri can be considered 
+on path pz. Paths pl and PZ up to this point are depicted in Figure 3. Now suppose that from state S: 
+we can continue path pl by considering the rules in R2 (in the same order), i.e. suppose the rules in 
+R2 are appropriately triggered and eligible. Similarly, suppose that from S; we can consider the rules 
+in RI. Then the same rules are considered along both paths. Consequently, if each rule in {ri} U RI commutes 
+with each rule in {rj } U R2, then the two paths are equivalent and reach a common state S ; this is 
+depicted in Figure 4. Unfortunately, even this scenario is not necessarily valid: There is no guarantee 
+that the rules in Rz are trig­gered and eligible from state Sj; similarly for RI and S;. A Lemma 6.6 
+(Confluence Lemma) Suppose the s Confluence Requirement (Definition 6.5) holds for R. l j Tj Then in 
+any execution graph EG for R, for any three states S, Si, and Sj in EG such that S ~ Si and S * Sj, Sj 
+* R2 ri ! Figure 4: Paths reaching common state S (For example, a rule in R2 may not be eligible from 
+state S: because rj triggered a rule with higher priority.) We can guarantee this, however, if we extend 
+the rules orig­inally considered in RI to include all eligible rules with precedence over rules in R2, 
+and extend the rules in R2 similarly. Using this mutually recursive definition of RI and R2, the pairwise 
+commutativity of rules in {r~ } U RI with rules in {rj } U R2 guarantees the existence of state S , and 
+consequently guarantees confluence. To establish confluence for the rules in R. then. we must consider 
+in this fsshion every pair of rules ri and rj such that some state in some execution graph for R may 
+have two outgoing edges, one labeled with ri and one with rj. Recall Observation 6.2: For any two un­ordered 
+rules ri and rj, it is very likely that there is an execution graph with a state that has two outgoing 
+edges, one labeled ri and one labeled rj. Consequently, we consider every pair of unordered rules, and 
+our anal­ysis requirement for confluence is stated as follows. Definition 6.5 (Confluence Requirement) 
+Con­sider any pair of unordered rules ri and rj in R. Let RI $ R and R2 ~ R be constructed by the following 
+algorlthm: RI + {ri} R2 +--{rj} repeat until unchanged: R1 + RI U{r c R /r E !l riggers(rl) for some 
+rl c RI and r> r2cPforsomer2GR2 andr#rj} RZ + Rz U{r GR Ir c Triggers for some r2 E R2 andr>rl ePforsomerl 
+ER1 and r# ri} For every pair of rules T-l c Itl and rz ~ Rz, rl and rz must commute. U The following 
+lemma and theorem formally prove that the requirement of Definition 6.5 indeed guarantees con­fluence. 
+there is a fourth state S such that Si % S and Sj &#38; S. Proof: Omitted due to space constraints; see 
+[AWH92]. (The formal proof parallels the motivation shown in Fig­ ure 4, although the full construction 
+is slightly more com­ plex.) Theorem 6.7 (Confluence Theorem) Suppose the Confluence Requirement holds 
+for R and there are no infinite paths in any execution graph for R. Then any execution graph for R has 
+exactly one final state, i.e. the rules in R are confluent. Proofi Let EG be any execution graph for 
+R. By Con­fluence Lemma 6.6, for any three states S, Si, and Sj in EG such that S + Si and S + Sj, there 
+is a fourth state S such that Si $ S and Sj % S . Therefore, by Edge Confluence Lemma 6.4, for any three 
+states S, Si, and Sj in EG such that S% Si and S% Si, there isa fourth state S such that Sa ~ S and Sj 
+$ S . By Path Confluence Lemma 6.3, EG has at most one final state, hence (since there are no infinite 
+paths) EG has exactly one final state. D Thus, analyzing whether the rules in R are confluent re­quires 
+considering each pair of unordered rules ri and rj in R: Sets R1 and R2 are built from ri and Tj according 
+to Definition 6.5, and the rules in R1 and R2 are checked pairwise for commutativity. 6.4 Using Confluence 
+Analysis If our analysis determines that the rules in R are not confluent, it can be attributed to pairs 
+of unordered rules ri and rj that generate sets R1 and R2 such that rules rl 6 RI and r2 E R2 do not 
+commute. (In the most common case, rl and rz are ri and rj themselves; see Corollary 6.8 below.) With 
+this information, it appears that the user has three possible courses of action towards confluence (short 
+of modifying the rules themselves): 1. Certify that rules rl and r2 actually do commute 2. Specify a 
+user-defined priority between rules ri and rj so they no longer must satisfy the Confluence Re­quirement 
+ 3, Remove user-defined priorities so rDl or rz is no longer part of RI or R2 Approach 1 is clearly 
+the best when it is valid. Approach 3 is non-intuitive and in fact useless: removing orderings to eliminate 
+rl or r2 from RI or R2 simply produces a corresponding violation to the Confluence Requirement elsewhere. 
+Hence, if Approach 1 is not applicable (i.e. rules rl and r2 do not commute) then Approach 2 should be 
+used. Note, however, that adding an ordering be­tween rules ri and rj does not immediately guarantee 
+confluence-sets R1 or R2 may increase for other pairs of rules and indicate that the rule set is still 
+not confluent.6 GIntuitively, a source of non-confluence can appear to move around , requiring an iterative 
+process of adding or­ As guidelines for developing confluent rule sets, the following corollaries indicate 
+simple properties that are satisfied by the rules in R if they are found to be conflu­ent using our methods. 
+Corollary 6.8 If R k found to be confluent and ri and rj are unordered rules in R, then ri and rj commute. 
+proof Unordered rules ri and rj generate sets RI and R2 such that ri c RI and rj E R2. Hence, by the 
+Con­fluence Requirement, ri and rj must commute. 0 Corollary 6.9 If R k found to be confluent and P = 
+@ (i.e. there are no user-defined priorities between any rules in R), then every pair of rules in R commutes. 
+Proof: Follows directly from Corollary 6.8. 0 Corollary 6.10 If R k found to be confluent and ri and 
+rj in R are such that ri may trigger rj (or vice-versa), then ri and rj are ordered. Proof Since rj c 
+Trzggers(ri ), by our conditions for noncommutativity (Lemma 6.1), ri and rj do not com­ mute. Suppose, 
+for the sake of a contradiction, that r~ and rj are unordered. Then by Corollary 6.8 they must commute. 
+0 Additional similar corollaries certainly exist and provide useful initial tools for the rule programmer. 
+We used our approach (by hand) to analyze confluence for several medium-sized rule applications. In most 
+cases the rule sets were initially found to be non-confluent. However, for those rule sets that actually 
+were conflu­ent, user specification of rule commut ativit y eventually allowed confluence to be verified. 
+Furthermore, for some rule sets the analysis uncovered previously undetected sources of non-confluence. 
+ Partial Confluence Confluence may be too strong a requirement for some ap­plications. It sometimes 
+is useful to allow rule set R to be non-confluent for certain unimportant (e.g. scratch) tables in the 
+database, but to ensure that R k confluent for other important (e.g. data) tables. We call this par­tial 
+confluence, or confluence with respect to T , where T is a subset of the set of tables T in the database 
+schema. In terms of execution graphs, the rules in R are confluent with respect to T! if, given any execution 
+graph EG for R and any two final states F1 = (DI, O) and Fz = (Dz, 0) in EG, the tables in T! are identical 
+in database states D1 and D2. (Partial confluence obviously is implied by confluence, since confluence 
+guarantees at most one final state.) Partial confluence is analyzed by analyzing confluence for a subset 
+of the rules in R: those rules that can directly or indirectly affect the final value of tables in T 
+. derings (or certifying commutativity) until the rule set is made confluent. This happens because our 
+analysis tech­niques simply detect that confluence requires two rules to be ordered the user chooses 
+an ordering, and this choice affects which additional rules must be ordered. Definition 7.1 (Significant 
+Rules) Let T ~ T be a set of tables. The set of rules that are significant with respect to T , denoted 
+S2g(T ), is computed by the fol­lowing algorithm: Sig(T ) + {r ~ R I (1,-t), (D, t), or (U, -t.c) is 
+in Performs(r) for some tE T } repeat until unchanged: Sig(T ) +Sig(T ) U {r E R I there is an r E Sig(T 
+) such that r and r do not commute} D That is, Sig(T ) contains all rules that modify any table in T 
+, along with (recursively) all rules that do not com­mute with rules in Sig(T ). This algorithm determines 
+whether rules commute using our conservative conditions for noncommutativity from Lemma 6.1. Hence, the 
+user can influence the computation of Sig(T ) by specifying that pairs of rules that appear noncommutative 
+accord­ing to Lemma 6.1 actually do commute. As in Confluence Theorem 6.7, partial confluence re­quires 
+that rules are guaranteed to terminate. In this case, however, the rule set under consideration is Sig(T 
+). Thus, before analyzing partial confluence, termination of the rules in Szg(T ) must be established 
+using the tech­niques of Section 5.7 Theorem 7.2 (Partial Confluence) Let T ~ T be a set of tables. Suppose 
+the Confluence Requirement (Definition 6.5) holds for the rules in Szg(T ) and there are no infinite 
+paths in any execution graph for Sig(T ). Then given any two final states F1 and F2 in any execu­tion 
+graph for R, the tables in T{ are identical in F1 and F2, i.e. the rules in R are confluent with respect 
+to T . Proofi Omitted due to space constraints; see [AWH92]. Hence, analyzing whether the rules in R 
+are conflu­ent with respect to T requires first computing Sig(T ), then considering each pair of unordered 
+rules ri and rj in Sig(T ): Sets RI and R2 are built according to Def­inition 6.5 and checked pairwise 
+for commutativit y. If the analysis determines that the rules in R are not par­tially confluent, then 
+the same interactive approach as that described in Section 6.4 for confluence can be used here to establish 
+partial confluence. 8 Observable Determinism In some database production rule languages, such as Starburst, 
+the final database state may not be the only effect of rule processing-some rule actions may be visi­ble 
+to the environment (observable) while rules are being processed. When this is the case, the user may 
+want to determine whether a rule set is observably deterministic, i.e. whether the order and appearance 
+of observable rule actions is the same regardless of which rule is chosen for consideration when multiple 
+non-prioritized rules are 7That is, even t bough the rules in Sig(T ) are never pro­cessed on their own, 
+it must be established that if they were processed on their own they would terminate. As in Sec­tion 
+6.3, this is necessary for Definition 6.5 to guarantee confluence. triggered. Note that observable determinism 
+and conflu­ence are orthogonal properties: a rule set may be con­fluent but not observably deterministic 
+or vice-versa. We analyze observable determinism using our tech­niques for partial confluence. Intuitively, 
+we add a fic­tional table Obs to the database, and we pretend that those rules with observable actions 
+also timestamp and log their observable actions in table Ohs. We analyze the resulting rule set for confluence 
+with respect to ta­ble Ohs; if partial confluence holds, then the rule set is observably deterministic. 
+More formally, recall the definitions of Section 3. Let = T U { Ohs} be an extended set of tables, let 
+ohs Cobs = C U { Obs.c} be an extended set of columns, and let Oobs be the corresponding extended set 
+of operations. Let Readsobs and p13TfOrIlMobs extend the definitions of Reads and Performs as follows. 
+For every r G R such that Observable(r), add Obs.c to Reads(r) and (I, Ohs) to Performs(r). For convenience, 
+we say that a rule r is observable if Observable(r). Theorem 8.1 (Observable Determinism) sup­pose, using 
+extended definitions Tobs, Cqbs, Oob , Readsobs, and peTf077TMo$s, that our analysls metho i s for partial 
+confluence determine that rule set R is con­fluent with respect to Ohs. That is, suppose (from The­orem 
+7.2) that the Confluence Requirement of Defini­tion 6.5 holds for the rules in Sig( Ohs) and there are 
+no infinite paths in any execution graph for R. Then the rules in R are observably deterministic. Proof 
+By supposition, any hypothetical behavior of the rules in R that is consistent with the definitions of 
+Reads. s and pHfOTmSobs k confluent with respect to Ohs. A onsider the following such behavior. Suppose 
+each observable rule r, in addition to its existing actions, inserts a new tuple into Obs that contains 
+the current number of tuples in Obs (the timestamp ) and a com­plete description of r s observable actions 
+(the log ). Since there is a unique final value for Ohs, the hypo­thetical tuples written to Obs must 
+be identical on all execution paths. Consequent Iy, there is only one possi­ble order and appearance 
+of observable actions, and the rules in R are observably deterministic. 0 If, using the analysis methods 
+indicated by this theo­rem, the rules in R are not found to be observably de­terministic, then the same 
+interactive approach as that described in Section 6.4 can be used to establish conflu­ence with respect 
+to Ohs, and consequently observable determinism. Although this requires the user to be aware of fictional 
+table Ohs, the use of Obs in the analysis tech­niques is quite intuitive and may actually guide the user 
+in establishing observable determinism. The following corollary gives a simple property that is satisfied 
+by the observable rules in R if they are found to be deterministic using our methods. Additional useful 
+corollaries certainly exist. Corollary 8.2 If R is found to be observably determin­istic and ri and rj 
+are distinct observable rules in R, then r~ and rj are ordered.8 8Note that this is not an if and only 
+if condition: order- Proof Since ri is observable, Obs.c c Reads(ri) and (I, Ohs) G Performs; similarly 
+for rj. Therefore, by Definition 7.1, ri and rj are both in Sig( Ohs). In ad­dition, by Lemma 6.1, r~ 
+and rj satisfy our conditions for noncommutativity. Suppose, for the sake of a con­tradiction, that r~ 
+and rj are unordered. Then ri and rj generate sets RI and Rz (from Definition 6.5) such that ri E RI 
+and rj E R2. Hence, by the Confluence Requirement, r~ and rj must commute. U 9 Conclusions and Future 
+Work We have given static analysis methods that determine whether arbitrary sets of database production 
+rules are guaranteed to terminate, are confluent, are partially con­fluent with respect to a set of tables, 
+or are observably deterministic. Our algorithms are conservative-they may not always detect when a rule 
+set satisfies these properties. However, they isolate the responsible rules when a property is not satisfied, 
+and they determine simple criteria that, if satisfied, guarantee the property. Furthermore, for the cases 
+when these criteria are not satisfied, our methods often can suggest modifications to the rule set that 
+are likely to make the property hold. Consequently, our methods can form the basis of a pow­erful interactive 
+development environment for database rule programmers. Although our methods have been designed for the 
+Starburst Rule System, we expect that they can be adapted to accommodate the syntax and semantics of 
+other database rule languages. In particular, the fun­damental definitions of Section 3 ( Triggers, Performs, 
+Choose, etc.) can simply be redefined for an alterna­tive rule language. Alternative rule processing 
+semantics will probably require that the execution graph model is modified, which consequently will cause 
+algorithms (and proofs) to be modified. However, our fundamental building blocks of rule analysis techniques 
+can remain the same: the triggering graph for analyzing termina­tion, the Edge and Path Lemmas for analyzing 
+conflu­ence, the notion of partial confluence, and the use of partial confluence in analyzing observable 
+determinism. Some technical comparisons can be drawn between this work and the results in [HH91, Ras90, 
+ZH90]. In [HH91], a version of the 0PS5 production rule language is considered, and a class of rule sets 
+is identified that (conservatively) guarantees the unique fhed point prop­erty, which essentially corresponds 
+to our notion of con­fluence. By defining a mapping between our language and the language in [HH9 1], 
+we have shown that our con­fluence requirements properly subsume their fixed point requirements: if a 
+rule set has the unique fixed point property according to [HH91], then our methods deter­mine that the 
+corresponding rule set is confluent, but not always vice-versa. The methods in [HH91] have pre­viously 
+been shown to subsume those in [Ras90, ZH90], hence our approach, although still conservative, appears 
+quite accurate when compared with previous work. ings between all pairs of observable rules does not 
+necessarily guarantee observable determinism. Finally, we plan a number of improvements and ex­tensions 
+to this work: e Incremental methods: In our current approach, complete analysis is performed after any 
+change to the rule set. In many cases it is clear that most re­sults of previous analysis are still valid 
+and only in­crement al additional analysis needs to be performed. We plan to modify our methods to incorporate 
+incre­mental analysis. At the coarsest level, most rule ap­plications can be partitioned into groups 
+of rules such that, across partitions, rules reference different sets of tables and have no priority 
+ordering. Although rules from different partitions are processed at the same time and their execution 
+may be interleaved, they have no effect on each other. Hence, analysis can be applied separately to each 
+partition, and it needs to be repeated for a partition only when rules in that partition change. Less 
+conservative methods: As discussed throughout the paper, many of our assumptions, def­initions, and algorithms 
+are conservative, and there is room for refinement. This may include more com­plex analysis of SQL, more 
+accurate properties of our execution model, and a suite of special cases.  Restrict ed user operations: 
+Our analysis assumes that the user-generated operations that initiate rule processing are arbitrary. 
+However, in some cases it may be known that these will be of a particular type,  i.e. users will only 
+perform certain operations on cer­tain tables. This may reduce possible execution paths during rule processing, 
+and consequently may guar­antee properties that otherwise do not hold. We plan to extend our methods 
+so that termination, conflu­ence, and observable determinism can be analyzed in the context of limited 
+user-generated operations. Implementation and experimentation: We plan to ;mplement our algorith-ms as 
+part of an int&#38;ac­tive development environment for the Starburst Rule System. Although we have verified 
+by hand that our methods are indeed useful, implementation will al­low practical experimentation with 
+large and realistic rule applications. Acknowledgements Thanks to Stefano Ceri and Guy Lehman for helpful 
+comments on an initial draft. References [AS91] S. Abiteboul and E. Simon. Fundamental proper­ties of 
+deterministic and nondeterministic exten­sions of datalog. Theoretical Computer Science, 78:137-158, 
+1991. [AWH92] A. Aiken, J. Widom, and J.M. Hellerstein. Be­havior of database production rules: Termina­tion, 
+confluence, and observable determinism. IBM Research Report RJ 8562, IBM Almaden Research Center, San 
+Jose, California, January 1992. [BFKM85] L. Brownston, R. Farrell, E. Kant, and N. Martin. -------. programming 
+Expert Systems in UYS5: An intro­duction to Rule-Based Programming. Addison- Wesley, Reading, Massachusetts, 
+1985. [CW90] S. Ceri and J. Widom. Deriving production rules for constraint maintenance. In Proc. 16th 
+Int 1. Conf. on Very Large Data Base9, pages 566-577, Brisbane, Australia, August 1990. [GJ91] N. Gehani 
+and H.V. Jagadish. Ode as an ac­tive database: Constraints and triggers. In Proc. 17th Int 1. Conf. on 
+Very Large Data Bases, pages 327 336, Barcelona, Spain, September 1991. [Han89] E.N. Hanson. An initial 
+report on the design of Ariel: A DBMS with an integrated produc­tion rule system. SIGA40D Record, 18(3):12 
+19, September 1989. [HCL+90] L. Haaa, W. Chang, G.M. Lehman, et al. Star­burst mid-flight: As the dust 
+clears. IEEE Transactions on Knowledge and Data Engineer­ing, 2(1):143 160, March 1990. [HH91] J.M. Hellerstein 
+and M. Hsu. Determinism in partially ordered production systems. IBM Re­search Report RJ 8009, IBM Almaden 
+Research Center, San Jose, California, March 1991. [Hue80] G. Huet. Confluent reductions: Abstract prop­erties 
+and applications to term rewriting sys­tems. Journal of the A CM, 27(4):797 821, Oc­tober 1980. [KU91] 
+A. P. Karadimce and S.D. Urban. Diagnosing anomalous rule behavior in databases with in­tegrity maintenance 
+production rules. In %d Workshop on Foundations of Models and Lan­guages for Data and Objects, Aigen, 
+Austria, September 1991. [MD89] D .R. McCarthy and U. Dayal. The architecture of an active database management 
+system. In Proc. ACM SIGMOD Int 1. Conf. on Manage­ment of Data, pages 2 15 224, Portland, Oregon, May 
+1989. [Rss90] L. Raschid. Maintaining consistency in a strati­fied production system. In Proc. AAAI National 
+Conf. on Artificial Intelligence, 1990. [SJGP90] M. Stonebraker, A. Jhingran, J. Gob, and S. Po­t amianos. 
+On rules, procedures, caching and views in data base systems. In Proc. ACM SIG-MOD Int 1. Conf. on Management 
+of Data, pages 281-290, Atlantic City, New Jersey, May 1990. ~CL91] J. Widom, R. J. Cochrane, and B.G. 
+Lindsay. Implementing set-oriented production rules as an extension to Starburst. In &#38;oc. 17th Int 
+1. Conf. on Very Large Data Bases, pages 275-285, Barcelona, Spain, September 1991. [WF90] J. Widom 
+and S.J. Finkelstein. Set-oriented pro­duction rules in relational database systems. In Proc. ACM SIGMOD 
+Int 1. Conf. on Manage­ment of Data, pages 259 270, Atlantic City, New Jersey, May 1990. [ZH90] Y. Zhou 
+and M. Hsu. A theory for rule triggering systems. In Advances in Database 7 echnology EDB T 90, LNCS 
+~16, pages 407-421. Springer-Verlag, Berlin, March 1990.  
+			

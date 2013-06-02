@@ -1,0 +1,446 @@
+
+ Using Processor Affinity in Loop Scheduling on Shared-Memory Multiprocessors* Evangelos P. Markatos 
+Thomas J. LeB1anc markatosQcs.rochester. edu leblancQcs.rochester. edu Computer Science Department University 
+of Rochester Rochester, NY 14627 Abstract Loops are the single iargest source of parallelism in many 
+applications. Traditional approaches to loop scheduling attempt to minimize execution time by dis­tributing 
+the workload as evenly as posstble among the available processors, while minimizing the number of synchronization 
+operations required. In this paper we consider a third dimension to the problem of [oop scheduling on 
+shared-memory mu!ttprocessors: com­munication overhead caused by accesses to non-local data. We show 
+that traditional algorithms for loop scheduling, which ignore the location of data when assigning iterations 
+to processors, incur a significant performance penalty on modern shared-memory mul­tiprocessors. We propose 
+a new loop scheduling al­gortthm that attempts to simultaneously ba!ance the workload, minimize synchronization, 
+and co-locate loop iterations with the necessary data. We compare the performance of this new algorithm 
+to other known algorithms using four representative applications on a Silicon Graphics multiprocessor 
+workstation, a BBN Butterfly, and a Sequent Symmetry, and show that the new algorithm offers substantial 
+performance im­provements, up to a factor of 3 m some cases. We conclude that loop scheduling algorithms 
+for shared­ memory multiprocessors cannot a~ord to ignore the location of data, parttcuiarly tn light 
+of the increasing disparity between processor and memory speeds.  Introduction Loops are the largest 
+source of parallelism in most ap­plications. The problem of decomposing a loop into parallel tasks and 
+executing those tasks on a multi­processor involves finding the appropriate granular­ ity of parallelism, 
+so that the overhead of parallelism is kept small, while the workload is evenly balanced among the available 
+processors. The simple static scheduling algorithm divides the number of loop iterations among the available 
+pro­ This research was supported by the National Science Foun­dation under grants CDA-8822724 and CCR-9005633, 
+and the office of Naval Research under contract NOOO1 4-92-J-1801. cessors as evenly as possible, in 
+the hope that each processor receives about the same amount of work. This algorithm minimizes run-time 
+synchronization overhead, but does not balance the load dynamically. If all iterations do not take the 
+same amount of time, or if processors begin executing loop iterations at dif­ferent points in time, then 
+load imbalance may arise, which will cause some processors to be idle while oth­ers continue to execute 
+loop iterations. The simplest dynamic algorithm for scheduling loop iterations is called self-scheduling 
+[13]. In this algorithm, each processor repeatedly executes one it­eration of the loop until all iterations 
+are executed. The algorithm relies on a central work queue of iter­ations, where each idle processor 
+gets one iteration, executes it, and repeats the same cycle until there are no more iterations to execute. 
+Self-scheduling achieves almost perfect load balancing, since all pro­cessors finish within one iteration 
+of each other. Un­fortunately, this algorithm incurs tremendous syn­chronization overhead; each iteration 
+requires atomic access to the central work queue. Uniform-sized ch unkmg [5] reduces synchronization 
+overhead by having each processor take K iterations, instead of one. This algorithm amortizes the cost 
+of each synchronization operation over the execution time of K iterations, resulting in less synchronization 
+overhead. Guided Se/f-Scheduling [10] is a dynamic algorithm that changes the size of chunks at run-time, 
+allocat­ing large chunks of iterations at the beginning of a loop so as to reduce synchronization overhead, 
+while allocating small chunks towards the end of the loop to balance the workload. Under guided self-scheduling 
+each processor is allocated I/Pth of the remaining loop iterations, where P is the number of processors. 
+In some cases guided self-scheduling might assign too much work to the first few processors, so that 
+the remaining iterations are not sufficiently time­consuming to balance the workload. This situation 
+arises when the initial iterations of a loop are much more time-consuming than later iterations. The 
+fac­tortng algorithm [4] addresses this problem. Under factoring, allocation of loop iterations to processors 
+proceeds in phases. During each phase, only a sub­set of the remaining loop iterations (usually half) 
+is divided equally among the available processors. Be­ 1063-9535/92$3.00@ 1992IEEE cause factoring 
+allocates a subset of the remaining iterations in each phase, it balances load better than guided self-scheduling 
+when the computation times of loop iterations vary substantially. In addition, the synchronization overhead 
+of factoring is not signifi­ cantly larger than that of guided self-scheduling. Although guided self-scheduling 
+minimizes the number of synchronization operations needed to achieve perfect load balancing, the overhead 
+of syn­chronization can become significant in large-scale sys­tems with very expensive synchronization 
+primitives. Trapezoid se~-scheduling [14] tries to reduce the need for synchronization, while still maintaining 
+a reason­able balance in load. This algorithm allocates large chunks of iterations to the first few processors, 
+and successively smaller chunks to the last few proces­ sors. The first chunk is of size ~, and consecutive 
+chunks differ in size ~ iterations. The difference in the size of successive chunks is always a constant 
+in trapezoid self-scheduling, whereas it is a decreasing function both in guided self-scheduling and 
+in factor­ing. All of these loop scheduling algorithms attempt to balance the workload among the processors 
+without incurring substantial synchronization overhead. Each of the algorithms assumes that an individual 
+iteration takes the same amount of time to execute on every processor. This assumption is not valid however 
+on many shared-memory multiprocessors. The existence of memory that is not equidistant from all proces­sors 
+(such as local memory or a processor cache) im­plies that some processors are closer to the data re­quired 
+by an iteration than others. Loop iterations frequently have an affinity[11] for a particular proces­sor 
+ the one whose local memory or cache contains the required data. By exploiting processor affinity, we 
+can reduce the amount of communication required to execute a parallel loop, and thereby improve perfor­mance. 
+In this paper we describe a new loop scheduling algorithm called afinity scheduhng. This algorithm attempts 
+to balance the workload, minimize the num­ber of synchronization operations, and exploit proces­sor affinity. 
+Affinity scheduling uses a deterministic assignment policy to assign repeated executions of a loop iteration 
+to the same processor, thereby ensur­ing most data accesses will be to the local memory or cache. In 
+contrast to most known algorithms, affhity scheduling employs per-processor work queues, which minimize 
+the need for synchronization across proces­sors. As a result of the deterministic assignment pol­icy 
+and per-processor work queues, affinity scheduling introduces synchronization only when load imbalance 
+occurs. If the initial assignment of iterations to pro­cessors produces a balanced workload, all processors 
+will finish executing at about the same time with­out incurring any synchronization overhead. If load 
+imbalance occurs (i.e., a processor is idle while t,here are iterations to be executed), iterations migrate 
+from one processor to another. The next section provides the rationale for aflin­ity scheduling, and 
+describes the affinity scheduling algorithm. Section 3 presents an analytic evaluation of affinity scheduling 
+and a comparison with other known algorithms. Section 4 contains an experimen­tal comparison of the known 
+loop scheduling algo­rithms, based on five representative applications run­ning on a Silicon Graphics 
+multiprocessor worksta­tion, and additional experiments on the BBN But­terfly and Sequent Symmetry multiprocessors. 
+Fi­nally section 5 summarizes our results and presents our conclusions. 2 Affinity scheduling 2.1 Rationale 
+Our motivation for exploiting processor affinity in loop scheduling derives from the observation that, 
+for many parallel applications, the time spent bringing data into the local memory or cache is a significant 
+source of overhead, ranging between 30-60% of the to­tal execution time [6]. While data movement caused 
+by true sharing is unavoidable, it is possible to mini­mize data movement caused by a poor assignment 
+of iterations to processors. By scheduling a loop itera­tion on the processor whose local memory or cache 
+already contains the necessary data, we can signifi­cantly reduce the execution time of the iteration. 
+Afhity scheduling is based on the assumption that, in many cases, loop iterations do in fact have an 
+affin­ity for a particular processor. In order for this as­sumption to hold, it must be the case that: 
+(1) the same data is used over and over by an iteration, and 2) the data is not removed from the local 
+memory [ or cache) before it can be reused. Data reuse is common in many applications, partic­ularly 
+those that employ iterative algorithms wherein a parallel loop is nested within a sequential loop. In 
+such cases, each iteration of the parallel loop accesses the same data on successive iterations of the 
+enclos­ing sequential loop. During the first iteration of the sequential loop, each iteration of the 
+nested parallel loop loads the required data into the local memory or cache, where it may remain during 
+subsequent itera­tions of the enclosing sequential loop. Data reuse may also occur in prograrm produced 
+by a parallelizing compiler. Earlier work has suggested that nested loops be interchanged in such a way 
+as to reduce synchronization and communication over­head [3]. The resulting loop structure nests a parallel 
+loop within a sequential loop, again producing the desired form. If necessary, several parallel loops 
+can be coalesced into one [9]. Whether data resides in local storage long enough to be reused is a more 
+complicated question. If two applications share a single processor, then the data required by one application 
+may be forced out of lo­cal storage by the other application. We can min­imize this effect under time 
+sharing by increasing the quantum, so that the time required to reload the cache is small relative to 
+the quantum size. A better solution is to avoid time-sharing altogether, and employ space sharing instead, 
+wherein each ap­plication gets some number of processors for a rela­tively long period of time. Space 
+sharing not only avoids cache (and memory) interference between ap­plications, it also has other attractive 
+properties that result in improved performance over timesharing [1; 8]. Even if a set of processors are 
+dedicated to a sin­gle application, the data needed by one iteration of a loop may be evicted from local 
+storage to make room for the data needed by another iteration of the same loop. (We assume that the number 
+of iterations is much larger than the number of available proces­sors, and therefore each processor must 
+execute mul­tiple iterations.) Although eviction may have been a serious problem in the past, when local 
+caches (or memory) were quite small, it is less likely to occur in modern multiprocessors whose caches 
+or memories provide several megabytes of storage.  2.2 Affinity scheduling algorithm We consider the 
+loop scheduling problem to have three dimensions: load imbalance, synchronization overhead, and communication 
+overhead due to non­local memory accesses. Our algorithm for affinity scheduling builds on previous work 
+in loop schedul­ing, while also attempting to exploit processor affiu­ity. The main ideas underlying 
+our algorithm are: As with many known algorithms, we assign large chunks of iterations at the start 
+of loop execu­tion, so as to reduce the need for synchroniza­tion, and assign progressively smaller chunks 
+to balance the load. . We use a deterministic assignment policy to en­sure that an iteration is always 
+assigned to the same processor. After the first execution of the iteration, that processor will contain 
+the required data, so subsequent executions of the iteration will not need to load the data into local 
+storage. . We reassign a chunk to another processor (which also involves moving the required data) only 
+if necessary to balance the load. An idle processor removes chunks from another s queue, and exe­cutes 
+them indivisibly, so an iteration is never reassigned more than once. We will assume that the underlying 
+hardware or software implements a coherent memory, so that data is copied into local storage when first 
+accessed. This copy is implemented in hardware on machines with coherent caches, such as the Symmetry 
+and Sili­ con Graphics machine, and may be implemented in the operating system on machines lacking coherent 
+caches, like the Butterfly. Our affinity scheduling algorithm divides the iter­ ations of a loop into 
+chunks of size [lV/P], where N is the number of iterations in the loop, and P is the number of available 
+processors. The ith chunk of iterations is always placed on the local work queue of processor i. When 
+a processor is idle, it removes l/k of the iterations in its local work queue and ex­ecutes them. (The 
+constant k is a parameter of our algorithm. In most of our experiments we assume k equals P.) If a processor 
+s work queue is empty, it finds the most loaded processor, removes ~1/Pl of the iterations in that processor 
+s work queue, and ex­ecutes them. Synchronization is required to remove iterations from a work queue, 
+but not to check the load on a processor. Note that we distinguish between assigning a loop iteration 
+to a processor s work queue, and executing the iteration on that processor. Initially, loop iter­ations 
+are assigned to a processor s work queue in chunks of size l/P, so as to balance the load statically. 
+Processors execute l/k of the remaining iterations on their local work queue at a time, which corresponds 
+to at most N/kP iterations. Processors execute l/P of the remaining iterations from a remote work queue, 
+which corresponds to at most N/Pz iterations. Although we implemented this algorithm by hand for our 
+experiments, it could easily be employed by a parallelizing compiler. In our implementation for small-scale 
+multiproces­sors, an idle processor examines the work queues of all the other processors and removes 
+work from the queue with the most iterations. This implementation suffices on small-scale machines, but 
+would not be ef­ficient on a large-scale machine, where a scalable or randomized policy would be more 
+appropriate [2]. There are two important differences between affin­ity scheduling and previous dynamic 
+loop scheduling algorithms. First, the initial assignment of chunks to processors in affinity scheduling 
+is deterministic. That is, processor i is always assigned the i~h chunk of iterations to execute. For 
+many programs, this assignment ensures that repeated executions of the loop will access data that is 
+already stored in the local memory or cache. Second, affinity scheduling initially assumes that load 
+imbalance will not occur, and therefore assigns the same number of iterations to each processor s work 
+queue. Each processor gets iterations from its own local work queue; accesses to different work queues 
+can proceed in parallel, and each access is local, and therefore cheap. If load im­balance arises, the 
+algorithm migrates iterations from loaded processors to idle ones. Migrating iterations causes the associated 
+data to move twice; the data must first move to an idle processor to alleviate load imbalance, and then 
+move back to its original location to restore processor affinity. However, under affinity scheduling 
+this overhead is introduced only when load imbalance arises, whereas other algorithms incur this overhead 
+on every iteration. Despite these differences, we will show that affinity scheduling has all the advantages 
+of the best dynamic loop scheduling algorithms. That is, it balances the load dynamically, minimizes 
+synchronization, and is immune to the arrival and departure of processors in the system.   Analytic 
+evaluation Under affinity scheduling each iteration is initially as­signed to a processor based on affinity 
+considerations, and then reassigned to another processor if necessary to balance the load. Since an iteration 
+is reassigned at most once, the algorithm is stable under load imbal­ance conditions and avoids processor 
+thrashing [12], where processors spend more time executing migrated work than executing their own zwsigned 
+work. The fact that each iteration is reassigned to another processor at most once by affinity scheduling 
+does not imply that the number of synchronization operations associated with reassignment is linear in 
+the num­ber of iterations. Since iterations are assigned (and reassigned) to processors in chunks, synchronization 
+overhead is amortized over the number of iterations in a chunk. Theorem 3.1 places a bound on the syn­chronization 
+overhead induced by affinity scheduling. Theorem 3.1 A@nitg scheduling will incur at most O(k log(fi) 
++ P log(~)) synchronization operations on each work queue. Proof: See [7]. ~ By way of comparison, guided 
+self-scheduling induces O(P log(iV/P)) synchroniza­tion operations on the central work queue, factoring 
+induces O(P log(N)) operations, and trapezoid self­scheduling induces 4P operations. One common assumption 
+in loop scheduling is that all processors do not start executing loop iterations at the same time, as 
+there may have been delays due to previous load imbalance or synchronization oper­ations. Theorem 3.2 
+places a bound on the degree of imbalance that can result from using affinity schedul­ing under this 
+assumption. Theorem 3.2 Assume that all iterations of a loop take the same amount of time to complete, 
+and that not all processors start executing loop iterations at the same time. Under aflnity scheduling, 
+all processors will finish within ~ + 1 iterations of each other. P(P-l)k Proof: See [7]. a Both guided 
+self-scheduling and factoring can guar­antee that all processors finish within one iteration of each 
+other. Theorem 3.2 implies that if the constant k is equal to the number of processors P, then all pro­cessors 
+will finish within one iteration of each other under affinity scheduling as well. From these results, 
+we see that k plays an impor­tant role in the overhead of affinity scheduling. If k is a small constant, 
+then the number of synchronization operations per local work queue is small (proportional to log(fi )), 
+while the potential for load imbalance is high (proportional to $). Ask approaches P, affinity scheduling 
+approaches the same worst-case load im­balance as guided self-scheduling and factoring, while simultaneously 
+increasing the number of synchroniza­ tion operations on the local work queue by a factor of P. Under 
+affinity scheduling we have separated the synchronization costs associated with access to the local work 
+queue (as represented by k, the fraction of iterations removed from the local work queue) from the synchronization 
+costs associated with ac­ cess to remote work queues (as represented by P, the fraction of iterations 
+removed from a remote work queue). Since synchronization operations on local work queues are usually 
+inexpensive, we use k = P in our implementation, which results in small initial chunks (iV/Pz ) and thus 
+good load balancing proper­ ties. Smaller values of k could be used to reduce the number of accesses 
+to local queues, while increasing the potential load imbalance. We next consider the size of chunks of 
+iterations that should be used with parallel loops wherein the time each iteration takes to execute is 
+a decreas­ ing function of the iteration index. These loops are among the most difficult to schedule 
+because they of­ ten result in load imbalance, particularly when the scheduling algorithm assigns large 
+chunks of loop it­ erations to the first few processors and successively smaller chunks to other processors. 
+Theorem 3.3 in­ dicates how many iterations each chunk should con­ tain so that no more than l/P of the 
+remaining work is assigned to a processor at one time. Theorem 3.3 Assume a parallel loop with N itera­ 
+tions, where the i~h iteration takes time proportional to (N i)k. A chunk of size ~ of the iterations 
+corresponds almost to I/Pth of the remaintng work to be done. Proof: See [7]. I Theorem 3.3 suggests 
+that when all iterations take the same amount of time, l/Pih of the iterations cor­responds to I/Ptb 
+of the workload. When the it­erations have a decreasing triangular form, that is iteration i takes time 
+proportional to (iV i), then l/(2P)t of the iterations corresponds to I/Pth of the wor i load. When 
+the iterations have a decreasing parabolic form, that is iteration i takes time propor­tional to (IV 
+ i)z, then l/(3P)tk of the iterations corresponds to l/Pih of the workload. In general, if a loop scheduling 
+algorithm assigns less than l/P ~h of the remaining workload to each idle processor, then the minimum 
+imbalance will re­sult. Theorem 3.3 states how many iterations corre­spond to this fraction of the remaining 
+workload for loops wherein successive iterations require a polyno­mially decreasing amount of work. If 
+the amount of work per iteration increases polynomially, then the loop is easy to schedule: l/(kP)th 
+of the remaining iterations always corresponds to less than I/Pth of the remaining work. Summarizing 
+our results, affinity scheduling (with k = P) offers worst-case load imbalance guarantees that are the 
+the same as (or in some cases better than) those of guided self-scheduling and factoring, but can, in 
+the worst case, introduce about P times more syn­chronization operations. Fortunately, these synchro­nization 
+operations are directed to P different work queues, and so the number of serializable synchroniza­tion 
+operations under affinity scheduling is somewhat smaller than the number of serializable synchroniza­tion 
+operations under guided self-scheduling or fac­toring. Since affinity scheduling can also dramatically 
+reduce communication overhead, affinity scheduling should perform much better than either guided self­scheduling 
+or factoring. We will now examine the rel­ative performance of these loop scheduling algorithms experiment 
+ally. 4 Experimental evaluation In order to evaluate the performance benefits of affin­ity scheduling, 
+we implemented many of the known loop scheduling methods by hand on a Silicon Graph­ics 4D/480GTX Iris 
+workstation, a bus-based, cache­coherent machine with 8 processors. We then mea­sured the performance 
+of each of the scheduling algo­rithms on a suite of applications. 4.1 Scheduling algorithms We implemented 
+the following loop scheduling al­gorithms by hand on the Iris: static schedul­ing (STATIC), self-scheduling 
+(SS), guided self­scheduling (GSS), factoring (FACTORING), trape­zoid self-scheduling (TRAPEZOID), affinity 
+schedul­ing with k == P (AFS), and a hand-optimized al­gorithm (BEST-STATIC). BEST-STATIC represents 
+our attempt at the best static assignment possible, given complete knowledge of the application and its 
+input. We implemented this assignment by hand, af­ter examining the application and the input, so as 
+to maximize locality of reference and minimize load imbalance. While not generally realizable, since 
+it re­quires programmer intervention and assumes knowl­edge of the application s input, BEST-STATIC is 
+a useful base-line for evaluating other loop scheduling algorithms. 4.2 Applications We carefully selected 
+four application programs that present loop scheduling algorithms a range of oppor­tunities for addressing 
+load imbalance, synchroniza­tion overhead, and communication overhead. our ap­plication suite contains 
+the following programs: . Successive Over-Relaxation (SO R): DO SEQUENTIAL 19 I = 1, MAXITERATIONS DO 
+PARALLEL 19 J = 1,N DO SEQUENTIAL 19 K = 1, N A(J, K) = UPDATE(A, J,K) 19 CONTINUE All iterations of 
+the parallel loop take about the same time to execute, so better load balancing al­gorithms are not likely 
+to produce better perfor­mance. However, the ith iteration of the parallel loop always accesses the it~ 
+row of the matrix, so scheduling algorithms that exploit processor affinity are likely to produce much 
+better perfor­mance. Gaussian Elimination: DO SEQUENTIAL 19 K = 2 ,N DO PARALLEL 19 I = K,N DO SEQUENTIAL 
+19 J = K-1 ,N+l AII] [J] = AIII [J] -A[K-11 [J] * A[il [K-11 /A[K-1] [K-i] 19 CONTINUE This application 
+exhibits some load imbalance across iterations, and offers some opportunities for exploiting processor 
+affinity. Although suc­cessive executions of an iteration of the parallel loop do not access exactly 
+the same matrix el­ements each time, there is significant overlap in the elements referenced by successive 
+executions of an iteration. We expect scheduling algorithms that exploit affinity to improve performance, 
+but not as much as in the previous case. Transitive Closure: DO SEQUENTIAL 19 K = 1,N DO PARALLEL 19 
+J = 1,N IF (A(J, K) .ECI. TRUE) THEN DO SEQUENTIAL 19 I = 1,N IF (A(K, I) .EQ, TRUE) A(J, I) = TRUE 19 
+CONTINUE The distinguishing characteristic of this applica­tion is that each iteration of the parallel 
+loop may take time 0(1 ) or O(N) (where the input matrix is of size N x N), depending on the input data. 
+Since the input values determine the variation in iteration execution tim~, this application will serve 
+to evaluate the effectiveness of load balanc­ing for each scheduling algorithm. This applica­tion will 
+also benefit from some form of affinity scheduling, since the i~h iteration of the parallel loop always 
+accesses the ith row of the matrix. . Adjoint Convolution: DO PARALLEL 19 I = 1,N*N DO SEQUENTIAL 19 
+K = 1,N*N A(I) = A(I) + X* B(K)* C(I-K) 19 CONTINUE This application exhibits significant load imbal­ance; 
+the it~ iteration of the parallel loop takes time proportional to 0(n2 i). There is no affin­ity to 
+exploit however, so this application serves to evaluate the effectiveness of load balancing in the absence 
+of affinity. 25 - I 1 I I I 1 Ss -0- GSS, FACT, TRAP -E AFS, BEST-STATIC -fl ~~~~- {, STATIC x Comple­ 
+; tion 15 -,,, time (sees) ~0 i .. ~..   5L_2sLJ 12345678 processors Figure 1: SOR. 4.3 Comparison 
+of loop scheduling al­gorithms Figure 1 presents the completion time (in seconds) of the SOR program 
+(IV = 512) running on 1 to 8 processors, As can be seen in the figure, SS performs the worst of all, 
+due to its high synchronization over­head. Other algorithms with lower synchronization overhead, such 
+aa GSS, FACTORING, and TRAPEZ-OID, perform much better than SS since there is no significant difference 
+in the execution time of it­erations, sophisticated load balancing schemes aren t necessary for this 
+application. All of these algorithms perform worse than the algorithms that exploit affin­ity. Both STATIC 
+and AFS are comparable to the best possible static algorithm. Figure 2 plots the completion time of the 
+Gaussian elimination program (N = 384) under the different scheduling algorithms. It is surprising to 
+see that none of the scheduling algorithms that ignore proces­sor affinity can effectively utilize more 
+than two pro­cessors. There is simply too much contention for the shared bus under these algorithms, 
+since every itera­tion must load data into the local cache. SS performs worst of all, because of its 
+high synchronization over­head, but the performance difference narrows quickly as the communication costs 
+of GSS, FACTORING, and TRAPEZOID start to dominate synchronization costs. Once again, AFS and STATIC 
+perform the best; they are within 10% of BEST-STATIC in the worst case, and a factor of 3 better than 
+the tradi­tional dynamic loop scheduling algorithms. In addi­ tion, both AFS and STATIC can effectively 
+use all 8 processors. This application is a good example of the fact that 16 - GSS, FACT, TRAP Ss ~ + 
+- 14 - AFS, STATIC -0.. - BEST-STATIC X  (sees) ~ - . ,.. y , * .. . 4 2 123456 78 processors Figure 
+2: Gaussian elimination. the dominant source of overhead in many applica­tions is communicant ion (caused 
+by cache misses), not synchronization. Loop scheduling algorithms that fo­cus on synchronization overhead 
+alone perform poorly when compared to algorithms that reduce communi­cation overhead by exploiting processor 
+affinity. Figure 3 presents the completion time of the tran­sitive closure application when given a skewed 
+in­put graph of 640 nodes containing a clique of 320 nodes, and no other edges. This is the first example 
+where there is significant imbalance in the computa­tion across iterations, which explains why STATIC 
+performs poorly. Although SS manages to balance the load, it still suffers from high synchronization 
+overhead. The surprising result in Figure 3 is that GSS performs worst of all. Although GSS assigns only 
+l/P of the iterations to the first processor, those iterations contain 2/Pth of the total work; the re­maining 
+iterations do not contain enough work to balance the load. Both FACTORING and TRAPE-ZOID start with a 
+smaller initial chunk of iterations, and therefore balance the load better. AFS has the same load balancing 
+properties as FACTORING and TRAPEZOID in this case, but exploits affinity as well. Although AFS performs 
+the best, the improvement over FACTORING and TRAPEZOID is not greater than 1570. The existence of significant 
+load imbalance forces affinity scheduling to override the initial assign­ment of iterations to processors 
+and instead execute iterations on idle processors. Each time an iteration moves to another processor, 
+the data must be loaded into a different cache, This is also why AFS does not perform as well as BEST-STATIC, 
+which has knowl­edge of the input, and is therefore able to distribute 20 Comple-BEST-STATIC + tion time 
+(sees) 10 8­ 6­ 4->_ z~ 12345678 processors Figure 3: Transitive closure (skewed input) the clique nodes 
+evenly among the processors, while maintaining processor affinity. Figure 4 presents the performance 
+of the schedul­ing algorithms for the adjoint convolution program with IV = 75. In this application, 
+iterations have no affinity for a particular processor, since the par­allel loop is not embedded within 
+a sequential loop. There is significant load imbalance across iterations however, since the first iteration 
+takes time propor­tional to 0(N2), while the last iteration takes time proportional to O(1). As expected, 
+loop scheduling algorithms that emphasize load balancing, such as FACTORING, TRAPEZOID and AFS, perform 
+the best. GSS and the static methods assign too much work to the first few processors, and suffer load 
+im­balance as a result. SS again suffers from high syn­chronization overhead. These results are consistent 
+with those of [4]. We should note that a trivial change to our im­plementation of GSS would improve its 
+performance to be comparable to FACTORING, although not Instead of as $ood aS AFS for these examples. 
+taking [N/Pi iterations, each processor could take [11/(kF)~ iterations, where k is an appropriate con­stant. 
+With this change, GSS could start with smaller chunks, leaving more opportunities to balance the load, 
+without introducing significant synchronization overhead.  4.4 Effects of load imbalance In order to 
+explore the effect of load imbalance in iso­lation, we implemented three dynamic loop schedul­.. 8 GSS, 
+STATIC +3­ 7 FACTORING + AFS, BEST-STATIC -~ ~~~~ 6 - TRAPEZOID x Comple- Ss -&#38; tion time (sees) 
+ 12345678 processors Figure 4: Adjoint convolution. ing algorithms (AFS, GSS, and TRAPEZOID) by hand 
+on the BBN Butterfly. The Butterfly is a large­scale NUMA (Nonuniform Memory Access) multi­processor. 
+None of our loop scheduling algorithms on the Butterfly preserve affinity, and even the dis­tributed 
+work queues require non-local access, so any performance differences can be attributed to the load balancing 
+properties of the various algorithms. We executed two applications on the Butterfly, while progressively 
+introducing more imbalance in the computation. The first application has the following form: DO PARALLEL 
+19 I = 1, N DO SEQUENTIAL 19 J = 1, (N-1) **2 COMPUTE 19 CONTINUE According to theorem 3.3, each processor 
+should take l/(3P) of the remaining iterations to balance the load evenly. TRAPEZOID allocates chunks 
+larger than that, but smaller than the chunks used by GSS. Therefore, we would expect TRAPEZOID to behave 
+worse than AFS, but better than GSS. Figure 5 plots the results for this program, with N = 200. As expected, 
+AFS performs better than TRAPEZOID, which performs better than GSS. Note however that TRAPEZOID is very 
+close to AFS when the number of processors is close to 50 and N = 200. Theorem 3.3 explains why: given 
+50 processors, the first chunk allocated by TRAPEZOID is of size 200/(2* 50) = 2 iterations, while the 
+maximum number of iterations that can be allocated without creating imbalance ac­ cording to theorem 
+3.3 is 200/(3*50) = 1.5 iterations. Thus, TRAPEZOID is within one iteration of the op­timal allocation, 
+which in practice gives performance 40 ,. k%20- i (sees) 15 -~;,, + , L:10 b ~ .&#38;,.,:,, 5 l!? ~.-..... 
+... 0 05101520253035404550 Figure5: Performance ofloop scheduling algorithms on the Butterfly under 
+decreasing parabolic workload. comparable to AFS. Our other application has imbalance comparable to that 
+of transitive closure. That is, the first 10~0 of the iterations take 100 time units to complete, while 
+the remaining 9070 of the iterations take one time unit to compIete. The code for the application is: 
+DO PARALLEL 19 I = 1, N IF (1. LT. (N/10)) THEN COMPUTE(1OO) ELSE COMPUTE(1) ENDIF 19 CONTINUE If the 
+first processor takes more than l/(lOP) of the iterations, it will get more than ( l/P)t~ of the work, 
+and will therefore be the last processor to finish. Fig­ure 6 plots the results of executing this program 
+on the Butterfly with iV = 50000. In this figure, AFS is clearly superior to TRAPEZOID and GSS. Both 
+GSS and TRAPEZOID can be improved, at the ex­pense of synchronization overhead, by starting with smaller 
+chunks of iterations. AFS can afford to start with small chunks of iterations because it uses a dis­tributed 
+work queue, which results in either smaller synchronization overhead for the same load balancing properties, 
+or comparable synchronization overhead for superior load balancing properties. 4..5 Synchronization overhead 
+In this section we focus on the synchronization over­head imposed by each scheduling algorithm, so aa 
+to verify experimentally our analytic results, and to quantify the synchronization overhead incurred 
+by our application suite. Our metric for synchronization 35 GSS-e-­. TRAPEZOID -I­30 AFS ..0 ....­ :. 
+Comple-25 -6+ :;: 20 . . (sees) 15 10 \ +. 5 b .U + .+..+,, 0 1 I n -p. ..rr &#38; o 10 20 30 40 
+50 60 processors  Figure 6: Performance of loop scheduling algorithms on the Butterfly when load is 
+in first 10~o of iterations. overhead is the number of times a processor removes iterations from a work 
+queue. Every algorithm except affinity scheduling uses a central work queue, wherein each access to the 
+work queue is a global synchronization operation. For affin­ity scheduling, we identify separately the 
+number of operations performed on local work queues from the operations performed on remote work queues. 
+We note however that on many architectures, operations on remote queues under affinity scheduling would 
+be cheaper than global synchronization operations on a central work queue, since there is less contention 
+for access to each distributed work queue under affinity scheduling. We should also note that load imbalance 
+does not affect the number of synchronization operations performed by SS, GSS, FACTORING and TRAPE ZOID. 
+Load imbalance does affect the number of syn­chronization operations performed by AFS however, because 
+AFS responds to imbalance dynamically by migrating iterations. Thus, the number of remote synchronization 
+operations performed by AFS will give us insight into the migration overhead incurred by the algorithm. 
+We will use transitive closure (with a skewed in­put) as an example of an application with consider­able 
+variance in computation times across iterations, because all the work is contained in the first half 
+of the iterations. Table 1 shows the number of synchronization op­erations per loop incurred by transitive 
+closure (with a skewed input matrix) under the various schedul­ing algorithms. Once again, SS induces 
+a large num­ber of synchronization operations independently of the number of processors. TRAPEZOID requires 
+the fewest serialized synchronization operations, but is Procs Ss GSS FCT TRAP AFS (per Q) remote local 
+1640111 3 0 1 2 640 11 20 7 1.5 8.4 4 640 23 36 13 2.1 16.8 6 640 34 52 18 1.1 23.8 8 640 45 64 22 0.7 
+28.3 Table 1: Number of synchronization operations for transitive closure on a skewed 640-node graph, 
+only slightly better than AFS. Even though the input matrix causes a large load imbalance in this application, 
+AFS requires only one or two remote synchronization operations per work queue to balance the load. Each 
+processor accesses a local work queue 20-30 times on average, but rarely accesses a remote work queue. 
+Whereas traditional loop scheduling algorithms always access non-local work queues, AFS accesses a non-local 
+work queue only 5-107o of the time, and yet balances the load just as well. On machines where access 
+to a local work queue is much cheaper than access to a remote work queue (either due to the cost of non-local 
+access or the cost of non-local synchronization primitives), this property of affinity scheduling could 
+have enor­mous performance advantages.  4.6 Architectural trends Our experiments on the Iris confirm 
+that communica­ tion overhead is a dominant factor in application per­formance on modern shared-memory 
+multiprocessors, Why then do so many of the known loop schedul­ ing algorithms ignore communication overhead? 
+The answer lies in the changes in hardware that have occurred over the last few years. RISC technology 
+and floating point co-processors have increased the speed of computation dramatically, while memory and 
+interconnection network speeds have improved only modestly. For example, the MC68020 proces­sors in the 
+BBN Butterfly Plus are about five times faster than the MC68000 processors in the Butterfly I, but the 
+two machines have about the same inter­ connection network bandwidth. In order to demonstrate this trend, 
+we executed our Gaussian elimination program on a Sequent Symme­try S81 multiprocessor, a bus-based, 
+cache-coherent machine that predates the Iris. The processors on the Iris are about 30 times faster than 
+the processors on the Symmetry, but the peak bandwidth of the Sym­metry bus is 80 MB/see, while the peak 
+bandwidth of the Iris bus is only 64 MB/see. Our experiments on the Symmetry (not shown here) suggests 
+that Gaus­sian elimination performs about the same under ei­ther AFS or GSS, while AFS clearly dominates 
+GSS on the Iris. We can conclude that the ability of AFS to exploit processor affinity in Gaussian elimination 
+is of little value on the Symmetry, since communication is cheap relative to computation. These results 
+suggest that communication was a relatively minor issue on the previous generation of shared-memory multiprocessors, 
+and that both load imbalance and synchronization overhead were domi­nant. Our results on the Iris argue 
+that the situation has changed dramatically, so much so that communi­cation is now the dominant factor 
+in performance.  5 Conclusions In this paper we argued that the non-uniform access time to data in a 
+shared-memory multiprocessor (due to local caches or memory) introduces a new dimen­sion to the loop 
+scheduling problem: communication overhead. We showed that traditional loop schedul­ing algorithms, which 
+emphasize load imbalance and synchronization overhead while ignoring communi­cation overhead, impose 
+a significant performance penalty on parallel applications. We described a new loop scheduling algorithm, 
+called affinity scheduling, which reduces communication overhead by exploit­ing processor affinity. This 
+new algorithm performed better than all other known algorithms in our exper­iments. The main reasons 
+for this are: When a parallel loop is embedded within a se­quential loop (a common case), affinity schedul­ing 
+assigns an iteration of the parallel loop to the same processor each time it is executed. If the iteration 
+accesses the same data each time, then the data will already be in the local memory or cache, reducing 
+communication overhead. Affinity scheduling uses per-processor work queues, instead of a-central work 
+queue. Accesses to several work queues may proceed in parallel, and most accesses to work queues are 
+local ac­cesses that do not suffer from contention. Syn­chronization across processor occurs only if 
+load imbalance arises. Based on our experiments with affinity scheduling and other loop scheduling algorithms 
+on three differ­ent multiprocessors, we c~nciude: Central work queues are an inappropriate scheduling 
+mechanism even for small-scale mul­tiprocessors. central work queues require the fre­quent movement of 
+data among processors, since every process must load the data it needs into the local cache. The resulting 
+communication overhead degrades performance even for a very small number of processors.  Loop scheduling 
+algorithms must consider com­munzcatton as an important source of overhead. Algorithms that ignore communication 
+incur a significant performance penalty in current mul­tiprocessors. If processor speeds continue to 
+im­prove more quickly than memory or interconnec­tion speeds, communication will be an increasing  
+percentage of an application s execution time; scheduling methods that reduce both communi­cation and 
+synchronization overhead are going to have an even greater impact in the future. Afinity scheduling 
+simultaneously balances over­head due to synchronization, communication, and load imbalance. Afinity 
+scheduling has the load balancing properties of the best dynamic scheduling algorithms, reduces synchronization 
+costs by employing per-processor work queues, and exploits processor affinity when it exists.  Afinity 
+scheduling is robust. Our experiments  cover a range of applications with widely vary­ing characteristics. 
+For applications that create affinity between iterations and processors, affin­ity scheduling is by far 
+the best algorithm. For applications with input-dependent load imbal­ance (e.g., transitive closure), 
+affinity scheduling was again the best scheduling algorithm. Even for applications that had no affinity 
+to exploit, but exhibited significant potential for load imbal­ance (e.g., adjoint convolution), affinity 
+schedul­ing was among the best algorithms. In summary, our theoretical and experimental eval­uation 
+shows that affinity scheduling has the attrac­tive load balancing properties of the best known loop scheduling 
+algorithms, but also reduces communica­tion overhead substantially. This overhead is quite high on current 
+multiprocessors, and is likely to in­crease in the future. We conclude that loop schedul­ing techniques, 
+such as affinity scheduling, that mini­mize commumcation overhead will be increasingly im­portant in 
+the future. References [1] M. Crovella, P. Das, C. Dubnicki, T. LeBlanc, and E. Markatos. Multiprogramming 
+on mul­tiprocessors. in Proceedings of the Third IEEE Symposium on Parallel and Distributed Process­ing, 
+pages 590 597, December 1991. [2] S. Dandamudi. A comparison of task scheduling strategies for multiprocessor 
+systems. In Pro­cecdzngs of the Third IEEE Sympostum on Par­allel and Distributed Processing, pages 423 
+426, December 1991. [3] R. Gupta. Synchronization and communica­tion costs of loop partitioning on shared-memory 
+multiprocessor systems. In 1989 Intern atzonai Conference on Parallel Processing, pages 11:23­30, 1989. 
+[4] S.F. Humrnel, E. Schonberg, and L.E. Flynn. Factoring: A practical and robust method for scheduling 
+parallel loops. In . $upercornputing 91, pages 610-619, December 1991. [5] C.P. Kruskal and A. Weiss. 
+Allocating independent subta.sks on parallel processors. IEEE Transactions on Software Engineering, 11(10):1001-1016, 
+1985. [6] E. P. Markatos and T. J. LeBlanc. Load bal­ancing versus locaIity management in shared­memory 
+multiprocessors. In Proceedings of the 1992 International Conference on Parallel Pro­cessing, August 
+1992. [7] E. P. Markatos and T. J. LeBlanc. Using memory (or cache) affinity in loop scheduling on shared­memory 
+multiprocessors. Technical Report 410, University of Rochester, Computer Science De­partment, March 1992. 
+[8] C. McCann, R. Vaswani, and J. Zahorjan. A dy­namic processor allocation policy for multipro­grammed 
+shared memory multiprocessors. Tech­nical Report 90-03-02, Department of Computer Science and Engineering, 
+University of Washing­ton, March 1990 (Revised February 1991). [9] C. D. Polychronopoulos. Parallel Programming 
+and Compilers. Kluwer Academic Publishers, Boston, MA, 1988. [10] C. D. Polychronopoulos and D. J. Kuck. 
+Guided self-scheduling: A practical scheduling scheme for parallel supercomputers. IEEE Transactions 
+on Computers, C-36(12), December 1987. [11] M. S. Squillante and E. D. Lazowska. Using processor-cache 
+affinity information in shared­memory multiprocessor scheduling. Technical Report 89-06-01, Computer 
+Science Department, University of Washington, February 1990. [12] M. S. Squillante and R. D. Nelson. 
+Analysis of task migration in shared-memory multiproces­sor scheduling. In Proceedings of the 1991 ACM 
+SIGMETRICS Conference on Measurement and Modeling of Computer Systems, pages 143-155, May 1991. [13] 
+P. Tang and P.-C. Yew. Processor self-scheduling for multiple nested parallel loops. In Proceedings 1986 
+International Conference on Parallel Pro­cessing, pages 528 535, August 1986. [14] T.H. Tzen and L.M. 
+Ni. Dynamic loop schedul­ing for shared-memory multiprocessors. In Pro­ceedings of the 1991 International 
+Conference on Parallel Processing, pages 11:247 250, August 1991. 
+			

@@ -1,0 +1,296 @@
+
+ Side Channel Analysis of AVR XMEGA Crypto Engine Ilya Kizhvatov Université du Luxembourg 6 rue Richard 
+Coudenhove-Kalergi L-1359 Luxembourg ilya.kizhvatov@uni.lu ABSTRACT AVR XMEGA is the recent general-purpose 
+8-bit microcon­troller from Atmel featuring symmetric crypto engines. We analyze the resistance of XMEGA 
+crypto engines to side channel attacks. We reveal the relatively strong side chan­nel leakage of the 
+AES engine that enables full 128-bit AES secret key recovery in a matter of several minutes with a measurement 
+setup cost about 1000 USD. 3000 power con­sumption traces are su.cient for the successful attack. Our 
+analysis was performed without knowing the details of the crypto engine internals; quite the contrary, 
+it reveals some details about the implementation. We sketch other feasible side channel attacks on XMEGA 
+and suggest the counter­measures that can raise the complexity of the attacks but not fully prevent them. 
+ Categories and Subject Descriptors E.3 [Data Encryption]: Code Breaking; Standards (AES, DES); C.3 [Special-Purpose 
+and Application-Based Systems]: Real-time and embedded systems General Terms Security, Algorithms, Measurement, 
+Experimentation Keywords cryptography, side channel analysis, DPA 1. INTRODUCTION XMEGA [14] is the 
+recent 8-bit RISC microcontroller (µC) in the Atmel s AVR family. To our knowledge, it is the .rst general-purpose 
+µC available over-the-counter with AES [17] and DES [18] acceleration. Others µC s with cryp­tographic 
+acceleration are either prescription-only secure versions (like Atmel s AT9xSC series) that are relatively 
+hard to obtain for experiments, or dedicated wireless chips (for example, Ember EM250 or Jennic JN5121 
+ZigBee SoC s, Permission to make digital or hard copies of all or part of this work for personal or classroom 
+use is granted without fee provided that copies are not made or distributed for pro.t or commercial advantage 
+and that copies bear this notice and the full citation on the .rst page. To copy otherwise, to republish, 
+to post on servers or to redistribute to lists, requires prior speci.c permission and/or a fee. WESS 
+09, October 15, 2009, Grenoble, France Copyright 2009 ACM 978-1-60558-700-4 ...$10.00. or ChipCon CC2420 
+RF transceiver used in MICAz motes). The AES engine of XMEGA provides 128-bit encryption and can maintain 
+a throughput of about 10 Mbps. Apart from the cryptographic features, XMEGA boasts a broad set of peripherals 
+and functionalities including DMA con­troller, event system for CPU-and DMA-independent inter­peripheral 
+communication, advanced clocking and energy saving options. Along with the low power consumption and 
+an attractive price of less than 10 USD apiece, this makes XMEGA a promising device for a wide range 
+of embedded applications. Motivation. De jure, XMEGA is not claimed by Atmel to be a mi­crocontroller 
+for secure applications. De facto however, the presence of the cryptographic features suggests the contrary. 
+It is hard to imagine a scenario where an embedded device implementing cryptography is not subject to 
+implementa­tion attacks, in particular, attacks exploiting side channel leakage of the device. The typical 
+scenario of a side channel attack is when the secret key is stored within the device. This secret key 
+is used by the device to perform cryptographic operations but never exposed through the communication 
+channels of the device. The attacker can try to deduce the secret key by an­alyzing physical parameters 
+of the device during an execu­tion like timing of operations, power consumption and elec­tromagnetic 
+radiation, since these side channels may leak information about the internal variables processed by the 
+device. Side channel attacks are posing a real threat for un­protected devices since they can be mounted 
+by an attacker with a modest budget. The XMEGA symmetric crypto engines can be of course used in non-keyed 
+constructions like block-cipher based hash functions. In this scenario side channel attacks are irrele­vant. 
+But (a) there are many more keyed scenarii and (b) there are no widespread AES and DES-based hash functions 
+that could be used. Also, AES in XMEGA is implemented as an atomic full encryption/decryption, which 
+means that hash functions that are based on AES building blocks (like some of SHA-3 candidates) will 
+not bene.t from this accel­eration. Related Work. To date, we are not aware of any works studying XMEGA 
+implementation security issues. In [11] and [12], XMEGA crypto engines were utilized for acceleration 
+of AES-and DES-based hash functions. Same application was mentioned in [10]. In [5], XMEGA DES engine 
+was used for the fast implementation of a cryptographic pseudo random number generator. Side-channel 
+attacks on hardware implementations of AES were performed in several works; see [8], [1] and [13] for 
+examples. Our Contribution. The work presented here is very practical. We do not develop new attacks 
+but apply the more or less standard attack to the implementation without any detailed knowl­edge of the 
+internals of this implementation. We look at XMEGA cryptographic features from the side channel at­tacker 
+s point of view and highlight their weaknesses in the side channel scenario. Then, experimentally we 
+reveal the relatively strong side channel leakage of the XMEGA AES engine. Exploiting this leakage in 
+a practical power analy­sis attack, we recover the full 128-bit AES secret key with only 3000 acquisitions 
+and post-processing time of several minutes. Acquisition can be performed with quite modest (around 1000 
+USD) measurement setup without any noise reduction measures. With our attack we can reveal some details 
+about the im­plementation. Namely, we discover that the AES implemen­tation is non-parallelized. We suggest 
+the possible counter­measures that can be used to partially hinder the attacks. Semi-invasive and invasive 
+attacks like fault analysis are beyond the scope of this paper. However, we believe that faults can be 
+induced quite e.ciently on this µC. Outline of the Paper. We begin with the description of XMEGA crypto 
+features in Section 2. Then we specify the security model and poten­tial weaknesses of XMEGA in this 
+model in Section 3. The attack on the AES engine is described in detail in Section 4. It is followed 
+by the discussion about attack practicability and suggestions for the countermeasures in Section 5. 
+2. XMEGA CRYPTO FEATURES We begin with a description of XMEGA cryptographic functionality, following 
+the preliminary manual [14]. 2.1 DES Instruction DES is implemented in XMEGA as an instruction set ex­tension. 
+A CPU instruction DES K executes a single DES round and operates with the state and the key loaded in 
+the main register .le. The round number K is passed to the in­struction as a parameter. Direction is 
+controlled by the half­carry .ag of the µC s status register. Encryption/decryption is done as follows: 
+1. the 64-bit plaintext/ciphertext is placed in CPU reg­isters R0-R7; 2. the full 64-bit key (including 
+the parity bits) is placed in CPU registers R8-R15; 3. the CPU half-carry .ag is set to 0 for encryption 
+or to 1 for decryption; 4. DES instruction is executed 16 times with increasing K (DES 0, DES 1, ..., 
+DES 15);  The 64-bit result (cihertext/plaintext) will be in the regis­ters R0-R7. Intermediate states 
+in R0-R7 di.er from the FIPS standard [18] since the initial permutation and the inverse initial permutations 
+are performed each iteration [16]. The instruction takes 1 CPU clock cycle. Another CPU clock cycle is 
+added if the instruction is followed by a non-DES instruction. Thus, the full DES execution (not coun­ting 
+data and key loading/unloading) takes 17 clock cycles. 2.2 AES Peripheral XMEGA implements AES-128 [17] 
+ a variant of AES with 128-bit secret key and 10 rounds. Unlike DES, AES engine in XMEGA is interfaced 
+through 5 dedicated reg­isters in the I/O address space. Encryption/decryption is performed as follows: 
+1. set encryption direction and other parameters (see be­low) in AES CTRL register, enable/disable AES 
+inter­rupts in AES INTCTRL register; 2. the 16 key bytes are sent one-by-one to the AES key memory through 
+the AES KEY register; 3. the 16 plaintext/ciphertext bytes are sent one-by-one to the AES state memory 
+through the AES STATE register; 4. the start bit in the control register is set to start AES execution 
+(this step can be omitted if the auto start .ag was set in the status register).  When the execution 
+is .nished, the interrupt .ag in the AES STATUS register is set and AES interrupt is optionally generated. 
+The result can be read out byte-by-byte from the AES STATE register. If the XOR .ag in the AES CTRL register 
+is set, the data loaded in the AES STATE regis­ter is XOR ed with the current AES state. This allows 
+to implement CBC and other modes of operation e.ciently. After the execution the AES key memory will 
+contain the last round subkey, so for another encryption the key should be reloaded. For decryption, 
+the last round subkey should be loaded into the key register. It can be obtained either by running AES 
+key expansion in software or by running a single AES engine encryption with a dummy state and the original 
+key. AES execution takes 375 peripheral1 clock cycles not co­unting data and key loading/unloading (cf. 
+about 3 thou­sand CPU cycles for a software implementation [9]). The CPU can execute any code in parallel. 
+Combined with the DMA transfer (that relieves the CPU from data and key loading/unloading) and event 
+system triggering at the end of AES execution, this de.nitely makes AES implementa­tion in XMEGA quite 
+e.cient and attractive for embedded developers: when operated at its maximum clock frequency of 32 MHz, 
+XMEGA can maintain AES-128 encrypted com­munication bandwidth of about 10 Mbps. In the following sections 
+we will show that crypto engines of XMEGA are susceptible to e.cient side channel attacks. 1The peripheral 
+clock frequency is the same as of the CPU clock; this is not the fast peripheral clock used by some of 
+the XMEGA modules.  3. SECURITY MODEL AND POTENTIAL WEAKNESSES We consider a simple security model when 
+an attacker aims at recovering the secret key stored within the device. An attacker knows inputs or corresponding 
+encrypted or de­crypted outputs (known plaintext or ciphertext scenario) of the cryptographic module 
+and can observe physical param­eters of the device while it performs cryptographic opera­tions. This 
+model is quite realistic when there is a chance for an embedded device to fall for a while into the hands 
+of a technically prepared malefactor. Resistance of XMEGA to implementation attacks was not claimed by 
+Atmel: our research does not result in any state­ments regarding implementation security either in XMEGA 
+documentation [14] or in other publicly available sources. However it is hard to imagine a scenario where 
+an embed­ded device implementing cryptography is not subject to im­plementation attacks. One may therefore 
+think that some countermeasures that are declared for AT9xSC secure series of µC s [15] were implemented 
+in XMEGA as well. In case there are no countermeasures implemented, we see the following potential weaknesses 
+of XMEGA in the model de.ned above: AES and DES: the crypto engines themselves can ex­hibit side channel 
+leakage;  AES and DES: direct manipulation of the secret key bytes by the AVR core is required, in particular 
+trans­ferring the secret key bytes over the memory buses;  DES: intermediate state is stored in the 
+main register .le;  AES: key expansion for decryption can be done man­ually in software.  Therefore, 
+the threats for AES and DES modules are as follows: side-channel attacks on the secret key bytes manipu­lated 
+by the AVR core;  side-channel attacks on the cryptographic engine exe­cution.  In the next section, 
+we show that the AES engine exhibits signi.cant side channel leakage (which suggests that no so­und countermeasures 
+were foreseen in XMEGA) and present an e.cient practical full key recovery side channel attack on the 
+AES engine. 4. PRACTICAL ATTACK Here we present our practical side channel attack on the XMEGA AES engine, 
+recovering full key in a matter of seve­ral minutes of acquisition and post-processing. Our attack is 
+based on the standard Di.erential Power Analysis (DPA) technique, but the attack .ow for the full key 
+recovery is speci.c to our particular case. We refer the reader to the book [6] for the basics of the 
+di.erential power analysis. We would like to stress that we discovered the attack without any prior knowledge 
+about the internals of the AES imple­mentation in XMEGA. 4.1 Measurement Setup We experimented with an 
+ATXMEGA128A1-AU µC [14]. The µC was clocked at 3.6864 MHz (this is both CPU and peripheral clock frequency) 
+using a quartz crystal and was provided with 3.6 V from a standard laboratory power sup­ply. Connection 
+to the host PC was performed via serial interface through the ADM202E level converter. A 50 Ohm shunt 
+resistor was inserted in the ground line of the µC for measuring the power consumption. Mea­surements 
+were performed with the LeCroy WaveRunner 104MXi DSO equipped with ZS1000 active probes and con­nected 
+to the host PC via a 100 Mbit Ethernet link. One of the pins of the µC was dedicated to the trigger signal. 
+The setup did not include any speci.c measures for noise reduction. Figure 1 depicts the setup. Figure 
+1: Measurement setup around ATXMEGA128A1. To verify the setup, we have .rst mounted a CPA at­tack in 
+the Hamming weight leakage model [2] on an un­protected software implementation of AES [9] on XMEGA. 
+Then we compared its results with those obtained for the same software implementation on the ATmega16 
+µC in the same measurement conditions. The results are consistent: for the software AES-128 implementation, 
+around 50 acqui­sitions (i.e. random plaintexts) are required in our setup for the successful full key 
+recovery both on ATmega16 and ATXMEGA128A1. The acquisition parameters in the attack on the software 
+implementation were as follows: analog low-pass .ltering of the signal with 20 MHz cut-o. frequency; 
+ sampling rate 100 MS/s;  post-processing: power consumption curves were com­pressed to 1 sample per 
+µC s CPU clock cycle by se­lecting cycle maxima. We decided to start attacking the hardware AES implemen­tation 
+on XMEGA keeping these acquisition parameters. 4.2 Implementation Details We have implemented AES-128 
+encryption utilizing the AES crypto engine of the XMEGA. The encryption key was stored in the the program 
+.ash memory and loaded into the AES module. Then the plaintext bytes were obtained from the host PC via 
+the serial line and loaded into the AES mod­ule. Then the encryption was started and the core entered 
+a loop waiting for encryption to .nish. When encryption was .nished, the ciphertext was read from the 
+AES module and returned to the host PC over the serial line. We have acquired power consumption traces 
+of the full encryption (375 clock cycles) for 10000 random plaintexts with the same acquisition parameters 
+as for the attack on the software implementation. 4.3 The Attack Here we will describe our attack on 
+the XMEGA AES peripheral. The attack consists of a basic step which is a more or less standard CPA attack 
+recovering one key byte, and the algorithm for the full key recovery that is simple but speci.c to our 
+particular case. 4.3.1 Basic Attack First, we have tried exactly the same CPA attack in the Hamming weight 
+model as for the software implementa­tion described above. No signi.cant correlation was ob­served with 
+10000 traces for most of the bytes2 . Knowing that hardware implementations typically follow the Ham­ming 
+distance model (see [8] and [1] for examples of attacks on ASIC implementations of AES), we tried several 
+com­binations of various internal bytes that did not show any sensible correlation until we came to the 
+following target value in the attack: bi =(pi . ki) . (pi+1 . ki+1), 1 = i = 15 , where pi and ki are 
+corresponding plaintext and key bytes counted in a standard way (column-wise). So by taking the Hamming 
+weight of bi, HW (bi), we get the Hamming distance between the successive bytes of the state after the 
+.rst AddRoundKey transform of AES. A straightforward approach would require to compute 28× 28 216 = correlation 
+traces for all possible pairs of the two key bytes ki and ki+1 involved. To reduce the number of cor­relation 
+traces, we have assumed byte ki to be known (like in [1]) and calculated correlation traces for 256 guesses 
+of ki+1 (below we will show that this approach leads to a very e.cient full key recovery attack). Figure 
+2 shows the cor­relation coe.cient . against clock cycles of AES encryption for the pairs of bytes k1,k2 
+and k4,k5. Since we targeted the operations in the 1st round of AES, we decided to consider only .rst 
+80 cycles of encryption and this turned out to be su.cient. We can clearly see up to three distinct (in 
+time) correla­tion peaks. The .rst peak is for the key byte ki (the one we assume to be known): the correlation 
+trace highlighted in 2only bytes 2 and 12 exhibited signi.cant leakage Figure 2: Results of CPA in HD 
+model on XMEGA AES engine, for byte pairs 1-2 (above) and 4-5 (be­low). Correlation traces for the guesses 
+correspond­ing to the correct 1st-2nd (above) and 4th-5th (be­low) subkey bytes are highlighted. black 
+corresponds to ki+1 = ki and and exhibits the max­imal correlation in the region of the peak. The 2nd 
+peak reveals the second subkey byte ki+1 (the one we are guess­ing): the correlation trace highlighted 
+in red corresponds to the correct guess of ki+1 and shows maximal correlation among all traces in the 
+region of the peak. By checking all 15 possible byte pairs we discovered that the 3-rd peak also revealing 
+the correct guess of ki+1 is present for byte pairs 1-2 to 3-4 and 9-10 to 11-12, as shown in Figure 
+2 above. This 3-rd peak can be used to increase the reliability of the attack. Such distinct pattern 
+emerges for all i =1, 2,..., 15, that is, for all successive pairs of adjacent state bytes after the 
+initial key addition. The evolution of the correlation coe.­cients in the region of the 2-nd peak with 
+the increase of the number of available power consumption traces is shown in Figure 3. We can see that 
+2-3 thousand traces is already suf­.cient to recover the correct (relative to the 1st byte) guess of 
+the 2nd key byte. For other byte pairs these .gures are the same. Figure 3: Evolution of the correlation 
+coe.cient in the region of the 2nd CPA peak against the number of traces, for bytes 1 and 2. Correlation 
+trace for the correct 2nd subkey byte guess is highlighted. 4.3.2 Full Key Recovery Above we have presented 
+the basic CPA attack recovering the single key byte under the assumption that the previous key byte is 
+known. Here we present the algorithm for the full 128-bit key based on this attack. The algorithm is 
+straight­forward: 1. guess the .rst key byte k1 (256 guesses in total); 2. determine k2 with the basic 
+CPA attack as described above: with our guess of k1 calculate the correlation traces for all 256 guesses 
+of k2 and obtain the correct guess by choosing the trace that exhibits the maximal correlation value 
+in the region of the second peak; note that the peaks can be identi.ed quite easily since we know the 
+trace corresponding to the guess of k1 and it shows its maximum in the region of the .rst peak; 3. determine 
+k3,k4,...,k156 sequentially in the same way: knowing k2, recover k3 and so on; 4. having ended up with 
+256 full key candidates, .nd the correct one among them by an exhaustive search; note that this requires 
+at least one known plaintext­ciphertext pair from the attacked device.  As already shown (see Fig. 3), 
+the attack requires less than 3000 traces in our setup; with our acquisition rate of 15 traces per second 
+this on-line phase takes about 3 min­utes. Since compressed traces are used, the o.-line stage of the 
+attack (obtaining correlation curves, determining key candidates and running exhaustive search) takes 
+about a minute. The relatively low sampling rate allows one to use an inexpensive DSO. Thus, the whole 
+attack takes several minutes and requires 1000 USDs worth of equipment.  4.4 Insight into AES Hardware 
+Our attack was performed without any knowledge about the internals of the AES implementation. However, 
+the re­sults of the attack reveal some information about the AES implementation in XMEGA. For example, 
+in Figure 2 we can see that the correlation peaks for byte pair 4-5 occur later than the ones for the 
+byte pair 1-2. The observation holds for all byte pairs. We con­clude that operations are executed sequentially 
+and not in parallel as one would expect from a hardware AES imple­mentation. This is further supported 
+by the fact that the similar behaviour of the correlation peaks were observed for all successive byte 
+pairs, which suggests that all the 16 state bytes are processed sequentially. Another example is the 
+observed third correlation peak for some byte pairs that indicates re-use of these values, however we 
+have not .gured out the possible reason. Refer to [3] for details on SCARE side channel analysis for 
+reverse engineering. Such information can be in partic­ular helpful for mounting fault attacks since 
+it can indicate where to inject a fault.  5. DISCUSSION AND COUNTERMEASURES In the previous section 
+we have presented a practical at­tack on the XMEGA AES module recovering the full 128-bit key from 3000 
+acquisitions. While being almost 100 times larger than for an unprotected software implementation, this 
+number is still so small that the whole attack takes several minutes. We have not performed experimental 
+investigation of the DES engine since we believe that AES engine will be used in most of XMEGA applications: 
+XMEGA is highly suit­able for wireless applications like ZigBee that imply AES usage. We suppose that 
+DES engine does not include any side channel attack countermeasures as well, though attack­ing it might 
+require more traces due to the higher level of parallelism in DES implementation (17 cycles per full 
+DES vs. 375 for full AES). 5.1 Attack Practicability Those familiar with embedded development might argue 
+that in our attack we had several conditions that simplify it, namely: 1. perfect synchronization via 
+the dedicated trigger signal in the beginning of encryption; 2. the CPU core running a deterministic 
+loop during en­cryption; 3. the chip was clocked at only 3.7 MHz (and using a stable quartz oscillator) 
+while it allows a maximum of 32 MHz.  Regarding synchronization, it can be often done in a real application 
+by observing the transfer over the communica­tion line that is being encrypted. What concerns the second 
+condition, it is quite probable that even in a real applica­tion the CPU core will execute some deterministic 
+sequence of operations while AES engine is running or will even be in the idle sleep mode (it is possible 
+in XMEGA to stop the CPU clock while all peripherals are kept running). With the higher clock frequency 
+the amount of traces re­quired for the successful attack should increase since the power consumption 
+observations in consecutive clock cycles will be superposed due to the unchanging discharge time of the 
+internal capacitances of the chip. However, for a low-power operation XMEGA can only be clocked at low 
+frequencies (less than 16 MHz), so a relatively cheap DSO could still be used for acquisition. 5.2 Countermeasures 
+As a countermeasure against side channel attacks both for AES and DES engines, we suggest deliberate 
+aggravation of all the 3 conditions mentioned above. Synchronization can be made di.cult for an adversary 
+by adding software random delays prior and after execution, and for DES also between rounds. A recent 
+e.cient algo­rithm for random delay generation in software is presented in [4]. Using less stable internal 
+oscillators of XMEGA as the clock source can be considered; however alone they seem to be still stable 
+enough for acquisitions of several hundreds clock cycles. Finally, clocking at higher frequency will 
+in­crease the number of traces required for the successful at­tack. For AES, these can be combined with 
+hiding in the ampli­tude domain by making the CPU core manipulate random­ized data or even execute a 
+randomized sequence of instruc­tions while encryption/decryption is running, for example, running a software 
+pseudo random number generator. More e.cient countermeasures are hardly possible for the crypto engines 
+of XMEGA since the low granularity of the implementation (the entire execution for AES and a single round 
+for DES) seems not to allow for any other software countermeasures like masking or shu.ing, and sound 
+hard­ware countermeasures are absent. However it is an inter­esting research question whether the round-level 
+granular­ity of DES in XMEGA can be used to implement any e.­cient software countermeasure. See also 
+[7] for an approach to protocol-level countermeasures against di.erential side­channel attacks that can 
+be applicable in some cases. Another weak link in our view is the direct manipulation of the secret key 
+bytes by the CPU core that can be suscep­tible to template attacks (refer to Section 5.3 of [6]). These 
+operations can be also protected by desynchronization. Un­fortunately, shu.ing of the AES key byte loading 
+order can­not be used since key bytes should be loaded sequentially, so only random delays are applicable 
+here. We stress that the suggested countermeasures only raise the complexity of attacks while lowering 
+performance, but do not render them completely impossible.  6. CONCLUSION We have presented an e.cient 
+side channel attack against the cryptographic module of AVR XMEGA a new general­purpose 8-bit microcontroller. 
+Our practical side channel at­tack against the AES engine recovers the full 128-bit secret key from 3000 
+power consumption traces that can be ac­quired with a very modest measurement setup. The attack results 
+indicate that the AES implementation in XMEGA is not parallelized. We have pinpointed potential weaknesses 
+of XMEGA allowing other e.cient side channel attacks. We have suggested the possible countermeasures 
+that can be im­plemented to raise the complexity of attacks. However, these countermeasures do not prevent 
+the attacks completely and decrease performance. Therefore, we conclude that utmost care should be taken 
+when using XMEGA in embedded applications dealing with security, i.e. implementing suggested countermeasures 
+and using it only in those applications where the presented at­tacks are tolerated by the security level. 
+Our result demonstrates how easy it is to attack an un­protected device with more or less standard techniques 
+even without knowing the details of the actual implementation of the cryptographic algorithm. Attacking 
+a 10 USD device for 1000 USD may seem ridiculous but it is in fact not attack­ing 100 devices repays 
+the setup and a potential application may be worth much more. 7. ACKNOWLEDGEMENTS The author would like 
+to thank Alexandre Kalinovski and Dmitry Khovratovich for their assistance with obtaining the µC s for 
+experiments, Johann Großsch¨ adl for his remarks about cryptographic hardware implementation issues, 
+and the many anonymous reviewers of this paper for their valu­able comments. 8. REFERENCES [1] L. Batina, 
+B. Gierlichs, and K. Lemke-Rust. Comparative evaluation of rank correlation based DPA on an AES prototype 
+chip. In T.-C. Wu, C.-L. Lei, V. Rijmen, and D.-T. Lee, editors, ISC 2008, volume 5222 of LNCS, pages 
+341 354. Springer, Heidelberg, 2008. [2] E. Brier, C. Clavier, and O. Benoit. Correlation power analysis 
+with a leakage model. In M. Joye and J.-J. Quisquater, editors, Cryptographic Hardware and Embedded Systems 
+ CHES 2004, volume 3156 of Lecture Notes in Computer Science, pages 135 152. Springer, Heidelberg, 2004. 
+[3] C. Clavier. An improved SCARE cryptanalysis against a secret A3/A8 GSM algorithm. In ICISS, pages 
+143 155, 2007. [4] J.-S. Coron and I. Kizhvatov. An e.cient method for random delay generation in embedded 
+software. In C. Clavier and K. Gaj, editors, Cryptographic Hardware and Embedded Systems CHES 2009, 
+volume 5747 of Lecture Notes in Computer Science, pages 156 170. Springer, Heidelberg, 2009. [5] T. Eisenbarth, 
+T. G¨ uneysu, S. Heyse, and C. Paar. MicroEliece: McEliece for embedded devices. In C. Clavier and K. 
+Gaj, editors, Cryptographic Hardware and Embedded Systems CHES 2009, volume 5747 of Lecture Notes in 
+Computer Science, pages 49 64. Springer, Heidelberg, 2009. [6] S. Mangard, E. Oswald, and T. Popp. Power 
+Analysis Attacks: Revealing the Secrets of Smartcards. Springer, 2007. [7] R. P. McEvoy, M. Tunstall, 
+C. Whelan, C. C. Murphy, and W. P. Marnane. All-or-nothing transforms as a countermeasure to di.erential 
+side-channel analysis. Cryptology ePrint Archive, Report 2009/185, 2009. http://eprint.iacr.org/. ¨ [8] 
+S. B. Ors, F. K. G¨urkaynak, E. Oswald, and B. Preneel. Power-analysis attack on an ASIC AES implementation. 
+In ITCC, volume 2, pages 546 552, 2004. [9] B. Poettering. AVRAES: The AES block cipher on AVR controllers, 
+2006. http://point-at-infinity.org/avraes. [10] R. Rivest et al. The MD6 hash function, 2009. http://groups.csail.mit.edu/cis/md6/docs/ 
+2009-02-21-md6-report.pdf. [11] S. Rohde. Protocols and light-weight algorithms for wireless authentication 
+through side channels in IEEE 802.11 communication. Master s thesis, Ruhr-Universit¨ at Bochum, 2008. 
+[12] S. Rohde, T. Eisenbarth, E. Dahmen, J. Buchmann, and C. Paar. Fast hash-based signatures on constrained 
+devices. In G. Grimaud and F.-X. Standaert, editors, Smart Card Research and Advanced Applications CARDIS 
+2008, volume 5189 of Lecture Notes in Computer Science, pages 104 117. Springer, Heidelberg, 2008. [13] 
+K. Tiri, D. Hwang, A. Hodjat, B.-C. Lai, S. Yang, P. Schaumont, and I. Verbauwhede. Prototype IC with 
+WDDL and di.erential routing DPA resistance assessment. In J. R. Rao and B. Sunar, editors, Cryptographic 
+Hardware and Embedded Systems CHES 2005, volume 3659 of Lecture Notes in Computer Science, pages 354 
+365. Springer, Heidelberg, 2005. [14] XMEGA A manual preliminary, revision G, April 2009. http://www.atmel.com/dyn/resources/prod_ 
+documents/doc8077.pdf. [15] Atmel secure products, revision D, October 2008. http://www.atmel.com/dyn/resources/prod_ 
+documents/doc6523.pdf. [16] 8-bit AVR instruction set, revision H, July 2009. http://www.atmel.com/dyn/resources/prod_ 
+documents/doc0856.pdf. [17] FIPS PUB 197: Speci.cation for the Advanced Encryption Standard, 2001. http://www.csrc.nist. 
+gov/publications/fips/fips197/fips-197.pdf. [18] FIPS PUB 46-3: Data Encryption Standard, 1999. http://csrc.nist.gov/publications/fips/ 
+fips46-3/fips46-3.pdf.  
+			

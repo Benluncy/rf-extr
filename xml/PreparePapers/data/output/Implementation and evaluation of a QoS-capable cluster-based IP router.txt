@@ -1,0 +1,652 @@
+
+ Implementation and Evaluation of A QoS-Capable Cluster-Based IP Router Prashant Pradhan Tzi-cker Chiueh 
+Computer Science Department State University of New York at Stony Brook  prashant, chiueh @cs.sunysb.edu 
+Abstract A major challenge in Internet edge router design is to support both high packet forwarding performance 
+and versatile and ef.cient packet processing capabilities. The thesis of this research project is that 
+a cluster of PCs connected by a high­speed system area network provides an effective hardware platform 
+for building routers to be used at the edges of the Internet. This paper describes a scalable and extensible 
+edge router architecture called Panama, which supports a novel aggregate route caching scheme, a real-time 
+link schedul­ing algorithm whose performance overhead is independent of the number of real-time .ows, 
+a highly ef.cient kernel extension mechanism to safely load networking software ex­tensions dynamically, 
+and an integrated resource scheduler which ensures that real-time .ows with additional packet processing 
+requirements still meet their end-to-end perfor­mance requirements. This paper describes the implementa­tion 
+and evaluation of the .rst Panama prototype based on a cluster of PCs and Myrinet. 1 Introduction A key 
+design principle for next-generation Internet archi­tecture is to push packet processing complexity to 
+network edges so that backbone routers can be both simple and fast. However, this architectural decision 
+also places more de­manding requirements on edge router designs in that they have to not only forward 
+generic IP packets at a rate scalable with the link speed, but also support a wide array of packet processing 
+functions for value-added services. Examples of such services range from low-level router enhancements 
+that improve end-to-end performance such as active queue man­agement and congestion state sharing, to 
+application-speci.c payload processing functions such as content-aware for­warding and media transcoding. 
+As a result of these new ser­vice requirements, edge routers become compute-intensive as well as I/O-intensive 
+systems. In view of this new ar­chitectural requirement, the following principles guide the design of 
+next-generation Internet edge routers: 1. To support a wide variety of packet processing func­tionalities, 
+an edge router architecture should base its high-level packet processing on a general-purpose com­puting 
+platform and support high-level programming 0-7695-1524-X/02 $17.00 (c) 2002 IEEE abstractions to facilitate 
+the development of router ex­tensions. 2. Router extension functions should be added to an edge router 
+statically or dynamically without compromising the router core s integrity. In addition, these functions 
+should be embodied as computation interposed along the packet datapath in an ef.cient and safe manner. 
+ 3. The performance of an edge router architecture should scale up linearly with increasing processing 
+hardware, switching capacity, and memory size. Moreover, it should be possible to grow the router incrementally 
+over a wide range of system sizes.  This paper describes the design, implementation, and evaluation 
+of a scalable and extensible edge router architec­ture, called Panama, whose goal is to show that with 
+ef.­cient algorithms and system software, PC clustering hard­ware provides an effective platform for 
+building highly scal­able and extensible edge routers. To achieve this goal, Panama decouples packet 
+forwarding from packet computa­tion whenever possible, and provides an asynchronous link­age between 
+them. The basic hardware building block of the Panama architecture is a router node, which includes a 
+set of programmable network interfaces and a general-purpose processor. Router nodes are interconnected 
+through a high­speed system-area switch-based interconnect that serves as the router s system backplane. 
+The scalability of the Panama architecture comes from the incremental expandability of both the number 
+of router nodes and the total switching ca­pacity of the router backplane. The current Panama pro­totype 
+uses general-purpose PCs with programmable net­work interfaces as router nodes, and a Gbit/sec switch 
+as the router backplane. The only requirement on the router node s network interfaces is that they provide 
+a low-end processor (henceforth called the network processor), a small amount of memory and a DMA engine 
+over which the network pro­cessor has direct control. In Panama, if an IP packet does not require additional 
+pro­cessing, its forwarding path is an interrupt-free pipeline co­ordinated by network processors lying 
+on the packet s for­warding path. However, when a packet needs high-level processing, it is asynchronously 
+posted to the computation path, which in turn asynchronously returns the packet to the forwarding pipeline 
+after processing it. High-level packet computation is modeled as a .ow of control through a func­tion 
+graph, and is guided by a CPU scheduler that integrated with output link scheduling to guarantee the 
+end-to-end per­formance objective of network connections that require ad­ditional packet computation. 
+The decoupling of forwarding and computation paths has several desirable characteristics. First of all, 
+neither com­ponent bottlenecks the other as long as their capacities are suf.cient to sustain their input 
+demands. For instance, at high packet rates, involving the CPU (via interrupt handling, for example) 
+in the forwarding path of network packets that do not require computation may affect the performance 
+of the forwarding and computation paths, even though in iso­lation, the throughputs of the forwarding 
+and computation paths would have been adequate to support their respective demands. Moreover, because 
+of decoupling, improvements in any one component allow the router to service higher in­put loads for 
+that component, independent of the other com­ponent. Another advantage is that in typical architectures, 
+coupling of the computation and I/O components introduces a .xed overhead, which leads to an unnecessary 
+bottleneck to the overall performance. For example, in a general-purpose architecture like a PC, this 
+overhead is the interrupt over­head, which is determined by the time taken to receive and acknowledge 
+the interrupt. Also note that on a node with several interfaces, such a coupling precludes any parallelism 
+in packet processing since all interrupts are to be handled by a single CPU. The main contribution of 
+this work is a set of architec­tural and implementation techniques that we developed to construct scalable 
+and extensible edge routers based on PC clusters. Although PC clusters have been used in the context 
+of Web proxies, .rewalls, and media gateways, the archi­tectural tradeoffs of applying PC clustering 
+hardware to net­work packet forwarding and computation has never been ex­plored before. We believe this 
+paper reports one of the .rst, if not the .rst, experimental result along this direction. The other major 
+contribution of this work is the integration of real-time link scheduling and packet processing scheduling 
+in a single framework that achieves end-to-end performance guarantees when real-time packets require 
+protocol-speci.c or application-speci.c computation. The rest of this paper is organized as follows. 
+Section 2 re­views related work in extensible and high performance edge router design. Section 3 presents 
+Panama s system architec­ture, including the routing table caching algorithm, the ker­nel extension mechanism, 
+and the packet processing compu­tation scheduling for performance isolation. In Section 4, we describe 
+the implementation details of the current Panama prototype. Section 5 presents the results of a comprehensive 
+performance evaluation study of this prototype, as well as some lessons from this performance study. 
+Finally we con­clude with a summary of the main research contributions of this work. 2 Related Work 
+The Extensible Router [13] project in Princeton has a de­sign goal very similar to Panama. Speci.cally, 
+it attempts to make routers open and general purpose computation and communication systems so that they 
+can support a wide vari­ety of protocol-speci.c and application-speci.c packet pro­cessing functions. 
+The Extensible Router uses an explicit path abstraction, introduced in [2], that models data .ow from 
+input device to output device, possibly with compu­tation interposed along the way. Moreover, a hierarchy 
+of such paths is proposed with different combinations of hard­ware, kernel and user-level subpaths. A 
+classi.cation hierar­chy is also proposed, to support increasing degrees of com­plexity of the classi.ers. 
+The idea of caching classi.cation decisions was mentioned but no concrete algorithms were described. 
+Two proposed solutions on the issue of how ex­tension functions are incorporated into packet paths safely 
+and ef.ciently are Java bytecodes and ahead-of-time com­piled code, but neither of them is quite satisfactory 
+on both fronts. Details about the datapath implementation, in partic­ular, the optimized hardware paths 
+are not described. Datap­ath primitives like real-time link scheduling are also missing. It also seems 
+that the interaction between the computation and data paths is through interrupts, which we have elim­inated 
+in the Panama architecture to achieve better packet rate performance. The hardware platform proposed 
+in the Extensible Router project is also a cluster of PCs, intercon­nected by a fast switch. A similar 
+platform, with a different system software architecture, was independently proposed in [14] at the same 
+time. Router extensions have been proposed through the use of kernel modules in [10]. While this mechanism 
+is ef.cient in minimizing the performance overhead of invoking router extensions, it could lead to a 
+compromise in system integrity when the extensions are buggy or malicious. Speci.cally, kernel modules 
+are part of the kernel and there is no pro­tection boundary between kernel and extension code. Our architecture 
+uses a safe extension model, proposed by the authors of [6], that prevents misbehaving or runaway ex­tensions 
+from compromising the router kernel, while keep­ing protection domain crossing overhead to the minimum. 
+In addition to memory protection, Panama also supports performance isolation through real-time packet 
+computation scheduling. Click [15] is a recently proposed modular software archi­tecture for routers 
+based upon general-purpose PCs. Two important features of this architecture are pull processing and .ow-based 
+router context. Pull processing decouples the source and the sink of a packet forwarding path by allowing 
+the sink to decide when to pull data from the source. Pull processing can recursively propagate towards 
+the source, if needed. Flow-based router context allows a module to per­form a closure operation over 
+the modules in the computa­tion graph that are reachable from it, and extract important information about 
+them. The focus of Click is on showing that a modular and low-overhead structure can be built for router 
+software, and the techniques proposed therein can be utilized in the computation model of any router 
+architecture based on a general-purpose computing platform. However, Click does not support any real-time 
+scheduling among com­putation modules. In contrast, computation in Panama pro­ceeds under the control 
+of a scheduler that attempts to match the computation requirements of various .ows with the per­formance 
+requirements of their data paths. Simple PC-based router designs have been experimented with in [11] 
+and [12]. [11] gives a good overview of the lim­itations of PC hardware and possible suggestions for 
+perfor­mance optimizations. [12] proposes the use of peer-to-peer External Interfaces General-Purpose 
+Processors Figure 1: An example Panama router that consists of 4 nodes and 12 ports. Internal interfaces 
+connect router nodes to a high-speed interconnect, whereas the external interfaces connect Panama to 
+the rest of the network. DMA to optimize throughput by avoiding multiple trips be­tween the I/O bus and 
+memory. This techniques is also used in Panama. The Scalable IP Router Project [16] proposes to use a 
+clus­ter architecture to speed up complicated IP route computa­tion such as OSPF, rather than IP packet 
+forwarding or pro­cessing. In Panama, PC clustering is viewed as a means to scale the performance of 
+both packet forwarding and com­putation paths, and the challenge is to develop ef.cient soft­ware primitives 
+to effectively harness the raw bandwidth and processing power contained therein. 3 System Architecture 
+Figure 1 shows the architecture of a 4-router-node and 2­port Panama router. On each router node, there 
+is a CPU and several network interfaces with one network processor per interface. On each router node, 
+there is an interface (hence­forth called the internal interface) that connects the node to the router 
+s backplane. All the other interfaces on a node are external interfaces, and connect the router to the 
+rest of the network. Hence, the fan-out of a Panama router is the total number of external interfaces 
+on its router nodes. The typical path that a packet takes is from an input interface of an ingress node, 
+through the internal interface of the ingress node, over the router backplane, into the internal interface 
+of the egress node, and eventually out of the router via an out­put interface of the egress node. When 
+a packet does not re­quire any packet processing beyond forwarding, the network processors on the interfaces 
+along the path are responsible for moving the packet toward the output link by performing necessary route 
+lookup, packet classi.cation, and DMA data transfer operations. If a packet needs additional processing, 
+the network processor on the internal interface of the egress router node posts a request for service 
+to its local CPU asyn­chronously. When this packet processing is completed, the packet is sent out on 
+the output link according to a schedule Output Interface Index Bit xxxx Host Address 3 2 1 0 0000 0001 
+0010 0011 0100 0101 0110 0111 1000 1001 1010 1011 1100 1101 1110 1111 1 1 2 2 1 1 2 2 3 3 2 2 3 3 2 2 
+CA B Figure 2: An example routing table whose address is 4 bits wide. Ignoring bit 1 permits merging 
+non-contiguous ad­dress ranges and reduces the number of ranges to be distin­guished from 8 to 3 (marked 
+A,B and C). as determined by the link scheduler. Panama employs a function graph computation model to 
+support packet processing of arbitrary complexity. In ad­dition, the CPU scheduler carefully schedules 
+concurrent packet computation threads so that the end-to-end perfor­mance guarantees of .ows that require 
+high-level packet computation are maintained. Packet forwarding and process­ing paths are running independently 
+on physically distinct processors, but they are synchronized with each other using queues, through which 
+each posts work to the other. A novel aspect of the Panama architecture is that it supports this syn­chronization 
+in a lock-free and interrupt-free manner. 3.1 Packet Forwarding 3.1.1 Routing Table Lookup and Packet 
+Classi.cation Panama implements an aggregate route caching scheme [4] at the network processors to perform 
+route lookup for most packets, and in the case of cache misses, posts a request to the main CPU for a 
+full-blown search through the routing table data structure. While there has been some debate about the 
+applicability of caching on backbone routers, the results reported in [9] demonstrated that caching is 
+very effective for edge routers. An ef.cient route caching algorithm, recently proposed in [4] exploits 
+the structure in the routing table to improve individual cache sets coverage of the IP address space, 
+thus further improving caching performance. An important observation for deriving ef.cient routing ta­ble 
+caching algorithms is that the number of distinct out­comes of routing table lookup is small, irrespective 
+of the size of the routing table or the IP address space. Consider the example routing table in Figure 
+2 for a 4-bit address space. Each routing table entry corresponds to a range of addresses in the address 
+space. A routing table lookup al­gorithm s goal is to .nd out which address range a given packet s destination 
+address lies in. The key novelty of the IP address range caching algorithm [4] is to merge non­contiguous 
+address ranges into a single cacheable unit. In Figure 2, a naive merging method, in which only adjacent 
+address ranges are allowed to merge, would yield a set of 8 address ranges whose maximum size is 2addresses. 
+Naive merging dictates that only address ranges that share the same most signi.cant address bits and 
+routing table lookup results, be allowed to be combined. However, there is no fundamen­tal reason to 
+limit the algorithm to combine only address ranges that have identical most signi.cant address bits. 
+In general, address ranges that share some subset of address bits can be merged. For example, if the 
+merging algorithm focuses on the g-th, 2-nd, and 3-rd address bits in the ex­ample of Figure 2, then 
+non-contiguous address ranges (e.g., 0000, 0001, 0100, 0101) can be combined, leading to a re­duction 
+of the number of cacheable address ranges from 8to (marked as A, B, C). The address range merging algorithm 
+aims to identify a subset of the address bits as the index bits into the cache and starts the merging 
+process with an empty index bit set. In­tuitively the index bits are bits in which mergeable address 
+ranges differ. Assume that a cache has 22Ksets and thus K index bits need to be chosen. Assume thatKn'e<xK, 
+have been chosen already. These KK'Kt'bits, where dbits decom­pose the address space into 2partitions, 
+each of which 2Kcontains a set of distinct address ranges. Within a parti­tion, address ranges that are 
+not adjacent to each other in the original IP address space may be adjacent in the parti­tion s address 
+space. If neighboring address ranges within a partition share the same lookup result, they can be merged 
+into a larger address range. Thus, the KK'' -th index bit is chosen to be that bit which minimizes both 
+the total number of address ranges and the variance in the number of address 2Kdth ranges, across the 
+2induced partitions. Once the routing table cache data structure is constructed and put in the external 
+network interfaces, at run time the network processors simply select the Kchosen index bits from the 
+incoming packet s destination address and use these bits as an index into a locally maintained cache. 
+The network processor then performs tag matching on the retrieved cache entry to verify that the fetched 
+address range indeed con­tains the given destination address. If so, the routing table lookup operation 
+is completed and the packet is forwarded to the output router node. Otherwise, a cache miss occurs. Cache 
+misses are serviced by a classi.er module running on every router node s main CPU. The classi.er exposes 
+a re­quest queue to each external network interface on its node, services requests from these queues 
+in a round-robin fashion, and eventually posts packets back to the forwarding path. After routing table 
+lookup, if a packet is destined to a remote router node, it is posted to the local node s internal interface. 
+Otherwise, it is posted to an output queue on the local node s main memory. Computation of the routing 
+table cache is done by a sep­arate administrative process, running on one of the CPUs. This is to ensure 
+that a single consistent copy of the rout­ing table is computed from routing protocol updates. Upon a 
+change to the global routing table, the network processor s caches are invalidated. If the new routing 
+table yields a new set of index bits that should be used, then the new set is also made known to each 
+of the network processors. For higher dimensional packet classi.cation, every di­mension of the .lter 
+rule is considered as an independent ad­dress space. Ranges in each address space are the results of 
+projecting the .lter expressions along each dimension, and a set of index bits is selected for each address 
+space. Given an incoming packet, the lookup algorithm then looks for each packet header .eld in the appropriate 
+address space, and .­nally takes an intersection of each dimension s results. Clas­si.cation is only 
+done up to a .xed number of .elds in the network processor. If more dimensions are required for some 
+rules, they are mapped to a special class that is equivalent to a forced cache miss. This causes packets 
+lying in this spe­cial class to be posted to the classi.er function, which then uses additional .elds 
+to perform the complete classi.cation. Classi.cation of real-time .ows is simpler and requires only a 
+lookup into a .at mapping table to translate .ow IDs to output queue IDs. This is possible because we 
+assume that real-time .ows have a .xed-length and .xed-structure header, e.g., an RSVP header, from which 
+.ow IDs can be easily extracted. The results of all forms of classi.cation is a queue. For in­stance, 
+if the packet should simply be forwarded after route lookup, this is the output queue on the output interface. 
+In case the packet should be processed by a function, this is the argument queue of that function (as 
+explained in section 3.2.2). Clearly, queues should be identi.ed in a location­dependent manner. In particular, 
+queue identi.ers in our system are the logical shift-and-OR of a router node id, a type and a queue id. 
+The type can be the argument queue of a function, or a packet queue, and is understood by both the network 
+processors and the CPUs. 3.1.2 Output Link Scheduling To guarantee guaranteed QoS, Panama allocates 
+a separate queue for each real-time connection, and implements dis­cretized fair queuing scheduler (DFQ), 
+which maintains fair­ness at a .xed-granularity time scale, rather than at an in­.nitesimally small time 
+scale. Given a chosen time granu­larity T, it can be proved [5] that the differences between Fluid Fair 
+Queuing (FFQ) and DFQ, in terms of per-hop and end-to-end delay bounds, are proportional to T, but is 
+inde­pendent of the number of real-time connections at each hop. This is an important result because 
+the deviation from ideal FFQ bounds is constant, even though the implementation of DFQ is much simpler 
+than FFQ emulation schemes. Each .ow fcontending for an output link makes a re­source reservation characterized 
+by three parameters, a per­hop delay bound D f, a long-term bandwidth requirement hf, and a maximum data 
+burst size Pnf, which is used to h derive the temporal allocation granularity off. Thus, the .ow fis 
+eligible for at most Pnfunits of service over a time period of b, which we call the service cycle. During 
+a ser­vice cycle, the .ow is served with an instantaneous band­width of (hbfP b. We de.ne the quantum 
+size of the .ow, whb f, as (f *T Pb . T. Thus, the quantum size of a .ow is b the amount of data from 
+it that gets served in one scheduler cycle of length T. This separation of long-term bandwidth (hf) and 
+instantaneous bandwidth ((hf) allows the decou­pling of delay and bandwidth guarantees, and is particularly 
+important for low-latency and low-bandwidth real-time con­nections such as Internet telephony applications. 
+The link scheduler decomposes time into scheduling cy­cles of length T, and in each scheduling cycle, 
+retrieves a quantum worth of data from every eligible .ow to form a transmission batch and forwards it 
+over the link, as shown in Figure 3. Flows become ineligible if they have already re­ceived the maximum 
+amount of service that they should get in a service cycle. DFQ link schedulers also achieve a cut­ Bitmap 
+: 1011 f1 f1 f2 Mux Recv f3 f3 Send Demux f4 . f4 f4 T Figure 3: In this example, the scheduling cycle 
+time of DFQ is Tand the link capacity is C. In every cycle, a quantum worth of data is picked from each 
+.ow s queue to form a batch. Every .ow s reservation is depicted as a channel that allows a maximum data 
+volume Pto be served over an in­terval . The instantaneous bandwidth that can be received by a .ow is 
+represented by the height of its channel P. For every batch, a bitmap is used to represents the information 
+that the downstream router needs to demultiplex quanta and map them to their corresponding .ows. through 
+forwarding effect through a network path and thus improve end-to-end delay bounds [5]. Together with 
+each transmission batch is a bitmap that indicates the .ows that contribute a quantum to the batch. The 
+bitmap is of .xed size and is speci.ed with respect to the .rst .ow id that has a quantum in the batch. 
+Operationally, neighboring routers need to agree on a simple multiplexing/de-multiplexing pro­tocol on 
+the connecting link, because DFQ does not observe packet boundaries. Given a starting .ow id and a bitmap, 
+a downstream router can derive the set of .ow IDs that have a quantum in the batch, followed by a map-table 
+lookup to yield the output .ow IDs (Figure 3).  3.2 Packet Computation Two design issues in supporting 
+extensible packet process­ing functions in Internet routers are memory protection, i.e., buggy router 
+extensions cannot compromise the router core, and performance isolation, i.e., the router core s perfor­mance 
+should not be adversely affected because of the ex­istence of compute-intensive router extensions. 3.2.1 
+Safe and Ef.cient Packet Processing Function In­vocation The key design challenge for supporting memory 
+protection is to develop a safe and ef.cient extension mechanism in the router OS. Although safety can 
+be achieved through various hardware/software protection schemes such as using sepa­rate address spaces, 
+sand-boxing, or type-safe programming languages, Panama exploits the segmentation hardware pro­tection 
+features in the Intel X86 architecture [7] to protect the router OS from programmable router extension 
+functions. In Panama, the router OS is put at the highest segment privilege level (g), while all router 
+extensions are placed in separate segments at a lower segment privilege level ( ). As a result, Panama 
+allows extension functions to reside in the same ad­dress space as the router OS and thus avoids the 
+full context switching overhead, such as TLB .ushing, when the router OS invokes router extension functions. 
+On the other hand, the built-in segmentation hardware check in X86 architec­ture guarantees that extensions 
+cannot corrupt the router OS, because extensions and the router OS occupy different seg­ments at different 
+protection levels. Since X86 hardware does not allow more privileged do­mains to initiate an inter-protection-domain 
+control transfer, an ef.cient emulation of an inter-segment control transfer operation has been implemented, 
+as described by [6], which takes 42CPU cycles for an empty call and return between two protection domains. 
+Our current intra-address-space protection scheme only protects the router OS from exten­sions, but does 
+not protect extensions from one another. 3.2.2 Composing and Scheduling Packet Computation The main 
+CPU on each router node performs three main types of packet computation: servicing classi.er cache misses, 
+output link scheduling, and router extension process­ing. The link scheduler on every router node is 
+driven by a periodic timer to ensure its timely and deterministic invo­cation. Panama chooses to service 
+classi.er cache misses at a higher priority than router extension functions, because classi.er cache 
+miss handling is considered part of a router s core function, and thus should be protected from add-on 
+functions such as router extensions. When there are no pend­ing classi.er cache miss requests, Panama 
+runs a potential­based CPU scheduler [1] to allocate computation resources among router extensions. The 
+set of extension functions is physically organized as a function graph, where each node represents a 
+self-contained extension function and links between nodes represent con­trol .ows. However, unlike function 
+calls, control transfer from one function to another is asynchronous, in that invoca­tion arguments are 
+posted to an argument queue of the called function, but the time of actual invocation is determined by 
+the CPU scheduler. To compose packet processing computa­tion for a .ow, a path is .rst constructed in 
+the function graph to achieve the desired functionality (Figure 4). This path of functions forms the 
+compute path of the .ow. Network pack­ets are bound to such compute paths at run time through the classi.er 
+module, which maps packets to an index into a ta­ble of compute paths. The CPU scheduler itself supports 
+a computation request queue for each .ow requiring packet processing computation, which represents the 
+starting point of each .ow s compute path. After a given packet is classi­.ed, a request is enqueued 
+to the computation request queue associated with the packet s .ow. Once the CPU scheduler chooses to 
+schedule a function operating on a packet, the function runs to completion and posts a new invocation 
+to the argument queue of the next function on the packet s compute path. The control then re­turns back 
+to the CPU scheduler. The intermediate state de­scribing the progress of a packet along its compute path 
+is kept in the associated .ow s compute path table entry. Note that a packet from a .ow must complete 
+its compute path be­fore the next packet from the same .ow may be processed. Also, in the process of 
+compute path execution, the packet s payload is never copied; only references to the payload are created 
+and consumed.  function interfaces g-h f-g-h g Figure 4: An example of composing computation on three 
+.ows. Each .ow is bound to a compute path, shown on the right, with Flow 2 s compute path marked by a 
+dashed line. The classi.er posts every packet of a .ow requiring packet processing to the .ow s computation 
+request queue at the scheduler. The scheduler receives control after each function invocation and selects 
+the next function to invoke according to a scheduling policy. The compute paths associated with multiple 
+.ows can in­tersect in the function graph. Essentially, this means that the function at the intersection 
+point is being used by mul­tiple .ows. However, invocations of functions for separate .ows are kept physically 
+disjoint through an independent ar­gument queue for each .ow, as shown in Figure 4. Figure 4 shows an 
+example in which three connections are bound to three different compute paths. A function has as many 
+in­terfaces to accept invocation requests as the number of com­pute paths that pass through it. The compute 
+path of Flow2is illustrated in the .gure. Control is logically passed be­tween functions in the compute 
+path. However, in reality, every function invocation returns control to the CPU sched­uler, which then 
+decides the next function to invoke. A packet processing function, that is running in response to an 
+invocation on one of its interfaces, can only be pre­empted by invocation requests to other functions, 
+but not by an invocation on another interface of the same function. This means that it is safe for packet 
+processing functions to be non-reentrant. Although this greatly simpli.es implemen­tation complexity, 
+it also introduces preemption interdepen­dence among compute paths that share a function. Note that since 
+the CPU scheduler gets control on timer interrupts, no packet processing function can prevent the service 
+of classi­.er cache misses or output link scheduling. In particular, the classi.er function s service 
+latency is bounded by the min­imum of the time taken by the longest function invocation, and the timer 
+period. To ensure that packets of a real-time .ow that requires high-level packet processing receive 
+suf.cient CPU resource to meet their end-to-end performance objective, the CPU scheduler uses the .ow 
+s reservation and packet processing requirements to automatically determine their CPU reser­ h vations, 
+and schedules them accordingly. Assume fandPtfare the long-term bandwidth requirement and maximum data 
+burst size for the .ow f. Also assume that the num­ber of CPU cycles required by the functions in f s 
+com­pute path, for processing Pnfbytes worth of packet data, is p . Then connection fimplicitly requires 
+a CPU bandwidth of Pf , where Tfb, to maintain its guaranteed Tbb throughput through the router. The 
+CPU scheduling algorithm attempts to equalize the potential of all competing .ow. We borrow the notion 
+of po­tential from [1], and give appropriate interpretations to sys­tem potential, per-.ow potential 
+and re-calibration instants as follows. Given a CPU bandwidth reservation Pffor con­nection f, if connection 
+fis backlogged, its potential at time fis vnfn(fs , P2fnff(fs , where vis the number of processor cy­cles 
+spent on processing packets of connection fduring the p f o time period [g. For a non-backlogged connection, 
+the po­tential is set to the system potential, which is the total amount of CPU time spent on packet 
+processing for any of the .ows. Re-calibration instants for the system potential are all time instants 
+at which some function returns. Thus, whenever the CPU scheduler takes control after a function invocation 
+re­turns, it updates the system potential according to the de.ni­tion above, and picks the .ow with the 
+least potential as the next function to run.  3.3 Forwarding and Processing Path Syn­chronization In 
+Panama, there is a packet forwarding path, mainly through network processors, and a packet processing 
+path, mainly through CPUs, and they need to synchronize with each other from time to time. All interactions 
+between the forwarding path and the computation path are producer­consumer interactions. Instances of 
+such interactions arise throughout the system. For instance, the CPU allocates a buffer pool for each 
+external interface, whose corresponding network processor consumes by posting packets and compu­tation 
+requests. On the other hand, the CPU produces space in the buffer pool after it completes the service 
+of the re­quests or packets. Other examples include network proces­sors at external interfaces producing 
+classi.cation miss han­dling requests that the classi.er module on CPU consumes, and internal interfaces 
+producing scheduling or packet com­putation requests that the CPU scheduler consumes. To minimize the 
+performance overhead of synchroniza­tion, Panama uses a lock-free queue as the basic build­ing block 
+to support all the concurrent accesses from the packet forwarding and processing paths. The key idea 
+here is to break all concurrent accesses into one-to-one producer­consumer interactions. For instance, 
+in the case of the in­teraction between network processors on external interfaces and the classi.er module 
+at a CPU, the classi.er module is a single consumer for multiple producers. Panama provides one request 
+queue for each external interface so that the in­teraction is now one-to-one producer-consumer. Similarly, 
+in case of the per-external-interface buffer pool, free buffers would be produced by the link scheduler 
+running at various output interfaces, and by several extension functions. In this case a one-to-one interaction 
+is maintained as follows. A single link scheduling function performs scheduling for all the output interfaces 
+at a node. Likewise, the CPU scheduler performs buffer accounting for packets that require process­ing. 
+Thus there are actually only two producers for the free buffer pool and each buffer pool is split into 
+two queues to form two one-to-one interactions. Whenever an interaction is broken to one-one in this 
+manner, a simple round-robin ar­bitration is performed among the split request/data queues. In case of 
+the argument queues and per-connection packet queues, the interaction is already one-to-one since there 
+is a unique queue for every .ow. Given a one-to-one producer-consumer relationship, con­current accesses 
+to a shared queue can be resolved without locks by always keeping at least one element in every queue, 
+where the type of the element distinguishes an empty queue from a queue with one or more elements. Speci.cally, 
+when the consumer consumes the last queue element, it leaves an element of type void in the queue. With 
+this setup, the con­sumer s criterion for queue emptiness is changed to the fol­lowing: a non-empty queue 
+either has a non-void descriptor at its head, or a void descriptor with a successor. If a queue is found 
+to be non-empty by the second criterion, the void de­scriptor is discarded and the next element is consumed. 
+Note that an invariant holds that only the .rst element of a queue can be void, since a producer always 
+produces non-void ele­ments. It can be shown that as long as inserting an element to the tail of a queue 
+(which is a single memory write for sim­ple queues) is atomic, this lock-free mechanism eliminates any 
+inconsistency between the producer and the consumer. Although the above mechanism ensures that no shared 
+queue element is garbled due to a race condition, there re­mains a subtler issue of triggering relevant 
+computation on a synchronization event. For example, when a queue changes from empty to non-empty, its 
+consumer should be scheduled to run on the CPU. This problem is solved by ensuring that all consumers 
+of shared queues that need to be woken up on the empty-to-non-empty transition be polling consumers. 
+For instance, the link scheduler is guaranteed to get woken up on timer interrupts, picking up any missed 
+empty-to-non­empty queue transitions. Similarly, the CPU scheduler (and hence the classi.er) is guaranteed 
+to get control after every function return and/or timer interrupt.  4 Prototype Implementation The 
+current Panama prototype consists of four 400-MHz Pentium-II PCs as router nodes, connected by a 8-port 
+Myrinet switch with a 10-Gbit/sec backplane and full-duplex .. 28Gbps links. Each router node has two 
+Myrinet [18] in­terfaces, each of which is equipped with a Lanai 4.X net­work processor. The Panama kernel 
+is derived from Linux and runs on the network processor and the main CPU. 4.1 Intra-Cluster Packet Movement 
+As shown in Figure 5, in the most general case a packet traverses a path from the external interface 
+of the ingress router node, through the ingress node s internal interface and the egress node s internal 
+interface, and eventually to the egress node s external interface. The external interface of the ingress 
+node performs a packet classi.cation operation to decide a queue to which the packet should be enqueued. 
+The queue could be a packet processing request queue, or a real­time/best-effort packet queue at an output 
+interface. Further, this queue could be local to the ingress node, or may reside on the egress node. 
+In the case of a local target queue, the ingress node also plays the role of the egress node. Ingress 
+Node Egress Node Figure 5: A generic packet forwarding path through Panama includes two router nodes 
+and four interfaces. The ingress node s external interface classi.es the packet and performs a request-response 
+protocol and peer-to-peer DMA with its in­ternal interface to send the packet to the egress node. Misses 
+in the classi.cation cache at the external interface trigger a request to be posted to the CPU, which 
+asynchronously services the request and forwards the packet to the ingress node s internal interface. 
+The egress node s internal inter­face receives and enqueues the packet and its CPU performs output link 
+scheduling to actually puts the packet on the wire. In the general case, the ingress and egress nodes 
+are dif­ferent; an incoming packet is .rst moved from the ingress node s external interface to its internal 
+interface through a peer-to-peer DMA transaction, and then to the egress node s internal interface through 
+a network transfer transaction over Myrinet. The peer-to-peer DMA transaction allows the packet to appear 
+on the I/O bus (PCI in this case) exactly once, and proceeds using a request-response protocol. The external 
+interface DMAs a request to a designated area in the memory of the internal interface and blocks waiting 
+for a noti.cation. The internal interface, which may get mul­tiple such requests from multiple external 
+interfaces, ser­vices these requests in a round-robin fashion by pulling the data from the source interface, 
+again through a peer-to-peer DMA, and .nally DMAs a noti.cation to a designated area in the external 
+interface s local memory. Upon receipt of a packet over the router s backplane, the egress node s internal 
+interface enqueues it to an appropriate queue in the node s main memory, based upon the classi.ca­tion 
+decision that the packet carries with it. Finally, the link scheduler schedules data for transmission, 
+by setting up the corresponding external interface to perform a gather DMA from the node s memory out 
+on the output link. In the event that the external interface of the ingress node encounters a classi.er 
+cache miss, it posts a classi.cation re­quest to the ingress node s CPU, which, after servicing the lookup 
+request, writes a pull request to the node s internal in­terface, exactly like a peer-to-peer DMA request 
+made by ex­ternal input interfaces to the internal interface. This mecha­nism allows the packet to .ow 
+back to the forwarding path. Note that the CPU is not interrupted regardless of whether a packet encounters 
+a classi.cation cache miss or not. Instead, each router node s CPU polls the lookup request queue peri­odically 
+to determine whether there are classi.cation cache misses to process. Similar posting mechanisms are 
+used for output link scheduling and packet computation requests at the egress nodes. Therefore, Panama 
+s data packet move­ment process is interrupt-free. The movement of a packet through the forwarding path 
+is heavily pipelined among the network processors on network interfaces and CPUs on the ingress and egress 
+nodes. Figure wire peer peer peer wire send enq to gather wire schedule  Figure 6: Pipeline boundaries 
+for the four-interface forward­ing path in Figure 5. The pipeline s critical path in this exam­ple is 
+the combination of stages 6, 7 and 8, and determines the pipeline s cycle time T. The arrows between 
+pipeline stages represent dependencies among individual pipeline stages due to resource contention. 6 
+shows the nine steps involved in moving a packet from the input link to its corresponding output link. 
+Each step takes a different amount of time. Since some steps may use m the same hardware resources, the 
+.nal design is a-stage pipeline rather than a 9-stage one. Speci.cally, steps 2, 3 and 4are combined 
+into one pipeline stage because they all need to use the ingress node s PCI bus, and steps 6, and 8are 
+combined into one pipeline stage because steps 6and 8need the egress node s PCI bus. In case of our hardware 
+platform, the cycle time of this pipeline, i.e., the critical path delay, is dictated by the combined 
+delay of the 6-th, -th and 8-th steps. However, note that pipeline boundaries are enforced by the network 
+processor code and are not hard-coded. In par­ticular, on different hardware platforms, the pipeline 
+cycle time may be different. Apart from explicit synchronization where network pro­cessors defer their 
+next request until the previous invoca­tion request is complete, there is an implicit pipeline syn­chronization 
+between the egress node s internal interface and its main CPU: the internal interface s enqueuing oper­ation 
+may be stalled if the free buffer pool is exhausted, to wait for the CPU to release buffers. Similarly, 
+there is an implicit pipeline synchronization requirement between the egress node s CPU and the output 
+interface that the packet takes to leave the router: the link scheduler may get blocked if the output 
+interface has not .nished the gather DMA of the previous cycle.  4.2 Integrated Packet Queuing and Link 
+Scheduling In the 6-th stage of the pipeline described in Section 4.1.2, a batch of quanta arrives at 
+the egress node s internal inter­face. Enqueuing each quantum in the batch to its respective per-connection 
+queue requires a separate short DMA to the current tail of the queue. As a result, the overhead of this 
+short DMA burst would seriously degrade the ef.ciency of the overall data transfer pipeline. To solve 
+this performance problem, the internal network interface is required to send a summary data structure 
+about each arriving batch of quanta to the CPU, which then performs the enqueuing operations directly 
+against main memory. Consequently, only a single DMA is required to transmit the summary data structure 
+and the batch. The data structure that summarizes which .ows a batch Queue Queue Queue Head Head Select 
+f1 f5 f1, f10 f25 f20 f10 f25 f30f30 Figure 7: Three batches arrive at an output interface. An example 
+2-cycle run of the consume-and-thread algorithm. Unsent quanta of a batch are threaded both vertically 
+and horizontally into the subsequent batches, which are to be ser­viced by the link scheduler subsequently. 
+Solid and dotted lines represent vertical and horizontal threading respectively. of quanta belong to 
+is a run-length encoded bit map. For example, assume there are 3gconnections sharing an output link, 
+and a batch is received in which .ows through gand .ows 2gthrough 32ghave quanta present. Logically this 
+in­formation can be represented as (gp(ggp (g. Each triple corresponds to a run. The .rst .eld in a 
+triple in­dicates whether the .ows in the run have quanta, meaning yes and gmeaning no. The second .eld 
+represents the run s length and the third .eld represents the number of quanta from each .ow if the .rst 
+.eld is . The same representa­tion is used to represent the per-connection queues associ­ated with an 
+output interface. So when a batch of quanta arrives at the internal network interface of an egress node, 
+the interface forwards the batch s corresponding encoded bitmap to the CPU, and the CPU simply logically 
+ORs the new bitmap with the bitmap representation at the corre­sponding output interface. For example, 
+if the current status mm of the per-connection queues is (pg ( pg(gp , then the logical OR of the batch 
+s bitmap and per-connection mmmm queues bitmap is ((2((pg (gp. Similarly, when the output link scheduler 
+sends out a batch of quanta, the set of quanta should be subtracted from the per-connection queues bitmap 
+accordingly. The subset of quanta that are not sent out in the current scheduling cycle are threaded 
+into the next batch. This threading operation is the physical realization of the bitmap merge operation: 
+quanta that belong to the same connection are horizontally threaded, and quanta that belong to connec­tions 
+between which there are no other backlogged connec­tions are vertically threaded. Figure 7 illustrates 
+how the threading operation works in two consecutive scheduling cy­cles. In the .rst cycle, the scheduler 
+selects only .ows and 22gfor service. This leaves quanta for .ows gand 32gto be carried over to the next 
+batch. A merging scan through the next batch would thread .ow g s quantum horizontally with its fellow 
+packets, and the quanta from .ow gand 32gverti­cally with their neighboring connections. In the next 
+cycle, m quanta from .ows , gand 2are selected, causing quan­tum from .ow 3gto be horizontally threaded, 
+and quanta from gand 3gto be vertically threaded. Without consume­ m and-thread, a total of 43= 2short 
+DMAs would be required for this example. However, with consume-and­thread, only 3short DMAs are required, 
+one for each batch.  5 Performance Evaluation Performance measurements are made on the Panama proto­type 
+described above. All the reported results are based on measurements from a single packet forwarding path 
+between two router nodes through four network interfaces. Because the router backplane supports signi.cantly 
+higher bandwidth than can be saturated by individual paths, the aggregate per­formance of a Panama router 
+is .times the measurements reported below, where .is the number of disjoint pairs of router nodes. Two 
+other PCs are used as the source and sink hosts that drive traf.c into and receive packets from the Panama 
+prototype. Byte and packet throughput are mea­sured by sending packets back to back from the source to 
+the sink. Inter-packet gap is measured at the sink and if it is within a small percentage of the inter-packet 
+gap at the source, the source further reduces the inter-packet gap. This adjustment continues until Panama 
+s throughput saturates and no further reduction in inter-packet gap at the sender side is possible. All 
+timing measurements have been taken using the cycle count register on the Pentium-II processor of the 
+source and sink hosts. Each cycle is worth 2m nsec. . 5.1 Throughput Results Panama supports both FIFO 
+and DFQ output link schedul­ing. In this section, we evaluate the overhead of DFQ com­pared to FIFO. 
+We also evaluate the scalability of DFQ with respect to the number of concurrent real-time connections. 
+Non-FIFO link scheduling such as DFQ ensures that the output link bandwidth be shared among competing 
+.ows based on their resource reservations, but may incur addi­tional scheduling overhead. The scheduling 
+overhead of DFQ is due to the multiplexing and de-multiplexing op­erations required for quantum-size 
+rather than packet-size transmission. Figures 8 and 9 show the differences in byte throughput and packet 
+throughput between FIFO link scheduling and DFQ link scheduling, as the quantum size used in DFQ and 
+the packet size vary. Each data point in these .gures represent the measured throughput, in bytes/sec 
+and packets/sec respectively, when a sequence of packets, each of the corresponding packet size, are 
+transferred from the source host to the sink host, through the Panama proto­type. For DFQ link scheduling, 
+we also vary the quantum size, which is the unit of discretization as compared to Fluid Fair Queuing. 
+For a given quantum size, we measure the router throughput only for packet sizes that are larger than 
+the quantum size. For FIFO scheduling, the byte throughput increases with the packet size, because each 
+DMA transaction at the sender side amortizes its per-transaction overhead over a larger packet and is 
+therefore more ef.cient. For DFQ schedul­ing, the byte throughput is independent of the packet size but 
+depends on the quantum size, because the size and thus ef.ciency of each DMA transaction in DFQ is dependent 
+on the quantum size, regardless of the packet size. The larger the quantum size is, the more ef.cient 
+DFQ s DMA trans­actions are. Compared to a DFQ scheduler whose quantum size is the same as the packet 
+size in the input traf.c, the FIFO scheduler actually shows a lower byte throughput be­cause at the receiver 
+end of a network link, DFQ only needs to perform a single DMA transaction for a batch of quanta whereas 
+FIFO requires one DMA transaction for each in­dependent packet. However, FIFO can continue to exploit 
+the increasing packet size to improve the DMA transactions ef.ciency at the sender end and eventually 
+out-perform all DFQ instances with a .xed quantum size, in terms of byte throughput. For the FIFO scheduler, 
+as the packet size increases, the byte throughput increases but the number of packets trans­mitted within 
+a unit time decreases, and the overall net ef­fect is that the packet throughput decreases. For the DFQ 
+scheduler, only the number of packets transmitted within a unit time decreases with increase in packet 
+size, but the byte throughput remains unchanged. Therefore, the slope of the decrease in packet throughput 
+for DFQ is steeper than that for FIFO. The byte and packet throughput differences between DFQ and FIFO 
+represent the cost of real-time link scheduling. As shown in Figure 8 and 9, this cost is less than 50% 
+for packet sizes smaller than or equal to 1000 bytes. For even smaller packet sizes, this cost is actually 
+negative, be­cause DFQ s batching improves the receiver side s DMA ef­.ciency. In addition to low scheduling 
+overhead compared to FIFO scheduling, DFQ is also more scalable in that its per­.ow scheduling overhead 
+does not depend on the number of real-time connections that share the same output link, which has been 
+the de.ciency for other real-time link schedulers based on packetized weighted fair queuing. To substanti­ate 
+DFQ s claim of .(scheduling overhead, we measure the packet rates versus the number of real-time connections 
+for a sequence of 28-byte real-time packets and a quantum size varying from 32bytes to 28bytes, increasing 
+by fac­tors of 2. Figure 10 shows that the overall packet throughput remains almost constant when the 
+number of real-time con­nections varies from 322gto 322gg.  5.2 Latency Results Quantum Size (bytes) 
+Ingress Node Latency (cycles) Egress Node Latency (cycles) Pipeline Cycle Time (cycles) 16 56,580 79,298 
+56,994 32 61,064 85,229 59,279 64 70,644 95,197 65,302 128 88,852 124,195 98,794 Table 1: Latency measurements 
+on the ingress and egress nodes for real-time packets. The ingress node latency is the combined latency 
+of pipeline stages 1 through 5 in Figure 6 and the egress node latency is the combined latency of stages 
+6 through 9. The last column shows the pipeline cycle time for the entire operation, which is always 
+less than the latency due to overlap between pipeline stages. Besides throughput, latency is another 
+important perfor­mance metric, because it shows how effective the pipelined datapath implementation is. 
+In Figure 6, the combined la­ m tency of stages through is the latency at the ingress node, whereas the 
+combined latency of stages 6though 9is the latency at the egress node. Table 1 shows the latency mea­ 
+500.0 30.0  DFQ (Qsize=16) DFQ (Qsize=32) DFQ (Qsize=64) 400.0 300.0 200.0  Throughput (Mbits/s) Pkt 
+Rate (in 10 Kpkts/s) 20.0 10.0 100.0 0.0 0.0 Figure 8: Throughputs in bytes/sec for FIFO and DFQ Figure 
+9: Throughputs in packets/sec for FIFO and DFQ schedulers with varying packet size and quantum size. 
+schedulers with varying packet size and quantum size. 20.0 25.0 15.0 Pkt Rate (in 10Kpkts/s) 10.0 5.0 
+0.0 Figure 10: The constant scheduling overhead of DFQ al­lows Panama s packet rate to remain unaffected 
+by increas­ing numbers of real-time connections.  Pkt Rate (in 10 Kpkts/s) 20.0 15.0 10.0 Figure 11: 
+Performance improvement in packet rate from the consume-and-thread algorithm, which avoids unneces­sary 
+DMAs, decreases with increases in quantum size. surements on the ingress and egress nodes for real-time 
+data transfers with varying quantum size. These numbers cor­respond to a batched transfer of 32-quanta 
+batches. These measurements demonstrate the effectiveness of Panama s pipelined implementation by showing 
+that the pipeline cy­cle time in each case is less than the overall latency as well as the latency of 
+the bottleneck node (viz the egress node in this case). The ratio between the sum of ingress and egress 
+node latencies and the pipeline cycle time re.ects the extent of pipelining at work. To reduce the delay 
+of the 6-th pipeline stage in Figure 6, the consume-and-thread algorithm was developed to avoid short 
+DMAs that would have been required if the internal in­terface at the egress node appends each incoming 
+quanta to its corresponding queue. By relaying relevant information to the CPU through a summary data 
+structure, and letting the CPU perform the queue appending operation, the over­all packet throughput 
+increases signi.cantly, especially for small packets, as shown in Figure 11. However, as the quan­tum 
+size increases, the overheads of short DMAs are more and more dominated by the per-byte data transfer 
+cost, and therefore the signi.cance of this optimization diminishes.  5.3 Routing Table Lookup Performance 
+When a network processor on a Panama router node s ex­ternal interface fails to classify an incoming 
+packet, it posts a request to its associated CPU, which then services the re­quest and posts the packet 
+back to the forwarding path. In this section, we evaluate the performance of routing table lookup in 
+our prototype. To evaluate the routing table lookup operation in isolation, we measure the hit access 
+time and the miss penalty of a lookup operation. I Lanai processor s cycle time is worth approximately 
+2Pentium cycles. A lookup resulting in a hit takes 4gmPentium cycles, or .392Lanai cycles. This overhead 
+is mainly due to the fact that selecting the index bits and the tag from a packet s destination address 
+has to bedone ina 32-iteration loop, since there is no hardware bit selection primitive. The cache miss 
+penalty is the extra overhead incurred in posting a request to the classi.er, and in a full search through 
+the routing table data structure, and is measured to be m6Pentium cycles for 4-byte packets. 2g 6 To 
+understand the effectiveness of the proposed aggre­gate route caching scheme, a packet trace was run 
+through the Panama prototype, which has been collected from an Internet edge router (the main router 
+of Brookhaven Na­tional Laboratory), and its cache hit ratio and routing table lookup rate were measured. 
+To be conservative, we used a g24-entry cache in the network processor, which corre­sponds to gindex 
+bits. The measured cache hit ratio is d 9236. Therefore, the average service time for a routing . table 
+lookup is f49223cycles. If the routing table lookup is the bottleneck, then a packet rate of 82mKpackets/sec 
+.. can be sustained for this trace. This less-than-stellar routing table lookup performance is because 
+long hit access time, which in turn is due to lack of an ef.cient bit selection prim­itive, and the low 
+clock rate the Lanai network processor. If the network processor s clock rate improves from 33 MHz to 
+330 MHz, the overall routing table lookup performance per interface would be close to 1 million packets 
+per second. 5.4 Packet Computation Overhead Panama features a highly ef.cient safe kernel-level router 
+extension mechanism. To evaluate the performance impacts of the invocation overhead of this router extension 
+mech­anism, we measured the packet throughput of a 64-byte packet sequence, some of which need to call 
+a router ex­tension function. The extension function used in this ex­periment .rst calls a null kernel 
+service, writes a word to a memory region shared by the kernel and the router extension, and returns 
+to the kernel. Thus, in every extension invoca­tion, two protected function calls are being made. Recall 
+that the overhead of a null protected function call is 42cy­cles. Figure 12 shows the packet rates versus 
+the percent­age of packets in the input sequence that need additional null packet computation. The packet 
+rate decreases slowly with the increasing percentage of input packets that need ad­ditional packet processing. 
+The small slope in this .gure demonstrates that the invocation of Panama s safe router ex­tension mechanism 
+is indeed quite ef.cient. The extension function used in this experiment does nothing but write a word 
+to a memory region shared by the kernel and the router extension. As the number of extension function 
+calls that each packet calls increases, the packet rate decreases, with a constant slope that corresponds 
+to the overhead of invoking a router extension function. An alternative way to measure the effectiveness 
+of the Figure 12 shows how the packet rate changes as the per­centage of .ows that require computation 
+worth one exten­sion function increases. The slope will be given by single extension overhead divided 
+by the number of connections considered in the experiment. The experiment shows that the incremental 
+overhead of computation is small and does not signi.cantly degrade the overall packet rate.  5.5 Importance 
+of Packet Computation Scheduling A key feature of Panama that does not exist in other exten­sible routers 
+is its ability to integrate CPU scheduling for packet computation with output link scheduling to achieve 
+end-to-end performance guarantees. To demonstrate the use­fulness of this integrated resource scheduling 
+scheme, we conducted an experiment in which there are two competing h.ows, .ow and 2, each reserving 
+and of the the link bandwidth and CPU capacity respectively. In addition, while .ow 1 sends data in accordance 
+with its reservation, .ow 2 sends at a rate twice its reservation. Figure 13 shows the time line of packets 
+received for each .ow, with and without scheduling. In the absence of packet computation schedul­ing, 
+the CPU simply serves packets from these two .ows as they arrive, without regard to their reservations, 
+and thus divides its capacity equally between the two .ows. As a re­sult, the aggressiveness of .ow 2causes 
+.ow to receive less CPU resource than it needs and to leave some of its re­served bandwidth unused. Since 
+the link scheduler is work­conserving, the unused bandwidth actually becomes avail­able to .ow 2. Consequently, 
+the link bandwidth is also equally divided between the two .ows. However, in the pres-hence of packet 
+computation scheduling, .ow 2only gets of the processing cycles and .ow 1 gets of the processing   
+30.0 10.0 8.0 20.0  Pkt Rate (in 10 Kpkts/s) 6.0 4.0 10.0 2.0 0.0 0.0 Figure 12: The performance impact 
+of the percentage of pack-Figure 13: Without packet computation scheduling, .ow 1 ets in the input traf.c 
+that require additional packet computation and 2 progress at the same rate. With packet computation on 
+Panama s packet throughput. The slope is indicative of the scheduling, .ow 1 progresses at twice the 
+rate as .ow 2, invocation overhead of Panama s safe router extension mecha-exactly according to their 
+original link/CPU reservations. nism. cycles. Eventually each .ow is progressing at a rate exactly according 
+to its reservation, as shown in Figure 13. This ex­periment shows that true end-to-end performance guarantees 
+can not be achieved without integrating packet computation scheduling and output link scheduling.  5.6 
+Lessons The experiences from designing and implementing the Panama prototype teach us several important 
+lessons about using PC clusters as the underlying computing platform for edge routers. First, the most 
+performance limiting factor in the Panama hardware architecture is the PCI bus, in partic­ular, the inability 
+to ef.ciently execute short DMA trans­actions due to .xed per-transaction bus arbitration over­head. 
+Although improving PCI s raw bandwidth might help, i.e., by upgrading to 66-MHz and/or 64-bit PCI, we 
+believe such upgrades would not improve Panama s packet or byte throughput by proportional amounts. What 
+is needed is a more intelligent DMA engine on the network interface to fully exploit the pipelining capabilities 
+of the PCI bus. Sec­ond, in Panama the processors on the network interfaces as­sume the responsibility 
+of routing and forwarding network packets, and do not appear to be a performance bottleneck. This result 
+demonstrates that by keeping the generic packet forwarding path simple, relatively low-performance RISC 
+processors, 323MHz processors in our case, can produce ad­equate packet forwarding performance. Therefore, 
+instead of designing customized processors with special-purpose in­struction, a more promising optimization 
+strategy is to in­crease the clock rate of generic RISC engines. Finally, to further minimize the performance 
+overhead due to the in­teraction between the network processors and node CPU s, network interfaces should 
+be equipped with more high-speed memory so that the network processors can assume more re­sponsibilities, 
+like link scheduling. Alternatively, network interfaces could be provided with a faster access path to 
+the main memory, much as the AGP bus for 3D graphics cards.  6 Conclusion The main contributions of 
+this work are the development of a scalable and extensible edge router architecture, its realiza­tion, 
+and its performance evaluation based on a functional prototype. We believe this is the .rst set of empirical 
+results ever reported on a cluster-based software router. In addi­tion to the decoupled system architecture 
+that cleanly sep­arates packet forwarding and packet computation paths, we also believe Panama boasts 
+several unique architectural and algorithmic features not available in existing router imple­mentations. 
+These features include .A safe and ef.cient extension mechanism to support programmable router functionalities, 
+.An aggregate route caching scheme to increase the ef­fective coverage of a routing table cache, .A Discretized 
+Fair Queuing link scheduler that provides good delay bounds, while incurring an overhead that is independent 
+of the number of real-time .ows sharing an output link, .A highly ef.cient interrupt-free and lock-free 
+data movement pipeline, and  .An integrated resource scheduler that does both packet computation scheduling 
+and link scheduling to ensure that the end-to-end performance guarantee of a real­time .ows with packet 
+computation is indeed met. Finally, we have completed a fully-operational cluster­based Panama prototype 
+and performed a comprehensive performance study on the prototype, which provides a better understanding 
+of the performance characteristics and design tradeoffs of PC cluster-based edge router architecture, 
+and design lessons on useful features for next-generation net­work interface processors.  Acknowledgement 
+This research is supported by NSF awards MIP-9710622, IRI-9711635, EIA-9818342, ANI-9814934, and ACI­9907485, 
+USENIX student research gransts, as well as fund­ings from Sandia National Laboratory, Reuters Information 
+Technology Inc., Computer Associates/Cheyenne Inc., Na­tional Institute of Standards and Technologies, 
+Siemens, and Rether Networks Inc. References [1] D. Stiliadis, A. Varma; Rate-proportional servers a 
+design methodology for fair queueing algorithms ; IEEE/ACM Transactions on Networking, April 1998, Volume 
+6, Number 2, pp. 164 -174. [2] D. Mosberger, L. Peterson; Making Paths Explicit in the Scout Operating 
+System ; Proc. OSDI 1996. [3] N. C. Hutchinson, L. L. Peterson; The x-Kernel: An architecture for implementing 
+network proto­cols ; IEEE Transactions on Software Engineering, 17(1):64#76, Jan. 1991. [4] P. Pradhan, 
+T. Chiueh; Cache Memory Design for Network Processors ; Proc. IEEE HPCA 2000. [5] Discretization in 
+Fluid Fairness : Formulation and Im­plications ; Technical Report (Author names hidden). [6] T. Chiueh, 
+G. Venkitachalam, P. Pradhan; Integrat­ing Segmentation and Paging Protection for Safe, Ef­.cient and 
+Transparent Software Extensions ; Proc. ACM SOSP 1999. [7] Intel Architecture Software Developer s Manual 
+(http://developer.intel.com/vtune/cbts/refman.htm) [8] J. Liedtke; Improved Address Space Switching on 
+Pentium Processors by Transparently Multiplexing User Address Spaces ; GMD technical report (http://­i30www.ira.uka.de/publications/pubcat/As-pent.ps). 
+[9] T. Chiueh, P. Pradhan; High Performance IP Routing Table Lookup Using CPU Caching ; Proc. IEEE IN-FOCOM 
+1999. [10] D. Decasper, Z. Dittia, G. Parulkar, B. Plattner; Router Plugins: A Software Architecture 
+for Next Generation Routers ; Proc. ACM SIGCOMM 1998. [11] J. Wroklawski; Fast PC Routers ; (http://ana-www.­lcs.mit.edu/anaweb/pcrouter.html). 
+[12] The ATOMIC-2 Project ; (http://www.isi.edu/div7/­atomic2). [13] L. Peterson, S. Karlin, K. Li; OS 
+Support for General-Purpose Routers ; Proc. IEEE HotOS 1999. [14] P. Pradhan, T. Chiueh; Operating Systems 
+Support for Programmable Cluster-Based Internet Routers ; Proc. IEEE HotOS 1999. [15] R. Morris, E. Kohler, 
+J. Jannotti, M. F. Kaashoek; The Click Modular Router ; Proc. ACM SOSP 1999. [16] V. Vuppala, L. M. Ni; 
+Design of A Scalable IP Router ; Proc. IEEE Hot Interconnects 1997. [17] Michigan University and Merit 
+Network. Internet Per­formance Measurement and Analysis (IPMA) Project. (http://nic.merit.edu/ipma). 
+[18] Myricom Inc.; LANai4.X speci.ca­tion ; (http://www.myri.com/scs/documentation/mug/­development/LANai4.X.doc.txt). 
+ 
+			

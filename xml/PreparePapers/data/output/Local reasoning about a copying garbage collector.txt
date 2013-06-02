@@ -1,0 +1,523 @@
+
+ Local Reasoning about a Copying Garbage Collector Lars Birkedal Noah Torp-Smith John C. Reynolds The 
+IT University of Copenhagen The IT University of Copenhagen Carnegie Mellon University birkedal@itu.dk 
+noah@itu.dk John.Reynolds@cs.cmu.edu Abstract We present a programming language, model, and logic appropriate 
+for implementing and reasoning about a memory management sys­tem. We then state what is meant by correctness 
+of a copying gar­bage collector, and employ a variant of the novel separation logics [18, 23] to formally 
+specify partial correctness of Cheney s copying garbage collector [8]. Finally, we prove that our implementation 
+of Cheney s algorithm meets its speci.cation, using the logic we have given, and auxiliary variables 
+[19]. Categories and Subject Descriptors D.2.8 [Logics and Meanings of Programs]: Specifying and Ver­ifying 
+and Reasoning about Programs Assertions, Logics of pro­grams, Speci.cation techniques General Terms 
+Realiability, Theory, Veri.cation  Keywords Separation Logic, Copying Garbage Collector, Local Reasoning 
+ 1 Introduction Reasoning formally about low-level imperative programs that ma­nipulate data structures 
+involving pointers has proven to be very dif.cult, mainly due to a lack of reasoning principles that 
+are ad­equate and simple at the same time. Recently, Reynolds, O Hearn and others have suggested separation 
+logic as a tool for reason­ing about programs involving pointers; see [23] for a survey and historical 
+remarks. In his dissertation, Yang showed that separa­tion logic is a promising direction by giving an 
+elegant proof of the non-trivial Schorr-Waite graph marking algorithm [28]. One of the key features making 
+separation logic a promising tool is that Permission to make digital or hard copies of all or part of 
+this work for personal or classroom use is granted without fee provided that copies are not made or distributed 
+for pro.t or commercial advantage and that copies bear this notice and the full citation on the .rst 
+page. To copy otherwise, to republish, to post on servers or to redistribute to lists, requires prior 
+speci.c permission and/or a fee. POPL 04 January 14 16, 2004, Venice, Italy Copyright 2004 ACM 1-58113-729-X/04/0001 
+...$5.00 it supports local reasoning: when specifying and reasoning about program fragments involving 
+pointers, one may restrict attention to the footprint of the programs, that is, to just that part of 
+memory that the program fragments read from or write to. The aim of this paper is to further explore 
+the idea of local rea­soning and its realization in separation logic. To this end we prove the correctness 
+of Cheney s copying garbage collector [8] via local reasoning in (an extension of) separation logic. 
+There are several reasons why we have chosen to focus on Cheney s algorithm: The algorithm involves 
+many imperative manipulations of data; in particular, it not only updates an existing data struc­ture 
+as the Schorr-Waite algorithm does, but moves data around. Moreover, it simultaneously treats the same 
+data as a set of records linked by pointers and as an array of records.  Cheney s algorithm copies any 
+kind of data, including cyclic data structures; to the best of our knowledge, our correctness proof is 
+the .rst such done via local reasoning for programs copying cyclic data structures.  Variants of the 
+algorithm are used in practice, e.g., in runtime systems for compilers for functional programming languages, 
+so it is not a toy -example.  To the best of our knowledge, there is no formal correctness proof of 
+Cheney s algorithm in the literature.  Indeed, for the reasons above, proving correctness of a garbage 
+col­lector, has been considered a key challenge for a long time. (In 1992 Nettles gave an informal proof 
+of correctness of a copying garbage collector [17] and expressed a wish for a formal veri.cation.) There 
+are two other motivating factors that we would like to call attention to. The .rst is that our analysis 
+answers a question in the literature and thus paves the way for important future work that so far has 
+been out of reach: In [7], local reasoning and separation logic for a garbage collected language is analyzed. 
+An underlying garbage collector is presumed in the operational semantics of the language, inasmuch as 
+a partial pruning and a-renaming (i.e., relo­cation) of the current state is allowed at any time during 
+execution of a program. In [7] it is not mentioned how this pruning and re­naming should be done, let 
+alone proven that it is done correctly. A remark at the end of the paper expresses the desirability of 
+such a proof we provide one here. The analyses in [7] and the present paper are at two distinct levels: 
+the former is at the level of a user language using a runtime system (a garbage collector), the latter 
+is at the level of a runtime system providing operations for the user language (memory allocation and 
+garbage collection). We believe these analyses pave the way for an investigation of the correctness of 
+combinations of user level programs and runtime systems, a goal that so far has been unfeasible. We present 
+some preliminary ideas in this direction in Sec. 8. The additional second motivating factor is that our 
+analysis of gar­bage collection should be of use in connection with foundational proof-carrying code 
+[2] and typed assembly language [14]. In these settings, a memory allocation (but no deallocation) construct 
+is part of the instruction set and a memory management system is implic­itly assumed. We believe that 
+our correctness proof can contribute to mimicking the work of [14] in a more realistic setting, for more 
+machine-like assembly languages. 1.1 Contributions and Methodology In Sec. 2 we present our storage 
+model and the syntax and semantics of assertions. Our storage model is very concrete and close to real 
+machines; it treats locations as multiples of four. (It is assumed that all data other than locations 
+are encoded as nonmultiples of four.) This is very similar to what is often used in real implementations 
+of runtime systems for compilers. For simplicity we assume that heaps only consist of cons-cells, aligned 
+such that the .rst compo­nent is always on a location divisible by eight; hence pointers (to cons-cells) 
+are multiples of eight. As usual in separation logic, a state consists of a stack and a heap, where a 
+stack is a .nite map from variables to values, and a heap is a .nite map from locations to integers. 
+A new feature is that our values include .nite sets and relations of pointers and integers, which are 
+used to give the seman­tics of assertions and of auxiliary variables [19]. Our assertion language, presented 
+in Sec. 2.3, is an extension of separation logic [23] with new assertion forms for .nite sets and relations. 
+These new forms are crucially used to express part of the speci.cation of Cheney s algorithm; in particular 
+the existence of an isomorphism between pointers to old cells and pointers to copies of the old cells. 
+We believe this methodology of using sets and re­lations can be used more widely, to specify and prove 
+correct other programs involving shared or cyclic structures. Indeed a somewhat similar approach is being 
+used by Richard Bornat [5] to specify and verify an algorithm for copying directed acyclic graphs. Moreover, 
+we have extended the iterated separating conjunc­tion [23] of separation logic to arbitrary .nite sets. 
+The assertion .*x .m. A holds in a state s,h,if m denotes a .nite set {p1,...,pk}and A[p1/x] *···*A[pk/x] 
+holds in s,h (see Fig. 1 for a precise de.nition). As illustrated in Sec. 5, one can specify a program 
+by dividing the locations it manipulates into disjoint sets, using the it­erated separating conjunction, 
+together with expressions for .nite sets and relations, to express particular properties for each set 
+of locations. One could argue that it is a weakness of separation logic that we had to extend it with 
+the above mentioned new constructs. Such exten­sions must be expected, however, when a young logic encounters 
+a subtle algorithm. The real question is whether the resulting speci.­cation is a natural formalization 
+of the programmer s understanding of the algorithm. In Sec. 3 we de.ne the syntax and semantics of the 
+programming language used for implementing the garbage collector. It is a simple imperative programming 
+language, with constructs for heap lookup and heap update (but no constructs for allocating or disposing 
+of heap cells). The associated program logic is presented in Sec. 3.2. The program logic is mostly standard 
+except for the new rules re­garding sets and relations. We include the Frame Rule of separa­tion logic, 
+which makes local reasoning possible, as explained in Sec. 3.2. In Sec. 4 we express what it means for 
+a garbage collector to be correct. Our de.nitions are based on the analysis in [7] (already referred 
+to above) and thus involve pruning and a-renaming of pro­gram states. Cheney s algorithm and the speci.cation 
+of our implementation thereof are presented in Sec. 5; the implementation itself is included in Appendix 
+A. We present an informal analysis of the algorithm and use it to derive a formal speci.cation of an 
+invariant. The point­ers manipulated by the algorithm can be naturally divided into dis­joint sets and 
+thus it is natural to use the method of sets and relations together with the iterated separating conjunction 
+mentioned before. The sets and relations are also used in another crucial way, namely to record the initial 
+contents of the heap (before garbage collection). This makes it possible to relate the .nal heap (after 
+garbage collec­tion) to the initial heap and prove that the .nal heap is a garbage collected version 
+of the initial heap. We also emphasize the following point. Cheney s algorithm as­sumes two contiguous 
+semi-heaps of equal size, OLD and NEW, and works by copying all live data from OLD into NEW. One of the 
+reasons for the popularity of Cheney s algorithm (and variants thereof) is that it runs in time proportional 
+to the live data; it never touches dead cells. This fact is re.ected directly in our speci.cation of 
+the algorithm, which refers to the live part of OLD only. It is in the spirit of local reasoning to have 
+such a direct correspondence between the intuitive understanding of an algorithm and its formal speci.cation. 
+In Sec. 6 we prove our implementation of Cheney s garbage collec­tion algorithm correct. The proof proceeds 
+by .rst showing that the proposed invariant from the previous section is indeed an invariant and then 
+showing that the invariant suf.ces to conclude correctness. We present the key ideas of the proofs and 
+in particular explain how local reasoning allows us to reason locally about different fragments of the 
+algorithm, thus illustrating the power of the Frame Rule. Full proofs with all details can be found in 
+the companion technical re­port [4]. In Sec. 7 we discuss some related work, besides what we have al­ready 
+discussed above, and .nally we conclude and present some suggestions for future work in Sec. 8.  2 Syntax 
+and Semantics In this section, we present our basic storage model and the syntax and semantics of expressions 
+and assertions. The basis of the sys­tem is the standard separation logic with pointer arithmetic [18], 
+but we extend the expression and assertion languages with .nite sets and relations, new basic assertions 
+about these, and the extension of the iterated separating conjunction to arbitrary .nite sets. 2.1 Storage 
+Model We assume .ve countably in.nite sets Varint , Varfs , Varfrp, Varfri , Varpath of variables, and 
+we let Var be the disjoint union of these sets. We let metavariables x,y,...range over Var and assume 
+a type­function t : Var .Types, where Types = {int,fs,frp,fri,path} indicating which type a given variable 
+has. The set of locations is the set of natural numbers that are divisible by 4, and the set of pointers 
+is the set of natural numbers that are divisible by 8. More formally, we de.ne: Variables x,y,... . Var 
+Pointers Locations Finite sets p .Ptr l .Loc FS def = def = def = {8n | n .N} {4n | n .N}P fin(Ptr) Pointer 
+rel ns FRP def = P fin(Ptr ×Ptr) Integer rel ns FRi def = P fin(Ptr ×.) Paths Values Path v .Val def 
+= def = {head,tail}* ..FS.FRP .FRi .Path Heaps def = Loc -fin Z Stacks States def = def = {s : Var -fin 
+Val |.x .Var. s(x) .[[t(x)]]} Stacks ×Heaps, and let [[int]] = ., [[fs]] = FS, [[fri]] = FRi, [[ path]] 
+= Path, and [[frp]] = FRP.  2.2 Expressions We de.ne the syntax and semantics for expressions of each 
+of the types int,fs,frp,fri,path. For expressions of type int we just present the syntax; the semantics 
+is standard. For expressions of the remaining types, we just present the semantics as the syntax will 
+be evident from the presentation of the semantics. Expressions of type int are de.ned by the following 
+grammar: e ::= n |xint|e1 + e2 |e1 -e2 |e1 ×e2 |e mod j fs |e1 =e2 |e1 = e2 |¬e |e1 .e2 |#m, where n 
+. .and j .N\{0}. The semantics of #mfs is the num­ fs ber of elements in the .nite set denoted by m(see 
+below). In order to avoid introducing an explicit type of boolean values, we use a standard encoding 
+of truth values, where 0 denotes false , and all other integers denote true . Although the superscript 
+that indicates the type is only meant to indicate the type of variables, we will sometimes use a superscript 
+to indicate the type of composite expressions. At other times, we will omit the superscripts, even on 
+variables, if it causes no confusion. We use m to range over expressions of type fs. The semantics of 
+an expression of type fs is a .nite set of pointers. The operator .adds an element to a set, if it is 
+a pointer, whereas e removes a pointer from a set. Itv(e1,e2) is the set of pointers in the half-open 
+interval from e1 to e2. [[0fs]]s = 0 [[xfs]]s = s(x) [[{e}]] s = {[[ e]] s}nPtr [[mfs .eint]]s =[[m]]s 
+.({[[ e]] s}nPtr) [[mfs eeint]]s =[[m]]s \{[[ e]]s} int int [[ Itv(e,e)]]s = {p .Ptr |[[e1]]s = p . p 
+<[[ e2]]s} 12 fs fs [[m1 .m2 ]]s =[[m1]]s .[[ m2]] s With this, we can formally de.ne the semantics of 
+expressions of fs: the form #m [[#mfs]]s = k, where [[m]]s = {p1,...,pk}(note that k may be 0) We use 
+f to range over expressions of type frp. The semantics of an expression of type frp is a .nite relation 
+on pointers. [[ 0frp]] s = 0 frp]] s [[x= s(x) [[ f frp .(eint ,eint)]]s =[[ f ]]s .({([[e1]]s,[[ e2]]s)}nPtr 
+×Ptr) 12 ' [[ f ]] s = {( p,p) |( p,p') .[[ f ]] s} [[ f frp . f frp ' ]] s = {( p,p''') |.p. ( p,p') 
+.[[ f2]] s . 12 ( p,p'') .[[ f1]]s} We use P to range over expressions of type path. The semantics for 
+expressions of type path is straightforward, in that the denotation of an expression is equal to itself: 
+[[P]]s = P. To conclude our semantics for expressions, we give the semantics for expressions of type 
+fri. We use g to range over such expressions. The @operator will be used to model the structure-preserving 
+prop­erty of a garbage collector, inasmuch as it extends a relation with the identity on non-pointers 
+before composing it with another rela­tion (cf. De.nition 6 later in this paper). fri]] s [[x= s(x) [[gfri 
+. f frp]] s = {( p,n) |.p'.Ptr. ( p,p') .[[ f ]]s . ( p',n) .[[g]] s} [[ f frp @gfri]] s = {( p,n) |(( 
+p,n) .[[g]] s .n. Ptr) . ' (.p'.Ptr. ( p,p') .[[g]] s .( p,n) .[[ f ]]s)} We use =to denote syntactic 
+equality between expressions, and we sometimes write e1 = e2 to denote that [[e1]] s =[[e2]]s, for all 
+stacks s. 2.3 Assertions The assertion language is an extension of separation logic [23] with new assertion 
+forms for .nite sets and relations. We just present the semantics of assertions; again the syntax is 
+evident from the presentation of the semantics. We use A, B, and D to range over assertions. The set 
+FV (A) of free variables for an assertion is de.ned as usual, but note that x is bound in .*x . m. A. 
+Substitution A[e/x] of the expression e for the variable x in the assertion A is de.ned in the standard 
+way. We sometimes write an assertion A as A(x) to emphasize that the variable x may occur free in A. 
+The formal semantics of assertions is given by a judgement of the form s,h lA, the intended meaning 
+of which is that the assertion A holds in the state s,h. We require that FV (A) . dom(s). The semantics 
+is given in Fig. 1; here b ranges over the boolean expressions e1 =e2,e1 = e2, and d ranges over Types. 
+In Fig. 1, we have used the notation h1#h2 to indicate dom(h1) ndom(h2)= 0(we call such heaps disjoint), 
+and if h1#h2, we de.ne the combined heap h1 *h2 by h1(n) if n .dom(h1) . n h2(n) if n .dom(h2) A brief 
+explanation of some of the clauses in Fig. 1 is appropriate here. The assertion forms emp, e1 . e2, A 
+*B, and A -* B are A s,h lA if and only if A s,h lA if and only if b T F ¬A A .B A .B A .B .xd . A .xd 
+. A m1 = m2 (e1,e2) . f frp (e1,e2) .gfri [[b]] s = 0 always never s,h .A s,h lA implies s,h lB s,h lA 
+and s,h lB s,h lA or s,h lB for all v .[[ d]],s[x .v],h lA for some v .[[ d]], s[x .v],h lA [[m1]]s =[[m2]]s 
+([[e1]]s,[[e2]]s) .[[ f ]]s ([[e1]]s,[[e2]]s) .[[ g]]s e1 .e2 emp A *B A -*B Ptr(e) PtrRg(g,m) m .m ' 
+m1 .m2 Tfun( f frp,m) Tfun(gfri ,m) h = {([[e1]]s,[[ e2]]s)}dom(h)= 0 there are heaps h1,h2 such that 
+h1#h2, h1 *h2 = h,s,h1 lA, and s,h2 lB s,h *h ' lB for all h ' such that h#h ' and s,h ' lA [[ e]]s .Ptr 
+.( p,q) .[[g]] s. q .Ptr .q .[[m]]s [[ m]]s n[[ m ']]s = 0 [[ m1]]s .[[ m2]]s .p .[[m]]s. .!n . .( p,n) 
+.[[ f ]]s .p .[[m]]s. .!n . .( p,n) .[[g]] s A s,h lA if and only if iso( f ,m1,m2) eval(g,g ' ,Ppath,e,e 
+') Reachable(g,g ' ,m,e) .*p .m. A .p1 .M1. .!p2 .M2. ( p1,p2) .f ..p2 .M2. .!p1 .M1. ( p1,p2) .f . .( 
+p1,p2) .f. p1 .M1 .p2 .M2, where M1 =[[m1]]s,M2 =[[m2]]s,f =[[ f ]]s (P = e and s,h le = e '), or (P 
+= P ' ·head and .p .Ptr. s,h leval(g,g ' ,P ' ,e,p) and s,h l( p,e ') .g),or (P = P ' ·tail and .p .Ptr. 
+s,h leval(g,g ' ,P ' ,e,p) and s,h l( p,e ') .g ') [[m]] s = {p .Ptr |.P .Path. s,h leval(g,g ' ,P,e,p)}s,h 
+lA[ p1/p] *···*A[ pk/p], if [[ m]]s = {p1,...,pk}s,h lemp if [[ m]]s = 0 Figure 1. Semantics of Assertions 
+taken from separation logic. emp states that the heap is empty, and e1 .e2 states that there is precisely 
+one location in the domain of the heap. A *B means that A and B hold in disjoint subheaps of the current 
+heap, and A -*B means that for all heaps h ' disjoint from the current heap h,if A holds in h ', the 
+combination h *h ' will satisfy B. The assertions eval and Reachable concern evaluation of paths, and 
+PtrRg(g,m) says that any pointer in the range of the relation denoted g is in the set denoted by m. Finally, 
+.* is an iterated separating conjunction. Informally, if s,h l.*x .m. A, and if [[m]]s = {p1,...,pk}, 
+then h can be split into disjoint heaps h = h1 *···*hk with s,h1 lA[ p1/x],...,s,hk lA[ pk/x]. Note that 
+the semantics is classical for the standard .rst-order logic fragment. We use the following standard 
+shorthand notations def e .e1,e2 = (e .e1) *(e + 4 .e2) e1 '.e2 def = e1 .e2 *T e '.e1,e2 def = e .e1,e2 
+*T e .- def = .xint . e .x e .-,- def = .xint ,yint . e .x,y The notations e .e1,e2,e '.e1,e2,e .-,-,e 
+'.-,- make sense for all locations, but we shall only use them when e denotes a pointer. We shall also 
+write e1 = e2 for ¬(e1 = e2). For later use, we introduce some special classes of assertions. The de.nitions 
+are taken from [28] and [23]. We call an assertion A pure if its validity does not depend on the heap, 
+i.e., if s,h lA if and only if s,h ' lA, for all stacks s and heaps h,h ' .  We call an assertion A 
+monotone if, for all stacks s and heaps h,h ' ,  s,h lA and h .h ' imply s,h ' lA, where .indicates 
+set-theoretic inclusion of graphs. In the literature, monotone assertions are often called intuitionis­tic 
+[23]. Remark 1. For a pure assertion A, .distributes over *: s,h lA .(B *C) iff s,h l(A .B) *(A .C) 
+for any assertions B,C.  Pure assertions are monotone.  Syntactically, an assertion is pure, if it 
+does not contain any occurrences of emp, .*, and ., or the shorthand notation '..  De.nition 1. We 
+call an assertion A valid if, for all states s,h with FV (A) .dom(s), we have s,h lA. We use .to denote 
+semantic validity, i.e., A .B if s,h lA implies s,h lB, for all states s,h. One may easily verify that 
+a number of useful assertion schemas are valid; below we present some of the more interesting ones (and 
+omit obvious assertions about .nite sets and relations, the standard rules for classical logic, and simple 
+arithmetic). First we present some rules for the iterated separating conjunction. '' (.*x .m. A) . m 
+= m ..*x .m . A (1) m = 0.((.*x .m. A) .emp) (2) (.*x .m. x .- . A) .e .m . (3) (.*x .m. x .- . A) .(e 
+'.-) (.*x .m. A) .e .m . (4) (.*x .(m ee). A) *A[ e/x] (e .m) .((.*x .(m ee).A) *A[ e/x]) . (5) .*x 
+.m. A Next, we give rules involving our special operator @on relations. (e1,e2) .g .¬Ptr(e2) ..xfrp. 
+(e1,e2) .x @g (6) (e1,e2) .g .(e2,e3) . f .(e1,e3) . f @g (7) (e1,e2) . f @g .((e1,e2) .g .¬Ptr(e2)) 
+. (.x. Ptr(x) .(e1,x) .g .(x, e2) . f ) (8) Tfun(g,m) .(e2,e1) .g .e2 .m .Ptr(e1) . (e2,e3) . f @g .(e1,e3) 
+. f (9) ((e1,e2) . f @g .e1 .m ' . ((.x. (e1,x) .g .x .m) .¬Ptr(e2)) . Tfun( f ,m) .Tfun(g,m ')) .e2 
+= e3 (10) The following rules exploit that heaps are single-valued. e '.e1 . e '.e2 .e1 = e2 (11) When 
+x .FV (e1,e2), (e1 '.e2) . ((.x. e1 .x .A(x)) *B) . (e1 .e2 .A[e2/x]) *B (12) If B is pure and B ' is 
+monotone, then A .B .B ' implies (A *A') .B .B' (13) The following lemmas can be applied when we reason 
+about asser­tions involving .*. LEMMA 1. Suppose s,h l.*x .m. A and that .x. x .m .A .B is valid. Then 
+s,h l.*x .m. B. This means that to infer .*x . m. B from .*x . m. A, it suf.ces to show that .x. x . 
+m .A . B is valid. In this way, we can do implication under .* . LEMMA 2. If D is a pure assertion, and 
+if D.A .A ' and D.B . B ' are valid, then D .(A *B) .D .(A '*B ') is valid. By induction, this means 
+that in order to infer D .(A1 *···*Ak) from D '.(A1 ' *···*A ' k), it suf.ces to show D '.A ' 1 .A1, 
+and ··· ,and D '.Ak '.Ak. As an example of a rule that can be derived from the rules above, we get the 
+following from (12) and monotonicity. When A is a monotone assertion and x . FV (e1,e2), (e1 '.e2) . 
+((.x. (e1 .x .A)) *B) . (e1 .e2 .A[e2/x]) *B (14) . ((e1 .e2) *B) .A[e2/x]  3 Programming Language 
+In this section we .rst de.ne the syntax and semantics of the pro­gramming language used for the implementation 
+of the garbage col­lector. Next, we use the assertion language de.ned above to give a program logic for 
+the language. 3.1 Syntax and Semantics De.nition 2. The syntax of the programming language is given 
+by the following grammar: C ::= skip | xint := e | xfs := m | xfrp := f | xint :=[e] | [e] := e |C;C 
+| while e do C od | if e then C else C . Note that there are no constructs for allocating or deallocating 
+lo­cations on the heap. It would be straightforward to add such con­structs to the language, but we will 
+not need them. In our speci.ca­tion and implementation of Cheney s algorithm we simply assume that the 
+domain of the heap contains the necessary locations. The operational semantics is given by a relation 
+.on con.gura­tions. Con.gurations are either of the form s,h (these are called terminal) or of the form 
+C,s,h (these are called non-terminal). De.nition 3. The relation .on con.gurations is de.ned by a number 
+of inference rules, most of which are completely standard. Thus we just present the rules for assignment, 
+heap lookup, and heap update: [[e]]s = vv . [[d]] xd := e,s,h .s[x . v],h [[e]]s = ll .dom(h) h(l)= n 
+int ::=[e],s,h .s[x .n],h x [[e1]]s = l [[e2]]s = nl .dom(h) [e1] := e2,s,h .s,h[l .n] The semantics 
+is easily seen to be deterministic. De.nition 4. We say that C,s,h is stuck if there is no con.guration 
+K such that C,s,h . K.  C,s,h goes wrong if there is a non-terminal con.guration K such that C,s,h 
+. * K and K is stuck.  C,s,h terminates normally if there is a terminal con.guration  ' ' s ,h ' such 
+that C,s,h . * s ,h ' . Other published de.nitions of the programming language used by separation logic 
+use a special con.guration called abort or fault instead of the concept of stuck ; we are able to avoid 
+this compli­cation because we have restricted the programming language to a deterministic sublanguage. 
+As is standard, we de.ne Mod(C) for a command C to be the set of variables that are modi.ed by the command, 
+i.e., those that occur on the left hand side of the forms xd := v and xint :=[e] (but not [x] := e). 
+The set FV (C) for a command is just the set of variables that occur in C. 3.2 Program Logic De.nition 
+5. Let A and B be assertions, and let C be a command. The partial correctness speci.cation {A} C {B} 
+is said to hold if, for all states s,h with FV (A,C,B) .dom(s), s,h lA implies C,s,h ' ' does not go 
+wrong, and if C,s,h . * s ,h ', then s ,h ' lB. We refer to A as the precondition of the speci.cation 
+and to B as the post­condition. We present a set of proof rules that are sound with respect to Def. 5. 
+Since the rules regarding constructs from the simple while­language are standard [11], we only present 
+rules regarding the heap. ' Rules for heap lookup. When x .FV (e ,A)and y .FV (e), ' {(.y. e .y .A).x 
+=e }x :=[e] (15) ' {e[e /x].x .A[x/y]} When x .FV (e,A)and y .FV (e), {.y. e .y . A}x :=[e] (16) {e .x 
+.A[x/y]} Rule for heap update. {e1 .-}[e1]:=e2 {e1 .e2} (17) The Frame Rule {A}C {B} Mod(C)nFV (A ')=0 
+{A *A '}C {B *A '} The Frame Rule makes local reasoning possible: suppose the asser­tion A *A ' describes 
+a state in which we are to execute C, but that the footprint of C, i.e., those locations read or written 
+by C,is described by A and B. Then from a local speci.cation {A}C {B}for C, only involving this footprint, 
+one can infer a global speci.­cation {A *A '}C {B *A '}, which also involves locations not in the footprint 
+of C. It is simpler to state and reason about local speci.­cations, and the Frame Rule says that it is 
+adequate to do so. Derived Rule for Pure Assertions {A}C {B} A ' pure, Mod(C)nFV (A ')=0 {A . A '}C {B 
+. A '} As an example of another useful derived rule, we note how pure assertions can move in and out 
+of the Frame Rule: When A ' is pure, and Mod(C)nFV (B ')=0, {A '.A}C {B} {A '.(A *B ')}C {B *B '} (18) 
+This follows from Remark 1 and the standard rule of consequence. We then have the expected soundness 
+result. THEOREM 1. If a speci.cation {A} C {B} is derivable by the rules above and the standard rules 
+of Hoare logic, then {A}C {B}holds. Example: The following rule for lookup can be derived from (16), 
+the Frame Rule, and the standard rules of Hoare logic. If y .FV (A), and x and y are distinct variables, 
+{A .(x '.-)}y :=[x] (19) {A .(x '.y)}  4 Expressing Garbage Collection In this section we de.ne what 
+it means for a state to be a garbage collected version of another state. Our formulation builds upon 
+the analysis in [7] and thus involves pruning and a-renaming of states. A basic requirement is that the 
+heaps of the two states are isomor­phic. For simplicity, we assume that heaps only consist of cons­cells. 
+De.nition 6. Let h and h ' be heaps. Call h and h ' heap-isomorphic if there is a bijection ß : dom(h).dom(h 
+')such that for all pointers p .dom(h), h '(ß(p))=ß*(h(p))and h '(ß(p)+4)=ß*(h(p+4)). Here, ß* is the 
+extension of ß to that is the identity on numbers that are not pointers. We refer to ß as a heap isomorphism. 
+Of course, it is only necessary to have a heap isomorphism between the subheaps consisting of the live 
+data, i.e., the data reachable from agiven root set. For simplicity, we will assume that there is only 
+one root cell. De.nition 7. Let s, h be a state with root .dom(s). Pointer q is reachable from pointer 
+p in the heap h if p =q or if h(p)= p1, h(p +4)=p2, and q is reachable from p1 or p2 in h. The pointer 
+p is called reachable in the state s,h if p is reachable from s(root) in h. Finally, prune(s,h)=s,g, 
+where g .h is the subheap of h restricted to those pointers reachable in s,h. ' De.nition 8. Let s, 
+h and s ,h ' be states. If ß is a heap isomorphism ' between h and h ' , and ß(s(root))=s (root), then 
+we call ß a state isomorphism. The formal notion of garbage collection is then as follows: '' De.nition 
+9. Let s, h and s ,h ' be states. We say that s ,h ' is a gar­bage collected version of s,h if there 
+exists a state isomorphism ' ß : prune(s,h)~,h '). =prune(s De.nition 10. A command GC is a correct 
+garbage collector if *' ' GC,s,h .s ,h ' implies that s ,h ' is a garbage collected version of s,h. 
+ 5 Cheney s Algorithm We implement and reason about Cheney s Algorithm [8]. The implementation of the 
+algorithm and the associated memory allocator is given in Appendix A. It assumes two con­tigous semi-heaps 
+, OLD =Itv(startOld,endOld) and NEW = Itv(startNew,endNew) of equal size. The memory allocator at­tempts 
+to allocate a cons-cell in OLD; if there is no space available in OLD, the garbage collector copies all 
+cells in OLD reachable from root into NEW, and then the allocation resumes in NEW. The garbage collector 
+is delimited by comments in the code in Ap­pendix A; we refer to it as GC*. Notice that the algorithm 
+is aware of the locations of the live cells only (those locations reachable from root). In the spirit 
+of local reasoning, our speci.cation will there­fore only involve the reachable pointers in OLD, called 
+ALIVE, and not the remaining (unreachable) part of OLD. Notice that the set {f, FORW, UNFORW}is an auxiliary 
+variable set for the implementation, in the sense of [19]. Thus, the assign­ments to these variables 
+are not necessary for the program to work, but they ease the job of proving properties about the program. 
+We could have chosen to existentially quantify these variables and omit them from the program, but the 
+reasoning becomes clearer when the program modi.es the auxiliary variables explicitly. root Figure 2. 
+A state of execution 5.1 The Precondition Before execution of GC*, we assume that the following assertion 
+holds. InitAss = Ptr(o.set) .Ptr(maxFree) .#ALIVE =#NEW . (ALIVE .NEW) .Reachable(head,tail,ALIVE,root) 
+. Tfun(head,ALIVE) .Tfun(tail,ALIVE) . PtrRg(tail,ALIVE) .PtrRg(head,ALIVE) .root .ALIVE . ((.*y .ALIVE. 
+((.z. (y,z) .head .y .z)* ''' (.z . (y,z ) .tail .y + 4 .z )))* (.*y .NEW.y .-,-)) Informally, the assertion, 
+among other things, expresses that ALIVE is the set of pointers reachable from root, and that head and 
+tail are relations recording the initial contents of the reachable cells, as can be seen from the iterated 
+separating conjunction over the set ALIVE.  5.2 The Invariant To exhibit an invariant of the while-loop, 
+we consider Fig. 2, which is a snapshot of a state during execution. Only the reachable cells in OLD 
+(the part of the heap above the bold horizontal line) are shown. Three of the cells in ALIVE have been 
+modi.ed at this stage: their .rst component have been updated with forwarding pointers; these have a 
+bolder appearance in the .gure. The original contents of these .rst components are indicated with dotted 
+lines and parenthe­sized numbers. The pointers in ALIVE naturally divide into two sets: UNFORW: The 
+pointers in ALIVE that point to cells not yet modi.ed by the algorithm.  FORW: The pointers in ALIVE 
+that point to cells that have their .rst component overwritten with a pointer in NEW.  The algorithm 
+proceeds by scanning all the cells in between the scan and free pointers, that is, scan always points 
+to the next cell to be scanned. If the cell being scanned contains a non-pointer, then the scan pointer 
+is incremented; if the cell being scanned contains a pointer p in UNFORW, then the cell pointed to by 
+p is copied and a forwarding pointer is placed in the original cell; if the cell being scanned contains 
+a pointer in FORW, then the cell pointed to has already been copied and we simply update the scanned 
+cell. We use the auxiliary variables f, FORW, and UNFORW to keep track of the forwarding pointers, and 
+to record the live cells that have been already copied into NEW. When a cell is copied from OLD to NEW, 
+the corresponding pointer is moved from UNFORW to FORW, and f is updated. The pointers in NEW can be 
+divided into the following three sets: FIN =Itv(o.set,scan): The pointers in NEW that have been scanned. 
+These are not modi.ed further by the algorithm.  UNFIN =Itv(scan,free): The pointers in NEW that have 
+not been scanned. These point to the original contents of cells pointed to by pointers in ALIVE.  FREE 
+=Itv(free,maxFree): The pointers in NEW that are available for allocation.  The .ve sets are illustrated 
+in Fig. 2. Note that FIN, UNFIN and FREE are intervals, whereas this is not the case for FORW and UNFORW 
+in general. We observe that there is a one-to-one correspondence, f, between the pointers in FORW and 
+those in BUSY =FIN .UNFIN = Itv(o.set,free). This bijection will turn out to be the heap isomorphism 
+we are looking for. The invariant of the algorithm has a pure and an impure part; the latter describes 
+the heap. The pure part is Ipure = iso(f,FORW,BUSY) .(ALIVE = FORW .UNFORW) . Reachable(head,tail,ALIVE,root) 
+.(ALIVE .NEW) . PtrRg(head,ALIVE) .PtrRg(tail,ALIVE) . Tfun(head,ALIVE) .Tfun(tail,ALIVE) . (#ALIVE =#NEW) 
+.(root .FORW) .(scan =free) . Ptr(free) .Ptr(scan) .Ptr(o.set) .Ptr(maxFree) Note in particular the 
+conjunct iso(f,FORW,BUSY) expressing that f is a bijection, and the conjunct Reachable(head,tail,ALIVE,root) 
+ expressing that ALIVE is the set of pointers reachable via head and tail from root, i.e., the set of 
+cells that were live initially. The rest of Ipure simply records basic facts about the relationship between 
+the various sets and pointers. We now describe the impure part of the invariant; we use the parti­tioning 
+of pointers into sets from before. The cells pointed to by pointers in UNFORW have not been mod­i.ed 
+by the algorithm; hence they are described by head and tail, and we thus de.ne AUNFORW =.*y .UNFORW. 
+((.z. (y,z) .head .y .z) * ''' (.z . (y,z ) .tail .y + 4 .z )). Each of the cells pointed to by a pointer 
+in FORW has a forwarding pointer in its .rst component. Recalling that f records the forward­ing pointers, 
+we de.ne AFORW =.*y .FORW. (.z. (y,z) .f .y .z,-). A cell pointed to by a pointer in UNFIN contains 
+the original con­tents of a cell pointed to by a pointer in FORW. The latter pointer is recorded by the 
+inverse of f, and hence we de.ne AUNFIN = .*y .UNFIN. ((.z. (y,z) .head .f .y .z) * ''' (.z . (y,z ) 
+.tail .f .y + 4 .z )). The cells in FIN have been scanned. The case-distinction between pointers and 
+non-pointers during scanning is captured by the oper­ q=<..(p) Figure 3. The situation for a pointer 
+p in FIN ator @. We de.ne AFIN =.*y .FIN. ((.z. (y,z) .f @(head .f ) .y .z) * ' (.z . (y,z ') .f @(tail 
+.f ) .y + 4 .z ')). To understand AUNFIN and AFIN, it is helpful to consider Fig. 3 in which we use a 
+functional notation for functional relations. The pointer p . FIN is the address of the rightmost bottommost 
+cell. Before p was scanned, it held the original contents of a cell pointed to by a pointer q .ALIVE. 
+When that cell was copied, it had its .rst component overwritten with the forwarding pointer p; this 
+is recorded by f, hence (p,q) . f. The original contents of the cell pointed to by q is recorded by head 
+and tail, so letting q ' denote the address of the rightmost uppermost cell in Fig. 3, we have (q, q 
+') . head, hence (p,q ') .head.f . Before the cell pointed to by p was scanned, it had q ' in its .rst 
+component. Now, by scanning the .rst component in the cell pointed to by p, we copy the cell pointed 
+to by q ' (if necessary), and update the component we are scanning to point to the address of the copy 
+of that cell. Denoting the address ' of the copy by q '', we then have (q ,q '') .f, by the de.nition 
+of f, and therefore, (p, q '') .f .(head .f ). For the pointers in FREE, we only need to know that they 
+are in the domain of the heap, to allow us to safely copy cells into FREE.We therefore de.ne AFREE =.*y 
+.FREE. y .-,-. Summing up, the invariant of the algorithm is I =Ipure .(AUNFORW *AFORW *AFIN *AUNFIN 
+*AFREE).  6 Proofs In this section we prove that our implementation of Cheney s gar­bage collection 
+algorithm is correct. We present the key ideas of the proof and refer to the companion technical report 
+[4] for further details. The proof proceeds in two stages. First we show that I from Sec. 5.2 is indeed 
+an invariant, and then we use the invariant to show that the algorithm is correct in the sense of De.nition 
+10. We will sometimes need to consider the iterated separating conjunc­tion over one of the sets from 
+Section 5.2, except for one element. We therefore, for example, write AFORW-x for the assertion .*y .(FORW 
+ex). (.z. (y,z) .f .y .z,-). 6.1 I is an Invariant We prove two speci.cations: {InitAss}INIT {I} and 
+{I .¬(scan = free)}BODY {I} , where INIT is the code before the while loop, and BODY is the body of 
+the loop. The proof of the .rst speci.cation is simi­lar to part of the proof of the second speci.cation, 
+and we there­fore omit it. Observe that BODY consists of two similar parts, ScanCar and ScanCdr (delimited 
+by comments in the code). We show the speci.cation for ScanCar, the one for ScanCdr is sim­ilar. After 
+ScanCar, the cell pointed to by scan is in a mixed state , where the .rst component is .nished and the 
+second is about to be scanned. Therefore, the speci.cation for ScanCar is {I .scan = free}ScanCar {I 
+'}, where I '= Ipure .((AUNFORW *AFORW *AFIN *AFREE *AUNFIN-scan) * (.z. (scan,z) .f @(head .f ) .scan 
+.z) * ' (.z . (scan,z ') .tail .f .scan + 4 .z ')). Observe that ScanCar has three branches. We only 
+present the proof of the speci.cation corresponding to the most interesting branch, CopyCell * (delimited 
+by comments in the code), in which a cell is copied from OLD to NEW. Thus, we prove the speci.cation 
+{I .scan = free .scan '.x .Ptr(x) .x '.y .¬(y .NEW)}CopyCell * (20) {I '} To this end, we .rst show 
+that the precondition implies the assertion x . UNFORW. Next we prove a local speci.cation for the heap 
+manipulations in CopyCell *, and .nally we apply the Frame Rule to infer the required speci.cation (20). 
+This illustrates the power of the Frame Rule. LEMMA 3. The assertion I .scan = free .scan '.x .Ptr(x) 
+.x '.y .¬(y .NEW) .free =maxFree .x .UNFORW is valid. Using this lemma we have the following derivation, 
+the last step of which uses (4): {I .scan = free .scan '.x .Ptr(x) .x '.y .¬(y .NEW)}. {I .x .UNFORW 
+.scan .UNFIN .free .FREE}. .. . Ipure . . .. .. .. . ((AUNFORW-x *AFORW *AFIN *AUNFIN-scan *AFREE-free) 
+* . .. ' (.z . (scan,z ') .tail .f .scan + 4 .z ') * .(.z. (x,z) .head .x .z) * . .. . ' . . ') * . .(.z 
+. (x,z ') .tail .x + 4 .z . .. (scan .-) *(free .-,-)) It is straightforward to show the following local 
+speci.cation using the rules for heap lookup (16), heap update (17), the rule for pure root scan free 
+Figure 4. Footprint of CopyCell root Figure 5. Footprint of ScanCdr assertions from Remark 1, and the 
+Frame Rule. . . . (.z. (x,z) .head .x .z) * . ' (.z . (x,z ') .tail .x + 4 .z ') * . . (scan .-) *(free 
+.-,-) t1:=[x];t2:=[x + 4]; [free] := t1;[free + 4] := t2; (21) [x] := free;[scan] := free . . . ((x 
+.free,-) *(scan .free) * . (free .t1,t2)) . . . (x,t1) .head . (x,t2) .tail We write CopyCell for the 
+code fragment in (21). Notice how the speci.cation (21) only mentions the footprint of CopyCell, i.e., 
+those locations that are either dereferenced or updated by CopyCell. This is illustrated in Fig. 4, in 
+which the footprint is shown using dotted circles. After executing CopyCell on the heap depicted in Fig. 
+4, the resulting heap is the one depicted in Fig. 5, in which the footprint of the following ScanCdr 
+is shown. After the execution of ScanCdr, the resulting heap will be the one depicted in Fig. 2. From 
+(21) we can continue the derivation from before. .. . Ipure . . . . . . . . . ((AUNFORW-x *AFORW *AFIN 
+*AUNFIN-scan *AFREE-free) * . . . ' (.z . (scan,z ') .tail .f .scan + 4 .z ') * .(.z. (x,z) .head .x 
+.z) * . . . . ' . .(.z . (x,z ') .tail .x + 4 .z ') * . . . . . (scan .-) *(free .-,-)) CopyCell (22) 
+. . . Ipure . . . . . . .((AUNFORW-x *AFORW *AFIN *AUNFIN-scan *AFREE-free) *. ' (.z . (scan,z ') .tail 
+.f .scan + 4 .z ') * . . . . .((x .free,-) *(scan .free) *(free .t1,t2)) . . . . (x,t1) .head . (x,t2) 
+.tail) FORW := FORW .x; UNFORW := UNFORW ex; f := f .(x,free); free := free + 8 {I ''} . {I '} where 
+I '' is an assertion similar to I ', which we will not state here for reasons of space. The .rst speci.cation 
+in (22) follows from (21) and the derived Frame Rule (18). The proof of the second speci.­cation in (22) 
+uses the standard rules for assignment and the impli­cation I '' .I ' uses Lemma 2. To apply Lemma 2, 
+one must show a few implications (see the preconditions of Lemma 2); we include one of them here: (x,free 
+-8) .f .x .FORW . ((.*y .(FORW ex). (.z. (y,z) .f e(x,free -8) .y .z,-)) * (x .free -8,-)) . ((.*y .(FORW 
+ex). (.z. (y,z) .f .y .z,-)) * (x .free -8,-.(x,free -8) .f)) .x .FORW . (23) ((.*y .(FORW ex). (.z. 
+(y,z) .f .y .z,-)) * (.z. x .z,-.(x,z) .f)) .x .FORW . .*y .FORW. (.z. (y,z) .f .y .z,-) . AFORW The 
+.rst implication in (23) uses the rule for pure assertions in Re­mark 1. The third uses the rule (5). 
+The remaining implications needed to conclude I ' via Lemma 2 can be found in the technical report [4]. 
+This completes our outline of the formal proof of the speci.cation {I .¬(scan = free)}BODY {I}. 6.2 
+Suf.ciency of Invariant We show that the invariant suf.ces to prove our implementation correct. The following 
+lemma expresses that the algorithm moves all reachable cells from UNFORW to FORW. LEMMA 4. I .(scan = 
+free) .Ptr(e) .(.Ppath. eval(head,tail,P, root, e)) . e .FORW This lemma is proved using an obvious 
+induction principle for paths. The next lemma expresses that upon completion of the algorithm, FORW is 
+equal to ALIVE. LEMMA 5. I . scan = free . FORW = ALIVE. This is easily shown using Lemma 4. The formal 
+proof of the following theorem is a bit more involved and can be found in [4]. Informally, it expresses 
+that, when we exit the while loop, all pointers in ALIVE have been scanned and thus satisfy the condition 
+that p in Fig. 3 satis.es. THEOREM 2. I . scan = free . (e . ALIVE . (e,e1) . f . (e1 '. e2 . (e,e2) 
+. f @head)). The proof of this uses Lemma 5. Finally, we can prove the main theorem of the paper. THEOREM 
+3. Let (s, h) be a state such that s,h lInitAss. *' ' Then, if GC* ,s,h .s ,h ' , (s ,h ') is a garbage 
+collected version of (s,h). PROOF (sketch): We argue that for all p . s(ALIVE), h '(ß(p)) = ß*(h(p)), 
+where ß = s '(f) is the relation denoted by f after execution. If r = h '(ß(p)), then r satis.es the 
+condition of the r in Theorem 2. ' Therefore, s ,h ' l(p,r) . f @head, and since head recorded the original 
+contents of p and @models the (-)* construction, this precisely means that r = ß*(h(p)). Since our speci.cation 
+does not mention the unreachable part of OLD, we also conlude that these cells are not copied by the 
+pro­gram; thus our implementation only copies cells reachable from root.  7 Related Work There has 
+been several proposals for using types to manage the problem of reasoning about programs that manipulate 
+imperative data structures [9, 25, 1, 20]. They are based on the idea that well­typed programs do not 
+go wrong, but they are not aimed at giving proofs of correctness. In the work [9] on capabilities, traditional 
+region calculus [26] is extended with an annotation of a capability to each region, and this gives criteria 
+to decide when it is safe to deallocate a region. In the setting of alias types [25], a static notion 
+of constraint is used describe the shape of the heap, and this is used to decide when it is safe to execute 
+a program. In the work [1] on hierarchical storage, ideas from BI [22] and region calculi are used to 
+give a type system with structure on locations. In [20] Petersen et. al. propose to use a type theory 
+based on ordered linear logic as a foundation for de.ning how data is laid out in memory. The type theory 
+in [20] builds upon a concrete allocation model such as the one provided by Cheney s copying garbage 
+collector. The .rst attempt of a formal correctness proof of a garbage col­lector was published in [10], 
+where the problem was selected as one of the most challenging and hopefully, most instructive! problems 
+. The proof given there is informal and merely gives an idea of how to obtain a formal proof. Other informal 
+proofs were published in [3] and [21]. The fact that a mechanically veri.able proof would need all kinds 
+of trivial invariants was used to justify the informal approach. Russinoff [24] explored how great a 
+detail that was needed for a formal proof and demonstrated that the proofs in [3] and [21] are fallacious. 
+Moreover, Russinoff gave a correct­ness proof of an abstract version of a mark-and-sweep collector, which, 
+however, did not use local reasoning. In their work on a type preserving garbage collector, Appel and 
+Wang [27] transform well-typed programs into a form where they call a function, which acts as a garbage 
+collector for the program. This function is designed such that it is well-typed in the target language, 
+and thus is safe to execute. The approach of Appel and Wang guarantees safety, but not correctness of 
+the garbage collec­tor, and there is no treatment of cyclic data structures, since the user language 
+does not create cyclic data structures. Monnier and Shao [13] combine ideas from region calculi and alias 
+types in their work on typed regions and propose a programming language with a type system expressive 
+enough to type a garbage collector, which is type preserving, generational, and handles cyclic data structures. 
+Recently, there has been a lot of work on Proof Carrying Code [16, 15]. The basic idea of a code producer 
+submitting a proof of safety along with a program could, of course, be transferred to low-level programming 
+languages, like the one used with separation logic. Nipkow s research group in Munich has developed a 
+framework for formally verifying programs in traditional Hoare logic with arrays [12], and an extension 
+to separation logic is underway. This would allow one to verify our correctness proof mechanically and 
+perhaps to ship that proof along with proofs of programs using the garbage collector. 8 Conclusion and 
+Future Work We have speci.ed and proved correct Cheney s copying garbage collector using local reasoning 
+in an extension of separation logic. The speci.cation and the proof are manageable because of local reasoning 
+and we conclude that the idea of local reasoning scales well to such challenging algorithms. We have 
+extended separation logic with sets and relations, general­ized the iterated separating conjunction and 
+shown how these fea­tures can be used to specify naturally and prove correct an algorithm involving movement 
+of cyclic data structures. We believe the meth­ods used herein are of wider use and future work should 
+include further experimentation with other subtle algorithms, such as those analyzed in [6] (and also, 
+Bornat s methods might be applicable to Cheney s algorithm). Although the goal of the paper was to prove 
+the simple variant of Cheney s collector, it is natural to ask whether the approach of this work scales 
+to more complex systems where the collected data have more complex types or where the collector is of 
+a different type than stop-and-copy. We do not have a proof of such a collector, but we believe that 
+an extension of the methodology presented here will serve as a basis for proofs of such algorithms. For 
+example, in a more complex type system, the de.nition of a heap isomorphism needs to be re.ned, and it 
+is likely that this will induce new notions in the logic. Future work also includes studying how to specify 
+and prove cor­rect combinations of user level programs and runtime systems, as mentioned in the introduction. 
+In his work on Foundational Proof Carrying Code [2], Appel suggests compiling high-level languages into 
+the Typed Assembly Language [14]. Our work offers an al­ternative to this. We suggest compiling types 
+from high-level lan­guages into garbage insensitive predicates, in the sense of [7], and using our memory 
+allocator and garbage collector as an implemen­tation of the malloc operation of TAL. By the nature of 
+garbage insensitive predicates, we would have {P} GC {P} for these pred­icates, for any correct garbage 
+collector GC, and thus predicates resulting from type-safety guarantees would be preserved by the garbage 
+collector, as desired. Acknowledgments The authors wish to thank Peter O Hearn, Richard Bornat, Cris­tiano 
+Calcagno, Henning Niss, and Martin Elsman for insight­ful discussions. Lars Birkedal s and Noah Torp-Smith 
+s research was partially supported by Danish Natural Science Research Coun­cil Grant 51 00 0315 and Danish 
+Technical Research Council Grant 56 00 0309. John Reynolds s research was partially sup­ported by an 
+EPSRC Visiting Fellowship at Queen Mary, University of London, by National Science Foundation Grant CCR-0204242, 
+and by the Basic Research in Computer Science Centre of the Dan­ish National Research Foundation.  A 
+Implementation of Cheney s Algorithm alloc(l,n1,n2) { if (free < maxFree) [free]:=n1; [free +4]:=n2; 
+free :=free +8; l :=free-8 else if (o.set = startOld) then o.set :=startNew; scan :=startNew; free :=startNew; 
+maxFree :=endNew else o.set :=startOld; scan :=startOld; free :=startOld; maxFree :=endOld .; // Garbage 
+Collection starts f :=0; FORW :=0; UNFORW :=ALIVE; t1:=[root]; t2:=[root +4]; [free]:=t1; [free +4]:=t2; 
+[root]:=free; FORW :=FORW . root; UNFORW :=UNFORW e root; f :=f . (root,free); free :=free +8; while 
+¬(scan = free) // ScanCar begins x :=[scan]; if (x mod 8 = 0) y :=[x]; if (y mod 8 = 0 . o.set = y . 
+y = maxFree) [scan]:= y else // CopyCell * begins t1:=[x]; t2:=[x +4]; [free]:=t1; [free +4]:=t2; [x]:=free; 
+[scan]:=free; FORW :=FORW . x; UNFORW :=UNFORW e x; f :=f . (x,free); free :=free + 8 // CopyCell * 
+ends .; else skip .; // ScanCar ends // ScanCdr begins x :=[scan + 4]; if (x mod 8 = 0) y :=[x]; if 
+(y mod 8 = 0 . o.set = y . y = maxFree) [scan + 4]:= y else t1:=[x]; t2:=[x +4]; [free]:=t1; [free 
++4]:=t2; [x]:=free; [scan + 4]:=free; FORW :=FORW . x; UNFORW :=UNFORW e x; f :=f . (x,free); free :=free 
++ 8 .; else skip .; // ScanCdr ends scan :=scan + 8 od;  // Garbage Collection ends root :=o.set; 
+alloc(l,n1,n2) . } B References [1] A. Ahmed, L. Jia, and D. Walker. Reasoning about hierarchi­cal 
+storage. In Proc. LICS 03, 2003. [2] A. W. Appel. Foundational proof carrying code. In Proc. LICS 01, 
+2001. [3] M. Ben-Ari. Algorithms for on-the-.y garbage collection. ACM Transactions of Principles on 
+Programming Languages and Systems, 6(3):333 344, 1984. [4] L. Birkedal, N. Torp-Smith, and J.C. Reynolds. 
+Correct­ness of a garbage collector via local reasoning. Tech­nical report TR-2003-30, The IT University 
+of Copen­hagen, Copenhagen, Denmark, July 2003. Available at http://www.itu.dk/English/research/publications/. 
+ [5] R. Bornat. Correctness of copydag via local reasoning. Private Communication, Mar 2003. [6] R. Bornat. 
+Local Reasoning, Separation and Alias­ing. Submitted to the SPACE 04 workshop. Available at http://www.cs.mdx.ac.uk/staffpages/r 
+bornat. [7] C. Calcagno, P. O Hearn, and R. Bornat. Program logic and equivalence in the presence of 
+garbage collection. Theoretical Computer Science, 298(3):557 581, 2003. [8] C. J. Cheney. A nonrecursive 
+list compacting algorithm. Comm. ACM, 13(11), November 1970. [9] K. Crary, D. Walker, and G. Morrisett. 
+Typed memory man­agement in a calculus of capabilities. In Proc. of POPL 99, pages 262 275, 1999. [10] 
+E. W. Dijkstra, L. Lamport, A. J. Martin, G. S. Scholten, and E. M. F. Steffens. On-the-.y garbage collection: 
+an exercise in cooperation. Comm. ACM, 21(11):966 975, 1978. [11] C. A. R. Hoare. An axiomatic approach 
+to computer program­ming. Comm. ACM, 12(583):576 580, 1969. [12] F. Mehta and T. Nipkow. Proving pointer 
+programs in higher­order logic. In Automated Deduction CADE-19, 2003. [13] S. Monnier and Z. Shao. Typed 
+regions. Technical Report YALEU/DCS/TR-1242, Dept. of Computer Science, Yale University, New Haven, CT, 
+2002. [14] G. Morrisett, D. Walker, K. Crary, and N. Glew. From system F to typed assembly language. 
+ACM Transactions on Pro­gramming Languages and Systems, 21(3):527 568, 1999. [15] G. C. Necula. Proof-carrying 
+code. In Proc. POPL 97, pages 106 119, 1997. [16] G. C. Necula and P. Lee. Safe kernel extensions without 
+run­time checking. In OSDI 96, pages 229 243, Berkeley, CA, USA, 1996. [17] S. Nettles. A Larch speci.cation 
+of copying garbage collec­tion. Technical Report CMU-CS-92-219, Carnegie Mellon University, Pittsburgh, 
+PA 15213, Dec 1992. [18] P. W. O Hearn, J. C. Reynolds, and H. Yang. Local reasoning about programs that 
+alter data structures. In CSL 2001, Berlin, 2001. [19] S. Owicki and D. Gries. An axiomatic proof technique 
+for parallel programs. Acta Informatica, 6(4):319 340, 1976. [20] L. Petersen, R. Harper, K. Crary, 
+and F. Pfenning. A type theory for memory allocation and data layout. In POPL 03, January 2003. [21] 
+C. Pixley. An incremental garbage collection algorithm for multimutator systems. Distributed Computing, 
+3(1):41 50, 1988. [22] D. Pym. The Semantics and Proof Theory of the Logic of Bunched Implications, 
+volume 26 of Applied Logics Series. Kluwer, 2002. [23] J. C. Reynolds. Separation logic: A logic for 
+shared mutable data structures. In Proc. of LICS 02, pages 55 74, 2002. [24] D. M. Russinoff. A mechanically 
+veri.ed incremental gar­bage collector. Formal Aspects of Computing, 6:359 390, 1994. [25] F. Smith, 
+D. Walker, and G. Morrisett. Alias types. In Euro­pean Symposium on Programming, March 2000. [26] M. 
+Tofte and J.-P. Talpin. Implementing the call-by-value lambda-calculus using a stack of regions. In Proc. 
+POPL 94, pages 188 201, 1994. [27] D. Wang and A. W. Appel. Type preserving garbage collec­tors. In Proc. 
+POPL 01, pages 166 178, 2001. [28] H. Yang. Local Reasoning for Stateful Programs. PhD thesis, University 
+of Illinois, Urbana-Champaign, 2001.  
+			

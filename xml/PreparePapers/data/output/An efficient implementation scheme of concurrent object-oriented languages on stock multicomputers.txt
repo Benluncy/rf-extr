@@ -1,0 +1,462 @@
+
+ An Efficient Implementation Scheme of Concurrent Object-Oriented Languages on Stock Multicomputers Kenjiro 
+Taura Satoshi Matsuoka Akinori Yonezawa Department of Information Science, The University of Tokyo* 
+Abstract Several novel techniques for efficient implementa­ tion of concurrent object-oriented languages 
+on gen­ eral purpose, stock multicomputers are presented. These techniques have been developed in implement­ 
+ing our concurrent object-oriented language ABCL on a Fujitsu Labor at or y s experimental mult icom­ 
+puter AP1OOO consisting of 512 SPARC chips. The proposed intra-node scheduling mechanism reduces the 
+cost of local message passing. The cost of intra-node asynchronous message passing is about 20 SPARC 
+instructions in the best case, including local­ ity checking, dynamic method lookup, and schedul­ ing. 
+The minimum latency of asynchronous inter­ node message passing is about 9ps, or about 120 in­ structions, 
+employing the self-dispatching mechanism independently proposed by Eicken et al. A large scale benchmark 
+which involves 9,000,000 message pass­ ings shows 440 times sp eedup on the 512 nodes sys­ tem compared 
+to the sequential version of the same algorithm. We rely on simple hardware support for message passing 
+and use no specialized architectural supports for object-oriented computing. Thus, we are able to enjoy 
+the benefits of future progress in stan­dard processor technology. Our result shows that concurrent object-oriented 
+languages can be imple­ment ed efficient 1y on conventional mult i computers. *PhysicaJ mail address: 
+7-3-1 Hongo, Bunkyo-ku, Tokyo 113, Japan. Phone 03-3812-2111 (overseaa +81-> 3812-2111) ex. 4108. E-mail: 
+{tau,matsu, yonezawa}@is.s .u-tokyo.ac.jp Pertnissian to copy without fee all or part of this material 
+i= granted provided that the copies are not made or distributed for direct commercial edvantage, the 
+ACM copyright notice and the title of the publication and its date appear, and notice ia given that copying 
+is by permission of the Association for Computing Machinery. To copy otherwise, or to republish, requires 
+a fee and/or specific permission. 4th ACM PPOPP,51931CA, USA o 1993 ACM 0-89791 -589 -5/93 /0005 /0218 
+...$1.50 1 Introduction Although a number of concurrent object-oriented programming languages (concurrent 
+00PL) have been proposed, relatively little attention has been paid to achieving high performance on 
+conven­ tional multicomputers such as CM-5, nCUBE/2, and AP1OOO[11]. Most work on high performance concurrent 
+OOPLS has focused on combination of elaborate hardware and highly-tuned, specially tailored soft ware 
+[5, 14]. These software architectures (the compiler and the runtime system) exploit special features 
+pro­vided by the hardware in order to achieve the two key factors in high-performance concurrent 00PL 
+implement ation+fficient message passing between objects and efficient intra-node mult ithreading. The 
+characteristics of the hardware features are: (1) Processors and the network are tightly connected processors 
+can send a packet to the network within a few machine cycles, and dispatching a task upon packet arrival 
+takes only a few cycles as well. (2) The scheduling of threads is automatic and directly supported by 
+hardware the hardware manages the scheduling queue and the next runnable thread is scheduled automatically 
+upon termination of the cur­rent thread, Some concurrent 00PLs on such fine­grain machines achieve impressive 
+performance where the latency of message passing between objects on different nodes are 9ps[14], or about 
+200 machine cycles [5] for a request-reply cycle of method invoca­tion. The purpose of this paper is 
+to demonstrate the techniques on conventional multicomputers that achieve comparable performance without 
+the hard­ware facilities described above. Language implemen­tation effort in this direction has been 
+recently pro­posed; Culler et al. has proposed key features to efficiently manage fine-grain parallelism 
+in a multi­computer setting in their work on TAM[4] and Ac­tive Message[13], using Id[8] as the primary 
+target language. Although our work shares some charac­teristics with theirs, we propose several novel 
+ideas which could be another essential step toward efficient parallel computing on conventional multicomputers. 
+ To demonstrate this, we have developed a run­time environment for a concurrent 00PL called ABCL/onAPIOOO, 
+which is based on the computa­tion model ABCM[15]. The runtime environment features low-overhead intra-node 
+scheduling and low­latency remote communication on conventional mul­ticomputers which lack special hardware 
+support such as message send instructions and hardware scheduling queues. The three key software technolo­gies 
+in our implementation of ABCL/onAPIOOO are: Integration of Stack-Based and Queue-Based Scheduling: Standard 
+multiprocessing techniques on a single node employ a scheduling queue but suf­fers from the high overhead 
+of software queue manip­ulation. Our scheduling mechanism avoids this over­head in many cases by employing 
+efficient stack-based scheduling as much as possible. Multiple Virtual Function Table: The virtual function 
+table is a well-known technique for dynamic method dispat thing in object-oriented languages. We propose 
+techniques that extend its use in concurrent 00PLs with which several runtime checks in concur­rent object 
+execution can be avoided. Hiding Latency of Remote Object Creation: The standard scheme for remote object 
+creation re­ quires inter-node communicant ion, which causes un­ predictable latency. Moreover, spiii-phase 
+alloca­ tion, which works well on fine-grain machines, is not acceptable because of the high-overhead 
+of con­ text swit thing on conventional multi computers. We present a technique which hides remote communica­ 
+tion latency and avoids context switching in many cases. The actual implement ation of the language 
+ABCL/onAP 1000 was done on Fujitsu Laboratory s experimental multicomputer AP1OOO, which consists of 
+512 SPARC chips running at 25MHz, intercon­ nected with a 25MB/s torus network. The prelim­ inary measurements 
+show the minimal cost of an asynchronous method invocation on a local object is 2 .3ps, or about 20 instructions, 
+including locality checking, method dispatching and scheduling. Also, the cost of an asynchronous message 
+send between two objects on different nodes is 9,US in the best case. This is within a small factor of 
+fine-grain machine performance [5, 14]. Our current prototype compiler generates C lan­guage source code. 
+This decision was based on main­taining portability y on various future machines. 2 Language Model This 
+section briefly describes our language, ABCL/onAPIOOO, which embodies characteristics common to most 
+concurrent OOPL proposed so far[2]. A more comprehensive description of the lan­guage ABCL can be found 
+in [15, 16]. 2. I Concurrent Objects and Message Passing In our computation/programming model[15], com­putation 
+is carried out by message transmissions among concurrent objects, which are units of concur­rency and 
+become active when they accept messages. More than one message transmission may take place in parallel 
+and objects may become active simultane­ously. When an object receives a message, the message is placed 
+in its message queue, and accepted for method invocation one-by-one (asynchronous buffered com­munication). 
+Messages can contain mail addresses of concurrent objects as well as basic values such as numbers and 
+booleans. When two messages are sent from the same sender to the same receiver, they arrive at the receiver 
+in the same order as they were sent (preservation of transmission order). A sender can send a message 
+to other concurrent objects only if it knows their mail addresses. Since the mail addresses of concurrent 
+objects can be message arguments, the reference topology of concurrent objects is dynamic. Each object 
+has its own (autonomous) single thread of control, and its own encapsulated state vari­ables (instance 
+variables). The state of a concurrent object is also characterized by the mode of its ex­ecution; an 
+object is in dormant mode if it has no messages to be processed, and it is in active mode if it is executing 
+a method. Our model also facilitates selective message reception where an object waits for a certain 
+set of messages within a method. Such ob­jects are said to be in waiting mode. 2.2 Actions within A Method 
+A concurrent object can execute a sequence of the following five kinds of basic actions in its method: 
+1. Message sends to other concurrent objects. Messages could be past type (namely, asyn­ chronously send 
+and no-wait , syntactically de­noted by [Target Obj <= Msgl ) or now type (namely, asynchronously send 
+and wait for a reply message , syntactically denoted by [ Target Obj <== Msgl ). The now-type is similar 
+to procedure call, except that (1) the receiver of the request message may continue execution even after 
+it has returned the reply message to the sender, and (2) the reply messages areo actually sent to an­other 
+object, called reply destination object which resumes the original sender upon the reception of the reply 
+message. The reply destination object may be passed to other objects, thus reply mes­sages are not necessarily 
+sent by the original re­ ceiver of the request message. 2. Creation of concurrent objects. 3. Referencing 
+and Updating of the contents of its state variables. 4. Waiting for a specified set of messages (Selective 
+message reception), including replies of now-type messages. 5. Standard operations (e.g., arithmetic 
+operations) on values that are stored in its state variables and passed around by message transmissions. 
+ 2.3 Types and Objects In this paper, we sasume that t ypes of variables and element types of containers 
+(i.e., arrays and lists) are statically determined. Although a part of our pro­posed scheme is applicable 
+regardless of the under­lying type system, the overhead incurred by runtime tag handling in dynamic types 
+may nullify our opti­miz ation. Objects are the only entities which could be referred to from remote 
+nodes, while other data types, such as arrays and lists are private data of an object that are only referred 
+to from the object. 2.4 Message Patterns The syntax of a message is similar to that of Smalltalk, consisting 
+of keywords and corresponding arguments. A message is distinguished from one an­other by its putt ern, 
+which is a combination of its keywords and its argument types. Unary messages (messages without arguments) 
+are also supported. At compile time, a unique number is assigned to each message pat tern. 2.5 Creation 
+of Objects Objects can be created dynamically on any node (processor). To provide the programmer with 
+local­ity control, we provide two primitives, namely local create and remote create. In remote creation, 
+the system determines where the object is created based on local information. The details are described 
+in Section 5.2. We are currently developing a more so­phisticated solution for issues on long-term locality 
+management /load balancing.  3 Issues in Implementations of Concurrent OOPL The major overhead in concurrent 
+00PL compared to sequential, single-node counter­parts lies in: (1) overhead of intra-node communica­tion/multiprocessing 
+(e.g., scheduling queue manip­ulation) and (2) high cost of remet e communication. Our proposed software 
+architecture overcomes these problems. A naive implementation of a message recep­tion/method invocation 
+for an object would require (1) allocation of an invocation frame, which holds lo­cal variables and message 
+arguments of the method, (2) buffering a message into the frame, and (3) en­queueing the frame into 
+the object message queue, and (4) enqueueing the object into the scheduling queue, if necessary (i.e., 
+if the object is not already in the scheduling queue). The object enqueued in the scheduling queue will 
+eventually get control. The above process is far more costly than the correspond­ing scheduling process 
+for sequential 00PLs (i.e., method lookup + stack-based function call).  The remote communication overhead 
+involves the start-up cost of message sends and the cost of dis­patching appropriate tasks on the receiver 
+node. This is complicated by the fact that the receiver node is not only required to service the messages 
+between objects, but also must provide other services such as remote object creation, garbage collection, 
+load mon­it oring, object migration, etc. On conventional mul­ticomputers, these tasks are mostly done 
+in software, thus consuming a significant amount of CPU time.  4 Intra-node Software Archi­tecture of 
+ABCL/onAPIOOO As mentioned above, the naive method invoca­tion schemes in concurrent 00PL are much more 
+costly than that of sequential OOPLS. The source of inefficiency is heap-based (i.e., not stack-based) 
+frame allocation/deallocation and queue manipula­tions (i.e., message queue and scheduling queue). In 
+this naive scheme, frame allocation is done from the heap because scheduling of methods are not neces­sarily 
+LIFO-bssed, that is, methods may be blocked in order to wait for messages and resumed upon the arrival 
+of the message. The scheduling queue is also required for the same reason. In addition, since the processing 
+of received messages may be postponed (1) (2) (3) (4) (5) Object Code Segment f mm n n fi> ! frame 
+--q : writing to scheduling <<: message transfer queue Figure 1: Intra-node scheduling strategy: (1) 
+A sends a mes­sage to B. B starts execution immediately. (2) B sends a message to C. C starts execution 
+immediately. (3) C sends the second message to B, and C continues execution because B is already active. 
+(4) After C finished its execution, B exe­cutes the rest of the method. (5) When B finishes its method, 
+B enqueues itself in the scheduling queue and wi!d be scheduled later. depending on the mode of the receiver 
+object (e.g., messages to active objects cannot be processed im­mediately), each object must have its 
+own message queue to which incoming messages are buffered, in addition to the global (node-wise) scheduling 
+queue. 4.1 Intra-node Scheduling Strategy Our key observation is that the full scheduling mechanism described 
+above is not necessary in many cases. Instead, more efficient, stack-based scheduling similar to sequential 
+language suffices. More specifi­cally, in our scheduling strategy, if an object has no messages to be 
+processed (i.e., dormant), its method is immediately invoked upon message reception with­out message 
+buffering nor scheduling queue manipu­lation. In contrast, if it is already running (active), the message 
+is buffered and the method is invoked later via a-global scheduling queue. To illustrate our scheduling 
+strategy, consider three objects A, B and C, which execute the following se­quence of actions on a single 
+node (Figure 1). Assume that only A is initially active, the others are dormant, and each method is not 
+blocked during its processing. 1. A sends a message to B. 2. B, in the method invoked by A, sends a 
+message to c.  3. Then C , in the method invoked by B, sends a message to B.  In Step 1, B is invoked 
+immediately because B is dormant, and the execution of A is temporarily sus­pended. Similarly, in Step 
+2, C starts its execution immediately, suspending the execution of B. On the other hand, in Step 3, since 
+B is now active, the sec­ond message to B is buffered in its message queue and C continues execution. 
+After C has finished its VFTP Figure 2: Components of an object. method, B resumes the execution of 
+the rest of the method (Step 4 in Figure 1). At this point, there is a choice either to process the next 
+message in the message queue of B, or resume A. We resume A in order to prevent B from monopolizing control; 
+thus, B is enqueued into the global scheduling queue to be scheduled later (Step 5 in Figure 1). By this 
+strategy, A would eventually get control even if B and C were to continue sending messages to each other. 
+4.2 Dynamic Method Dispatching via Multiple Virtual Tables Although our scheduling strategy is now clear, 
+the mechanism to implement it efficiently is not trivial. For example, it might seem that a runtime check 
+is required on every intra-node message send in order to determine whether the receiver is dormant or 
+not, making our scheme less attractive. Also, the schedul­ing mechanism must be deadlock-free, i.e., 
+when the running object becomes blocked on the stack, other objects must be resumed. This and next sections 
+de­scribe an efficient realization of these strategies. First, the representation of an object is an 
+exten­ sion of that in sequential OOPLS. As in Figure 2, each object is composed of A state variable 
+box, which holds the state vari­ables (i.e., instance variables) of the object. Each state variable is 
+accessed with a fixed offset from the top of the object.  A message queue, which is a list of received, 
+unpro­cessed messages. Each item in the message queue is actually a heap-allocated frame which is allocated 
+upon message reception. Each frame keeps its mes­sage arguments, local variables and other necessary 
+fields for scheduling purpose.  . A virtuai function table pointer ( VFTP), which points to one of the 
+multiple uirtualfunction, tables. A method of a class is compiled into a C function and its address 
+is placed in a virtual function table similar to that of sequential OOPLS (e.g., C++[12] and Eiffel[7] 
+). The key idea in our object representation is an extended use of virtual function tables: each class 
+has multiple virtual function tables, each of which roughly corresponds to a mode (dormant, active, and 
+waiting) of an object. When an object is in dormant mode, its VFTP points to the table that contains 
+the method bodies, as is with sequential 00PLs. When the object becomes active, the VFTP is made to point 
+to a virtual function table that holds tiny queuing procedures which simply allocates a frame, store 
+the message into the frame and enqueues it to the mes­sage queue of the receiver object. Multiple virtual 
+function tables liberate the sender object from the runtime checking of whether or not the receiver ob­ject 
+is dormant, by incorporating it into the virtual function table look-up, which is already a necessary 
+cost in 00PLs, A message send begins with a runtime check to de­termine whether or not the receiver object 
+is local by looking up the node ID of the object. (The lo­cal it y check usually takes 3=4 SPARC instructions.) 
+If the receiver object is local, we simply look-up the virtual function table with the statically-determined 
+index number of the message pattern and call the in­dexed procedure with the message as arguments. As 
+described above, if the object is in dormant mode, the procedure will be the method body itself, which 
+is executed immediately. Otherwise, if the object is in active mode, the procedure will be a queuing 
+pro­cedure, which stores the message into a message box and returns execution to the sender. Each queuing 
+procedure is customized according to the interface of the corresponding method (i.e., the number of the 
+arguments and the types of each argument). For now-type messages, the mail address of the re­ply destination 
+object is passed as well. After the invoked procedure ret urned, the sender checks its re­ply destination 
+object to see if the reply has arrived; if the reply has not arrived the object becomes blocked. (The 
+details are described in Section 4.3.) Notice that return from a procedure does not imply the arrival 
+oft he reply as with sequential procedural languages; rather, the reply message is explicit Iy sent as 
+normal message passing to the reply destination object. Each object checks its message queue at the com­pletion 
+of a method, and if there are any pending mes­sages, enqueues itself in the global scheduling queue. 
+Objects in the scheduling queue are invoked when the scheduling stack becomes empty.1 Selective message 
+reception, described in Section 2, is also naturally realized by constructing a virtual function table 
+for each selective message reception in the methods. The entries for acceptable patterns contain procedures 
+which restore the context of the object, whereas the other entries contain queuing pro­ cedures. (This 
+reflects the semantics of ABCL where unacceptable messages in selective message reception are buffered 
+into the message queue. Other seman­ tics, e.g., discarding unacceptable messages, can also be facilitated 
+easily.) In addition, we utilize the VFTP for two other pur­ poses. Firstly, an object initializes its 
+state variables lazily when it receives a message for the first time. A naive implementation would require 
+an additional flag indicating initialization, which would result in checking the flag on every message 
+send. We avoid this by building a virtual function table which holds pointers to an initialization routine 
+which calls the method body after the state variable initialization. Secondly, using the multiple virtual 
+function tables solves a problem in fast remet e creation of objects. The problem is that, a message 
+to an object created on a remote node may arrive before the virtual func­ tion of the object is properly 
+initialized. The details of the problem and its solution is described in Sec­ tion 5.2. 4.3 Combining 
+the Stack and Schedul­ing Queue Upon invoking a method of a dormant object, a frame is allocated on the 
+stack thereby achieving fast frame allocation/deallocation. When such an invoca­tion is blocked in the 
+middle of the thread for the first time, it allocates another frame lazily on the heap, and saves its 
+context (i.e., local variables) to the frame which will be kept until termination of the method. On the 
+other hand, upon reception of a mes­sage by an active object, a frame is allocated on heap and the message 
+is immediately stored there. The object that has its activation frame on the top of the stack is physically 
+executing. When the run­ning object becomes blocked as a result of a selec­tive message reception or 
+waits for a reply of a now­type message send, it pops off its own stack frame and saves its context (i.e., 
+instruction pointer and 10­ cal variables) into the heap-allocated frame, thereby resuming other objects. 
+At the same time, it also 10ur scheduling mechanism also allows invocation of ob­jects in the scheduling 
+queue even if the stack is not empty, but we do not employ this for the purpose of fair scheduling between 
+objects. (See Step 5 in F@u-e 1) switches the VFTP to point to the virtual function table whose entries 
+of awaited messages have the con­text restoration routine and others have the queueing procedures. (More 
+precisely speaking, in the case of now-type messages, since the reply is sent to the re­ply destination 
+object rather than to the sender ob­ject, all the entries of the VFTP of the sender are the queueing 
+procedure; the reply destination object actually resumes the sender on the arrival of the re­ply message.) 
+When one of the awaited messages later arrives, the context is restored and the object becomes active 
+again. We stress that object is not blocked as long as it finds an awaited message when it first checks 
+its message queue (or, the reply desti­nation object for a now-type message). In particular, for intra-node 
+now-type message passing, it is usu­ally the case that the reply will have already arrived when the sender 
+checks the reply destination object because we employ stack-based scheduling; in such cases, stack unwinding 
+does not occur. Let us examine an example case where stack unwinding occurs and how our scheme schedules 
+runnable objects (Figure 3). Consider object S sends now type message m to active object R, whose cur­rent 
+activation frame is buried in the lower part of the stack. When sending m, S invokes the queue­ing procedure 
+of m because R is active. After the queuing procedure returns, S checks the reply desti­nation object 
+to see if a reply has already returned. Since there are naturally no replies, S saves its con­text into 
+a heap-allocated frame and resumes the ob­ject which activated S (i.e., Object O in the Figure 3). When 
+control reaches R again and R finishes its cur­rent method, it checks its message queue to find that 
+there are some messages, thus enqueueing itself to the scheduling queue (Step 3 in Figure 3). Eventu­ally 
+R processes m and sends a reply message to S, resuming the saved context of S. Although most part of 
+our scheduling is done via the stack, we also employ a global (node-wise) scheduling queue as well. The 
+purposes of the scheduling queue are twofold: 1. To invoke buffered messages in the FIFO scheduling Messages 
+that were once buffered in a message queue are scheduled through the schedul­ing queue, as we have seen 
+in Section 4.I. 2. To preempt objects Preemption occurs when an object falls into a long internal loop 
+or a deep recur­sion. When preemption occurs, the object stores its context into a heap-allocated frame 
+and en­queues itself into the scheduling queue.  Each item of the queue consists of a pointer to the 
+Figure 3: An example of stack unwinding. (1) S sends now type message m to R and m is enqueued. (2) S 
+checks the reply destination object to find that no reply has arrived and saves its context into a heap-allocated 
+frame. (3) When R gets control, it enqueues itself into the scheduling queue at the end of the method. 
+m is eventually scheduled and the reply reaches s. object which will be scheduled and a continuation 
+address from which the object will restart execution. The system dequeues an item in the scheduling queue 
+simply by transferring control to the continuation ad­ dress contained in the item the instructions start­ 
+ing from the continua tion address perform the actual context restoration and activation of the scheduled 
+object.   5 Inter-node Software Archi­tecture of ABCL/onAP:1000 We next describe the remote servicing 
+aspects of our soft ware architecture, such as message passing between objects on different nodes, and 
+object cre­ation on a remote node. Our software architecture assumes that the hardware (or message passing 
+li­braries) provides an interface to send and receive mes­sages asynchronously. It is strongly desirable 
+to be able to send/receive messages without OS kernel in­tervention. Supports for arbitrary length packets 
+and preservation of message transmission order do sim­plify the implement at ion, although it is not 
+a neces­sity. Message arrival may be notified by polling as in CM-5 or AP1OOO, or by interrupt as in 
+nCXJBE/2 or iPSC/2. Most multicomputers (including AP 1000, our current target machine) support these 
+facilities. 5.1 Efficient Remote Task Activation As for underlying mechanisms of remote servic­ing aspects, 
+we employed an (Active Message-like mechanism[13] ,2 which is a low overhead !message dispatching mechanism 
+for conventional multicom­puters. The idea is that each kind of message attaches its own self-dispatching 
+message handler which is in­ voked immediately after the delivery of the message By giving a customized 
+message handler for each kind 2We developed a tectique similar to Active Message early 1992, and later 
+found it in [13]. of remet e messages, low overhead remote task dis­patching is achieved. Our compiler 
+generates these specialized message handlers for many purposes such as remote message passing, remet 
+e object creation etc. Message han­dlers are classified into the following four categories: 1. Normal 
+message transmission between objects. 2. Request for remote object creation. 3. Reply to remote memory 
+allocation request. 4. Other services (load balancing, global garbage col­lection, etc.),  The handlers 
+for Category 1 extract the pointer to the receiver object and arguments and schedule the receiver object 
+in the manner described in Section 4.2. The compiler generates a specialized message handler for each 
+message pattern (i.e., the number of argu­ments and the type of each message). Since the types of the 
+arguments are statically determined, tags are no longer necessary and the arguments are processed efficiently 
+by the specialized handler. Categories 2 and 3 are used for remote object cre­ation. The handlers for 
+Category 2 create an object of a particular class at the address specified by the request er. The message 
+handler returns the address of another memory chunk to the requester for its fu­ture use. The message 
+handlers for Category 3 are provided as the handler address of this reply mes­sage. Our compiler generates 
+a single (specialized) message handler of Category 2 for each class and one message handler of Category 
+3 for each chunk size. The details are described in the next section. 5.2 Remote Object Creation In our 
+software architecture a mail address of an object is uniformly represented as a pair ( processor number, 
+a (real) pointer ). We employed this rep­resentation for maximum performance in local ob­ject access 
+and to avoid the overhead of the ex­port table management. One restriction is that in general it would 
+prohibit the use of a simple copy­ing/compacting garbage collector, as objects cannot be moved freely. 
+We are now developing an algorithm whereby objects that are only referred to locally can be freely copied. 
+Under our represent ation scheme of mail addresses, object creation on a remote node requires a memory 
+allocation on the target node in order to generate a remote mail address. Since the latency of remote 
+communication is unpredictable, it is not accept­able to wait until a pointer to the allocated memory 
+(chunk) is returned. Split-phase allocation is prefer­able on fine-grain machines where context switching 
+to another thread effectively hide the latency[l]. On conventional multicomputers, however, split-phase 
+allocation is undesirable because of high cent ext­swit thing overhead. Rather, a scheme whereby the 
+object can continue execution even in the presence of remote allocation request is preferable. For this 
+purpose, we employ a prefetch scheme where each node manages predelivered stocks of address of memory 
+chunks on remote nodes, and the address for remote object allocation is obtained lo­cally from the stock. 
+Only when the stock is empty does context switching on remote object creation oc­cur. The requested node 
+later replies another chunk to replenish the stock. The stock is unlikely to be­come empty except when 
+unusually frequent remote creations occur. A typical sequence of remote object creation is as follows 
+: 1, The requester node obtains a unique mail address locally from the stock. 2. A creation request 
+message is sent to the node of the mail address. 3. The target node performs class-specific initializa­tion 
+(e.g., initialization of virtual function table) of the created object upon receipt of the creation message 
+(message handler for Category 2). 4. The target node allocates a replacement chunk and returns its address 
+to the requester node. 5. The requester replenishes the stock upon receipt oft he address (message handler 
+for Category 3).  An object on the requesting node can obtain the mail address of the created object 
+in Step 1, rather than in Step 3, thereby effectively hiding the remote communication latency. Furthermore, 
+this scheme avoids context switching (which, in contrast, is neces­sary for split-phase allocation) as 
+long as some chunks remain in the stock. There is one problem however: After the new mail address is 
+locally obtained in Step 1, the request mes­sage sent in Step 2 must precede any messages to the object. 
+Under our scheme, however, standard messages between objects could reach the uninitial­ized object when 
+the obtained mail address is passed to other objects before the initialization message has reached the 
+target node (Figure 4). We again utilize the VFTP to solve this problem without adding any overhead to 
+each message send. Each chunk is pre-initialized in the following way when its address is sent in Step 
+4: The message queue is empty and the VFTP is temporam !y initialized to be the generic fault function 
+table, whose entries are Figure 4: Initialization problem on remote object creation: (1) Sending creation 
+request to B, an object on node A obtains the mail address of an uninitialized object O on node B from 
+the stock. (2) The object on A sends a message which contains the mail address of O to some object on 
+another node C. (3) It sends a message to O. This message may reach O before the actual initialization 
+of O by the creation request. I Time (,us) Intra-node Message (to Dormant) I 2.3 Intra-node Message (to 
+Active) 9.6 Intra-node Creation 2.1 I II 1 Latency of Inter-node Message 8,9 I Table 1: Costs of basic 
+operations. entirely queuing procedures. This forces all messages to uninitialized objects to be enqueued. 
+When the initialization message eventually arrives, the virtual function table is initialized to the 
+proper one for the class of the object. In addition, the message queue of the object is checked for pending 
+messages, and the first message is extracted and processed if it ex­ists. This scheme works because the 
+queuing proce­dures are generic for all objects, independent of their classes.  6 Preliminary Performance 
+Measurement of  ABCL/onAPIOOO 6.1 Efficiency of Basic Operations Table 1 shows the cost of basic operations 
+such as message passing or object creation. Our compiler generates C language code, which is in turn 
+compiled with optimization level -04 . Throughout all the measurements, Sun-OS 4.1.1 cc was used. An 
+intra-node past-type message send to a dor­ mant object takes 2.3ps. This was measured by re­ peatedly 
+invoking a null method with no arguments. Table 2 is the breakdown of this process. Further compile-time 
+optimization are possible under the fol­ lowing conditions: (1) Locality check can be elimi­ nated for 
+objects guaranteed to be local; for example, message passings which follow local object creation. (2) 
+Switching of the VFTP is not necessary if the method does not send messages to other objects and Instructions 
+Check Locality 3 ---1 Lookup and C~l 5 Switch VFTP to Active Mode 3 Execution of Method Body . Check 
+Message Queue 3 Switch VFTP to Dormant Mode 3 Polling of Remote Me ssage 5 Adjusting Stack Pointer and 
+Return 3 Total 25J Table 2: Breakdown of intra-node message to dormant ob­ject. is never blocked. (i.e., 
+if the method is ensured to fin­ish its execution without running other objects.) (3) Checking the message 
+queue is not necessary if the object is not history sensitive. (4) Polling of remote message arrival 
+is not always necessary, especially for small methods we merely need to guarantee peri­odical polling 
+of remote messages. Altogether, the overhead of an intra-node message to dormant ob­jects varies from 
+8 (in this case, the overhead is truly comparable with virtual function call in C++) to 25 instructions. 
+The cost of an intra-node message to an active mode object includes: (1) a frame allocation, (2) stor­ing 
+the message into the frame, (3) enqueueing the frame into the message queue of the object, (4) en­queueing 
+the object to the global scheduling queue (if the object is not already in the scheduling queue), and 
+(5) re-scheduling of the object from the schedul­ing queue. The total time is approximately 10Lw, which 
+is over 4 times (or even more if we adopt the above optimization) that of the dormant case. Our scheduling 
+mechanism specially optimizes dormant case by stack-baaed scheduling, thereby reducing the total intra-node 
+scheduling overhead. Minimum inter-node latency, 8.9ps, is obtained by repeatedly transmitting one word 
+past-t ype messages between two objects. There are no objects other than these two objects in the system 
+and both are dormant upon message reception. This shows that conventional multicomputers with appropriate 
+soft­ware technologies have much higher inter-node mes­sage passing capability than previously believed. 
+In cornp-arisen-to fine-grain architecture (Table 3), send and reply latency is approximately 18ps, or 
+450 cy­cles, which is only about twice of [5] or about 4 times of [14] when normalized to the same clock 
+speed. The instruction counts includes message setup (in the script of the sender), polling, extracting 
+of the mes­sage (in the message handler), system message buffer management and script invocation. The 
+sender node Instruction Counts Real Time (ps) Cycles Clock Rate (MHz) ABCL/onAPIOOO 160 ABCL/onEM4[14] 
+100 CST (on J-Machine) [5] 110 Table 3: Comparison ]N =8] N=13 # of Solutions 92 73,712 # of Objects 
+Creation 2,056 4,636; 210 # of Messages 4,104 9,349,765 Total Memory Used (KB) 130 549,463 Elapsed Time 
+on SS1+ 84 ms 461,955 ms Table 4: The scale of the N-queen program (N= 8, 13). takes about 20 instructions 
+to setup and send a mes­sage which is a total of 4 words including routing in­formation, the mail address 
+of the receiver object and the message argument. The receiver node consumes a total of about 50 instructions 
+for polling, extract­ing the message and management of the system mes­sage buffer. The script invocation 
+cost is the same as intra-node message send to dormant objects (ap­ proximately 10 instructions). The 
+remaining portion of the latency is due to hardware, which is roughly 1.5ps each way. By (1) reducing 
+this hardware la­tency and (2) more appropriate interface to network, our speed further approaches that 
+of implementations on fine-grain machines. Furthermore, such implemen­tations on conventional multicomputers 
+can directly benefit from advances in single-processor technology. 6.2 Benchmark Statistics To evaluate 
+the proposed techniques on real ap­plications, we measured the performance of the N­queen exhaustive 
+search algorithm varying N. The small program (N = 8) is the one which terminates within 100 milliseconds 
+on single CPU SPARC sta­tion 1+, and the large program (N = 13) involves more than 4,500,000 object creations 
+and 9, 000, 000 message passings. Table 4 shows the scale of the al­gorithm where N = 8 and 13. Table 
+4 also shows the elapsed time of the sequential version of basically the same algorithm running on a 
+single SPARC station 1+, which has the same CPU as the node processor of AP1OOO. The sequential version 
+is written in C++ and compiled by g++ with optimize option. Figure 5 shows the speedup of the N-queen 
+pro­gram relative to the sequential version. Since the se­quential version of the algorithm uses run-time 
+stack for the depth first search, it requires no heap memory and there is no need for termination detection, 
+while our parallel version uses heap extensively for parallel 17.8 450 25 9 110 12.5 4 220 50  of send/reply 
+latency. / 40 Ideal Speedup N =8 20 j :: o,<; 40 so so 0 ­0 100 200 300 400 500 600 #of Processors Figure 
+5: Speedup for N-queen problem (N = 8, 13). search and acknowledgement message trace back the search 
+tree for the termination detection. Neverthe­less, approximately 20 times speedup is obtained for N = 
+8 on a 64 processors, and 440 times for N = 13 on 512 processors (approximately 85~0 utilization). 6.3 
+Effect of Stack-Based Scheduling To demonstrate the effect of stack-based schedul­ing, we compare our 
+performance to a more naive scheduling mechanism. The naive scheduling mecha­nism always buffers a message 
+in the message queue of the receiver object and the object is scheduled through the scheduling queue. 
+Figure 6 shows the performance improvements in the N queen programs as N varies. In these pro­ grams, 
+approximately 75% of local messages are sent to dormant mode objects. In general, we have ob­served approximately 
+3070 speedup.  7 Related Work Our work shares the goals of all attempts to make fine-grain computing 
+feasible, not only for object­oriented concurrent languages but for other lan­guages. Amongst them, our 
+work is similar to Threaded Abstract Machine (TAM) [4] and Active Message[13] in aiming for high performance 
+without elaborate hardware supports. TAM is a multithreaded abstract machine whose instruction set, TLO, 
+is intended to be mapped onto conventional instruction sets, so that TLO can serve as an intermediate 
+language on conventional multi­computers for high-level parallel languages such as Id[8] and Multilisp 
+[9]. The execution model of TAM is an extension of the hybrid dataflow model[6]: In ad­dition to threads 
+(instruction sequences which are exclusively executed), TAM recognizes a collection of logically related 
+threads called the code-biock. Under the TAM execution model, runnable threads within a code-block are 
+ensured to be scheduled consecutively, thereby allowing inter-thread register allocation and inexpensive 
+synchronization of threads. This unit of co-scheduling is called quant a in TAM. $ =9 _ Naive Scheduling 
+m Stack Based Sceduling &#38; N=1O CJ ~ N=ll .:.:.:.w,:,:,:.:.:::,:::::::.:::::::::,:::::::::: I * N=12 
+I o 1000 2000 Execution Time (ins) Figure 6: Effect of the stack scheduling.  8 Discussion 8.1 Stack-based 
+Scheduling Although TAM has shown an efficient dataflow synchronization and communication bet ween threads 
+within a code-block, its code-block invocation or inter­code-b!ock communication (e.g., passing function 
+ar­guments) mechanism has room for further improve­ment. That is, under the TAM execution mechanism, 
+a code-block invocation (e.g., function call) always re­quire frame allocation from heap, message buffering, 
+and scheduling queue manipulation, while our imple­ment ation uses a stack as much as possible. Although 
+situations are different for our language and TAM, which is intended to support lenient [10] semantics 
+where blocking in the middle of a function is more likely, we believe our stack-based schedul­ing mechanism 
+is better in practical settings where small functions (or methods), which are not typically blocked, 
+are extensively used. The advantages of our stack-based scheduling are: (1) frames are cheaply allocated/deallocated 
+as long as blocking does not occur, (2) messages are pro­cessed without buffering, (3) it is more likely 
+that the result of a function (or method) has already ar­rived when the callee resumes the caller, because 
+we run the callee (or the receiver object) first, and then resuming the caller (or sender object). Of 
+course, we do not claim that our stack-based scheduling is not unconditionally advantageous. It requires 
+some registers to be saved before a func­tion call, which is unnecessary under a TAM exe­cution where 
+a caller is never invoked until a callee is blocked. Nevertheless, the amount of registers to be saved 
+will be typically small and the cost will be smaller than the cost of argument buffering and scheduling 
+queue manipulation which is required in the TAM mechanism. 8.2 Method Inlining Our implementation scheme 
+relies on the fact that objects are always accessed through methods which are obtained from the virtual 
+function table: The readers might point out that this would prohibit fur­ther optimization via inlining 
+of method calls which is used extensively in sequential object-oriented lan­guage SELF[3] to achieve 
+good performance. How­ever, inlining is possible in the following way, as long as the class of a receiver 
+object is known at com­pile time: let the class of the receiver be C, the vir­tual function table of 
+class C for dormant mode be C-dormant-vft, and the method which should be in­voked be C-method. The inlined 
+code of the method call would be as follows: if (receiver.node_id == my.cell. id){ if (receiver.obj ->vf 
+tp == C-dorment.vf tp) { inlined code of C\_method; ] else { enqueue the message; 3 } else { send the 
+message to the receiver_n.ode-id; 3. This code still has additional checks for locality and the mode 
+of the object. The full benefit of in] ining is obtained by inferring such information and eliminat­ing 
+the checking code, but such inference is far more difficult than class inference in sequential OOPL set­tings, 
+and is a subject of our future work.  Conclusion We have proposed a software architecture for concurrent 
+00PLs on conventional multicomputers that can compete with implementations on special­purpose, fine-grain 
+architectures. Our primary con­tribution is a novel intra-node scheduling mechanism which reduces the 
+average cost of intra-node method invocation. Several novel techniques for avoiding many runtime checks 
+have also been proposed. The preliminary measurements have shown that our per­formance compares favorably 
+with the implementa­tions on fine-grain machines. Restrictions of these mechanisms/techniques are small 
+and they are widely applicable for various (even non-object-oriented) con­current language implement 
+ations. Acknowledgements Our thought was improved through the discussion with Rishiyur S. Nikhil, who 
+gave us many beneficial and thoughtful comments that go into details of our proposal. We thank to David 
+E. Culler and Thorsten von Eicken for giving us many comments on our pa­per. The discussions with Bill 
+Dally and Waldemar Horwat at our mutual visits were very fruitful. We would like to appreciate the offer 
+of Fujitsu Labo­ratory in Kawssaki, Japan, which has provided us with the opportunity to use AP1OOO. 
+Our special thanks go to Takeshi Horie for his helpful technical advices and access to the library sources 
+of AP 1000. We thank the members of the ABCL project group, especially Jeff MaAffer who substantially 
+improved the present ation of our paper, and Masahiro Yasugi for daily technical discussion. References 
+[1] Arvind and Robert A. Iannucci. Two fundarnen­t al issues in multiprocessing. In 4th lntemational 
+DFVLR Seminar on Foundations of Engineering Sciences, volume 295 of Lecture Notes in Com­puter Science, 
+pages 61 88, 1987. [2] Henri E. Bal, Jennifer G. Steiner, and Andrew S. Tanenbaum. Programming languages 
+for dis­tributed computing systems. ACM Computing Surveys, 21(3):261-322, September 1989. [3] Craig Chambers 
+and David Ungar. Making pure object-oriented language practical. In 00PSLA, pages 1-15, 1991. [4] David 
+E. Culler, Anurag Sah, Klaus Erik Schauser, Thorst en von Eicken, and John Wawrzynek. Fine-grain parallelism 
+with min­ imal hardware support: A compiler-controlled threaded abstract machine. In ASPL OS, pages 166 
+175, 1991. [5] Waldemar Horwat. Concurrent Smalltalk on the message-driven processor. Msster s thesis, 
+Department of Electrical Engineering and Com­puter Science, Massachusetts Institute of Tech­nology, May 
+1989. [6] Roberb A. Iannucci. Toward a dataflow/von neuman hybrid architecture. In ISC A, pages 131-140, 
+1988. [7] Bertrand Meyer. Object-oriented Software Con­struction. Prentice Hall, 1988. [8] R. S. Nikhil. 
+Id (version 88.0) reference man­ual. Technical Report 284, MIT Laboratry for Computer Science, March 
+1988. [9] Jr. Robert H. Halstead. Multilisp: A lan­guage for concurrent symbolic computation. acm Transactions 
+on Programming Languages and Systems, 7(4) :501-538, April 1985. [10] Klaus Erik Schauser, David E. CuHer, 
+and Thorsten von Eicken. Compiler-controlled mul­tithreading for lenient parallel languages. In Functional 
+Programming Languages and Com­ puter Architecture, volume 523 of Lecture Notes in Computer Science, pages 
+50 72, 1991. [11] Toshiyuki Shimizu, Takeshi Horie, and Hiroaki Ishihata. Low-latency message communication 
+support for the ap1000. In ISCA, pages 288 297, 1992. [12] Bjarne Stroustrup. The C++ Programming Language, 
+second edition, Addison Wasley, 1991. [13] Thorsten von Eicken, David E. Culler, Seth Copen Goldstein, 
+and Klaus Erik Schauser. Ac­tive messages: a mechanism for integrated com­ munication and computation. 
+In ISCA, pages 256-266, 1992. [14] Masahiro Yasugi, Satoshi Matsuoka, and Aki­nori Yonezawa. ABCL/onEM4: 
+A new soft­ware/hardware architecture for object-oriented concurrent computing on an extended dataflow 
+supercomputer. In ICS, pages 93 103, 1992. [15] Akinori Yonezawa. AllCL: An Object-Oriented Concurrent 
+System Theoy, Language, Pro­gramming, Implementation and Application. The MIT Press, 1990. [16] Akinori 
+Yonezawa, Jean-Pierre Briot, and Et­suya Shibayama. Object-oriented concurrent programming in ABCL/1. 
+In OOPSLA 86 Con­ference Proceedings, pages 258-268, 1986. 
+			

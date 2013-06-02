@@ -1,0 +1,212 @@
+
+ ON STORING AND CHANGING SHAPE INFORMATION I.C. Braid University of Cambridge Abstract: A data structure 
+for modelling engineering components and assemblies is described. It is shown how the same structure, 
+slightly extended, can also be used to represent a single component defined as boolean combinations 
+of more primitive shapes. This leads to a unified method of handling both the concise boolean description 
+and the longer explicit description in terms of faces, edges and vertices. The technique permits close 
+control of evaluation from boolean to explicit description, and facilitates saving of partly evaluated 
+results and back tracking. The data structure is built up and evaluation is controlled through a geometrical 
+language embedded in Algol 68. The language is intended for the construction of computer-aided design 
+systems, for simulating engineering production processes, or for any application in which shapes and 
+changes to shapes must be recorded and manipulated. Keywords and phrases: computational geometry, computer-aided 
+design, computer-aided manufacture, geometric languages, geometric modelling, mechanical components, 
+polyhedra, shape synthesis. C.R. Categories: 3.2, 8.2  i. Introduction  In recent years, the idea 
+of building up three-dimensional shapes by combining simple shapes together has become increasingly popular, 
+numerous systems have been built (for example, [2,10,11]), and a few have reached the point of practical 
+application in industry. However, these systems tend, like operating systems, to be large, intricate 
+and prone to error. Although some of the difficulties will yield to structured programming, use of high-level 
+languages and simply good programming practice, others are intrinsic to the subject and ought to repay 
+closer scrutiny. This work was supported in part by the Science Research Council, U.K. Author's address: 
+Computer Laboratory, Corn Exchange Street, Cambridge CB2 3QG, England. In this paper, an aspect of data 
+structures in geometric modelling is examined. Two kinds of data structure commonly occur [4]. One is 
+an implicit, unevaluated description of a shape stored by designating the constituent shapes, noting 
+the rotation, translation or scaling operations to be applied to them, and prescribing the type and sequence 
+of set operations to be performed upon them. The description may be in the form of a string of commands, 
+or may have been transformed into a tree-structure whose terminal nodes are either complete primivite 
+shapes such as cubes, cylinders and prisms, or are individual surfaces, for example, the half-spaces 
+of the PADL system [ii]. The second kind forms an explicit, evaluated description of a shape in a graph-based 
+data structure that records how the faces, edges, and vertices of a shape are connected (known loosely 
+as the shape topology), together with geometric information describing the surfaces and curves in which 
+faces and edges lie, and the positions of the vertices. Both kinds of data structure can be discerned 
+in any system using set operations on shapes. In fact, the second kind is the result of evaluating the 
+expressions represented by the first. However, systems to date have tended to stress one kind at the 
+expense of the other, either performing an immediate evaluation whenever a boolean command is given (the 
+'steady state' method), or delaying all evaluation until a final stage is reached (the 'big bang' approach). 
+In the latter case, the explicit data structure finally produced is sometimes specialized if only a picture 
+or numerical control output is wanted, thereby to some extent simplifying and speeding up a lengthy computation. 
+ The thesis of this paper is that the specification of the set operations should be decoupled from their 
+evaluation. It should be possible to start evaluation at various places in the tree at different times 
+and observe the results during a succession, so to speak, of little bangs. The user of the system can 
+then be given much better control over the progress of his design as he sets up volumes, checks them, 
+combines them and backtracks. A further advantage of this approach arises if the system is being used 
+to model a manufacturing process such as 252 machining. In this case, it is the path taken to the final 
+goal that is of interest as much as the goal itself, and hence control of progress along that path is 
+vital. We begin by describing a simple data structure for assemblies and components and show how it 
+can be generalised to cover implicit and explicit descriptions. At the risk of taxing readers, we have 
+used Algol 68 [9] to specify the data structures. We can then go on to show how operators defined in 
+the language can be made to generate the data structure and to control evaluation. This is important 
+if the complexity of hierarchical data structures [3, Ch.4] is to be controlled and comprehended by the 
+user. Even so, we regard the compiled input as better suited to writers of special-purpose CAD systems 
+that will use the underlying kernel of procedures, rather than to engineering designers. 2. A shape 
+model for assemblies Assemblies consist of items which are either individual components or sub-assemblies. 
+An assembly is modelled as a tree with components at the terminal nodes, and sub-assemblies at the non-terminal 
+nodes. As there are frequently several occurrences of an item in an assembly, we allow an assembly to 
+contain instances of other assemblies, and permit assemblies to be instanced more than once: the tree 
+is now a directed graph. An assembly must not contain an instance of itself or of an ancestor as this 
+would imply an infinite assembly. In other words, the directed graph must be without cycles (a semi-tree). 
+To simplify deletion of assemblies, we also keep a count of the number of times an assembly is instanced. 
+ A three-valued logical entity records the type of the assembly. For finished assemblies, the type will 
+always be collective, that is, the items in the assembly are simply juxtaposed and collected together. 
+As will be explained below, assemblies can also be of type conjunctive or disjunctive. Three-valued quantities 
+are of mode kleen, named after S.C. Kleene [8]. They are widely used in the system, for example, to convey 
+the result of a test to determine if a point is inside, on or outside a closed boundary. An assembly, 
+then, is declared by mode assembly = struct ( union (ref instance, ref component) item #either a component 
+or the first of a chain of instances of (other) assemblies in this assembly# , kleen type #3-valued 
+logical entity# , int used #number of times this assembly is instanced# ). Note that modes (int, real, 
+transformation, ref assembly, etc.) are always,underlined in the Algol 68 examples. System words (mode, 
+struct, union, proc , op, etc.) are also underlined, as are operators with alphabetical names (evaluate, 
+draw - see below). Sequences of the form "(" "," ... ",.... )" are aligned horizontally or vertically. 
+ The structure for an instance must contain a reference to the assembly instanced (the prototype) and 
+a reference to the next instance in the chain. For convenience, a reference to the assembly containing 
+the instance (the owner) is included as well. We also store in the instance a transformation so that 
+the instance can be moved, rotated and scaled. Thus we have mode instance = struct ( ref assembly prototype, 
+owner , transformation trans ref instance next ). Every path from the base of the semi-tree to a terminal 
+node denotes the presence in space of a solid, that is, of the cemponent at the terminal node transformed 
+successively by each transformation along the path. The structure is best handled using recursion. For 
+example, given a procedure ("draw component") to draw a transformed component and an operator "*" to 
+multiply two transformations together, an assembly may be drawn by proc draw assembly = (ref assembly 
+a,transformation t) ref assembly: case item of a #test whether item is instance or component# in (ref 
+instance i): #non-terminal node -draw instances# for all instances (i , ( ref instance j) void: draw 
+assembly (prototype of j, trans of j * t) ) , (ref component c): draw component (c,t) esac. A further 
+procedure "for all instances" of mode proc (ref instance proc (ref instance) void) void applies the argument 
+procedure (in the example above not named but given explicitly) to each instance in a chain of instances. 
+ This example shows how attributes, in this case a transformation, can be passed along a path. Different 
+attributes with different rules for their combination could be devised. Such an approach has been used 
+in computer graphics [7] for handling transformations, line styles and other graphic information in a 
+general graphical data structure and language for picture processing. 3. Types of assembly The data 
+structure developed for assemblies may be used to represent the implicit and explicit forms of shape 
+description if we allow assemblies to be of three different types: collective, conjunctive or disjunctive. 
+A collective assembly has already been explained above. If, however, the solids are going to be combined, 
+the assembly is marked as conjunctive or disjunctive depending on whether a set union or intersection 
+is envisaged. Note that as the same boolean operation is to be applied to all items in a given assembly 
+considered together, the order in which it is actually performed on the items is immaterial. 253 To 
+obtain the set difference operation, we need to be able to complement some of the items in a disjunctive 
+assembly. An extra boolean field might have been added to the instance mode. Instead we choose to place 
+the boolean in the definition of a transformation, that is, mode transformation = struct ( matrix mat 
+#a 4x4 matrix to record rotation, scaling and translation# bool neg #if true, negate the transformed 
+entity# ). The multiply operator for transformations can now be given: o p * = (transformation p,q) 
+transformation: (mat of p * mat o_ff q, neg of p ~= neg of q) where an operator * for matrix multiplication 
+is employed. Having shown how the implicit form of shape description is handled, we now consider briefly 
+the explicit form. This occurs at the terminal nodes of the semi-tree, which are occupied by assemblies 
+containing a single component. The storage of faces, edges and vertices of the component is based on 
+Baumgart's winged-edge data structure [i], extended to handle multiply- connected faces. A description 
+of the structure in a simplified form is given in [5]. Evaluation of set operations is carried out by 
+an operator formally defined as op evaluate = (ref assembly a) ref assembly: the details of which will 
+be described elsewhere. It takes and returns an assembly. Often the resulting assembly will be a single 
+component. If, however, a set difference cuts a component into pieces, then these are easily returned 
+as a new assembly. Thus the data structure is able to represent an assembly, or an implicit, unevaluated 
+description of a component (or assembly), or the evaluated result. The evaluate operator need not be 
+applied at the base of the semi-tree; it can be applied to any sub-assembly when its effect will be confined 
+to the instances in that assembly and their descendants. Like drawing, evaluation is carried out recursively. 
+With care, it is possible to ensure that only a minimum of change is made to the semi-tree in order to 
+model the effect of evaluating set operations. For example, the conjunction of disjoint solids produces 
+no change in the tree. The same procedures for drawing or saving an assembly on backing store can be 
+used for unevaluated, or partly- or fully- evaluated descriptions; hence saving of semi- finished shapes 
+is easily arranged and an automatic back-up can be provided if desired. 4. Compiled shape descriptions 
+ Having described the form of the data structure, we now show how examples of it can be constructed by 
+means of compiled statements in Algol 68. Perhaps the greatest advantage of the language in shape processing, 
+apart from the ability to declare new modes, is that it allows operators to be defined. In principle, 
+operators are not much different from procedures that take one or two arguments and deliver one result. 
+Yet, as will be seen below, their use makes shape descriptions much easier to write and understand and 
+is probably essential if full advantage is to be derived from the data structure proposed. In effect, 
+the operators allow a language for shape processing to be embedded in Algol 68, and that language also 
+enjoys the power of Algol 68 in addition to its geometric and topological features. Others have similarly 
+constructed graphical languages [6,12] based on extensible programming languages. In shape processing, 
+rather than work in terms of lines and points in a graphical language, we prefer instead to devise a 
+language in the problem domain where the language can be made more concise and more powerful. Doubtless 
+this is true for many applications and suggests that it is extensible programming languages that should 
+be encouraged rather than special-purpose languages for particular applications or techniques. In Algol 
+68, dyadic operators are given priorities so that the order of evaluation is defined. The reader need 
+not be concerned with priorities for the purpose of this paper, but should remember that monadic operators 
+are always evaluated before dyadic operators, and that repeated occurrences of the same operator are 
+evaluated from the left. The data structure will be built up in a global area (the heap) which exists 
+independently of the flow of control through the block structure of the program. Although we shall sometimes 
+speak of operators taking arguments, and delivering results such as assemblies, the arguments are in 
+fact references to the assemblies, rather than the assemblies themselves. We shall make use of diagrams 
+for illustration in which an assembly is shown by a circle and an instance by a square. If the assembly 
+has an instance chain for its items, it appears as whereas if it is a terminal node with an explicit 
+data structure attached, it appears as where the triangle denotes the winged-edge data structure. 
+The basic tree-building operator ( + ) creates a new instance of the assembly given by its right-hand 
+argument, adds it to the instances already attached to the assembly given by the left-hand argument, 
+and returns the new instance. An alternative definition with a left-hand argument of mode instance adds 
+the new instance after the given instance. Thus a + b + c is parsed as (a ÷ b) + c 254 which creates 
+ and returns instance i. A check is made to ensure that adding an instance does not create a cyclic result. 
+ Also needed is a monadic operator ne___gg declared for instances op neg = (ref instance i) ref instance: 
+(neg of trans of i := ~ neg of trans of i; i). The operator neg is also declared for assemblies which, 
+if non-terminal, have all their instances negated, and, if terminal, have their explicit shape description 
+negated by reversing the stored boundary orientation. We shall make use of a procedure "mka" that constructs 
+an assembly with no instances, and monadic operators conjunctive, disjunctive, collective that return 
+true when applied to assemblies of the given type. Three more operators setconj, setdisj, setcoll force 
+an assembly to be the given type; owner finds the assembly that contains the given instance. We may 
+now define the operators +, !, &#38;, - and use them to form collections, unions, inter- sections or 
+set differences, respectively. The monadic operators +, ! and &#38; each create a null assembly and force 
+it to be the appropriate type before adding an instance of the given assembly; they then return the newly-created 
+assembly. The dyadic operators first inspect the assembly given in the left-hand argument. If it is of 
+the required type, the assembly given by the right- hand argument is simply added as a further instance. 
+If the type of the left-hand argument is different, that assembly is first instantiated using a monadic 
+operator, and the right-hand argument is added as a further instance in the newly-created assembly. This 
+arrangement ensures that extra levels in the semi-tree are only created when necessary. o p + = (ref 
+assembly a) ref assembly: owner (setcoll mka ÷ a); o_P_P + = (ref assembly a,b) ref assembly: owner 
+ begin if collective a then a else +a fi ÷b end ; o_PP ! = (ref assembly a) ref assembly: owner (setconj 
+mka ÷ a); o_~ ! = (ref assembly a,b) ref assembly: owner begin if conjunctive a then a else !a fi 
+ ÷b en__dd; o_~ &#38; = (ref assembly a) ref assembly: owner (setdisj mka + a); o p &#38; = (ref assembly 
+a,b) ref assembly: owner begin if disjunctive a then a else &#38;a fi ÷b end; o_~ -= (ref assembly 
+a) ref assembly: neg &#38;a; o19 -= (ref assembly a,b) ref assembly: owner : neg begi n if disjunctive 
+a then a else &#38;a fi +b end. For example, +b + b ! c &#38; (d-e) will be parsed as (+b) + (b ! 
+(c &#38;(d-e))) and will produce the structure shown in fig.l. We now have a means of creating the non- 
+terminal nodes of the tree but have also to set the terminal nodes and the transformations in the instances. 
+A terminal node contains a single component in explicit form. Procedures such as "make cube" and "make 
+cone" construct the primitive components using the methods of Baumgart. Sweeping operators are provided 
+for constructing prismatic shapes or objects of revolution. Where a primitive is to be referenced more 
+than once, like "b" in the example Fig. 1 An assembly 255 above, we would first declare "ref assembly 
+b = make cube" before writing down the expression for the semi-tree. Instances have their transformation 
+initially set to unity. Two operators, ÷ and *, allow a transformation in an instance to be replaced 
+or modified by another transformation. An assembly can be transformed by op * = (ref assembly a, transformation 
+t) ref assembly: case item of a in (ref instance i): for all instances (i, (ref instance j) void: 
+ trans of j := trans of j * t) (ref component c):transform component(c,t) esac. Sometimes it may be 
+necessary to transform a particular instance in an assembly. To assist in locating instances, two further 
+operators are provided. One "ni", used as in "a ni b", delivers the first instance of "b" in "a". If 
+there are several instances of "b" in "a" , the other operator "II '! will select the nth instance in 
+the instance chain. Thus "a ni b II 2" finds the second instance of b in a. Various monadic operators 
+construct simple transformations by moving, scaling or rotating an assembly. For example, mx 3.5 delivers 
+a transformation for a move by 3.5 units along the x-axis. Thus to draw a cube pierced with an angled 
+cylindrical hole scaled in z by 2 and rotated by 45 degrees about the x-axis , we could write draw evaluate 
+(make cube - make cylinder * s__{z 2 * r__xx 45) The draw operator takes account of factors such as 
+scale, line style, view point and projection, all controlled by the current "view style", a global quantity; 
+it also makes use of the procedure "draw assembly" described above. The data structure before and after 
+evaluation is cub~cylind~ f°re / ~ after 5. Conclusion A hierarchical data structure for shape descriptions 
+offers a unified solution to the problem of specifying shapes in terms of volume elements and set operators, 
+and of representing the final result as assemblies, sub-assemblies and components. By describing the 
+hierarchies as compiled statements in a high-level language which allows operators to be defined, the 
+complexities of the hierarchical approach can be managed. So far, input in the form of compiled statements 
+has been used for testing the system, and for writing a command interpreter that gives the user the impression 
+he is creating a simple one-level collection of solids in space whilst actually building and modifying 
+a compact hierarchical description. We intend next to construct a specialized CAD system for a class 
+of shapes, for example, pistons, and to evaluate the use of compiled shape descriptions in this more 
+realistic context. References: i. Baumgart, B.G., Geometric modelling for computer vision, Stanford 
+Artificial Intelligence Laboratory report STAN - CS-74-463, (1974). 2. Braid, I.C., Lang, C.A., Computer-aided 
+design of mechanical components with volume building bricks, proc. PROLAMAT '73  (published as Computer 
+Languages for Numerical Control by North Holland, Amsterdam), (1973).  3. Braid, I.C., Designing with 
+volumes, Ph.D. Thesis, Cambridge University, England, (1974).  4. Braid, I.C., Six systems for shape 
+design and representation -a review, proc. CAM-I Int. Seminar, Bournemouth, England, report P-75-~M-ol, 
+pp. 60-67, (1975).  5. Braid, I.C., and Hillyard, R.C., Geometric modelling in ALGOL 68, ACM Sigplan 
+Notices, vol. 12, no. 6, pp. 168-174, (1977).  6. Gnatz, R., Higher graphic languages. In: Nake, F. 
+and Rosenfeld, A. (Eds.) Graphic Languages, North Holland, Amsterdam, pp 302-320, (1972).  7. Hagen 
+T., et al, The intermediate language for pictures, Proc. IFIP '77, (pub. North-Holland), pp. 173-178, 
+(1977).  8. Kleene, S.C., Introduction to Metamathematics, p 334, D. Van Nostrand Inc., New York, (1952). 
+ 9. Lindsey, C.H. et al, Informal Introduction to Algol 68 (revised) North-Holland, (1976).  i0. Okino, 
+N. et al, TIPS-I : Technical information system for CAD, drawing and manufacture, proc. PROLAMAT '73 
+(see above), (1973). ii. Voelcker, H.B. et al, An introduction to PADL, Report TM-22, Production Automation 
+Project, University of Rochester, N.Y., (1974). 12. Williams, R. and Krammer, G., EX.GRAF: an extensible 
+language including graphical operations, CGIP, vol.l, no.4, pp 317-340, (1972). 256 
+			

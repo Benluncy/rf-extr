@@ -1,0 +1,330 @@
+
+ USING A SHOT CLOCK TO DESIGN AN EFFICIENT PARALLEL DISTRIBUTED SIMULATION John T. Douglass and Brian 
+A. Malloy Department of Computer Science Clemson University Clemson, SC 29634 ABSTRACT the various events 
+in the system. In conservative simulations, a processor does not Parallel discrete event simulation represents 
+an im­execute an event e at simulation time teuntil all mes­ portant area of research because large simulations 
+are sages with time stamp less than tehave been pro­ prohibitively expensive to execute on a sequential 
+ma­cessed. This sequencing of events is known as the chine. Though simulation programs seem to have loca[ 
+causahty constraint and adherence to this con­ substantial amounts of parallelism, workable tech­straint 
+guarantees that the execution of event e is niques to efficiently parallelize these programs have correct. 
+Since the sequencing constraints that dic­ been elusive. In this paper, we show that by increas­tate 
+the relative order in which events must be ex­ ing the granularity of computation that each proces­ecuted 
+are highly data dependent, successful conser­ sor performs, the degradation in performance due to vative 
+algorithn~ must take advantage of Iookahead, expensive communication can be mitigated. We sim­the ability 
+to predict what will or will not happen in ulate a network traffic flow problem using PVM to the simulated 
+future. construct our parallel system. To further reduce the The problem with the conservative approach 
+is that cost of communication, we use a novel windowing without a large lookahead value, very little 
+paral­technique called a shot clock. The initial value of lelism in the simulation program can be exploited. 
+a shot clock is a lookahead value and expiration of The degree of lookahead becomes crucial if the par­a 
+shot clock triggers actions which dictate the gran­allel computer exacts a high cost for communication. 
+ularity of the messages passed in the system. The A software package that allows the user to construct 
+finest grained message is a single car and the coars­ a parallel machine using a network of workstations 
+is est grained message is a queue of cars. We achieve a Parallel Virtual Machine (PVM). PVM provides 
+soft­speed up of 6 using PVM on a network of 16 work­ware support for a message passing system composedstations. 
+Our experiments show that we can achieve of a network of heterogeneous workstations. The ad­better speed 
+up using a system with faster communi­vantages of PVM are that it is readily available, easycation. to 
+use and allows the user to construct a parallel m~ chine from existing sequential hardware. The disad­vantage 
+of PVM is that since communication between INTRODUCTION the processors of the virtual machine occurs 
+across the local area network it is expensive. Therefore, un-Parallel discrete event simulation (PDES) 
+refers to less the granularity of parallelism is coarse, any gainthe execution of a single simulation 
+program on a achieved from executing the program in parallel mayparallel computer. PDES is an important 
+area of be completely eroded. research because large simulations are prohibitively expensive on a sequential 
+machine (Righter 1989). In this paper, we present the design and implemen-Though simulation programs 
+appear to have substan-tation of a parallel distributed simulation for a traffic tial amounts of parallelism, 
+workable techniques to flow problem. The parallel computer is constructed efficiently parallelize simulation 
+programs have been using PVM on a network of Sun workstations. We elusive. The main bottleneck in the 
+parallel simula-investigate the effects of increasing the granularity of tion is the need for frequent 
+communication among computation on each processor by assigning increas­the processors due to the maintenance 
+of global sys-ing number of traffic lights per processor. Also, since tem time and the data dependencies 
+that exist among communication is expensive with PVM, we investi­ 1362 gate the effects ofreducing the 
+frequency of commu­nication by increasing the granularity y of the messages. To increase the grain of 
+the messages, we pack more cars in each message using a novel windowing tech­nique that we call a shot 
+clock. The shot clock is ini­tialized to the size of the lookahead in the simulation; expiration of the 
+shot clock triggers actions which dic­tate the message granularity, where the finest grain is a single 
+car in the traffic flow problem and the coars­est grain is a queue of cars. Our results show that in 
+a system where commu­nication cost is high, such as a virtual machine using the local area net work for 
+communication, the effects of this high cost can be mitigated by increasing the amount of computation 
+that each processor performs. We show further that increasing the granularity of messages and reducing 
+the frequency of communica­tion can have a positive influence on the speed up achieved in the parallel 
+system. We were able to achieve a speed up of 6 on a parallel system of 16 workstations connected using 
+PVM. This speed up is a lower bound on the potential speed up using our shot clock technique since other 
+workstations were active during the experiments and since we recorded wall time rather than processor 
+time. Our experi­ments indicate further that, using our notion of a shot clock, we can achieve better 
+speed up using a system wit h faster communication. The next section of this paper presents background 
+and reviews work related to conservative parallel dis­tributed simulation. Section 3 presents our approach 
+using a shot clock and section 4 presents the PVM im­plementation. Section 5 illustrates our results 
+while section 6 draws conclusions and presents ideas for fu­ture work. 2 BACKGROUND The protocols used 
+to design and implement parallel simulation programs fall broadly into two categories: conservative and 
+optimistic. We begin this section with a brief overview of these two protocols, We then present the highlights 
+of PVM, the software package that enables our construction of a parallel machine using a network of workstations. 
+2.1 Protocols for Parallel Simulation The protocols currently used to parallelize a simula­tion program 
+fall into two generrd categories; conser­vative and optimistic. Excellent surveys of these ap­ proaches 
+can be found in Fujimoto ( 1990) and Righter (1989). In conservative simulations, a processor does not 
+execute an event e at simulation time te until all mes­sages with time stamp less than te have been pro­cessed. 
+This sequencing of events is known as the local causality constraint and adherence to this con­straint 
+guarantees that the execution of event e is correct. There are numerous conservative algorithms that 
+differ primarily in the manner in which they com­municate this guarantee. Some approaches execute synchronously 
+(see Nicol 1993, Lubachevsky 1989a) while other approaches are asynchronous (e.g., Nicol 1988). In optimistic 
+simulations, a processor may ex­ecute events in any order and violations of the lo­cal causality constraint 
+are corrected by rolling back the processor to a state where the constraint holds. The optimistic approach, 
+such as Time Warp (Jeffer­son 1985), has shown to produce substantial speed up due to parallelism (Madisetti 
+and Hardaker 1992, Fu­jimoto 1990, Baezner, Robs and Jones 1992, Unger et al. 1990). An excellent variation 
+of the Time Warp approach can be found in Madisetti, Walrand, and Messerchmitt (1988). There are disadvantages 
+to each protocol. For the conservative approach, the local causality constraint dictates the relative 
+order in which events must be executed. Each processor maintains a local system time whose value is the 
+lowest time stamped mes­sage of any communicant ing processor. However, since the events in a simulation 
+are highly data depen­dent, there is little opportunity to exploit parallelism because the frequency 
+of communication needed to maintain the constraint enforces a virtual lock step execution. Successful 
+conservative algorithms must take advantage of iookahead, or the ability to predict what will or will 
+not happen in the simulated future. Thus, if a processor, pi, knows that it will not receive a message 
+from another processor until time ti,then all pending messages with time stamp less than tjcan be processed, 
+A disadvantage of the optimistic approach is the overhead incurred due to the maintenance of all nec­essary 
+information to perform a roll back. This state saving information must be maintained even if a roll back 
+is never performed, Also, a roll back on one processor may incite a roll back on another processor, leading 
+to cascading roll backs. An excessive number of roll backs may erode the gains accrued by paral­lelization 
+of the simulation program. 2.2 PVM PVM (Parallel Virtual Machine) , Geist et al. (1993), is a software 
+packagel that provides support for the 1available through anonymous ftp from netlib2 .orrd.gov in the 
+pvm3 directory construction of a parallel computer using a network of workstations. PVM supports a message 
+passing com­ munication paradigm that can accommodate more than 25 platforms, ranging from a Cray/YMP 
+to an 80386 personal computer running the Unix operating system. Messages may be passed between any of 
+the machines supported; data conversions, for platforms which use different data representations, are 
+trans­ parent to the user. There are two communication protocols supported by PVM, allowing the programmer 
+to choose be­tween dynamic TCP sockets or UDP communication through the P VM daemon. TCP refers to Transmis­sion 
+Control Protocol which provides connection ori­ented communication across a network. UDP refers to User 
+Datagram Protocol, this protocol is a con­nect ionless transport protocol. The default commu­nication 
+protocol is UDP communication. In UDP communication, user processes make PVM library calls. The PVM daemon 
+receives this information and mediates the communication. In the dynamic TCP socket communication, the 
+user makes the same library calls as in the UDP approach, however on the first communication between 
+two processes, a TCP socket is established by daemons running on each of the machines. Once established, 
+this socket is used for all subsequent communication between the two processes so that the daemons are 
+not in­volved in the mediation. The initial communication using the dynamic TCP sockets is significantly 
+more expensive than subsequent TCP communication or any UDP communication because of the overhead incurred 
+to establish the sockets. However, subse­quent TCP communication is far less expensive than UDP communication; 
+thus, if communication occurs many times over the course of a program than TCP socket communication is 
+significantly more efficient than UDP communication. The results of our exper­imentation demonstrate 
+the savings of repeated TCP communication. The cost of the communication in PVM, regardless of the protocol 
+used, is high. Since PVM is running on a network of machines all contending for the use of the network, 
+the time needed to paes a message is many times that of messages being passed in a ded­ icated multiprocessor. 
+Reducing communication in programs running in PVM is therefore a crucial con­sideration. 3 THREE MODELS 
+THAT USE A SHOT CLOCK Our approach to parallelizing the traffic flow prob­lem is influenced by PVM, the 
+software package that and Malloy we utilize to construct our parallel machine. PVM is readily available 
+and easy to use but exacts a high cost for communication, especially if other workst a­tions are vying 
+for access to the connecting network. Thus, the three factors listed below focus on reduc­ing communication 
+cost and guided the design of our simulation program: 1. Increasing the amount of computation per pro­cessor 
+will help to offset the cost of communica­tion in a system where communication is expen­sive. 2. Reducing 
+the frequency of communication will positively influence speedup. 3. Reduction of null messages will 
+positively influ­ence speedup.  A major goal of this work is to measure the effects of the above factors 
+on a parallel simulation given that the target multiprocessor exacts a high cost for communication. A 
+second goal is to obtain as much speedup as possible by parallelization of the simu­lation program and 
+to investigate the scalability of the parallelization using PVM. Our approach is based on a windowing 
+protocol (Nicol 1993, Chandy and Sherman 1989, Lubachevsky 1988) where scalabil­ity results have been 
+proven for this approach (Nicol 1993, Lubachevsky 1989b, Lubachevsky, Shwartz, and Weiss 1989). In a 
+windowing protocol, processor pi at simulated time t~, is guaranteed not to receive a message with timestamp 
+less than some future time, say ti+ f. In this case, processor pi is said to have a lookahead of size 
+j. In our work, we refer to our windowing protocol as a shot clock where the initial value of the shot 
+clock is the Iookahead value. If cur­rent simulation time is t~ and the lookahead value is ~, then the 
+shot clock is said to ezpire at simulated time ij+ f. In our model, expiration of the shot clock triggers 
+actions which address factors two and three listed above. Our model is explained in the following sections. 
+ 3.1 Overview of the Approach In addition to establishing the three factors listed previously, this work 
+investigates the degree of in­fluence the above factors might have on the abil­ity of a parallel simulation 
+to achieve good speed up. For factor one, we increase the computation on each processor to mitigate the 
+effects of expensive com­munication by designing and implementing a param­etrized trafic flow network. 
+The parameter to the network constructor is the size of the local grid, The advantage of the parameterized 
+network is that the 51 +-J --OUOL c S6 57 L1S8 GRIDO 53 ;= : ?Otig--- -- 59 L2 Slo L3 511 g 55 1;1 
+ ?; I+; F- + 1 Figure 1: Two sample grids of size 2 by 2. Each grid is mapped onto a processor; in this 
+example, GRIDO is mapped to processor PO and GRID1 is mapped to processor PI. flexibility permits easy 
+scale to an increasing number of lights per processor, therefore an increase in the computation performed 
+by each processor. Figure 1 illustrates a sample traffic network com­posed of two 2 by 2 grids, labeled 
+GRIDO and GRID1. Each grid is mapped onto a processor; in this exam­ple, GRIDO is mapped to processor 
+PO and GRID1 is mapped to processor pl. GRIDO contains four traffic lights labeled LO, L 1, L2 and L3, 
+and twelve street segments labeled SO through S11. In the implemen­tation, the lights are represented 
+by a three valued flag indicating that the light is red, green or yellow and the street segments are 
+represented by queues of cars. Street segments serve as both sources and sinks since traffic can flow 
+in both directions. For example, the north end of street segment SO serves as both a source where cars 
+generated at random intervals are permitted to travel south on the segment, and as a sink where cars 
+traveling north on street segment SO are consumed when they reach the end of the seg­ment. Street segments 
+have a fixed size and for some segments, cars leaving the street must be passed to other processors for 
+further travel. For example, cars traveling east on street segment S8 of GRIDO must be passed to processor 
+pl when they reach the end of the street; these cars correspond to messages in the parallel model. Thus, 
+a message must be passed to processor PI when a car traveling east reaches the end of street segments 
+S8 and S11; similarly cars traveling south on street segments S4 and S5 must be passed to another processor 
+when they reach the end of the street. If the simulation program is executed on four processors, then 
+cars traveling east on street segments S8 and S11 are consumed when they reach the end of the street; 
+if more than four processors are used then cars must be passed as messages when they reach the end of 
+street segments S8 and S11. A drawback of our parameterized network is that the regularity imposed by 
+the parameterization pre­cludes replication of an actual traffic network; streets in our network are 
+the same length, have traffic in both directions, do not permit one car to pass another and there are 
+no freeways. The number of lights per processor and the number of processors are restricted to be perfect 
+squares. Work is underway to inves­tigate the effects on the parallel model when these limitations are 
+removed. The parameterized traffic flow network is used in all three models presented in this paper. 
+To investigate the effects of factors two and three listed previously, we designed three models of sim­ulation. 
+These models differ by the composition of the messages that each processor passes and by the actions 
+that a processor perform when a shot clock expires. 3.2 Model One: send one car in each message In the 
+first model, a processor pi maintains a shot clock for each boundary segment which can have inter-processor 
+communication. For example, if GRIDO and GRID1 are assigned to processors p. and PI respectively, then 
+processor pO must maintain a shot clock entry for street segments 58 and S11 since these segments neighbor 
+processor pl. A sireet seg­ ment is a segment of road connecting two lights; for example, street segment 
+s7, shown in Figure 1, con­nects lights LO and L1. Algorithm Simulate Traflic shown in Figure 2, overviews 
+the simulation process which runs on each processor. The input to the algorithm is the Max SimTime, which 
+is specified in a common startup file which all processes may access. The simulation continues until 
+the local clock exceeds algorithm Simul at eTraf f i c input Max SimTime output Simulation of this local 
+grid begin SimulateTraffic LocalTime = O whiIe LocalTime <= MazSimTime loop while more null messages 
+in the receive buffer loop process the null message end while while more car messages in receive buffer 
+loop process the car message end while if proceed does not violate causality constraint then update lights 
+process segments by 1. gen cars for source 2. coneume cars for sink 3. pees cars to neighboring processors 
+ 4. move cars to adjacent segments increment local time end if end while end  Figure 2: General algorithm 
+executed by each pro­cessor to simulate a traffic network MazSirnTime. The first of the two inner while 
+loops processes null messages. A null message consists of two parts: a destination segment and a time 
+stamp. The times­tamp in this case specifies how much the receiver s local clock is allowed to proceed 
+(the window for this segment ) by guaranteeing that no subsequent mes­sages (car or null) with a smaller 
+timestamp will be received for that segment. The second of the inner while loops processes car messages. 
+In this instance, a car message consists of a destination segment and the car structure. The processing 
+of the car message consists of unpacking the message and inserting the car onto the proper queue of the 
+destination segment. The shot clock entry for that segment is then updated to reflect the receipt of 
+the car. After the processing of the messages from other processors is complete the local causality constraint 
+is verified. If the local clock is less than the times­tamp of the last message received on all boundary 
+segments then the simulation is allowed to proceed. If the simulation can proceed, each of the segments 
+in the local grid is processed sequentially. For segments which are boundaries of the global system, 
+cars are either generated based upon a user specified probabil­ity, or consumed. Cars are passed on segments 
+which are internal to the local grid, and cars are passed be­ and Malloy algorithm PassBetween input 
+SegNo, ProcNum output Cars/null messages passed to neighbor processor begin PassBetween determine destination 
+(SegNo, ProcNum) if the queue for thk segment is not empty for each car whose queue time has expired 
+loop pack destination segment pack car structure send message to proper processor end for end if if the 
+shot clock has expired and no cars were sent then pack destination pack time stamp send null message 
+to proper processor end if end Figure 3: Algorithm used in Model One to pass cars from one processor 
+to another processor t ween processors. The part of this processing which is of interest here is the 
+passing of cars to neighboring processors. Al­gorithm PassBetween, shown in Figure 3, illustrates how 
+cars are passed in Model One. In this model we check to see if there are cars on this segment s queue 
+(assume in the outgoing directions). For each car whose time on this queue has expired, i.e. the cars 
+which have traveled the segment s length, an individ­ual message is packed and sent. If no cars were 
+sent and the shot clock has expired then a null message is sent. The null message specifies that no further 
+com­munication will come from this segment until time t, where tis the local time of the sender s grid 
+plus time remaining until the next car will be passed. In Model One, cars which are passing between pro­cessors 
+are individually packed and sent in messages. Furthermore, if there are cars on the queue which are not 
+ready to be sent, i.e. their time on the queue has not expired but the shot clock has run down, a null 
+message is sent to the appropriate processor with a timestamp which is the arrival time of the car at 
+the front of the queue. Our experiments revealed that Model One produced no appreciable speedup and, 
+in many instances including the large cases, was demon­stratably slower than the sequential approach! 
+Using PVM on the ethernet to perform message passing, communication delay is significant. The lack of 
+performance gain for Model One can be attributed to the scheme of passing cars in individual messages 
+while also passing what might be unnecessary null messages; this, together with the relatively high com­munication 
+delay of PVM produced little or no speed up. Thus, we now present coarser grained approaches in Models 
+Two and Three, in order to reduce the cost of communication. 3.3 Model Two: send the queue in each mes­sage 
+The second approach incorporates two improvements. The first improvement in Model Two is to reduce the 
+number of null messages. The second improvement for Model Two is the packing of the car messages. Once 
+cars arrive on the sending queue, there is no need for the car to wait until it s time on the queue has 
+expired. The car can be passed immediately aa long as the timestamp in the message is appropriately adjusted 
+to make it appear as if the car had been sent at the proper time. Further, there is no need to send each 
+car in an individual message. Any car which is available can be packed together into one message and 
+sent. 3.4 Model Three: send the queue only when the corresponding shot clock expires The average number 
+of cars being sent per message in Model Two was 2.1. The overall number of messages being passed was 
+still exceedingly high, translating into a pvm process which controls the communication still grabbing 
+nearly 15 %0 of the CPU time. In Model Three, we applied the shot clock to the car messages so that no 
+car message is sent until the shot clock has expired. In contrast, the second approach passed cars as 
+soon as they entered the queue on the sending side, whether or not the shot clock had expired. 4 THE 
+IMPLEMENTATION We implemented the three models presented in the previous section but, to provide a basis 
+for compari­son, we first implemented Sequential Mode/, a sequen­tial version of the traffic flow problem. 
+In the Sequen­tial Model, we maintain an array of data structures and local grid information is kept 
+in this structure. This implementation was then extended in several ways to obtain the three models. 
+In the Sequential Model, when a car travels from one street segment on a local grid to a street segment 
+on another local grid, the car is simply removed from one queue and inserted into another queue. To imple­ment 
+the parallel version for the models, travel from a street segment on one local grid to a street seg­ment 
+on a different local grid requires a message to be passed from one processor to another. Therefore, using 
+PVM, information about the car being passed algorithm ConstructLocalGrid input Loca/G~idSize output Initialize 
+data structures storing local grid layout begin ConstructLocalGrid EastWestVal = LocalGTidSize i=o while 
+i < Loca6GridSi.ze2 loop for j = O to LocalGridSize 1 loop va[=i+j LightNumber = val Segment North of 
+Light is numbered val Segment South of Light is numbered val+ LocalGridSize Segment West of Light is 
+numbered vat+ LocalGridSize2 +-EastWestVal Segment East of Light is numbered val+ LocalGridSizez + EastWestVal 
++ 1 end for EastWestVal = EastWestVal + 1 i = i + LocalGridSize end while end Figure 4: Algorithm to 
+construct a local grid. was packed into a message and sent to the appro­priate processor. Similarly, 
+the receiving processor needed to unpack the information, and insert the car into the proper street segment. 
+This code is added to the main loop of the simulation program. When comparing the performance of the 
+sequen­tial and various parallel approaches physical wall time was used rather than processor time. There 
+are two main reasons for this. First, since communication through PVM is implemented through a daemon 
+pro­cess, the overall processor time for the simulation would need to take into account the processor 
+time of the daemon. There is no easy and convenient way to do this, Secondly, when running an application 
+the most important time is how long it takes to see the result; this is the wall time. The experiments 
+in this paper were run on a network of SUN SLC worksta­tions. 5 PERFORMANCE Our experiments investigate 
+the effects of the three factors listed in section 3. The first factor focuses on increasing computation 
+to offset communication. Ta­ble 1 illustrates the results of our experiments, using Model Three, to determine 
+the effects of increasing the computation performed by each processor to mit­igate the effects of expensive 
+communication. Recall that with Model Three, the entire queue is packed into a message and a message 
+is sent only when the shot clock expires. The first row in the table is a head­ ing indicating that, 
+for both the Sequential Model (using one workstation) and for Model Three (us­ing 16 workstations), our 
+simulation program con­tained first 64 lights, then 144 until finally the last column shows the results 
+for the program containing 576 lights. The second row of the table shows the execution time in minutes 
+for the Sequential Model and the third row of the table shows the execution time in minutes for Model 
+Three. The fourth row shows the speed Upz achieved for Model Three us­ing 16 workstations over the Sequential 
+Model using a single workstation. For example, comparing the results in the first column, the Sequential 
+Model re­quired 10.1 minutes to execute the simulation pro­gram containing 16 lights, while Model Three 
+(the parallel version) required 3.2 minutes to execute the parallel program containing 16 lights; this 
+is a speed up of 3.19. This fourth row of Table 1 verifies our hypothesis that for a parallel system 
+with expensive communi­cation bet ween processors, increasing the amount of computation on each processor 
+can offset the high cost for communication. In the case of the simulation program containing 16 lights, 
+a speed up of 3.19 was achieved in the parallel version. However, in the case of the simulation program 
+containing 576 lights, we were able to achieve a speed up of 5.7 in the paral­lel version. Furthermore, 
+we were able to achieve in­creasingly better speed up as the simulation programs cent ain more lights, 
+and therefore more comput at ion per processor. Tables 2, 3 and 4 illustrate a comparison of the three 
+models described in section 3. Also, we com­pare the execution of Model Three using both UDP and TCP 
+communication. Section 3 describes factors 2 and 3, which claim that reducing the frequency of communication 
+and reducing null messages can pos­itively influence speed up. By comparing the three models, we verify 
+factors 2 and 3. 2SPeed UP is the ratio of the execution time for the sequen­ tial program as compared 
+to the execution time for the parallel program. No. of Lights ] 64 144 256 400 576 Seq Model I 19.5 36.2 
+57.9 75.9 128.9 I Model Three I 1 5.8 9.9 12.9 16.3 22.6 I Speed-up / 3.33 3.65 4.46 4.65 5.70 Table 
+1: Execution time (in minutes) for the Sequential Model (1 processor) and for Model Three (16 processors), 
+with increasing number of lights used in the simulation program and Ma]loy ] No. of Lights I 64 144 256 
+400 576 Table 2: Comparison of execut ion time (in min­utes) on 16 processors for each of the mod­els; 
+also, we compare Model Three using both UDP and TCP communication m Table 3: Comparison of total messages 
+sent us­ing each model for a simulation program con­t aining 576 lights when executed on 16 proces­sors 
+Table 2 illustrates five different executions for each of the models using PVM on a network of 16 work­stations. 
+The first row of the table illustrates the number of lights contained in each of the simulation programs, 
+row two illustrates the time in minutes for execution using Model One, and row three illustrates the 
+time in minutes for execution using Model Two. Rows four and five illustrate the time in minutes for 
+execution using Model Three with the model in row four using UDP communication and the model in row five 
+using TCP communication. Our results indicate that using a shot clock may produce better speed up for 
+a multiprocessor system where communication is not as expensive as in the PVM system. Table 3 shows that 
+the average num- No. of Lights / 64 144 256 400 576 Model One I 0.50 0.67 0.75 0.86 1.19 Model Two 1.04 
+1.12 1.47 1.57 2.16 Model ThreeU 1.91 1.94 2.14 2.23 3.74 Model ThreeT 3.33 3.65 4.46 4.65 5.70 Table 
+4: Comparison of speedup on 16 proces­sors for the models; also, we compare Model Three using both UDP 
+and TCP communica­tion ber of messages sent for Model Three using UDP and TCP communication in PVM was 
+the same. How­ever, Table 4 shows that Model Three using TCP communication performed better than Model 
+Three using UDP communication, Since TCP communica­tion requires less overhead than UDP communication, 
+our shot clock technique may perform better in a sys­tem that exacts a lower cost for communication. 
+CONCLUDING REMARKS In this paper, we presented the design and implemen­tation of a distributed parallel 
+simulation of a traffic network problem. We constructed our parallel com­puter using PVM on a network 
+of Sun workstations. Since communication cost using PVM is high, we in­vestigated the effects of increasing 
+the granularity of computation performed by each processor in the par­allel execution of the simulation 
+program. We also investigated the effects of increasing the granularity of messages while decreasing 
+their frequency. Our results show that increasing the amount of computation that each processor performs 
+can offset the high cost of communication. We use a shot clock to control the frequency and grain of 
+the messages passed in our parallel system. Our results show that by packing more cars in each message 
+and decreasing the frequency of the messages, we can achieve better speed up. Our results show further 
+that in a system with faster communication, the shot clock can achieve even better results. AUTHOR BIOGRAPHIES 
+BRIAN A. MALLOY is an Assistant Professor in the department of Computer Science at Clemson Uni­versity. 
+He received an M.S. and Ph.D. from the Uni­versit y of Pittsburgh in 1984 and 1991 respectively. His 
+research interests include compilation techniques for parallelism and language design techniques for 
+simulation, JOHN T. DOUGLASS is a graduate student in the department of Computer Science at Clemson Uni­versity. 
+He received an M .S. from Clemson University in 1994. His research interests include program anal­ysis, 
+and language design techniques for parallelism. REFERENCES Baezner, D., C. Robs, and H. Jones. 1992. 
+U. S. Army MODSIM on Jade s Time Warp. Proceedings of the 1992 Winter Simulation Conference 665 671. 
+ Chandy, K. and R. Sherman. 1989. The Conditional Event Approach to Distributed Simulation. Pro­ceed~ngs 
+of the 1989 S(7S Multi conference on Dis­tributed Simulation 93-99. Fujimoto, R. M. 1990. Parallel Discrete 
+Event Simu­lation. Communications of the ACM 33:31-53. Geist, A., A. Beguilin, J. Dongarra, et. al. 1993. 
+PVM 3 User s Guide and Reference Manual. Oak Rtdge National Laboratory ORNL/TM-12-87. Jefferson, D. R. 
+1985. Virtual Time, Transactions on Programming Languages and Systems July: 404­ 425. Lubachevsky, B. 
+1988. Bounded Lag Distributed Discrete Event Simulation. Proceedings of the 1988 SCS Multiconference 
+on Distributed Simula­tion 183-191. Lubachevsky, B, 1989a. Efficient Distributed Event­driven Simulations 
+of Multiple Loop Networks. Communications of the ACM January :lll-123. Lubachevsky, B. 1989b. Scalability 
+of the Bounded Lag Distributed Event Simulation. Proceedings of the 1989 SCS Multiconference on Distributed 
+Sim­ulation 100 105. Lubachevsky, B., A. Shwartz, and A. Weiss. 1989. Rollback Sometimes Works...If Filtered. 
+Proceed­ings of the 1989 Winter Simulation Conference 630-639. Madisetti, V., and D. Hardaker. 1992. 
+Synchro­ nization Mechanisms for Distributed Event-Driven Computation/. ACM Transactions on Modeling 
+and Computer Simulation January: 12 51. Madisetti, V., J. Walrand, and D. Messerschmitt. 1988. WOLF: 
+A Rollback Algorithm for Optimistic Distributed Simulation Systems. Proceedings of the 1988 Winter Simulation 
+Conference 296-305. Nicol, D. M. 1988. Parallel Discrete-event Simulation of FCFS Stochastic Queueing. 
+Proceedings of A CM Sigplan PPEALS 1988124-137. Nicol, D. M. 1993. The Cost of Conservative Syn­chronization 
+in Parallel Discrete Event Simulation. JA CM April. Righter, R., and J. C. Walrand. 1989. Distributed 
+Simulation of Discrete Event Systems. Proceedings of the IEE 77:99 113. Unger B. W., J. Cleary, A. Dewar, 
+and Z. Xiao. 1990. A Multi-Lingual Optimistic Distributed Simulator. Transactions of the Society for 
+Computer Simula­tion June: 121-152.  
+			

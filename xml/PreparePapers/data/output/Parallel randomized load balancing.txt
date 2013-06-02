@@ -1,0 +1,485 @@
+
+ Parallel Randomized Load Balancing (Preliminary Version) Micah Adler* Soumen Chakrabartit Michael Mitzenmacher$ 
+Lars Rasmussen~ Computer Science Division University of California, Berkeley, CA 94720 {mi.cah, soumen,mitzen,larsr}Klcs 
+.berkeley. edu Abstract It is well known that after placing n balls independently and uniformly at random 
+into n bins, the fullest bin holds @(log n/ log log n) balls with high probability. Recently, Azar et 
+al. analyzed the following: randomly choose d bins for each ball, and then sequentially place each ball 
+in the least full of its chosen bins [2]. They show that the fullest bin contains only log log n/ log 
+d + El(l) balls with high probability. We explore extensions of this result to parallel and distributed 
+settings. Our results focus on the tradeoff between the amount of communication and the final load. Given 
+r rounds of communication, we provide lower bounds on the maximum load of Q( r log n/ log log n) for 
+a wide class of strategies. Our results extend to the case where the number of rounds is allowed to grow 
+with n. We then demonstrate parallelizations of the sequential strategy presented in Azar et al. that 
+achieve loads within a constant factor of the lower bound for two communication rounds and almost match 
+the sequential strategy given log log n/ log d + O(d) rounds of communication. We also examine a parallel 
+threshold strategy based on rethrowing balls placed in heavily loaded bins. This strategy achieves loads 
+within a constant factor of the lower bound for a constant number of rounds, and it achieves a final 
+load of at most O(log log n) given Q(log log n) rounds of communication. The algorithm also works in 
+asynchronous environments. Supported by a Schlumberger Foundation graduate fellowship. tsuppofied in 
+part by ARPA under contract DABT68-92-C-ol)261 by NSF (numbers CCR-921026O and CDA-8722788), and by 
+Lawrence L1vermore National Laboratory. ~supp~~ted by the Office of Naval Research. $Supported by a fellowship 
+from UC Berkeley. Permission to copy without fee all or part of this material is granted provided that 
+the copies are not made or distributed for direct commercial advantage, the ACM copyn ht notice and the 
+title of the publication and Its date appear, an%notice is given that copyin is by permission of the 
+Association of Computing Machinwy. o cop otherwise, or to republish, requires yr a fee andlor specx 
+ICpermission. STOC 95, Las Vegas, Nevada, USA @ 1995 ACM 0-89791 -718-9/95/0005 ...$3.50 1 Introduction 
+When n balls are thrown independently and uniformly at random into n bins, it is known that with high 
+probability (by which we shall mean 1 0(1/n)) the maximum number of balls received by any bin is E)( 
+~O~fO~n ). (In this paper log is used for logz. ) Occupancy results such as this have a long history 
+in the mathematical literature [7, 10] with numerous applications in hashing [2, 5, 9], PRAM simulation 
+[9, 11] and load balancing [2, 5]. Recently, an important extension of this result was proven by Azar 
+et al. [2]. Suppose we adopt the following st rat eg y: we place the balls sequentially, one at a time; 
+for each ball, we choose two bins independency and uniformly at random, and place the ball in the less 
+full bin. When all the balls have been placed, the fullest bin cent ains only @(log log n) balls with 
+high probability, an exponential improvement over the simple randomized approach. Unfortunately, the 
+new method requires the resting place of the balls to be determined sequentially. This limits its applicability 
+in parallel and distributed settings, a major drawback when compared to the simple randomized approach. 
+In this paper, we examine the potential of parallelizing the above procedure, as well as other possible 
+strategies for reaching a small maximum load in a distributed environment. We focus on the tradeoff between 
+the number of communication rounds and the final load one can achieve using simple, randomized strategies. 
+We first show lower bounds that hold for a wide class of load balancing strategies, including natural 
+parallelizations of the method of Azar et al. (Following [2], we shall hereafter refer to their algorithm 
+as GREEDY. ) We demonstrate a parallelization of GREEDY for two communication rounds that matches the 
+lower bounds to within a constant factor, and we examine alternative parallelizations of GREEDY that 
+are effective when the number of communication rounds is approximately equ~ to the maximum load. We also 
+examine an idea used in [9] and [11] based on setting a threshold at each bin: balls that attempt to 
+enter a bin that is already above its threshold for that round must be rethrown. This strategy matches 
+the lower bounds up to a constant factor for any constant number of rounds. Our results show that thresholding 
+strategies can achieve a useful tradeoff between communication cost and the maximum load achieved. 1.1 
+The model We first describe our model in terms of balls and bins. Each of m balls is to be placed in 
+one of n bins. (For simplicity, we shall concentrate on the case m = n. Extension to general values will 
+appear in the full paper,) Each ball begins by choosing d bins as prospective destinations, each choice 
+being made independently and uniformly at random (with replacement) from all possible bins. The balls 
+decide on their final destinations using T rounds of communication, where each round consists of two 
+stages. In the first stage each ball is able to send, in parallel, messages to any prospective bin, and 
+in the second stage each bin is able to send, in parallel, messages to any ball from which it has ever 
+received a message. In the final round, the balls commit to one of the prospective bins and the process 
+terminates. Messages are assumed to be of size polylog(n, m). The goal is to minimize the maximum load, 
+which is defined to be the maximum number of balls in any bin upon completion. This model is motivated 
+by the following realistic sce­nario: modern computer networks often have decentralized compute-servers 
+(bins) and client workstations issuing jobs (balls). A distributed load-balancing strategy has to assign 
+jobs to servers. Clients are ignorant of the intention of other clients to submit jobs; contention is 
+known only from server load. Servers are ignorant of jobs from clients that have not communicated with 
+them. It is also prohibitively expensive for clients to globally coordinate job submissions. The primary 
+objectives are to minimize the maximum load achieved as well as the number of communication rounds required. 
+Reducing the number of rounds is an important goal since, in a network setting, the time to complete 
+a round is determined by network latency, which is generally orders of magnitude higher than CPU cycle 
+times. We examine a class of simple strategies that include many of the standard algorithms presented 
+in the literature. The strategies we restrict our attention to are non-adaptive, in that the possible 
+destinations are chosen before any communication takes place. We will also restrict our discussion to 
+strategies that are symmetric, in the sense that all balls and bins perform the same underlying algorithm 
+and all possible destinations are chosen independent y and uniformly at random. We believe that these 
+restrictions have practical merit, as an algorithm with these properties would be easier to implement 
+and modify even as the underlying system changes. Informally, we shall say that an algorithm functions 
+asynchronously if a ball (or bin) has to wait only for messages addressed to it (as opposed to messages 
+destined elsewhere). That is, balls and bins are not required to wait for a round to complete before 
+continuing. An algorithm requires synchronous rounds if there must exist a synchronization barrier between 
+some pair of rounds; that is, a ball or bin must explicitly wait for an entire previous round to complete 
+before sending a message. In many distributed settings, the ability of an algorithm to function asynchronously 
+can be a significant advantage; an algorithm with synchronous rounds needs some notion of global time 
+to maintain coordination. Note that the algorithm of Azar et al. achieves final load no worse than O(log 
+log n), but requires Q(n) synchronous rounds. Also, the obvious strategy of having the balls choose random 
+I.D. numbers and applying standard sorting methods requires O(log n) rounds in this model, as well as 
+more sophisticated communication. We remark that many of our algorithms can perform asynchronously. In 
+these versions of our algorithms any ball sends or receives at most d messages per round, whereas a bin 
+may receive or send up to 0(~) messages per round. It seems unlikely that this latter number could be 
+made smaller while insisting on a small (O(log n)) number of rounds. During some round at least 0( *) 
+messages from balls that have not previously communicated must be handled. If these messages are distributed 
+randomly, some bin will receive at least 0(~) of them. We can loglogn avoid this complication if we modify 
+the algorithms to use synchronous rounds and assume a time limit for each round. In most of our algorithms, 
+a bin must explicitly acknowledge each message and send a negative response to all but a constant number 
+of balls in each round. If these negative responses need not be sent explicitly, and instead a lack of 
+response is interpreted as a negative reply, then the bins need only acknowledge and respond to a constant 
+number of messages per round. The remaining messages can be discarded.  1.2 Our results In $2, we provide 
+a general lower bound for non-adaptive and symmetric strategies that include parallel variations of GREEDY 
+[2] and threshold methods [9, 11]. For any fixed number r of rounds of communication and any fixed number 
+d of choices for each ball, we show that with constant probability the maximum load is at least Q (m 
+The lower bounds are proved by reducing the balls and bins scenario to an edge orientation problem on 
+random graphs. The rest of the paper deals with upper bounds. Our analysis exploits a basic tool, based 
+on results of Gonnet [6]. In analyzing complex random processes, the use of heuristic approximations 
+through normal or Poisson distributions is common. We apply this notion systematically to the scenario 
+of a number of balls being thrown independently and uniformly at random into some number of bins. Apart 
+from enabling us to prove our bounds, the tool may be of independent interest. In $4 we describe an asynchronous 
+parallelization of GREEDY for two rounds that matches the lower bound to wit hin a constant factor for 
+any fixed d. We also describe a more complicated extension of GREEDY in which the number of rounds is 
+allowed to grow with n. We show that this extension achieves a final load no worse than 10~O~j n + 2d 
++ O(1) with high probability if we allow fo~~ + 2d + O(1) synchronous rounds. In ~5 we explore an entirely 
+different paradigm based on thresholds, which were also used in [5, 9, 11]. We demonstrate algorithms 
+based on thresholds that Intuitively, for each round of communication, a ball asymptotically match the 
+lower bounds for any fixed number discovers a little more about the graph. Specifically, since of rounds 
+r up to a constant factor; that is, the final load is with high probability. However, if r and d (m 
+are allowed to grow with n, we show that the thresholding method (with threshold one) is inferior to 
+the parallel GREEDY approach: while the latter achieves a maximum load of O(lJ:~j:O;~) with O(,~;f$fO~m) 
+rounds, thresholding achieves a maximum load of Q(log log n) with log log n+O(l) rounds. Nevertheless, 
+thresholding has the advantage of functioning asynchronously and offering a continuous trade­off between 
+rounds used and final load achieved. Finally, we also present results obtained by simulating our algorithms. 
+As one might expect, our parallel strategies lead to a final load close to that obtained by GREEDY, and 
+much better than that achieved by choosing one bin randomly for each ball. Lower bounds using edge orientation 
+ We first develop a general model for lower bounds that captures a class of non-adaptive, symmetric load 
+balancing strategies. Recall that for non-adaptive, symmetric strategies, the destinations are chosen 
+independently and uniformly at random before communication begins. Our lower bounds are based on the 
+number of rounds of communication, T, and the number of choices available to each ball, d. In $2.1, we 
+will focus on the case where d = 2 and T = 2, extending the results to arbitrary values of T and d in 
+~2.2. For our bounds, we will rephrase the balls and bins problem in terms of a graph orientation problem 
+similar to that found in [1]. We temporarily restrict ourselves to the case of d = 2. Associate with 
+each bin a vertex of a graph. Each ball can be represented by an undirected edge in this graph, where 
+the vertices of the edge correspond to the two bins chosen by the ball]. Choosing a final destination 
+is equivalent to choosing an orientation for the edge. The goal of the algorithm is to minimize the maximum 
+indegree over all vertices of the graph. In the case where there are n balls and n bins, the corresponding 
+graph is a random graph from ~n,n, the set of all graphs with n vertices and n edges. Following standard 
+terminology, we define the neighbors of an edge e, denoted by N(e), to be the set of all edges incident 
+to an endpoint of e. For a set S of edges, we write IV(S) for U,cSIV(e). The neighbors of a vertex v, 
+denoted by iV(v), is the set of all edges incident to rJ. Definition 2.1 The .-neighborhood of an edge 
+e, denoted by N,(e), is defined inductively bg: NI (e) = N(e), N,(e) = N(N,_l(e)). Definition 2.2 The 
+(T,z)-neighborhood of an edge e = (z, y), denoted by Nr,x (e), is defined inductively by: Nl,. (e) = 
+N(z) {e}, N,,z(e) = N(N,_l,c(e)) {e}. we are working towards lower bounds, we may assume that the bins 
+transport all available information about the balls whenever possible. Consider an T round protocol for 
+the balls and bins problem where balls commit to their final choice in the rth round. In this case, we 
+may assume a ball knows everything about the balls in its (r 1 )-neighborhood, and no more, before it 
+must commit to a bin; this follows from a simple induction argument. We now describe an assumption that 
+we use to show that the final load is high with constant probability. The r­neighborhood of a ball e 
+= (x, y) splits into two subgraphs corresponding to N,,=(e) and Nr,Y (e); these are the parts of the 
+neighborhood the ball discovers from each bin. Suppose that these two subgraphs of the ball s r-neighborhood 
+are isomorphic rooted trees, with the roots being z and y. In this case we say the ball has a symmetric 
+r-neighborhood. Then the ball has no reason to prefer one bin over another, and must essentially choose 
+randomly. For the moment, we explicitly assume that in this situation the ball chooses a bin randomly 
+with probability 1/2; we shall expand on this shortly. Assumption 2.3 If a baii has a symmetric (T l)­ 
+neighbor-hood, then in any protocol of r rounds it chooses a destination bin with a fair coin f7ip. 2.1 
+The d= 2, T= 2case We now show that, with constant probability, there exists a ertex ith at least T=o(m 
+ncident edges such that each incident edge has a symmetric one-neighborhood. Thus, with at least constant 
+probability, at least T/2 of these edges orient themselves to the vertex, and hence with constant probability, 
+any two-round parallel algorithm for balancing balls and bins in this model must end with a final The 
+vertex in question will be load   atleast Q(m the root of a specific tree component in the graph. 
+Definition 2.4 A (T, T) tree is a depth T tree, each of whose internal vertices has degree T and each 
+of whose leaves is at depth T. A (T, T) tree is said to be isolated in a graph G if it is a connected 
+component of G. Lemma 2.5 If there is m isolated (T, 2) tree in the graph determined by randomly throwing 
+balls into bins, then the probability that each ba[t incident to the root directs itself to the root 
+&#38; 1/2. PROOF. This follows since each edge incident to the root of the (T, 2) tree has a symmetric 
+one-neighborhood. K TheoremexistsaT=~(mthat2.6ThereSuch with constant probability, a random graph from 
+~n,n contazns PROOF. Let J = (vo, v], ....OTZ) be a vector of T2 + 1 1For convenience, We assume here 
+that balls choose distinct bins; an isolated (T, 2) tree. that is, the graph has no self-loops. The analysis 
+is similar if self-loops are allowed. We restrict ourselves to isolated trees in order to simplify We 
+thus have that E[x2] = E[X] + E[x]2(1 + o(I)). It now the proof. Note that it would be sufficient for 
+the graph suffices to choose a T such that E[X] is bounded below by a to contain a (Z , r) tree with 
+further edges adjacent to the constant. One can thus check that there exists a (T, 2) tree leaves; restricting 
+ourselves to isolated trees, however, only with T = (~ o(l)) ~-­ with constant probability. affects 
+lower order terms in the analysis. E vertices. Let XZ be an indicator variable that is 1 if V. is the 
+root of an isolated (T, r) tree, VI, . . . . VT are the nodes of depth 1, VT+l, ..., VZ7 -1 are the children 
+of vl, and so on, and let X = &#38;XZ. We show that X > 0with at least constant probability by determining 
+the expectation and variance of X and applying the simple bound (from [4], equation (3) of 1.1): E[x]2Pr(X=O) 
+< l . E[x ] The multinominal coefficient (l. T,T_~, .,.~_l) represents the number of possible choices 
+for d; we must first choose the root, and then the T children of the root, and then the T 1 children 
+for each child. We now choose a specific J and determine the probability that Xu is 1. If X7 is 1, there 
+must be T edges corresponding to the (T, r) tree connecting the vertices of J and no other edges incident 
+to these vertices. Routine calculations give the probability of this event as: [n-(:,+,, ) -T (:,)(T 
+)! (;)n Using linearity of expectation, we have (I, T, T-:;...;1)I) (n-(: + ))n-T2 (~2)IT2)! E[x] = (;)n 
+ This unwieldy expression can be simplified by canceling appropriately and noting that we will choose 
+T small enough so that many terms are o(l). For example,   (n-(;2+l))­ e 2(T2+])(l + o(l)). ~;)n-T2 
+= We thus obtain: n2T2(l + o(l)) E[x] = T!e2(T2+l)((T _ I)!)T We now examine how to compute E[X2]. Note 
+that, because we are considering only isolated (T, r) trees, if Z # ti, then X3 and X. can both equal 
+1 if and only if Z and ti consist of disjoint sets of vertices or are equal. This simplifies the calculation 
+of E[x2] considerably. Since E[x2] = E[X] + ~ E[X Xw] it suffices then to compute the second term. The 
+calculation is similar to that for E[X]. Thus, with essentially the same argument as above, one finds 
+that n 2 T2(l + o(l)) ~ E[-xu-xwI = (jp!)2e4Tz+4((T -I)!)zT 17#G Corollary 2.7 Any non-adaptive, syrnrnetmc 
+load distr-i­bution strategy for the balls arm! bins problem satisfying Assumption 2.3, where d = 2 and 
+r = 2, has a final loud at least (fi/2 o(l)) J- with at least constant probability. Although it may 
+at first seem unreasonable to insist that balls with symmetric r-neighborhoods choose a bin randomly, 
+obvious tie-breaking schemes do not affect the lower bound. For instance, if the balls are ordered at 
+the bins, either by random I.D. numbers or by a random permutation, and then choose a bin according to 
+their rank, the balls are essentially choosing a bin at random. The proof can easily be modified for 
+the case where the balls are ranked at the bins by some fixed ordering as well by using the symmetry 
+of the destination choices of the balls. Similarly, if bins are numbered and given a preferred ordering 
+in case of ties, then with constant probability there is still a (T, r) tree whose root has the given 
+final load. 2,2 The general case One can extend the proof to the case where d >2 and r > 2; in fact, 
+the extension applies if r and d grow sufficiently slowly wit h n as well. When r > 2, the balls and 
+bins scenario can again be reduced to a graph orientation problem; instead of showing the existence of 
+a (T, 2) tree, one needs to the existence of a (T, r) tree. The proof that such a tree exists is similar 
+to that of Theorem 2.6. When d > 2 we must consider hypergraphs instead of graphs. In this reduction, 
+balls correspond to hyperedges of d distinct vertices in the hypergraph, The degree of a vertex is the 
+number of incident hyperedges. A tree of hyperedges is simply a connected acyclic hypergraph, and the 
+depth of a tree is the the number of hyperedges in the longest path from the root to a leaf. Definition 
+2.8 A (T, r, d) tree is a depth r tree of hyperedges of size d, each of whose internal vertices ha~ degree 
+T and each of whose leaves is at depth r. A (T, r, d) tree is said to be isolated in a hypergraph G if 
+G contains a subgraph that is a (T, r, d) tree and there are no other hyperedges incident to the (T, 
+T,d) tree in the hypergraph. The r-neighborhood and (r, x)-neighborhood of a ball can be defined for 
+hypergraphs similar to Definitions 2.1 and 2.2. As in Assumption 2.3, we will assume that if a ball 
+has a symmetric r 1 neighborhood, it chooses one of the d bins uniformly at random at the end of an 
+r round algorithm; for convenience, we still call this Assumption 2.3. Thus the root of an isolated (T, 
+r, d) tree will end with T/d balls with at least constant probability. The important feature in our calculations 
+is essentially the size of the (T, r, d) tree. As long as the tree size is approximately ,O~&#38;~n, 
+a suitable (T, r, d) tree will exist. Theorem 2.9 For any fixed r and d, there exists a T = such that 
+with constant probability, a random Cm graph with n vertices and n edges of size d contains an isoiated 
+(T, T,d) tree. PROOF. The proof will appear in the full version of the paper; it requires a combinatorial 
+calculation entirely similar to that of Theorem 2.6. Corollary 2.10 Any non-adaptive, symmetric load 
+distri­ bution strategy for the balls and bins problem satisfying Assurnptton 2.3 where d and T are constants 
+has a final load at ieast ~( ~-) with constant probability. The constants in the lower bound (for T and 
+d fixed) are dependent on d. The theorem can also be used when d grows with n; with constant probability 
+the final load is T/d if there is a (T, r, d) tree in the corresponding hypergraph. Similarly, if there 
+is a (T, T,o!) tree in the corresponding hypergraph, then with probability d-~ the final load is T; this 
+can be used to give negative results by showing that no non-adaptive, symmetric load distribution strategy 
+achieves load T with high probability when dT = o(n). 3 The Poisson approximation We now derive a tool 
+that will be useful in developing upper bounds. After throwing m balls independently and uniformly at 
+random into n bins, the distribution of the number of balls in a given bin is approximately Poisson with 
+mean ~. We formalize this relationship by adapting an argument used by Gonnet [6] to determine the expected 
+maximum number of balls in a bin. While useful tail bounds on the distributions of balls in bins can 
+be found with other methods, most notably martingales [8, 9], our method appears to be more general, 
+and in some cases easier to apply. Although tighter probability bounds for specific problems can often 
+be obtained with more detailed analyses, as can be seen for example in [3], for our purposes this simple 
+approach is quite effective. As mentioned in [4], similar ideas have been used in the study of random 
+graphs to relate the setting where each edge is included independently with some probability and the 
+setting where a graph with a certain number of edges is chosen randomly. Theorem 3.1 Suppose m balls 
+ar-e thr own into n bins independently and uniformly at random, and let X, be the number of balls in 
+the ith bin, where 1 < i s n. Let Yl,.. ., Yn be independent Poisson random variabtes with mean ~, and 
+let f(xl, ..., Xn) be a non-negative function. Then E[f (Xl, . . .. Xn)] < eE[f(Y,,. . ., Yn)]. (1) 
+ Further, if E[f (Xl, . . ., Xn)] is monotonically increasing or decreasing with m, then E[-f(x], . . 
+. . X~)] < C E[f(Yl, . . . . Y~)] (2) for­ some constant c. PROOF. We have that E[f (Y1,..., Yn)] co 
+= EfYl,..., Yn)~E=k Pr[~X=k]  ~[(1 k=O > E f(Yl,..., Y.)~E=m Pr[~~=m][1 m -m = E[.f(Xl,..., xJ~, where 
+the last equality follows from the fact that the joint distribution of the Z given ~ ~ = m is exactly 
+that of the X,, and that ~ X is Poisson distributed with mean m. Using Stirling s approximation now yields 
+equation (1). If E [.f(XI, . . . . X~)] increases with m, then by a similar argument we have E[f(Yl, 
+. . . . Y~)]  > Ef(Yl, ..., Yn)~K=7n]f%[~Y2rnJ [ = E[f(Xl,..., Xm)]Pr[~X>m] Since 1% [~ z ~ m] can 
+be bounded above by a constant, equation (2) follows. The case where E [f(Xl,. . . . Xn)] decreases with 
+m is similar. From this theorem, we derive a corollary that will be central to most of our proofs. Let 
+us call the scenario in which bin loads are taken to be independent Poisson random variables with mean 
+~ the Poisson case, and the scenario where m balls are thrown into n bins independently and uniformly 
+at random the ezact case. Also, let a load based event be an event that depends solely on the loads of 
+the bins. Corollary 3.2 A load based event that takes place with probability p in the Poisson case takes 
+p[ace with probability at most p= in the exact case. If the probability of the event is monotonically 
+increasing or decreasing with the total number of batls, then the probability of the event is at most 
+cp in the exact case for some constant c. PROOF. Let f be the indicator function of the load based event. 
+In this case E[f] is just the probability that the event occurs, and the result follows immediately from 
+Theorem 3.1. To demonstrate the utility of this corollary, we provide a simple representative example 
+that will prove useful later, Lemma 3.3 Suppose m < &#38;, and suppose m balls are thrown independently 
+and uniformly at random into n bins. Then, with high probability, the maximum load is at least 0(#$-&#38;) 
+and at most O(l~). PROOF. By Corollary 3.2 it is sufficient to prove that the bounds hold in the Poisson 
+case. Let p be the probability that any particular bin contains T or more balls. For the lower bound, 
+note that ~ > (;)~e-dn T! as the right hand side is simply the probability that a bin has exactly T 
+balls. The probability that no bin has T or more balls is thus at most (1 p) s e pn, and we need to show 
+that e-p ~ ~ when T = Q(&#38;). Taking logarithms m twice yields the following sufficient condition: 
+log T! + Tlog(~) s logn O(loglog n). (3) It is now simple to check that choosing T = * for any constant 
+a < * suffices. For the upper bound, note that ~ < z(:)~e-+ (4)T! as can be found by bounding the probability 
+that a bin has T or more balls by a geometric series. It is easy to show that when T ~ ~, this probability 
+is less than -$, and thus no bin containsrnw or more balls with probability at least 1 0(1/n) in the 
+~xact case. Corollary 3.2 will also prove useful to us because in the Poisson case all bin loads are 
+independent. This independence allows us to use various forms of Chernoff bounds (such as those in [4], 
+section 1.3) in the Poisson case, and then transfer the result to the exact case. 4 Parallel GREEDY The 
+lower bounds in the previous section show that if the number of communication rounds and possible destinations 
+for a ball are fixed, the log log n/ log d + O(1) maximum load bound of [2] no longer applies. We therefore 
+seek ways to parallelize the GREEDY strategy and gauge their performance. We first deal with the case 
+of two rounds in $4.1, and then consider multiple rounds in $4.2. 4.1 A two-round parallelization of 
+GREEDY We note that in the GREEDY strategy, all balls can choose their random bins efficiently in parallel, 
+but the rest of the protocol is sequential. In this section, we consider strategies that allow for the 
+entire protocol to be performed efficiently in parallel. We first consider the case where a ball makes 
+only two destination choices, i.e. d = 2. We begin with a description of GREEDY. Each ball a will at 
+some point in the algorithm independently choose two destination bins Z1(a) and iZ (a). We may assume 
+that these choices are made in parallel as the first step in the algorithm; this assumption clarifies 
+that GREEDY is non-adaptive. Next, each ball a decides, solely by communicating with il (a) and i2 (a), 
+to which of the two bins it shall commit. Once a ball has committed to a bin, its decision cannot be 
+reversed. We note that ties in this and other algorithms are broken arbitrarily unless stated otherwise. 
+chooses u.a.r. two bins z] (a) and i2 (a) E GREEDY: call CHOOSE(2) sequentially: each ball a queries 
+bins il (a) and iz (a) for current load commits to bin with smaller load We first attempt to break the 
+sequentiality of GREEDY by letting the balls choose between ZI (a) and iz (a) according to the selections 
+made by the other balls in the initial stage of the process. Let all the balls inform il (a) and i2 (a) 
+of their choices by sending them both a request. We shall refer to the two requests as sibhrsgs. Each 
+bin then creates a list of the requests it has received. The bins may order the list arbitrarily. However, 
+if they handle requests in the order they arrive, the algorithm may function asynchronously. Notice that 
+we make no claim that the requests arrive at the bins in any particular order. The height of a request 
+is its position in the request list it belongs to. The bins now send back the heights of their requests 
+to the balls. Finally, each ball commits to the bin in which its request had the smaller height. This 
+allows the entire process to finish in only two rounds: PGREEDY: call CHOOSE(2) in parallel: each ball 
+a sends requests to bks il (a) and iZ (a) in parallel: each bin i creates list of received requests sends 
+heights to requesting balls in parallel: each ball a commits to bin with smaller height Note that Corollary 
+2.7 provides a lower bound for the PGREEDY strategy. We now prove an upper bound on the maximum load 
+achieved by PGREEDY. Theorem 4.1 The maximum load achieved by PGREEDY is at mo9t (4 + o(l)) J-wzth high 
+probability. PROOF. We bound the probability that a specific bin receives more than 2T balls, where T 
+is to be determined. Consider a bin z with more than T requests. The probability that more than 3 balls 
+sent both requests to i or that the total number of requests received by z is more than log n is at most 
+0(~), so we condition on the event that neither is the case. The set R of requests sent to a bin other 
+than z are distributed in the remaining n 1 bins independently and uniformly. Consider a request in 
+i of height at least T whose sibling lies outside Z. Let S C R be the set of siblings of such requests. 
+We prove that, with sufficiently high probability, fewer than T requests in S have height T or more. 
+Consider the subprocess of requests R arriving to the bins other than i. We can imagine these requests 
+arriving sequentially at the bins according to some arbitrary ordering. Let time tbe the instant immediately 
+after the t th such request arrives. We now use an innovation from [2]. Let N = ~ and &#38; be the event 
+that, at time t, no more than N bins have received more than T requests from R. Also, let the random 
+variable X* equal 1 if the height of the t t h request is greater than T, and O otherwise. Finally, let 
+the random variable Y~ equal 1 if X~ = 1 and t~ occurs, and O otherwise. We define S to be the event 
+that &#38; is true for all t. Conditioned on E, we have that ~tc~ Yt is an upper bound on the number 
+of balls of height at least T that choose bin z as their final destination. Note that Pr[Y, = 1 I YI,.. 
+., Yt_I] < {. It follows that the sum of a subset of the Y, is stochastically dominated by the sum of 
+the same number of independent Bernoulli variables with parameter ~. Therefore, using the Chernoff bound, 
+we have for T = (2-+ o(l)) ~-: 0(+). P[;.+ ~ (-) < We can bound Pr[--t] since R consists of at most 2n 
+ T requests uniformly distributed over n 1 bins. It is easy to show Pr[-f] = 0(~) by Corollary 3.2 and 
+Chernoff s bound. Thus It follows that for each bin i, the probability that T balls of height greater 
+than T choose bin z is 0(~). Hence with high probability all bins must finish with at most 2T balls. 
+ The proof can be easily modified to the case where balls have more than two siblings as well; for fixed 
+d, the final 10ad iii tin be (m but he constant actor in the O-expression is &#38; + o(l). In practice, 
+however, for reasonable values of n, increasing d does not improve the final load. Informally, each ball 
+receives more pieces of information, but each piece is less valuable since the height becomes a less 
+accurate estimate of the final position. Also, the constant factor is dictated by our attempt to have 
+the probability of failure be at most 0(~); if one is willing to accept slightly larger error probabilities 
+one can improve the constant factor slightly.  4.2 Multiple round strategies Our lower bounds suggest 
+that with more rounds of communication, one might achieve a better load balance. We thus suggest an alternative 
+parallelization of GREEDY called MPGREEDY that makes use of more rounds. We first examine the case where 
+d = 2. The algorithm proceeds in a number of rounds, until every ball has committed. In every round, 
+each bin will allow at most one of its requesting balls to commit to it. If a ball receives that privilege 
+from two bins, the ball commits to the bin with the lesser current load. Once a ball has committed, the 
+bin holding the other request is informed that it may discard that request: MPGREEDY: call CHOOSE(2) 
+in parallel: each ball a chooses a random I.D. number sends requests with I.D. to bins i] (a) and i2 
+(a) in Parallel: each bin i sorts requests by I.D. number sequentially: repeat until all balls have commit 
+ted in parallel: each bin i sends current load to first uncommitted ball on request list in parallel: 
+each ball a if received at least one message commits to the bin with smaller current load tells bin holding 
+other request to discard One can imagine the algorithm by picturing a scardine moving level by level 
+through the request lists of the bins, When the scanline moves up to a new level, bins send messages 
+to all the balls that the scanline has just passed through. When bins receive responses, they delete 
+the corresponding balls in the request list above the scardine. The algorithm terminates when every request 
+has either been passed through or deleted. One disadvantage of this algorithm is that it requires synchronous 
+rounds; the discards for each round must complete before the next round can begin. We also require a 
+partiaJ order on the balls, given in this case by randomly chosen I.D. numbers (chosen from a suitably 
+large set to ensure uniqueness with high probability), to instill some not ion of sequentialit y. However, 
+a significant ad vant age is that all the communication paths required are determined by the initial 
+choices of two bins made by the balls. This may be useful in practice in cases where there is a cost 
+associated with modifying the communication pattern during the course of the algorithm, as in distributed 
+networks. Clearly, the maximum number of balls in any bin upon completion is bounded above by the number 
+of rounds taken to finish. We analyze the latter. Theorem 4.2 With high probability MPGREEDY finishes 
+in at most log log n + 0(1) rounds. In order to prove the above statement, we consider the following 
+variation of GREEDY (for any d): if there is a tie for the least loaded bin, then a copy of the ball 
+is placed in each bin with the minimal load. We call this scheme GREEDY WITH TIES. Lemma 4.3 The number 
+of communication rounds used by MPGREEDY is one more than the maximum load given by GREEDY WITH TIES 
+when the balls are thrown in the order given by the I.D. numbers and the bm choices made by the balls 
+are the same for both trials. PROOF. Consider a modification of MPGREEDY where the ball commits to all 
+bins from which it receives a message. The number of communication rounds used by this modified version 
+of MPGREEDY is the same as for the original. With a little thought one can see that this scheme exactly 
+mimics the GREEDY WITH TIES scheme, and hence the two methods give the same final distribution of the 
+balls. Since the height of the scanline moves up one level each round, the number of communication rounds 
+used by MPGREEDY is hence one more than the maximum load of GREEDY WITH TIES. H We now suggest a modification 
+of the proof given in Azar et al. to handle the case where there may be ties. The following statement 
+is sufficient: Theorem 4.4 The maximum load achieved by GREEDY WITH TIES when n balls are thrown into 
+n bins is at most O&#38; ~ n + 2d + 0(1) with high probabdzty. In particular, for fixed the load M 0 
+0 +0(1). any d maximum pog~ n PROOF. The proof is almost entirely the same as Theorem 4 of [2]. The 
+main difference is that for each ball placed in the system up to d copies can be placed if ties remain. 
+This problem can be handled by taking some care in the base cases. In the notation of Theorem 4 of [2], 
+one can set ,&#38;d2 = n/2de; for d > 8, one can show by Chernoff s bounds that setting ~zd = n/2de works 
+with sufficiently high probability for the argument to follow. Theorem 4.2 follows immediately. Moreover, 
+an extension to the case where d grows with n is interesting. Corollary 4.5 When MPGREEDY is run with 
+d = ,0~~0~~0~ ~ + 0(1), the number of rounds and mccxtmum ioad are at most ~K ) with high probability. 
+ (lo~lo~lo~n Theorem 4.4 demonstrates that one can match the performance of GREEDY at the expense of 
+I f$jn +2d+O(l) rounds of communication. As we shall see, Corollary 4.5 also implies that, in the case 
+where d = ~0~~0~~0~ ~ + O(l), MPGREEDY performs better than the threshold strategy discussed in the next 
+section. It is open whether one can extend MPGREEDY to avoid the partial order on the balls or the synchronous 
+rounds while achieving similar results. 5 Threshold strategy We now examine another strategy, previously 
+exploited in [5, 9, 11] in similar contexts, to achieve good load balancing. Given a threshold T, we 
+imagine throwing the balls over r rounds. If more than T balls enter a bin during a round, the excess 
+balls are rethrown. We wish to set T as small as possible while ensuring that with high probability at 
+most T balls are thrown into any bin in the rth round. Then after the r rounds the fullest bin will contain 
+at most rT balls. Note that a ball can choose its bins for all r rounds before any messages are sent, 
+so this scheme falls into the general model of Section 2 for which our lower bounds apply. There are 
+several advantages this method has over the PGREEDY strategy already presented. First, this method can 
+work in completely asynchronous environments. As long as a request includes the number of its current 
+round as part of the message, messages from distinct rounds can be handled simultaneously. Secondly, 
+balls send and receive at most one message per round. Finally, we shall show that this method demonstrates 
+a potentially useful tradeoff between the maximum load and the number of rounds. THRESHOLD(T): while 
+there exists a ball that has not been accepted in parallel: each unaccepted ball a chooses u.a.r. a bh 
+i(a) sends a request to i(a) in parallel: each bin i chooses up to T requests from current round sends 
+these balk acceptances sends other balls in this round rejections The question is how to set the parameter 
+T so that the procedure terminates with high probability within some specified number of rounds. In 
+35.1, we show how to set T for any constant number of rethrowing rounds. We then show in j5.2 that when 
+T = 1 THRESHOLD(T) takes at most O(log log n) rounds and has maximum load Q(log log n) with high probability. 
+Our proofs demonstrate the essential techniques to derive the relationship between T and r for any values 
+of T and r. A variation on this strategy would allow a bin to hold up to kT balls after k rounds for 
+all k, instead of limiting the bin to T balls per round. We choose to analyze the latter approach because 
+the proofs appear more straightforward. We also remark that we could show that the bounds we present 
+hold with very high probability; that is, the probability of failure is bounded above by I/j(n) where 
+f(n) is a superpolynomial function. This requires more attention to the Chernoff bounds, and the results 
+will appear in the full version. 5.1 Thresholds with a fixed number of rounds Theorem 5.1 For T = r 2 
+;.;;;; ~g n THRESHOLD(T) d terminates after r rounds with high probability. PROOF. We begin with the 
+proof when r = 2. We bound the number of rethrows after the first round by using the Poisson case. The 
+probability that a bin contains more than T balls is at most ~, as can be seen by bounding the probability 
+by a suitable geometric series. Thus, with high probability, the number of bins with more than T balls 
+is at most ~. We also have that with probability exponentially close to 1 that no bin contains more than 
+log n balls. We now assume that this is the case; formally, we can condition the event that no bin has 
+more than log n balls, and all previous statements still hold. Thus the total number of rethrows in the 
+Poisson case is at most W with high probability, and the same holds in the exact case by Corollary 3.2, 
+as the expected number of rethrows is an increasing functiou in the number of balls thrown. Now consider 
+the second round. Using equation (4) from the proof of Lemma 3.3, we have the probability that a specific 
+bin receives more than T balls in the second round is at most 2(2 log n) T/( T!)~+l in the Poisson case. 
+This expression is 0(1/n2 ) for the given value of T and as in Lemma 3.3 the result follows. We now consider 
+when r >2. We have shown that after one round the number of balls that need to be rethrown is certainly 
+less than *. Let k, be the number of balls that have to be rethrown after z rounds. Following entirely 
+the same argument, one can show inductively that   t < (%)= T1-l with high probability y for any fixed 
+i and large enough n. Now consider the final round. By equation (4) of the proof of Lemma 3.3, the probability 
+that a bin receives more than T balls on the rth round is at most 2(k,_1 /n)~/(T!), which is 0(1/n2) 
+for the given value of T. The result follows. The theorem suggests that using the threshold strategy, 
+one can successfully trade load balance for communication time in a well-defined manner. We note that 
+one can also directly show that for T = THRESHOLD(T) = requires more than T rounds with high probability 
+in a similar matter. 5.2 ThecaseofT=1 We can extend our argument to the case where r grows with n with 
+a bit more care. We consider the case where T = 1. The following results are similar to those in [9] 
+and [11], but the simple proofs below are appealing. Theorem 5.2 THRESHOLD (1) terminates after at most 
+log log n + 0(1) stages with high probability. PROOF. Again let k, be the number of balls to be thrown 
+after stage i. We first claim that, as long as k,+] is at least 4<=, k,+ 1 < ekj/n with probability 1 
+O(l/nz). For convenience we assume the balls arrive in some arbitrary order, with the first ball that 
+arrives at a bin being accepted. Let XJ be the event that the jth ball falls into a non-empty bin, where 
+1 < j s k,. Note that Pr[Xj=l] Xl,..., Xj_l] < k, /n. It follows that the sum of the k: random variables 
+Xl is stochastically dominated by the sum of k, independent Bernoulli random variables with parameter 
+k, /n. Using Chernoff bounds the claim follows. We thus have: J2 -1) k, < koz . n2t 1 By picking kO = 
+n/2e, r = log log n rounds will suffice to cut down k, to below 4/= with high probability. By using the 
+Poisson case to bound the number of bins that receive more than one ball, one can show that only O(1) 
+more rounds will be needed after this point. It is simple to show by Chernoff bounds that only a constant 
+number of rounds are required before only ko balls remain to be thrown, and the result follows. 9 Theorem 
+5.3 The maximum load of THRESHOLD(1) is at least Q(log log n) with high probability. PROOF. As before, 
+let k, be the number of balls thrown in round i, but let kO = n. We can determine the number of balls 
+thrown in the ith round by considering the number of bins that receive two or more balls in the ith round. 
+Using the Poisson case and Chernoff bounds, we find that as long as k, > 10~=, then with probability 
+at least 1 0(1/n2), () ~, ~1 4en 2 k,+] 2 k. z = * It is easy to check that we need i = fl(log log n) 
+before k, < 10/=. We now show that with high probability, there will be at least one bin that receives 
+a ball in each of the first Q(log log n) rounds. Say that a bin survives up to round i if it gets a ball 
+in each of rounds O,...,i, and let ~i be the number of bins that survive up to round i. Then pr bin survives 
+up to z + 1 it survives up to i1 [ = 1 >~ ()l_u n 2n where the last inequality holds since k, s n. 
+Applying Chernoff s bound tells us that the fraction of bins that survived round i that also survive 
+round i + 1 is at least &#38; with probability over 1 0(~) as long as s, is sufficiently large. Therefore, 
+after the z + l-st round, with high probability the number of surviving bins is at least s,+ I > nx~x...x~ 
+> 4 + Y4e)2 It remains to be checked that for i = Cl(log log n) all the Chernoff bounds will hold, and 
+thus with high probability there is still a surviving bin. The strategy THRESHOLD (1) achieves a maximum 
+load that is essentially the same as GREEDY, but uses only O(log log n) asynchronous rounds instead of 
+O(n) synchronous rounds. Balls Simple GREEDY PGREEDY THRESHOLD(T) n Random d=2 d=3 d=5 d=2 d=3 d=5 2 
+rounds 3 rounds 5 rounds 106 8 11 4 3 2 3 5 6 5 6 5-6 5 6 4 5 4 5.106 9 12 4 3 3 5 6 5 6 6 7 5 6 4 5 
+4 10 9 12 4 3 3 5 6 5-6 6 7 5 6 4 5 4 5.107 9 12 4 3 3 5-6 5 6 6 7 6 5 4 Table 1: Simulation results. 
+ 6 Simulation Results References An important feature of these load balancing schemes is that [1] Miklos 
+Atjai, James Aspnes, Moni Naor, Yuval Rabani, the maximum load, even using the simplest randomization, 
+Leonard J. Schulman, and Orli Waarts. Fairness in is very small compared to the total number of bins. 
+Thus, scheduling. In Pr-oceedzngs of the Sixth Annual ACM­even though one may be able to show that asymptotically 
+SIAh4 Symposium on Discrete Algortihms, pages 477­one strategy performs better than another, it is worthwhile 
+485, 1995. to test actual performance. We thus briefly describe some [2] Y. Azar, A. Broder, A. Karlin, 
+and E. Upfal. Balancedsimulation results. allocations. In Proceedings of the 26th ACM SymposiumWe here 
+consider only the case where the nnmbers of on Theory of Computing, pages 593 602, 1994. balls and bins 
+are equal. As usual, d represents the number of bins to which each baJl sends requests. The numbers [3] 
+A.D Barbour, Lars Hoist, and Svante Janson. Poisson given in the table represent the ranges for the maximum 
+Approximation. Oxford Science Publications, 1992. load found after between fifty and one hundred trials 
+for [4] B. Bollobiis. Random Graphs. Academic Press, London,each strategy. 1985. As expected, both PGREEDY 
+and THRESHOLD(T) perform somewhere between simple random selection and GREEDY. [5] A. Broder and A. Karlin. 
+Multi-level adaptive hashing. Notice that for PGREEDY when d = 3 the maximum load In Proceedings of the 
+1st ACM/SIAM Symposium on is the same as when d = 2, and that the maximum load Discrete Alg&#38;ihms, 
+pages 43-53, 1990. - increases when d = 5; this is not completely surprising given our previous analysis. 
+Also, we note that the thresholds [6] G. Gonnet. Expected length of the longest probe were not optimized 
+for the threshold strategy; in practice sequence in hash code searching. Journal of the A CM, one might 
+want to take care to optimize the threshold for a 28(2):289-304, April 1991. given number of balls. 
+[7] N. Johnson and S. Kotz. Urn Models and Their Applicat~on. John Wiley and Sons, 1977. 7 Conclusion 
+ [8] A. Kamath, R. Motwani, K. Palem, and P. Spirakis. We have demonstrated lower bounds for simple parallel 
+Tail bounds for occupancy and the satisfiability load distribution strategies in a distributed setting, 
+and also threshold conjecture. In Proceedings of the 2~th IEEE Symposium on Foundations of Computer Science, 
+pagesfound simple strategies that match the lower bounds within a constant factor. Our results show the 
+tradeoff between 592-603, 1994. the final load and the number of rounds of communication [9] R. Karp, 
+M. Luby, and F. Meyer aufder Heide. Efficient required. Directions for future work include looking at 
+the pram simulation on a distributed memory machine. In case where each baJl has an associated weight, 
+and the goal Proceedings of the .2Jth ACM Symposium on Theory of is to minimize the maximum weight over 
+all the bins after Computing, pages 318-326, 1992. distribution. Also, it would be interesting to see 
+how useful the general paradigms we employ are in the case where [10] V. F. Kolchin, B. A. Sevsat yanov, 
+and V. P. the underlying communication network is restricted, so that Chistyakov. Random Allocations. 
+V.H. Winston &#38; balls can only communicate with certain processors. Sons, 1978. [11] P.D. MacKenzie, 
+C.G. Plaxton, and R. Rajaraman. Acknowledgments On contention resolution protocols and associated probabilistic 
+phenomena. Department of Computer We would like to thank the numerous people at U.C. Science Technial 
+Report TR-94-06, University of Texas Berkeley and the International Computer Science Institute at Austin,, 
+April 1994. who offered suggestions and improvements to previous drafts of the paper, We thank Michael 
+Luby and Alistair Sinclair for many helpful suggestions, and Claire Kenyon and Orli Waarts for leading 
+us to examine the graph model.  
+			

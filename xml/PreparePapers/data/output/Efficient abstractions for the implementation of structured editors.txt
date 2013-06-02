@@ -1,0 +1,256 @@
+
+ Efficient Abstractions for the Implementation of Structured Editors 1 Robert Hood Department of Computer 
+Science Rice University Houston, Texas 77251 Abstract This paper investigates the use of abstract recursive 
+data structures and operations in the implementation of a structured program editor. The value-oriented 
+semantics of the proposed constructs simplify the implementation of important features such as version 
+control and an unbounded undo operation. Since the constructs can be implemented efficiently, their use 
+in the structured program editor does not significantly affect its performance. 1. Introduction rive 
+pointer operations make it significantly harder to reason about the program, both formally and in- In 
+conventional high-level languages, the imple- formally. Since abstraction is not being provided at mentation 
+of structured program editors is compli- the programming language level, anyone who wants cated by the 
+lack of appropriate abstract data struc- to understand the program must map the machine tures and operations 
+for describing and manipulat- representation back into the abstract data object. ing an abstract syntax 
+tree. As a result, program- When a programmer implements such an object mers are forced to use pointers 
+and records (or a with destructive operations, he is responsible for en- simulation of pointers and records 
+using arrays) ex-suring that those operations are well-defined at the plicitly to represent the tree, 
+and destructive opera- abstract level. tions to manipulate it. Even in languages like Lisp or Algol 
+68 that support abstract recursive data In a structured editor, pointers are usually used structures, 
+implementors typically resort to "im-in a disciplined way: to select and modify unshared pure" (destructive) 
+pointer operations (such as values within the abstract syntax tree. In a previ-rplaca) in an attempt 
+to make their programs more ous paper[CanM sl], we proposed an abstract alterna- efficient. tive to pointers, 
+the path, which captures such uses. Paths provide an abstraction for the disciplined uses The Mentor 
+group [DHKL S41 did some early work of pointers in a manner similar to the way that do on language design 
+for structured editing. Their language, MENTOL, contains constructs similar to loops provide an abstraction 
+for the disciplined use some presented here, but it too suffers from side of go to's. effects caused 
+by pointer operations. Such destruc- In the next section we discuss a collection of high-level language 
+features including paths that XThis research has been supported in part by Na- would ease the burden 
+on the structured editor im- tional Science Foundation grants MCS 78-05850, MCS- plementor. In the third 
+section we investigate how 8104006, and MCS-8121884 and by International Business Machines Corporation 
+under a Faculty Development the use of those features would impact the struc-Award. tured editor. In 
+the fourth section we discuss stra- tegies for implementing the language features Permission to copy 
+without fee all or part of this material is granted provided that the copies are not made or distributed 
+for direct described. commercial advantage, the ACM copyright notice and the title of the publication 
+and its date appear, and notice is given that copying is by 2. Language Definition permission of the 
+Association for Computing Machinery. To copy otherwise, or to republish, requires a fee and/or specific 
+permission. In this section we propose enhancements to ALGOL-like languages that simplify the task of 
+im- plementing a structured editor. The goal is to pro- &#38;#169; 1985 ACM 0-89791-165-2/85/006/0171 
+$00.75 171 vide the implementor with an abstract yet efficient method for manipulating the abstract syntax 
+tree (AST) being edited. The job of implementation will be easier if done in terms of lists and trees 
+rather than pointers and records. The implementor of a structured editor needs to be able to define recursive 
+data structures and then manipulate them at a very high level. For example, if the user asks for a while 
+loop to be inserted in place of some existing statement, the editor must re- place the subtree representing 
+the existing statement with a subtree representing a while loop template. If a programming language like 
+C [KeRi 78] is used, this may involve several steps: (1) create a subtree representing a while loop template 
+(this may itself involve several steps including the explicit allocation of storage to be used for the 
+AST node), (2) remove the statement being replaced, freeing up the storage used, (3) change the appropriate 
+field to point to the new while loop template.  A good programmer faced with the prospect of re- peating 
+this process many times would write primi- tives to minimize the amount of code he needed to write, perhaps 
+replacing the above sequence of steps with a single procedure call. If the programming language provided 
+abstraction at the same level that our programmer is working, he would not be forced to write that procedure. 
+The most common operations the implementor is faced with are creating, deleting, selecting, and re-placing 
+substructures of the AST. The program-ming language should, like Lisp, provide storage management facilities 
+so that there is a convenient way to create recursive structures and so that un-referenced ones are automatically 
+freed. Unlike Lisp, which has a single recursive data type, the im- plementor of a structured editor 
+would be better served if he could define his own recursive data structure to represent his AST. 2.1. 
+User-defined Recursive Data Struc-tures Several researchers have described mechanisms for user-defined 
+recursive data structures [Bum ea, Host 73, Cart 76, Cart 80, BuMS 80, Miln 84]. We will use Cartwright's 
+framework which allows declarations of the form:  constructor atom(), 8eqcons(first : atom, rest : seq); 
+union 8eq-~-seq U 8eqcon8 which declares a data type 8eq that behaves in a manner similar to a list of 
+atoms in Lisp. The user can create a new value from existing ones in a manner similar to the con8 operation 
+of Lisp. For example, S :-~ 8eqcons(a, T) where a is an atom and T is a 8eq, assigns to the variable 
+S the 8eqcon8 value whose first field is the atom a, and whose rest field is the 8eq T. Like Pas- cal, 
+there is a dot operator "." which can be used to extract a component of a constructed value. For ex- 
+ample,  8eqcons(a,T).rest: T . The user can also test the type of a value. For ex-ample, if S is declared 
+to be a 8eq then the logical expression S : 8eqcon8 is true if and only if S is not the empty sequence 
+ 2.2. Paths as Abstract Locations In addition to user-defined recursive data struc- tures, the programming 
+language should also pro- vide a mechanism for referring to and modifying an abstract location within 
+a recursive structure. While such operations could easily (and efficiently) be defined in terms of the 
+standard pointer and record representation of recursive data structures, we would like to provide an 
+efficient but more abstract mechanism. We will use paths [c~ sl] in- stead of pointers to manipulate 
+recursive data struc- tures. Paths provide an mechanism, similar to sub- scripted arrays, to select and 
+update abstract loca- tions within an recursive data structure. A natural description for a location 
+within a re- cursive data structure (such as an S-expression or an AST) is a sequence of selector names 
+specifying the path from the root to the location. Such a sequence is called a path. In accordance with 
+typical notation for sequences, we denote the path consisting of the sequence of selector names 8~,82, 
+...,8, by <81,8e, ...,s,>. The empty path is denoted by < >. Let us now define two operations for manipu- 
+lating paths: extension and retraction. <81,  ,8,>~<tl, . . . ,t~> ---~ <81, . . . ,sn,tl, . . ,tm~ 
+T<81..,.,Sp..> ~ <81, ., 8 -1> Like array indices, paths can be used either to extract values from 
+composite values or to update them. Modeling our notation after array selection in ALGOL, if p is a path 
+and v is a variable of some user-defined recursive type, we let  v[p] specify the "global" location 
+at the end of path p in variable v. Adopting the terminology of Keruighan and Ritchie [KeRi78], we call 
+expressions denoting global locations l-values. We also a~lopt the usual convention that l-values are 
+implicitly dereferenced (coerced) in "right-hand" contexts (e.g. within an expression). As a result, 
+path selections may freely appear in both left and right-hand contexts just like array selections. In 
+other words, a path selection such as "v[Pl"' can be used within an expression to extract the value at 
+location p within v, and as the target (left-hand-side) of an assignment statement to update v at location 
+p. For example, v1[p,] := v~[p~] is just the assignment of the value at the end of path P2 in the variable 
+v~ to the location at the end of path Pl in the variable vt. In more formal terms it is equivalent to 
+the simple assignment vt := update(v1, Pl, extract(v2, p~)) where extract and update are defined as follows: 
+ { return the value in v at the end of <st, ...,8,> } extract(v: T, <81 .... ,8.> :path) v fin=0 extraet(v.81, 
+<s2, ...,8~ >) ffny~0 ( return the value of v with the value at the end of <81, ..., 8,> replaced by 
+new_part } update(v: T1, <81, ..., s,> :path, new part:T~) new_part i/n=0 ~-Tt(v.fl .... , v.fi_l, if 
+nyAO update( v.f j , < 82 .... ,8, >, new_part),  v.f,+, ..., v.fk) assuming that 8t is the jth of 
+k fields of Tx. Note that update is an ordinary function; it does not modify its arguments. Like array 
+selection and modification, the assignment statement above has a straightforward predicate transformer 
+[CaHM 81]. 2.3. Other Features One of the most interesting space-saving tech- niques employed in Lisp 
+implementations is hash- consing[Alla 7S]. When hash-consing is used, con8 is responsible for ensuring 
+that no list structure is du- plicated. If, after hashing the two arguments to-gether, it determines 
+that the result of a cons operation already exists, then it returns a pointer to that node rather than 
+creating a new one. The use of hash-consing guarantees that two equivalent values are represented by 
+the same structure, (there- by making eq and equal semantically identical.) In the context of user-defined 
+recursive data structures, each constructor function must deter-mine whether the value being constructed 
+on any given call already exists. If it does, the constructor function must return a pointer to the existing 
+one rather than creating a new structure. It is easy to see how this technique could save storage, especially 
+if the node space is going to have similar-looking values as might be the case when multiple versions 
+of an AST exist. 3. A Structured Editor In this section we will discuss editor implementa- tion techniques 
+by way of an example. We will as- sume that the language being edited is Pascal-like in syntax, and that 
+a primary component of the language is a list of statements. For the purposes of the example, we will 
+restrict ourselves to that part of the language dealing with statements and lists of statements. In particular, 
+the following is a gram-mar generating the sub-language of interest: <stmt-list> --* <stmt> ; <strut-list> 
+<strut> --* <var> := <expr> I if <bool-expr> then <stmt-list> fl ]while <bool-expr> do <stmt-list> end 
+[ <proc-name> ( <expr-list> )  3.1. The Abstract Syntax Tree The abstract syntax tree for the language 
+being edited will have a distinct type for each non-terminal appearing in the grammar describing the 
+syntax of the language. We will use the mechanism described in Section 2.1 to declare those types. A 
+rather straightforward translation of the productions above yields the following declarations:  constructor 
+NonEmptyStmtList(f irst :Strut, rest : StmtList ), Do(guard : BoolExpr , body : StmtList), If(guard : 
+BoolExpr , body : StmtList), Assign(target : Var, value : Expr), CaU(proc : ProcName , args : EzprLiat 
+), e-strut 0  union StmtList =e-stmt U NonEmptyStmtList , Stmt =Do U If LJ Assign 0 Call where it is 
+assumed that Vat, BoolExpr, Expr, ProeName, and ExprList have been declared analo- gously. 3.2. The Basic 
+Editor In this section we show how standard features of structured editors can be implemented in a language 
+containing the features described in Section 2. The main features of interest here are: motion, selection, 
+ inserting, copying, deleting, and pasting. In later sections we illustrate how more sophisticated features 
+such as version control and an undo func- tion can be implemented. Many standard structured editors 
+such as the Cornell Program Synthesizer[TeReell, require the user to walk around the program using tree-oriented 
+motion commands. For example, if his current focus of attention is a statement 2 in the middle of a 
+state- ment list, the next and prey commands changes the focus of attention to be the statement immediately 
+after or before, respectively. The out command changes the focus of attention to be the compound statement 
+that encloses the current focus. When positioned at a compound statement, the in com- mand moves the 
+focus to the first statement in the sub-list that the compound statement surrounds, s SFor the sake 
+of simplicity, we will assume in our ex- amples that the focus of attention is always a value of type 
+Strut. The removal of this restriction poses no special problems--merely uninteresting details. ~ection 
+3.3 describes the implementation of a more "user-friendly" mechanism for selecting the focus of atten- 
+tion. These four commands (in, out, next, prey) are quite easy to implement in our enhanced program- 
+ming language. We will use a path variable cursor to represent the current focus of attention. It will 
+be a sequence of field selectors that take us from the root of the AST to the value representing the 
+focus. For example, the statement list 8urn :~--- O; while i <~--- n do sum :---~- sum + i; i:=i+1 
+end;   write(sum) is represented (in somewhat operational terms) by the value in Figure 2. If the 
+current focus of atten- tion is the while loop, then the value of cursor is <rest, rest, first >. Since 
+every statement is part of a statement list, it should be quite clear that if the current focus of attention 
+is a statement, the value of cursor will be of the form: < ..., zero or more rest's, first> A next operation 
+is performed by deleting the last field (a first) from cursor and then extending it by the path < rest, 
+first > : cursor :~ ( T eursor )~ < rest, first > . A prey operation is performed by retracting twice, 
+and then extending by <first >, When positioned at a while loop an in operation requires the exten- sion 
+of cursor by < body, first >. When positioned at the first statement in a while loop's list of state- 
+ments, an out operation is performed by removing the last two fields of cursor (first and body). In addition 
+to being able to select a focus of at- tention, the user must also be able to perform basic editing operations. 
+The ones we will use are copy, cut, paste, and insert. A copy operation non-destructively saves a copy 
+of the current focus of at- tention in the "paste buffer," from which the user can retrieve it for later 
+use. The path-based imple- mentation of copy is trivial: PasteBuffer :~ AST[eursor l The reason for the 
+simplicity is that we have a value-oriented semantics for paths and recursive data structures. Conceptually 
+we can believe that PasteBuffer gets a copy of the value at the current focus of attention in the AST. 
+In Section 4 we out- line how this abstract path operation can be imple- mented efficiently.  NonEmptyStmtList 
+I' anti restl  Assign ,f,J ~ NonEmptyStmtList I'arg.*l,']u. I I ~"t I r,t I " Ase~;'a ~ ~~NoaEmptyStmtList 
+I-~* " I~alu. I I ""tl ~" I  Do NonEmptyStmtList [gnar d I eml r,t I \ . / \ NonEmptyStmtList Call 
+,/ ¢-stmt [ fl.t I rest [ ]proc [arg~ I [ [  / \ Assign NonEmptyStmtList Itarp~l~al.. I I e.t I mt I 
+" Assign / Xe-stmt I tar~,~ I ~al"~ I r--I Figure 2: Representation of a short program segment The cut 
+operation removes the current focus of cursor := Tcursor; AST[cursor] :-~ NonEmptyStmtList(PasteBuffer, 
+attention from the program and saves it in the paste AST[cursor]); buffer; the next statement becomes 
+the new focus. cursor :----cursor ~ <first > Assuming that the statement cut is not the last in a list 
+cut can be implemented as follows: Finally, the insert operation allows the user to PasteBuffer := AST[cursor]; 
+add a new statement before the current focus; the cursor := ~c~rsor~ new statement becomes the new focus. 
+Where the AST[cursor] :~- AST[cursor l < rest>]; editor has established that template contains a copy 
+cursor := cursor ~ < first > of the new statement, the implementation of insert If the statement cut 
+was the last in a list, the imple- is identical to the implementation of paste with the mentation of 
+cut would be similar, except for the exception that a statement template is used in the re-positioning 
+of cursor. place of PasteBuffer. The creation of the statement template value is not very difficult. 
+For each type The paste operation takes the value in the paste of statement in the language being edited, 
+there buffer and inserts it into the program text before the should be a variable in the editor that 
+contains an current focus. The newly inserted staten~ent be-?,ST template for that statement type. These 
+vari- comes the new focus. Paste can be performed as able would be given values once, presumably when 
+follows: 175 other initialization was taking place. For example, suppose we want to create the variable 
+WhileTem-plate to correspond to an empty while statement: While Template :---- Do (e-boolO, e-stmt()) 
+ After initialization, While Template can be inserted whenever needed. Again, the value-oriented seman- 
+.tics of our implementation language saves us from the need to make explicit copies of the templates 
+every time they are inserted. 3.3. Incremental Unparslng and a Screen Map In order for a structured editor 
+to be practical, it cannot unparse the entire program every time it needs to redisplay the screen. It 
+is desirable, there- fore, to implement some sort of incremental unpars- ing, where instead of traversing 
+the whole AST, only the portion of the AST actually appearing on the screen is looked at. Let us take 
+as our model that the editor must be able to unparse that portion of the tree around a givel~ location 
+which is specified by a path within the AST. We will assume that the construct at the path specified 
+is to be put at the top if the screen. The unparsing algorithm in the context of paths is quite simple. 
+To traverse the tree, we use the functions in, out, next, and prey defined above. The program segment 
+in Figure 3 is an outline of the tree traversal required to print the screen, starting at the value AST[P]. 
+Q :--~ Top; while room left at bottom of screen and (ASTIQ ] : Strut or AS~Q] : e-stmt) do ease type( 
+AST~ Ql) of Aesign, Call : print simple statement; O := next(Q) Do, If: print opening bracket of compound 
+stmt; Q := in(Q) ~-stmt : Q := o~t(Q); print closing bracket of compound stmt; if AS~Q] : strut then 
+Q :: next(Q) end Figure 3: Unparsing with path variables Earlier we presented structured motion~ com-mands 
+in, out, next, and prey which the user could employ to change his focus of attention. In the event that 
+the editor supports a pointing device, such as a mouse, there needs to be a map from screen positions 
+to values in the AST. We can easi- ly implement such a map as a two-dimensional ar-ray of paths, say 
+ScreenMap, where SereenMap[i, 31 is an index of the location of the value in the AST that was unparsed 
+to row i and column j of the screen. The unparsing algorithm should be modified to update the map when 
+information was printed on the screen. 3.4. Undo-lng, Version Control, and Space Compression The value-oriented 
+semantics of path-indexed as- signments provides a particularly convenient way to perform an undo operation. 
+It is sufficient for the editor to keep a queue of checkpointed values. A simple assignment statement 
+of the form: checkpoint[i] :-~-AST would save the current value of the AST in the checkpoint queue. 
+By reducing the .granularity of checkpoints, it is also quite easy to maintain a historical record of 
+versions. Having a number of versions available in the same node space would make it possible for the 
+user to easily monitor the changes made to a pro-gram. By having the constructor operations for the re-cursive 
+data structure behave in a manner similar to the hash-cons operation of Lisp, we will be able to avoid 
+the duplication of list structure in the representation of multiple checkpoints and versions. Thus, not 
+only do the proposed language features make it very easy to implement these sophisticated functions, 
+they also make the implementation space efficient. 4. Implementation In order to compete with pointers, 
+an efficient implementation of paths must perform primitive path operations (with the exception of a 
+few patho- logical cases) in time independent of path length. For example, if inserting an statement 
+S at the current focus of attention in the AST, AST[cursor] := NongmptyStmtList(S, AST[eursor]); takes 
+time proportional to the length of the path cursor, then the editor will be woefully slow. If, on the 
+other hand, the assignment is performed in con- stant time, then the path solution matches the asymptotic 
+efficiency of the pointer solution. As explained in previous work[CaHMsl, Hood S2, CaHo S4], ~ve can 
+achieve the constant time goal for most operations by implementing the user-defined recursive data structures 
+in terms of pointers and records, and by implementing paths as pointers. Beyond the space required for 
+reference counts, there is no space penalty involved in the implemen- tation. In addition, the space 
+savings due to hash- consing may completely negate that penalty. To implement assignment efficiently 
+and to util- ize space effectively, an implementation must avoid recopying values whenever possible. 
+On the other hand, it must also ensure that updating a variable sharing some structure does not generate 
+side effects (modify the other variables sharing the structure). This can be done by prohibiting the 
+sharing of the "speared nodes", those nodes from the root of the value down to the "target node", the 
+root node of the value selected by the path. In the implementa- tion, we require that all path operations 
+maintain this invariant. In particular, if the extension opera- tion "~" lengthens a path by one field 
+selector, it must recopy the new target node if it is shared. Since the speared nodes are never shared, 
+the imple- mentation can perform an assignment to the target node by destructive modification. As a result, 
+an update operation usually takes only constant time. The only exception occurs in the unlikely situation 
+when the new component's root is itself a node that cannot be shared. In this case, the update operation 
+must recopy the speared nodes of the new com-ponent. By recording the "can't be shared" status of a node 
+in the node, it is trivial to check whether a node is speared. Unfortunately for paths, which require 
+unshared speared nodes, hash-consing seeks maximal sharing. To accommodate paths in a hash-consing environ- 
+ment, we must change our notion of "no duplicated structure." In particular, we will hash-cons all the 
+shareable nodes of structures. The speared nodes of a structure may represent values found elsewhere 
+in the node space. When a node is unspeared (as the result of a retraction operation) it will need to 
+be re- placed by its hash-consed equivalent. 5. Ooncluslons The existence of paths and user-defined 
+recursive data structures in a programming language can greatly reduce the effort required to implement 
+a structured editor. The combination of these two features provides a substantial increase in abstrac- 
+tion over the constructs they replace--pointers and records. Because they are implemented in terms of 
+pointers and records, however, there is no significant efficiency penalty involved in their use. 6. Acknowledgements 
+This work greatly benefited from the guidance and collaboration of Robert "Corky" Cartwright. I would 
+also like to thank Michael Caplinger for many discussions about structured editing. 7. References [Alln 
+78] Allen, J. The Anatomy of L[SP. McGraw-Hill, New York (1978). IBurs eg] Burstall, R. Proving properties 
+of programs by structural induction. Comput. J~. 12, pp. 41- 48 (1969). [BUMS 80] Burstall, R., MacQueen, 
+D., and Sannella, D. HOPE: An experimental applicative language. Conference Record of the 1980 LISP Confer- 
+ence, pp. 136-143 (Aug. 1980).  lCart 7e] Cartwright, R. User-Defined Data Types as Aid to Verifying 
+LISP Programs. Pp. 228-257 in Automata, Languages, and Programming, ed. R. Milner, Edinburgh Press, Edinburgh 
+(1976). [Cart 80] Cartwright, R. A constructive alternative to axiomatic data type definitions. Conference 
+Record of the 1980 LISP Conference, (Aug. 1980). [C~ 81] Oartwright, R., Hood, R., and Matthews, P. Paths: 
+An abstract alternative to pointers. In Conf. Record of the Eighth Annual ACM Sym- posium on Principles 
+of Programming Languages, (Jan. 1981). Cartwright, R. and Hood, R. The path: An efficient high-level 
+construct to replace pointers. Technical Report COMP TR84-2, Department of Computer Science, Rice Univ., 
+Houston, TX. (Nov. 1984). [DH L S41 Donzeau-Gouge, V., Huet, G., Kahn, G., and Long, B. Programming 
+environments based on structured editors: The Mentor experience. Pp. 128-140 in Interactive Programming 
+En- vironments, ed. D. Barstow, H. Shrobe, E. San- dewall, McGraw-Hill, New York (1984). [Hoar 731 Hoare, 
+C. A. R. Recursive data structures. CS Report Stan-CS-73-400, Stanford Univ. (1973). [Hood 82] Hood, 
+R. The Efficient Implementation of Very-High-Level Programming Language Con- structs. Ph.D. thesis, Department 
+of Comput- er Science, Cornell Univ., Ithaca, NY (Aug. 1982). [KeRi 78] Kernighan, B. and Ritchie, D. 
+The C Program- ming Language. Prentice-Hall, Englewood Cliffs (1978). [Miln 84] Milner, R. A proposal 
+for standard ML. Conference Record of the 198j ACM Sympoai- um on LISP and Functional Programming, (Aug. 
+1984). [TeRe 811 Teitelbaum, R. and Reps, T. The Cornell pro- gram synthesizer: a syntax-directed program- 
+ming environment. Comm, ACM 24(9 ) pp. 563-573 (Sept. 1981).  
+			

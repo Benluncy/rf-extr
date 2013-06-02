@@ -1,0 +1,314 @@
+
+ RASTER-SCAN HIDDEN SURFACE ALGORITHM TECHNIQUES Griffith Hamlin, Jr. ICASE, NASA Langley Research Center, 
+Hampton,Va. 23665 and C. William Gear Computer Science Department, University of Illinois, Urbana, Ill. 
+ Two new techniques are presented for reducing the number of depth calculations in hidden surface elimination. 
+Two new algorithms using the techniques are compared with three existing algorithms and it is shown by 
+examples that the new techniques reduce the number of multiplications involved in the depth calculations. 
+A technique for increasing the parallelismof operations is also presented. This allows the calculation 
+to be done more rapidly in hardware and is particularly useful for generating line drawings rather than 
+the usual TV raster scan images in the common raster-scan hidden surface algorithms. I. INTRODUCTION. 
+Several hidden surface algorithms from the literature have been classified by Sutherland et  According 
+to his classification scheme, the two algorithms described here belong with a group of three algorithms 
+which are depth priority, point sampling algorithms which work with image space data. Like these other 
+three algorithms[2,3,4], the algorithms described here produce a raster scan output in which the scene 
+is scanned by a sequence of horizontal planes in order to generate the projection of the information 
+in each plane onto the corresponding scan line as shown in FIGURE 1. Sutherland et al.[1] observed that 
+all hidden surface algorithms exploit some form of coherence of the data as the basis for efficiently 
+computing the rendering. All of the scan-line algorithms exploit scan-line coherence: the property that 
+the set of edges intersected by two adjacent scan-lines is nearly the same. Scan-line algorithms also 
+exploit point-to-point coherence along each scan-line: the property that the ordering in X and Z of edges 
+on two adjacent scan lines are nearly the same. The difference between all these scan-line algorithms 
+lies in the way each takes advantage of point-to-point coherence along each scan-line. The two algorithms 
+described here exploit the fact that if it is assumed that polygons cannot intersect, then the relative 
+depths cannot change, and the only times when it is necessary to perform new depth calculations are when 
+the order in the list of active edges changes. The second algorithm presented here also uses a form of 
+object coherence across edges to infer the visibility of a plane connected-at an edge to another plane 
+whose visibility has already been computed.  This report was prepared as a result of work performed 
+under NASA Contract Number NAS1-14101 while both authors were in residence at ICASE, NASA Langley Research 
+Center, Hampton, Va. 23665 Permission to make digital or hard copies of part or all of this work or 
+personal or classroom use is granted without fee provided that copies are not made or distributed for 
+profit or commercial advantage and that copies bear this notice and the full citation on the first page. 
+To copy otherwise, to 206 republish, to post on servers, or to redistribute to lists, requires prior 
+specific permission and/or a fee. Siggraph 77, July 20-22 San Jose, California In all of the schemes 
+to be discussed, the scene is composed of a number of plane convex polygons in three dimensions. The 
+two new techniques described assume that these polygons are non-intersecting and do not overlap one another 
+cyclically, although both techniques could be modified to compute intersections. The non-intersecting 
+polygon assumption is reasonable in many environments. For example, the polygons might represent the 
+surface of a solid body, such as an aircraft. Since two solid bodies cannot both occupy the same space, 
+polygons on their surfaces could not intersect, although they might share sides in common. Many aircraft 
+drawings used for all manner of aeronautical design and testing are examples of such drawings. They abound 
+at the NASA Langley Research Center where these hidden surface algorithms were developed. The two new 
+techniques introduced below use the following ideas: 1. In each scan line, a recursive method is used 
+to process the polygons which insures that overlapping polygons are processed in order of the distance 
+from the observer. Visible polygons are numbered in such a way that the relative depth of any two overlapping 
+polygons will be remembered for all future scan lines. This stored relative depth information is the 
+heart of this algorithm's exploitation of point-to-point coherence along each scan line.  2. When the 
+order of the Active Edge List changes, the visibility of polygons after the change can often be deduced 
+from the visibility before the change and an examination of the type of the edges involved in the change. 
+All edges are classified as left or right depending on whether they are on the left or right side of 
+a polygon as seen by the viewer. Edges which are both left and right are classified as middle edges. 
+  These two techniques have been programmed, and the two algorithms are described below. Both techniques 
+are useful for any scene described by planar convex polygons. The second appears to be superior when 
+the scene is composed of curved surfaces approximated by adjoining planar polygons, such as descriptions 
+of aircraft fuselages, wings, etc., used for structural and aerodynamic analysis as mentioned above. 
+ The next section summarizes the processing common to all scan-linealgorithms studied. The following 
+two sections describe the two algorithms in some detail. Section 5 discusses a technique for generating 
+the raster output in parallel with visibility computations. The final section presents some experimental 
+results which compare the operation counts for all scan-line algorithms studied for several scenes composed 
+of from 41 to 480 polygons. 2. BASIC ALGORITHM FEATURES. The work is broken up into two stages: preprocessing 
+and visibility computation. This not only allows for some parallelism, but also increases the possibility 
+for incremental computation. All scan-line algorithms studied do the rotation (and perspective transformation 
+if desired) in the preprocessing stage. This can be performed incrementally. Next they sort the vertices 
+by the Y coordinates. A bucket sort is used here with a variable sized bucket for each scan-line. Next, 
+all algorithms except the Watkins[4] algorithmcompute coefficients A, B, and C for each polygon so that 
+the polygon lies in the plane Z=AX+BY+C. If the polygon is 'edge on' to the viewer, it is dropped from 
+further consideration. These coefficients can also be computed incrementally. Another step in preprocessing 
+involves computing the inverse of the slope of each polygon edge in the scene. This is computed as dx/dy 
+which indicates the change in X in the movement from one scan line to the next. (Horizontal lines require 
+some special handling dependent on the details of the algorithm implementation.) During the visibility 
+computation, an Active Edge List of all edges intersected by the current scan line is maintained. This 
+list is sorted in order of the X coordinates of the intersectionof the edges with the current scan line. 
+When the scan line is advanced by increasing Y to the next higher value, these X values must be updated 
+by adding dx/dy to them. This requires resorting the Active Edge List between the visibility processing 
+of each scan-line. Since the Active Edge List is presumably almost sorted, a variant of the bubble sort 
+provides a rapid method. Each algorithm studied performs visibility computations upon the Active Edge 
+List in its own unique way.  3. DESCRIPTION OF ALGORITHM "STACK". Algorithm "STACK" employs the first 
+technique to reduce depth calculations. As described in the previous section, the input polygons are 
+sorted according to the first scan-line in which they appear and a sorted Active Edge List is maintained 
+at each scan-line. When the end of the sorted polygon list is reached and the Active Edge List is empty, 
+the algorithm terminates. Two entries are made in the Active Edge List for each polygon, corresponding 
+to the two points at which the scan ray enters and exits the polygon as it scans the current scan line 
+from left to right. Each entry consists of four values: the X coordinate of the edge at this scan line 
+(X), the inverse of the slope of this edge (dx/dy), the Y value of the last scan line intersecting this 
+edge (Yend), and the number of the associated polygon (P). Referring to FIGURE 2, the processing of 
+an  individual scan line begins with the first (leftmost) edge in the Active Edge List. The polygon 
+entered at this edge is declared to be the CURRENT polygon and procesing begins on it. To process a polygon 
+means to scan the Active Edge List data which lies within the left and right boundaries of the polygon 
+and determine when (if ever) the polygon becomes visible. This is done by using a pointer into the Active 
+Edge List which keeps track of the position of the scan ray as it advances from edge to edge. The processing 
+done at each edge falls into one of several cases which are describedbelow and specified in appendix 
+A by a PL/I-like description of the STACK algorithm's scan line processing.  When the pointer encounters 
+the right edge of the CURRENT polygon, processing is terminated on that polygon. At this time the algorithm 
+saves with the CURRENT polygon the ordinal number representing when the CURRENT polygon was processed 
+(i.e., three is saved if the CURRENT polygon is the third polygon on this scan line for which processing 
+has been terminated). This number will called be the rank of the polygon. Since the algorithm causes 
+the frontmost polygon of overlapping polygons to have its processing terminated first, the rank of two 
+overlapping polygons may be used on the next scan line to indicate their relative depths. Ranks of 
+two non-overlapping polygons are meaningless. Therefore, before using ranks, the algorithm checks the 
+left and right X values of the edges of the polygon stored during processing of the previous scan line 
+to insure that the two polygons overlapped. After ranking a polygon, the stack is popped and processing 
+is resumed on the polygon saved at the top of the stack. It now becomes the CURRENT polygon. When this 
+occurs the Active Edge List pointer jumps back to the position it had when the polygon was pushed onto 
+the stack. This may cause the algorithm to deviate from a strict left to right processing order. The 
+algorithm remembers the rightmost X-value for which output has been produced. If, after a pop of the 
+stack, the Active Edge List pointer jumps to the left, no output is generated until it again reaches 
+this rightmost value. If, before exiting the CURRENT polygon, the Active Edge List pointer encounters 
+another polygon which hides the CURRENT polygon, processing of the CURRENT Polygon is suspended, the 
+Active Edge List pointer is pushed onto a stack, and processing is started on the newly encountered polygon, 
+which has become visible. If, before exiting the CURRENT POLYGON, the Active Edge List pointer encounters 
+the right edge (exit) of a polygon, the algorithm marks that polygon. If that polygon is at all visible, 
+it will have been pushed onto the stack. When it is later popped off the stack the mark will cause the 
+ algorithm to immediately rank it and pop another polygon from the stack. If, on the other hand, the 
+polygon is completely invisible, it will not have been pushed onto the stack. In this case the mark 
+will have the effect of deleting the polygon from further processing on the current scan line. This eliminates 
+some Z-depth calculations involving this polygon. Instead of ranking such invisible polygons, the algorithmsaves 
+with each of them the number of the polygon that was visible when the invisible polygon was entered 
+by the scan ray. This information may save Z-depth calculations on subsequent scan lines. 4. DESCRIPTION 
+OF ALGORITHM "CROSS" Algorithm CROSS employs the second technique. In this algorithm the fundamental 
+elements in the representationof the data are the vertices. Each vertex consists of its coordinates X, 
+Y, and Z plus some pointer information generated in the algorithm. Edges consist of a pair of vertices 
+plus information generated in the algorithm. Polygons consist of an (ordered) list of edges. The usual 
+preliminary processing is used to compute the coefficients of the planes of the polygons, to order 
+the vertices by their Y-values, and to construct lists of edges connected to each vertex. In this case, 
+edges are said to begin on a vertex if their end with the lowest Y value is on that vertex. They end 
+on the vertex with the highest Y value. Two lists are constructed for each vertex, a list of those 
+edges ending on a vertex and a list of those beginning on a vertex. The list of beginning edges is 
+ordered by the slope of the edges so that at higher Y values the edges will be in a left to right order. 
+The list of ending edges is unordered. It is used to remove edges from the Active Edge List when the 
+ vertex is encountered. This saves testing each active edge to see if it has ended.  4.1 EDGE CLASSIFICATION 
+ Because edges can be 'shared' between two or more polygons, it is possible for an edge be to the left 
+or right edge of more than one polygon. However, it is convenient if we associate a unique left and-right 
+polygon with each edge. Therefore, the algorithm creates enough copies of edges so that no edge is 
+a left or right edge of more than one polygon. It is also necessary to avoid making more than one copy 
+of an edge a 'middle' edge (because the non intersectinghypothesis could be violated). During part 
+of the preprocessing, the edges are classified as L, M or R and copies are created if necessary. At 
+the same time, a pair of pointers is created for each edge indicating its unique left and right polygons. 
+At this time, the left polygon of a left edge is null, and similarly for the right polygon of a right 
+edge. During the scanning, these unused positions will be used for storing pointers to the next visible 
+polygons when the edge is active and visible. Thus, for any active visible edge, the left pointer will 
+always contain the polygon on the left which is visible, and similarly for the right pointer. When 
+an edge is put in the Active Edge List, pointers are stored with the polygon so that any polygon under 
+the scan line has pointers to its  208 left and right edges. (This is the reason for the restriction 
+to convex polygons.) The X position of each edge is recorded in the Active Edge List, along with the 
+edge type (L, M, or R), its visibility (V=visible, I=invisible) and pointers to the left and right polygons 
+mentioned above. The list must be updated each time a vertex is encountered or two active edges cross. 
+ A Crossing List, sorted by Y-value, is maintained to describe the crossings of two adjacent Active Edges. 
+It contains an entry for each pair of edges in the Active Edge List that cross unless those edges are 
+incident on the same vertex or part of the same polygon. The Crossing List must be updated each time 
+the Active Edge list is changed.  4.2 VERTEX PROCESSING When a vertex is encountered all edges ending 
+on the vertex are removed. The vertex can be marked visible if any of these edges are visible, otherwise 
+it is invisible. Its position in the Active Edge List is given by the position of the removed edges. 
+If there are no edges to remove, the visibility of the vertex and its position in the active edge must 
+be calculated. Its position is determined by searching through the active edge list sequentially. Its 
+visibility is determined by computing the depth of the visible polygon at that point. (This polygon is 
+known by looking to the left or right in the list.) Next, all edges begining at the vertex are  added 
+to the Active Edge List and the crossing points to their left and right are calculated and added to the 
+Crossing List if necessary. If the vertex is invisible, there is nothing else to do. If it is visible, 
+the visibility of each new edge must be computed. This is necessary because several polygons could start 
+from a vertex, and these could obscure some of the edges. The visibility is determined by comparing the 
+edge depth with the depth of the currently visible polygon on the left. If the visible polygon does not 
+pass through the vertex under consideration, this requires a straightforwarddepth calculation and comparison. 
+If the polygon does pass through the vertex, the comparison is done using the coefficients of the polygons 
+and the slope of the added edge. Anytime a middle edge is added its visibility is determined by seeing 
+if its left polygon is the currently visible polygon. In addition,when a visible right edge is added, 
+a search must be made to find the next visible polygon on the right. This is done using the search described 
+in the next section, except when this is the last edge from the vertex. In that case, the next visible 
+polygon can be determined by looking to the right in the Active Edge List.  4.3 CROSSING ANALYSIS The 
+principal feature of the visibility computation is the classification of crossing types. Each active 
+edge is in one of the six states LV, MV, RV, LI, MI, or RI. This gives a total of 36 possibilities for 
+the crossing of a pair of adjacent edges. These are shown in Table I below. (The first edge is the edge 
+with the smaller X value.) A pair of edges that cross are handled by switching their positions in the 
+active edge list and then executing the action described in TABLE I below. For example, when an RV edge 
+crosses an MV edge, the edges switch and the middle edge becomes invisible. The only other action needed 
+is to update the right polygon pointer of the RV edge. Its new value is the right polygon pointer of 
+the middle edge.  Blank entries indicate no action, otherwise: -Make first edge invisible  -Make second 
+edge invisible C1 -If the second edge is in front of the polygon visible to the left of the first edge, 
+make second edge visible. (Cases a, b, and c are  distinguished later). C2 -Compares the depths of 
+the polygons to the left and right of the first and second edges respectively. The one with the forward 
+ polygon remains visible. C3 -The same as C1 with first and second, and left and right interchanged. 
+E -'Error' condition because the edges belong to the same polygon. The crossing can be ignored. TABLE 
+I  The left polygon pointer of a left edge that is visible after the crossing calculation (and similarly 
+for right edges) may have to be updated. In all but two cases, the pointer is available in the other 
+edge. In these two cases,  and C3c it is necessary to search to find the polygon that is now visible 
+between the two edges. This search is done by processing the active edge from left to right looking for 
+the edge under consideration while recording entries and exits from polygons. When the edge under consideration 
+is reached, it is known which polygons span the intersection point. Their depths must be calculated, 
+and the most forward chosen as the new visible polygon. Thus, of the 32 cases that can occur in TABLE 
+I, 21 of them require no action, four of them require a simple change of visibility and the changing 
+of a pointer, and seven cases require a depth comparison of two polygons. In addition, two of the last 
+seven cases require a search and possibly several depth calculations in those cases that the visibility 
+changes.  4.4 PREPROCESSING In addition to the preprocessing described in section 2, this algorithm 
+must do the following: Edge Process Each edge is examined. Its end points are placed in ascending order 
+and a pair of chains is constructed from each vertex through the edges so that from each vertex it is 
+possible to find the set of edges that end on the vertex and the set of edges that start on the vertex. 
+The set of edges that start on the vertex are sorted in ascending order of their slopes so that they 
+will be in the correct left to right order in the Active Edge List when they are entered there. Polygon 
+Edge Label CoefficientsA, B, and C of the plane of each polygon are found by solving a system of three 
+linear equations derived from three adjacent vertices on the polygon. The determinent of this system 
+(which is available as a byproduct) indicates whether the polygon is being processed in the clockwise 
+or counter-clockwisedirection. This information is used in two ways. The first is an option to ignore 
+rear polygons. If this option is used, polygons must be specified in clockwise order when viewed from 
+the exterior of the body. A counter-clockwiseprojection in the X-Y plane indicates that the polygon should 
+be dropped. If the polygon is not dropped, its edges are examined in sequence. The combination of the 
+direction of rotation and the direction of the edge (up or down) indicates whether the edge is a left 
+or right edge. It is marked accordingly in the list of edges, and the 'name' of the polygon on the left 
+or right of the edge is stored in the edge list. If the edge is already marked as being of the same type, 
+a duplicate edge is created. The edge of the rear polygon is saved as the duplicate edge (which is distinguishable 
+in the edge list), so that the picture generation can simply ignore visibility tests on duplicate polygons. 
+The front edge is easily found by finding the edge attached to the polygon with the largest value of 
+the parameter A in the case of left edges, or the smallest value in the case of right edges. If the edge 
+has been marked as of the other type (e.g. R when the new type is L) it is simply marked as M. 5. PARALLEL 
+GENERATION OF RASTER AND LINE DRAWING TECHNIQUE. Since there is no visibility change from One scan line 
+to the next until a new vertex is encountered or until two edges in the Active Edge List change places, 
+the Active Edge List can be updated from one scan line to the next by additions only. There is no need 
+to test for changes of position. Indeed, there is no need to generate the state of the Active Edge List 
+for each scan line, only for those on which a change occurs. The Y value of the next change can be found 
+from the minimum in the Crossing List and the next entry on the sorted vertex list generated in preprocessing. 
+It was found that the amount of arithmetic involved in computing the intersections was less than the 
+amount of work involved in additions and tests used to generate successive scan line Active Edge Lists. 
+In this technique, a separate processor can be generating the state of the Active Edge List for each 
+scan line by additions and generating the raster output. Such a display generator was described by Erdahl[5] 
+in 1972. It appears that algorithm CROSS produces the proper type of input required by Erdahl's display 
+processor, i.e., a sequence of visible edge segments sorted by the initial scan line on which they appear 
+and then sorted by the X-values of the intersection with the scan line. The visibility computation can 
+proceed by advancing to the Y value of the next change. As implemented, even the X values of the active 
+edge were not updated except when there was a change of visibility. This was partly in order to allow 
+line drawings to be generated easily, but also because it was found that the X coordinates of active 
+edges were not needed very often, so that the additional work in calculating intersections from the data 
+available was more than offset by the reduction in the number of times that the calculation of the X 
+value had to be made. Each active edge contained its last calculated X value and the corresponding Y 
+value in the implementation. 6. COMPARISON OF SEVERAL ALGORITHMS The two algorithms described here, 
+along with three other scan-line algorithms [2,3,4] were implemented in FORTRAN on a PRIME-300 minicomputer. 
+Each of these implementations counted the number of tests, stored data accesses, multiplications or divisions, 
+and additions required by that part of the calculation unique to each algorithm. The counts do not include 
+preprocessing and other calculations done the same way by all scan line algorithms. TABLE II gives the 
+operation counts for four pictures representativeof those tested. These four are shown in Appendix C. 
+The counts included all processing done on each individual scan line (the unique part of all of these 
+algorithms), the processing done in keeping the Active Edge List sorted in left-to-right order, and the 
+preprocessing done in calculating the coefficients of the plane of each polygon. The counts do not include 
+other preprocessing done in reading the input polygons or sorting them in order of the Y coordinate 
+of their topmost vertex. This Y-sort is performedby all algorithms tested and so could be omitted from 
+the counts. Also, the updating of the X values in the Active Edge List after processing each scan line 
+was done by all algorithms and so was not counted. In assigning counts to each portion of each algorithm 
+it was assumed that a moderate amount of data could be placed temporarily in registers with essentially 
+ instantaneous access. For this reason no storage accesses are included for incrementing indices and 
+ other control pointers. In assigning additions and multiplications,no additions to program loop counters 
+or other such programming functions were included. Such operations are very much implementation dependent, 
+not an integral part of the algorithm, and so were omitted entirely. Some of the algorithms studied 
+can handle more general input data, e.g. concave and intersecting polygons. This adds some complexity 
+to these algorithms not present in the two algorithms described here. -In an attempt to collect data 
+on the various algorithms that could be more meaningfullycompared, our implementations of these algorithms 
+removed such complexities and restricted the input data to convex non-intersecting polygons in all cases. 
+On all but the Watkins algorithm this simply removed a  210 special case needed for intersecting polygons. 
+In the Watkins algorithm, it eliminated one of three possible outcomes of looking at overlapping polygon 
+segments on a sample span. Also, the Watkins algorithm wae designed to accept input vertices with a precision 
+greater than one raster point and this fact is used in tests to determine when two polygons overlap. 
+Our input data contained vertices that were rounded off to the nearest raster point. This sometimes caused 
+the Watkins algorithm to think that two adjacent polygons overlapped (by one raster unit), causing some 
+extra calculations.  6.1 Operation Counts. The preprocessing calculations consist of calculating plane 
+equations of each polygon and Y-sorting the polygons. The plane equations of the polygons are calculated 
+in the form Z=AX+BY+C by all algorithms except the Watkins algorithm. If N is the number of polygons, 
+then our gaussian elimination implementation of this calculation added 17N multiplications, 11N additions, 
+3N tests, and 9N memory references to the operation counts given in TABLE II. The Watkins algorithm keeps 
+the Z value of each edge of each polygon at each scan line. This means that a dz/dy value must be added 
+to these Z values before processing each scan line. The Z value of any polygon at any X position along 
+a scan line is calculated when needed as a linear interpolation of the Z values at the left and right 
+edges of the polygon. Each Z value is initially set to the Z coordinate of one endpoint. All processing 
+done the same way by all algorithms tested was not counted in the data of TABLE II. This common processing 
+consisted of: 1. The Y-sort of the input polygons.  2. Adding polygon edges to the Active Edge List 
+from the top of the Y-sorted polygon list at each scan line.  3. Updating X by dx/dy for each entry 
+in the Active Edge List at every scan line.  Sorting the Active Edge List on the X coordinate of each 
+edge was done by all algorithms, but it was done a bit differently by algorithm "CROSS" due to its different 
+data representationof image data. Thus this sort was counted in the data of TABLE II. All algorithms 
+used a bubble sort. The scan line processing done by each algorithm is quite dependent upon how the 
+polygons in the data overlap each other. This makes the number of operations hard to compute precisely, 
+even just to the highest order. For algorithm "STACK" the number of each type of operation required by 
+the various stages of this processing is given as comments in the PL/I-like description of the algorithm 
+in Appendix A. For an image with N polygons, each of which intersects an average of K scan lines, the 
+main DO loop of appendix A will be executed approximately 2NK times per image. Most of the arithmetic 
+(and all of the multiplicationsand divisions) is done when calculating relative depths of pairs of polygons. 
+This calculation is done only once for each unique pair of overlapping polygons in which one polygon 
+ is visible. We observed in our images that the number of depth calculations was between 2N and 3.5N 
+(3.3N average). This agrees with statistics of Watkins[4] showing that at any (X,Y) position there are 
+usually no more than 2 or 3 overlapping polygons. For algorithm CROSS, if we assume that the scene is 
+composed of M "sheets" of joined quadrilaterals,where each sheet contains n**2 quadrilaterals, then we 
+have about (n**2)M vertices, 2(n**2)M edges, and (n**2)Mpolygons. If the sheets are behind one another 
+rather than visibly disjoint, the worst case occurs, and CROSS is called about 2(n**2)(M**2) times because 
+each edge intersects about M other edges. This figure could be doubled in an extreme case. For this example, 
+the number of crossing computations (to determine the Y value for entry in the crossing list) is also 
+about 2(n**2)(M**2). These account for the bulk of the arithmetic operations, taking 5 multiplications, 
+1 division, and 6 additions. If we take M to be n (that is, the figure has order of (n**3)=N edges, vertices, 
+and polygons distributed in three dimensions, we see that the speed is proportional to n**4 or N**(4/3). 
+ For all pictures combined, the two algorithms described here performed fewer multiplicationsand additions 
+than any of the three algorithms obtained from the literature. In the case of algorithm STACK, this was 
+sometimes accomplished at the expense of increased testing of previously stored data. Algorithm CROSS 
+can be used for raster or line drawings, and makes efficient use of connectivity information. Consequently 
+it appears to be faster than many other techniques. However, it uses considerably more storage than other 
+techniques because of the large number of pointers. (The present implementation uses about 40 16-bit 
+integers and 12 32-bit floating point values per 4-sided polygon. However, it is an experimental version 
+with an unnecessary number of pointers to allow any variation to be tried. A better implementation could 
+reduce this to approximately 22 16-bit integers and 9 32-bit floating point values per 4-sided polygon.) 
+ AlgorithmMemory Tests Mult/Div Additions CONE PICTURE-331 Polygons STACK 259686 131112 9783 23752 CROSS 
+79723 22680 5639 8753 Bouknight 242524 85682 48787 61471 Romney 261167 91720 36233 48917 Watkins 345671 
+262095 54599 130615 CYLINDERPICTURE-235 Polygons STACK 298237 156147 7767 23913 CROSS 86229 22090 4000 
+11950 Bouknight 273648 95549 55295 71173 Romney 291893 99956 36569 52447 Watkins 382588 308619 72607 
+169599 BOTTLE PICTURE-41 Polygons STACK. 70503 36788 1289 5459  212  References  [1] Sutherland, 
+Ivan E., Robert F. Sproull, Robert A. Schumacker, "Sorting and the Hidden-Surface Problem", Proceedings 
+ National Computer Converence 1973, p. 685-693. [2] Bouknight, W.J., "A Procedure for Generation of 
+Three-DimensionalHalf-Toned Computer Graphics Presentations",Communications of the ACM, (13,9), September, 
+1970, 527-536. [3] Romney, G.W., G.S. Watkins, D.C. Evans, "Real-Time Display of Computer Generated 
+Half-Tone Perspective Pictures", IFIP, 1968, 973-978. [4] Watkins, G.S., "A Real-Time Visible Surface 
+Algorithm", Computer Science Department, University of Utah, UTECH-Csc-70-101, June 1970. [5] Erdahl, 
+Alan C., "Displaying Computer Generated Half-Tone Pictures in Real Time", Computer Science Department, 
+University of Utah, RADC-TR-69-250, 1972.  
+			

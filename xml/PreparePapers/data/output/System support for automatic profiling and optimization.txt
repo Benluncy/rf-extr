@@ -1,0 +1,612 @@
+
+ System Support for Automatic Profiling and Optimization Xiaolan Zhang, Zheng Wang, Nicholas Gloy, J. 
+Bradley Chen, and Michael D. Smith Division of Engineering and Applied Sciences Harvard University  
+ Abstract The Morph system provides a framework for automatic collection and management of profile information 
+and application of profile-driven optimizations. In this paper, we focus on the operating system support 
+that is required to collect and manage profile information on an end-user s workstation in an automatic, 
+continuous, and transparent manner. Our implementation for a Digital Alpha machine running Digital UNIX 
+4.0 achieves run-time overheads of less than 0.3% during profile collection. Through the application 
+of three code layout optimizations, we further show that Morph can use statistical profiles to improve 
+application performance. With appropriate system support, automatic profiling and optimization is both 
+possible and effective. 1. Introduction Morph is a combination of operating system and compiler technology 
+that provides a practical framework for the advanced compiler optimizations needed to support continued 
+improvements in application performance. Morph is practical because it provides system support for the 
+automatic application of profile-driven compiler optimizations on an end-user s system. The major obstacle 
+to the use of these optimizations is obtaining timely high-quality profile information. Ideally, such 
+profiles should be representative of how a program is used on a specific machine by a specific user. 
+Given the current infrastructure for compilation, it is not practical to obtain and use such profiles, 
+as typical end-users do not know how to generate profile information and would not be able to optimize 
+the application if they did. The Morph system addresses this problem, using operating system support 
+to collect, process, and apply profile information to re-optimize applications automatically. This paper 
+describes our implementation of Morph for the Digital Alpha processor and Digital UNIX. Our implementation 
+is composed of several components. The Morph Moniror is an operating system kernel component that implements 
+continuous, low overhead profiling and program monitoring. The Morph Editor is a compiler component that 
+Permission to make digital/hard copy of part or all this work for personal or classroom use is granted 
+without fee provided that copies are not made or distributed for profit or commercial advan-toge, the 
+copyright notice, the title of the publication and its date appear, and notice Is given that copying 
+is by permission of ACM, Ino. To copy otherwise, to republish, to post on servers, or to redistribute 
+to lists, requires prior specific permission and/or a fee. SOSP-16 IO/97 Saint-Malo, France 8 1997 ACM 
+0-89791~916-5/97/0010...$3.50 implements re-optimization, transforming compiler intermediate form into 
+an executable. The Mo@r Manager is a system component that manages profile information, including the 
+automatic invocation of re-optimization. In this paper we focus on the systems components, the Monitor 
+and the Manager. Although some discussion of the Morph Editor is needed to provide context for the rest 
+of the work, detailed description of specific compiler optimizations is outside the scope of this paper. 
+We designed our system to meet a number of requirements that we believe are necessary for mainstream 
+systems and usea: . Optimization should happen on the machine where the sojlware is used. For complex 
+interactive applications, there can be substantial variation in how the application is used by different 
+individuals. Also, binaries for popular applications run on a broad range of binary-compatible systems 
+with widely varying internal architecture and performance characteristics. Given these sources of variation 
+between systems, profile-driven optimization will be most effective if it can incorporate information 
+specific to the end-user and the user s machine. . Optimization should not require source code. Although 
+recompilation from source code may be a reasonable alternative for public-domain and low-volume software, 
+it is not practical for the commodity software market. To enable optimization without source code, we 
+assume that an intermediate-form representation of the program can be derived from the program distribution 
+media, with all optimizations based on this intermediate form. In practice, there are a number of alternatives 
+for achieving this, including executable editing techniques [Ls95, RVL971 and compact program representations 
+[FK96]. . Optimizationmust be transparent to the user. We assume that the people who use cdmputers are 
+non-specialists with no background in computer science or compilation. Optimization should be transparent 
+in that the user does not need to understand or actively participate in the optimization process. Transparency 
+also implies that the system be robust and provide consistent performance benefits with no negative performance 
+impact. The Morph system is designed to address all these requirements. It automatically collects profiles 
+and uses them to optimize programs on the machine where the software is used. The optimizations transform 
+an intermediate form representation of the program to a new executable without requiring source code. 
+As an intermediate form representation is not shipped with current applications, it must be generated 
+from source in our system. Morph makes it possible to re- optimize an application using a small number 
+of simple, mechanical steps. Our results show that Morph is an effective platform for profile-based optimization. 
+We also show that the overhead of Morph profile collection and management is negligible. This paper describes 
+a design and implementation of Morph, and gives performance results that illustrate the measured benefit 
+of profile-driven optimization on our testbed system. 1.1 Related Work There are a number of research 
+projects in low-overhead profiling and late optimization. In this section we review some relevant projects 
+and explain how they differ from Morph. Morph enables executable programs to evolve with changes in program 
+usage patterns and computer hardware. This functionality is not provided by any current tool, although 
+Morph builds on technology and techniques originally developed for program instrumentation and measurement. 
+Several existing tools (Pixie [Smi91], ATOM [SE94], EEL [Ls95]) rewrite executables for the purpose of 
+program measurement. These instrumentation tools differ from Morph in two important ways. First, though 
+the overhead of instmmention-based profiling has improved, yielding slowdowns as low as lo%, this level 
+of overhead is still too large for continuous monitoring, frequently exceeding the benefit of optimization. 
+In Morph, we avoid this overhead through statistical profile sampling in the operating system. In Section 
+4.3, we show that the on-line overhead for sample collection in Morph is significantly less than 1%. 
+A further difference between Morph and earlier profiling tools is that Morph is designed specifically 
+for automatic profiling and optimization. Morph applies profile-driven, machine-specific optimizations 
+to intermediate representations of programs and libraries. Like Morph, three prior systems from Digital 
+Equipment Corporation (Mahler [wp87], Epoxie lJVal92], OM [SW92]) also performed optimizations on programs 
+after compilation. These tools were designed for UNIX systems and required either an intermediate form 
+representation of the program or an executable that includes relocation information. More recent systems 
+for Windows NT include Spike [CL96, Go0971 and Etch [RVL97]. Both implement profile-based optimizations, 
+Etch for the Intel x86 architecture and Spike for Digital Alpha-based systems. The Digital Continuous 
+Profiling Infrastructure (DCPI), developed at the Digital Systems Research Center, supports continuous 
+monitoring of the entire system including the kernel [ABD97]. There are substantial similarities between 
+DCPI profile collection and the continuous monitor used in Morph. Both DCPI and the Morph Monitor use 
+statistical sampling to collect profile information of all system activity with very low overhead. The 
+primary difference between the two monitors is how they have been applied. In Morph we have focused on 
+optimization, whereas the emphasis to date for DCPI has been on ,performance analysis. It would be relatively 
+straightforward to use DCPI as a source of profiles for Morph. Conte et al. [CMH96] describe an approach 
+in which new hardware support in the form of a profile buffer is used to collect statistics describing 
+the behavior of conditional branches in the program. They use the resulting information to drive a superblock 
+scheduling optimization. Although the Morph design does not preclude the use of new hardware support 
+for profile collection, it does not require it either. Digital s FX!32 is a system that provides transparent 
+execution of x86 Win32 applications on Windows NT Alpha systems [CH97, Rub96]. As a part of their emulation 
+system, execution profiles of x86 code are collected and fed to a background process that translates 
+the previously emulated portions of x86 binaries into native Alpha code. Though the goal of Digital FX!32 
+is different from Morph, the two systems share many similarities: both systems continuously collect profile 
+information of executables in a transparent manner and use the profiles to guide a code re-writing operation. 
+The main differences between the two systems are that IX!32 works directly on executables, it collects 
+profile samples during program emulation (rather than direct execution) of the application, and that 
+it emphasizes code translation, rather than code optimization as in Morph, In the next section, we discuss 
+the design goals for Morph, Section 3 then describes our implementation. In Section 4, we report performance 
+results, both in terms of optimization and overhead. Section 5 discusses future research directions and 
+other issues in making the system practical for widespread use. Conclusions follow in Section 6.  2. 
+Motivation for System Design Morph provides a framework for profile-based and host- specific optimization. 
+An important feature of Morph is thnt optimizationoccurs on the system where the applications are run. 
+The final stage of optimization occurs after the end-user has already installed and used the application. 
+This makes it possible for optimization to incorporate the idiosyncratic usage patterns of a specific 
+user and track changes in the way a-program is used. It also means that all details of the host hardware 
+can be used during optimization. Several observations about profile data and machine description information 
+serve to clarify the potential advantages of the late application of host-specific optimizations. Profile 
+information describes how an application is used by an end-user. The trend in modem applications is to 
+implement a large number of features and to hide the complexity of feature selection behind a rich graphical 
+user interface. For such applications, the subset of features used by different individuals can vary 
+substantially. This will tend to increase the -need for profile-driven optimization and the value of 
+collecting profile information as close as possible to the end- user. Also, the way an individual uses 
+a complex interactive application can evolve over time. For example, a user mny discover a new feature 
+in a user-interface and make regulnr use of it from that time on. This suggests a situation in which 
+profile-based optimizations must be continuously re-applied in order to achieve their full benefit. This 
+variation may not be significant for batch-style UNIX workloads such as those used in this paper. Nonetheless, 
+the techniques we present facilitate exploration of these issues for more complex interactive workloads. 
+The second type of information used by host-specific optimizations describes a specific implementation 
+of a 16 machine architecture. Many modem compiler optimizations depend on information that is specific 
+to an implementation of an instruction set architecture and is not expressed in the instruction-set description, 
+such as: . Pipeline orguttizution. This information directs instruction scheduling. . Ittsttwfiott timing. 
+Often, the relative cost of an instruction sequence changes from one machine implementation to the next. 
+This information influences the instruction selection and scheduling processes. . Cache parameters. This 
+information can be used by locality optimizations such as data blocking [LRW91] and code layout [PH90]. 
+These hardware parameters commonly vary between binary- compatible systems, even between those designed 
+at the same time in similar VLSI technologies. In the absence of a suitable infrastructure for host-specific 
+optimization, hardware designers have created machines that attempt to execute programs efficiently without 
+help from the compiler. An example is the current trend towards out-of-order instruction execution, in 
+which the hardware does instruction scheduling on the fly rather than relying on software scheduling. 
+While this has the advantage of providing performance improvements for legacy software, it has the disadvantages 
+of increased hardware complexity and sub-optimal overall performance. In general, the lack of a practical 
+infrastructure for host-specific optimization leads to increased hardware complexity, even when simpler 
+hardware alternatives that require minimal compiler support exist. In spite of the lack of a workable 
+compiler infrastructure, the need for host-specific optimizations is increasing in modem machines. Experts 
+in the computer architecture and compiler communities anticipate that the importance of these optimizations 
+will increase for the next generation of machines [Chr96, Gwe96]. 3. Implementation Our prototype implementation 
+of Morph supports automatic profile generation and re-optimization for Digital Alpha-based workstations 
+running Digital UNIX. We employed several custom system tools and made small modifications to Digital 
+UNIX to support automatic profile generation, collection, and analysis. The compiler components of Morph 
+are based on the SUIF research compiler infrastructure available from Stanford University [SUIF94]. We 
+have extended this infrastructure to support profile-driven, machine-specific optimizations [Smi96]. 
+We are planning support for Windows NT and the x86 ISA, as a step towards optimization of more complex 
+interactive applications. Practical considerations led us to choose the UNIX/Alpha platform for our initial 
+implementation, including access to source code for Digital UNIX. In Section 3.1, we introduce the components 
+of the Morph system and describe how they are incorporated into a complete system for automatic program 
+optimization. The subsections that follow focus on the main systems components of Morph, namely the Morph 
+Monitor for profile sample collection (Section 3.2), the Morph Manager that provides off-line profile 
+processing (Section 3.3), and the Morph Editor that implements optimizations (Section 3.4). 3.1. Overview 
+Our initial design targets a single-user workstation environment. Specifically, we assume that each user 
+has his or her own machine, and that all instructions executed on the machine are run on behalf of that 
+user. We assume that each user has a private copy of the applications they use. Finally, we assume that 
+there are substantial periods of idle time. These assumptions are appropriate for most workstations and 
+personal computers. For machines that do not satisfy these assumptions, additional engineering is required. 
+For example, in an environment where users share a single copy of an executable file from a file server, 
+the optimized version of the module could either be created on a per-user basis or be shared by all users. 
+The former requires more disk space and the latter requires distributed profile collection. Both require 
+system support comparable to that described in this paper. compiler i cc Morph Manager 11 . your computer, 
+Figure 1. The Structure of Morph. The major components of Morph are represented schematically in Figure 
+1. Optimizations in Morph are applied without the use of source code. To achieve this goal we posit an 
+application distribution format that includes a compact representation of the compiler intermediate form. 
+Compiler optimizations are implemented as SUB? passes which apply transformations to this intermediate 
+form. An important aspect of our design is that executable modules are machine and OS specific. Though 
+we are aware of prior work on machine and operating system-neutral program distribution formats [OSF93, 
+Co195], we have chosen not to attempt similar functionality in Morph, focusing instead on the problem 
+of using profile-driven optimizations to improve performance. The key to providing a viable framework 
+for host-specific optimization is to define a partitioning of the compilation process that supports efficient 
+and effective retargeting. The link between the two phases of compilation is the Morph executable, an 
+executable that includes the supplementary information required for the second, host-specific stage of 
+compilation. Conceptually, a Morph executable consists of two parts. The first part is equivalent to 
+executables in today s systems. This part could be directly executed on the target hardware. The second 
+part, specific to the Morph system, contains the extra information necessary to re-optimize the executable. 
+It includes information that allows recovery of the program intermediate form, as well as the additional 
+Morph annotations required to support robust and general executable rewriting. In our prototype, we maintain 
+these two components in separate files, one for the executable program, and another containing. the complete 
+intermediate form representation of the program. Morph has five major software components: the Morph 
+Back- end, the Morph Manager, the Morph Editor, PostMorph, and the Morph Monitor. The Morph Back-end 
+produces executable programs and shared libraries that include the annotations Morph needs to support 
+efficient late optimization. The Morph Manager is a user-level daemon that provides off-line profile 
+management as well as profile analysis to decide when to invoke the Morph Editor and PostMorph. The Morph 
+Editor implements the optimizations provided by Morph. The current version of our Editor supports three 
+profile-based optimizations. Two of the optimizations, procedure layout and fluff removal , are designed 
+to improve locality in the instruction reference stream [PH90]. The third is a basic block ordering optimization 
+that improves both branch prediction and instruction reference locality CpH90, YJK971. The Morph Monitor 
+collects profile information for use by the Morph Editor. The Monitor collects profile samples with very 
+low overhead, leaving subsequent processing to the Morph Manager. PostMorph provides a means for extending 
+the life of legacy executables by inferring Morph annotations through static and dynamic analysis so 
+they can be retargeted by the Morph Editor.  3.2 On-line Profile Collection: The MorphMonitor Profile 
+collection is implemented as a two-phase process: on- line sample collection in the Morph Monitor, followed 
+by off- line profile analysis and management in the Morph Manager. This separation allows us to minimize 
+the on-line overhead of profile collection by deferring as much work as possible until off-line processing. 
+In this section we describe the design of the Morph Monitor and some of the interesting problems we encountered 
+in its implementation. One key goal of the Morph Monitor is low profiling overhead. Our monitor achieves 
+this goal by using statistical sampling of program activity, rather than collecting a complete profile. 
+In most current systems, profile information is typically obtained by executing an instrumented version 
+of the application that generates profile information as a side-effect of program execution [SmiSl, SE94, 
+Ls95]. A straightforward approach for automatic profile collection would be periodic use of a higher-overhead 
+profiling system, such as an instrumentation-based profiler. Although this approach has the advantage 
+that it is well understood, the performance overhead incurred during profiled runs of application would 
+be substantial and in many cases would be perceptible by users. Also, if profile collection were to occur 
+only part of the time, it would be difficult to insure that the resulting profiles were representative 
+of typical program use. By collecting profile information continuously for all activity on the system, 
+we assure that the profiles accurately reflect how the software is used. The Monitor is implemented 
+as a pseudo-device and a small number of local modifications to the Digital UNIX 4.0 kernel. Profile 
+samples are collected using a modified version of the clock interrupt routine, hardclock(), which records 
+a program counter (PC) sample to a sample buffer on each clock interrupt. Idle-loop activity is automatically 
+recognized and eliminated during profile collection. Several additional kernel modifications provide 
+supplementary information needed to interpret the profile samples. We modified the exec(l system call 
+to provide information about the initialization of address spaces and to selectively enable and disable 
+sampling, We also modified the mmup() system call, which is used by the user-IeveI runtime to map executable 
+files and shared libraries into a user address space. We modified the exit() system call to log process 
+termination events. This makes it possible to identify when an address space has terminated and the corresponding 
+mapping information can be discarded. We also modified the kernel to log context switch information so 
+that we can interprel each PC sample in the context of the address space in which it was generated. The 
+kernel sample buffer is statically allocated and is 256 KB in our current system. Periodically, the contents 
+are transferred to the Morph Manager using a UNIX pseudo- device. With 8 bytes per sample and a clock 
+interrupt rate of 1024 Hz, this allows for approximately 30 seconds of profile samples between daemon 
+invocations. The sampIe buffer is organized as a ring buffer with sample collection continuing during 
+the dump of the sample buffer to disk. Our current monitor presents a number of opportunities for tunihg 
+which we have not yet exploited. These include reducing the number of bytes required to store a profile 
+sample and adjusting the tradeoff between sample buffer size and the frequency of writing samples to 
+disk. The overhead of our current profiler satisfies our main subjective performance goal: it is unnoticeable. 
+Measurements of our current Monitor implementation show the overhead of profiling is typically only about 
+O.l-0.3% (Section 4.3). Given this level of performance, we have chosen to defer further work on reducing 
+profiling overhead and focus on the other functionality required for automatic optimization. A potential 
+pitfall of sampling based on clock interrupts ki that activity synchronized with clock interrupts might 
+be missed. This problem could be avoided by introducing randomness into the sampling interval, using 
+an interrupt based on a countdown timer instead of (or in addition to) sampling during clock interrupts. 
+This scheme is used by the continuous profiler in DCPI [ABD97]. Many populnr processors provide appropriate 
+hardware support, including the Digital Alpha and the Intel Pentium Pro. Using a version of the Morph 
+Monitor that supports random snmpling intervals, we determined that sampling on clock interrupts IS appropriate 
+for the benchmarks used in this paper, 3.3 Off-line Profile Processing: The MorphManager Ihe Morph Manager 
+is implemented as a user-level daemon that periodically reads and processes the raw profile samples generated 
+by the Monitor. Whereas the Monitor is responsible 18 for on-line profile sample collection, the Manager 
+performs off-line profile management and processing. The goals of this processing are twofold: to decide 
+when to invoke an optimization and to transform the raw PC samples into a compact form that can be used 
+directly by optimizations. In our work to date we have focused on transforming profile data for use by 
+optimizations. From the point of view of optimization, applications are composed of multiple modules, 
+typically with one executable file and multiple dynamically linked libraries (DLLs). Each use of a module 
+results in some number (possibly zero) of Monitor samples. We use the term sample set to refer to the 
+PC samples resulting from activity in a single module for a single process. A single sample set may not 
+include enough information to achieve the full potential benefit of a given optimization. This makes 
+it desirable to collect and combine multiple sample sets into a single composite profile for the module. 
+The Manager identifies executable modules in the profile sample log by their path-name in the file system. 
+If the corresponding file is updated for some other reason than re-optimization (for example, a program 
+update), the system needs to recognize this event, so that profile samples can be interpreted in the 
+correct context. A straightforward scheme for implementing this is to discard profile samples collected 
+during a period in which the corresponding module was updated. A more sophisticated scheme could use 
+a cryptographically secure checksum of the module, that would be recorded in the profile log and checked 
+to verify the correspondence between the module that generated the profile samples and the module currently 
+on disk. We expect that the simple scheme will be adequate in most situations. Figure 2: Sample scaling 
+for two basic blocks. In the conversion from profile sample sets to a basic block profile, each PC sample 
+is a witness for the basic block containing it. Morph provides the information needed to identify basic 
+block boundaries in terms of instruction addresses and to map these address ranges to basic blocks in 
+the intermediate form representation of the executable module. This mapping information is required for 
+the use of profiles based on PC values, such as those obtained through statistical sampling. The PC 
+samples must be scaled when incrementing the counters for basic blocks. To understand the need for scaling, 
+consider two basic blocks, one containing three instructions, one containing six instructions, and both 
+of which are executed the same number of times during a process. Figure 2 illustrates this example. When 
+processing profile samples, the Manager assumes two instructions that are executed the same number of 
+times have the same probability of being sampled. If we increment the per-basic block counter by one 
+for each sample, the resulting profile would indicate (incorrectly) that block B was executed twice as 
+often as block A. Scaling the increment by the inverse of the basic block length gives better correlation 
+between the weights in the profile and the number of times the basic block was executed. Differences 
+in the cycles required to execute individual instructions also affect the profiles. We will discuss these 
+effects shortly. After transforming PC samples into a basic block profile, we combine the individual 
+profiles from each run to generate a single basic block profile. The Manager sums the counts from each 
+program execution for each basic block to create an aggregate profile. This method of combining sample 
+sets models the actual usage of the application, as each run of the application is represented in the 
+cumulative profile in proportion to the amount of execution time it required. During this conversion, 
+profile samples for modules that have been modified or deleted are eliminated. The combining of profile 
+data is a general problem for profile-based optimization and is not unique to our methodology. In conventional 
+(non-automatic) profile-based optimization, complete profiles are collected for a number of scripted 
+training input sets. This is in contrast to continuous profiling of all activity as with Morph. Fisher 
+and Freudenberger [FF92] evaluate three techniques for combining multiple branch profiles: combining 
+profiles directly, normalizing to give each test case the same weight in the composite profile, and polling 
+. The Morph Manager uses direct combining, such that profiles contribute to the composite profile in 
+proportion to their contribution to overall activity. We believe that direct combining is appropriate 
+for a continuous monitor, even though normalization can give better results for scripted inputs [FF92]. 
+When a module is optimized, the profile information for the module must also be transformed, to make 
+it meaningful in the context of the new executable module. As our profiles are stored in terms of basic 
+blocks in the program s intermediate form representation, this transformation requires a function that 
+maps basic blocks in the old intermediate representation to basic blocks in the new intermediate representation. 
+In Morph this mapping function must be generated as a by-product of optimization. Our profiles tend to 
+give more weight to basic blocks with higher latency and higher average cycles per instruction (CPI), 
+as they have a higher relative probability of being sampled; we call these time-based profiiles. In contrast, 
+Fisher and Freudenberger found that polling gave inferior results. This technique will not be discussed 
+further. profiles generated by instrumented program execution give equal weight to all instructions, 
+regardless of their relative latency; we refer to these as frequency-based profiles. Because of this 
+difference, time-based profiles and frequency- based profiles of the same activity are not identical. 
+We could attempt to adjust the time base in our statistical profiles to make them more similar to a frequency-based 
+profile. However, our experience to date suggests that neither time nor frequency based.profiles are 
+clearly superior. [GWZ97] .  3.4 The Morph Editor The Morph Editor applies optimizations using profiles 
+from the Morph Monitor. The Editor is cdrrently implemented as a composition of SUIF compiler passes 
+which convert a program module in a low-SUIF intermediate form to optimized assembly language. For this 
+paper, the Editor performed three profile-driven code layout optimizations. The input to the Editor has 
+already been highly optimized using a set of typical scalar optimizations including dead-code removal, 
+as well as machine-specific optimizations such as register allocation. The rest of this section provides 
+a brief description of the optimizations implemented by the Editor. All the optimizations require machine-specific 
+information and benefit from profile information, including basic block execution counts and control 
+flow graph edge frequency counts. The Morph Monitor directly generates basic block counts, and the Editor 
+analyzes these counts to synthesize the edge frequencies. The counts and frequencies do not have to be 
+exact since the information is used only to direct optimization toward the most popular parts of the 
+program. Since these optimizations make some paths through the application run faster at the expense 
+of others, they perform better when profile information can be used in place of simple global heuristics 
+(e.g. assuming forward branches taken and backward branches not-taken). The three code layout optimizations 
+implemented in the Editor are branch alignment, fluff removal, and procedure layout. All are based on 
+previous work by Pettis and Hansen [PH90]. The first optimization is branch alignment. This intra- procedural 
+optimization reorders the program basic blocks to reduce control penalties, branch n&#38;predictions 
+and misfetches, and to improve instruction cache locality. We implement a greedy version of this technique, 
+described by Young et al. [YJK97]. The algorithm considers the edge frequencies in order of decreasing 
+weight and attempts to place the blocks at the ends of an edge adjacent to each other so that the control 
+penalties are minimized. Fluff removal follows branch alignment. This optimization uses the basic block 
+counts to identify blocks of code (such as error handling code) that were not executed during the profiled 
+run. Moving these blocks to the end of the text segment improves the density (spatial locality) of the 
+remaining code. The relocation of fluff code re uires additional jumps to insure that the code 9 is still 
+reachable . Once we have compacted the executed portion of each procedure, we apply a procedure layout 
+optimization to find a placement of the program procedures in memory that minimizes the penalty cycles 
+due to instruction cache conflict and capacity misses. We place all of the non-fluff procedure components 
+before placing all of the fluff components, In particular, our implementation constructs a weighted cnll 
+graph from the block counts and uses it to identify procedure conflicts that incur the largest cache 
+penalties. Our greedy algorithm attempts to minimize penalties by using a closest- is-best heuristic: 
+if two procedures call each other frequently, the algorithm attempts to place them near each other in 
+the code segment.  4. Experimental Results This section describes our experiments to evaluate automatic 
+profile-based optimization under Morph. After describing the experimental system and workloads, we present 
+two sets of results. One set of experiments (Section 4.2) documents the effectiveness of profile-based 
+optimization under Morph. In the second set of experiments (Section 4.3), we quantify and analyze the 
+overheads in Morph. Overall our results show that the optimizations applied by Morph achieve substantial 
+performance improvements for many of our test workloads. Though the focus of this paper is not to explore 
+the effectiveness of such optimizations, these results are important as justification for providing support 
+for automatic optimization as part of an operating system, However, readers should keep in mind that 
+the optimizations used in Morph are well understood by the compiler community, and the main criteria 
+upon which Morph should be evaluated is its effectiveness as a framework for automatic optimization. 
+4.1 Experimental Details Our Morph prototype system used version 1.1.2 of the Stanford SUIF compiler 
+with Harvard Machine SUIF extensions (version 1.1.2). We ran our experiments on an AlphaStation 400 4/233. 
+The system includes a 512 KB second-level cache and 128 MB of main memory. Profile information was collected 
+by sampling the program counter on every clock interrupt, producing 1024 samples per second. Our experimental 
+system is based on Digital UNIX version 4.0. The Morph Monitor is implemented as a set of modifications 
+to the Digital UNIX kernel, with other Morph components running within the infrastructure provided by 
+Digital UNIX. * There is clearly an interaction between instruction scheduling, branch alignment, and 
+fluff removal. Managing this interaction is an area of on- going research in the compiler community. 
+ I I t Text I Benchnark Description (Kzg public grip file compression utility 96 license mpeg-play video 
+file player 248 Digitnl sort 1 data file sorting or merging 56 UNIX 1 utility Spee92 1 espresso 1 boolean 
+functionminimization 1 248 Spce95 I go 1 oriental boardgame 1 416 I ijpcg 1 JPEGimagecompressionand __ 
+- 1 248 deeomprekion - lisp LISP Innguage interpreter 112 per1 Per1 bmguage interpreter 488 vortex object-oriented 
+database 800 transaction system Table 1. Experimental Workloads. Ben clrmark 1 Testing Input 1 Training 
+Input I fidin from Suee92 seven other input files downloaded from the downloaded from the Table 2. Testing 
+and Training inputs. Table 3. Application Time Distribution. This table gives testing and training times 
+for the experimental workloads, and a breakdown of training time among the application, shared libraries, 
+and the operating system kernel. The time breakdown is based on profile samples from the benchmark training 
+run. The execution time is measured using the system clock, which has 17 ms resolution. The time distributions 
+arc computed from the profile samples; e.g. 0.1% of the profile samples for go were PCs values from the 
+kernel. We used a suite of nine workloads for this study. Table 1 gives a description of each workload, 
+and Table 2 describes the training and testing input sets we used. Table 3 gives summary statistics for 
+the workloads, including both execution times for the test inputs and total execution time for all training 
+inputs. All experiments for this paper were run in single-user mode with a warm file system cache. Two 
+factors limited our choice of workloads. First, any potential benchmark application had to be compiled 
+with SUIF. As a research compiler, SUIF does not support the full set of language idioms supported by 
+gee or commercial C compilers, and makes less efficient use of CPU time and memory during compilation. 
+As a result we were unable to compile many popular public domain UNIX applications. We also excluded 
+applications that are J/O bound or spend most of their time in the kernel, as they will not benefit significantly 
+from re-optimization. Figure 3. Optimization Results: This figure shows the reduction in execution time 
+for programs optimized by Morph as a percentage of the execution time of the original program. All execution 
+times are the average of ten runs. The improvement in execution time for complete profiles is included 
+for reference. 4.2 Optimization Results Figure 3 shows optimization results for the nine test workloads. 
+Optimization using profiles gathered by the Morph system improves application performance by up to 27% 
+depending on the application. The results labeled statistical profiles in Figure 3 were generated by 
+combining profile samples from the training runs of a workload, generating an optimized executable using 
+the Morph Editor, and then measuring the execution time of the optimized executable on the test input 
+data set. Our experience with Morph suggest that minimal training is needed to obtain most of the benefit 
+of optimization. For a detailed discussion of our findings, see [GWZ97]. The execution time improvements 
+given in Figure 3 are computed from the average of ten runs, with execution times measured using the 
+Alpha cycle counter. The standard deviation for all workloads was less than 0.3% with the exception of 
+go (1.8%). To compare performance improvements for automatic optimization in Morph to conventional optimization 
+techniques using complete profiles, Figure 3 also includes a set of optimization results using complete 
+profiles from the execution of instrumented workloads. Overall, the optimization results show that the 
+potential benefit of profile- based optimization is significant and that automatic profiling and optimization 
+with Morph can effectively achieve those benefits.  4.3 Overhead We classify overhead in Morph according 
+to the three steps in automatic optimization: on-line profile collection, off-line profile processing, 
+and optimization. In this section, we evaluate the overhead of profile collection and profile processing. 
+We do not discuss the overhead of the SUIF optimizations performed by the Morph Editor. SUIF is a research 
+compiler, and is designed for flexibility tither than short compilation times. Ebcioglu and Altman EA97] 
+describe a dynamic compilation system designed specifically for compilation speed while still performing 
+machine-specific optimizations such as global instruction scheduling. They report that their compiler 
+requires 15 times fewer instructions per generated instruction than gee. Similar techniques could be 
+applied to the Morph Editor to make the cost of optimization low. 4.3.1 On-line Profiling Overhead Overhead 
+from on-line profile collection comes from two sources: the time to record a PC sample into the in-memory 
+profile buffer and the time required to periodically flush the profile buffer to disk. A problem that 
+arises when attempting to measure overheads on the order of 0.1% for realistic workloads is that the 
+overhead is smaller than the variation that can occur due to non-determinism in the system. A major source 
+of such non-determinism is virtual-to-physical page mapping [KH92]. The standard Digital UNIX kernel 
+uses a bin-hopping policy for allocation of physical memory pages. Although this policy has some desirable 
+performance characteristics [KH92], it has the undesirable property of poor repeatability. For our overhead 
+measurement experiments, we replaced the bin-hopping policy with page coloring fJDF90], a deterministic 
+policy, to improve the repeatability of our experiments. All results reported in this section use the 
+page coloring policy. The problems and pitfalls of page mapping algorithms are well documented in the 
+research literature [JSH92, CB93, BCL94]. Table 4 gives the overhead of the on-line component of profiling 
+for our test workloads. To distinguish the impact of profiling from memory system effects, we compare 
+execution times for the Morph kernel with profiling and the Morph kernel with profile collection disabled. 
+Disabling profile collection eliminates most of the instruction overhead for the Monitor and prevents 
+profile sample generation, while preserving code displacements in kernel memory. We also present execution 
+times for a standard Digital UNIX 4.0 kernel. Note that the standard kernel can give slightly better 
+or slightly worse performance than the Morph kernel with profiling disabled. This is an indication of 
+the impact of moving code within the kernel on execution time for the test workloads. Program DU Morph-off 
+Morph Overlrenrl espresso 12.051 12.133 12.155 0.18% (0.001) (0.001) (0.003) go 279.724 282.045 282.498 
+0,16% (0.193) (0.234) (0.170) gcP 25.275 24.953 24.981 0.11% (0.010) (0.009) (0.007) iipeg 20.770 20.740 
+20.770 0.14% (0.005) (0.004) (0.006) , lisp 19.319 19.296 19.322 0,!3% (0.001) (0.001) (0.004) w~PW 19.262 
+19.309 19.341 0.17% (0.001) (0.001) (0.004) per1 46.977 46.253 46.357 0,22% (0.043) (0.017) (0,020) sort 
+13.591 13.614 13.624 0.07% (0.010) (0.009) (0.010) vortex 59.324 59.840 59.982 0424% 1 (0.006) 1 (0.014) 
+1 (0.015) I I Table 4. On-line overhead for Morph continuous proflla collection. This table shows execution 
+times and profiling overhead for our workloads using test inputs and three different systems, the base 
+Digital UNIX kernel (DU), the Morph kernel with profiling disabled (Morph-off), and the Morph kernel 
+with protiling enabled (Morph). All systems used page-coloring for physical page selection. Times arc 
+the average of ten runs, in seconds, and were measured using the Alpha cycle counter. All measurements 
+in this table are for a warm file system cache. Standard deviations arc given below times (in parentheses). 
+Overhead is computed by comparing execution time with Morph monitoring (Morph) to execution time using 
+a Morph kernel with profiling disabled (Morph- off). Program DU MO&#38;-off Morph Overhend strawman 86.38 
+86.38 86.45 0.07% (0.00) (0.00) (0.00) strawman 67.97 68.38 68.73 OSO% 512KB (0.01) (0.00) (0.01) strawman 
+82.11 82.17 82.3 1 0.17% (0.00) (0.00) (0.01) Table 5. On-line overhead for strawman tests. This table 
+shows execution times and profiling overhead for the three strawman tests. The experimental operating 
+systems arc the same as for Table 4. Note that the number of iterations performed by these tests is not 
+the same. Strawman-1MB has a very high CPI (about 18) making it impractical and unnecessary to run a 
+longer test. To quantify the overhead of profiling, we compare benchmark execution times for the Morph 
+kernel with and without profiling. Table 4 shows that the overhead of profiling in Morph is very small, 
+ranging from 0.07% to 0.24%. Although the absolute overhead is small, the relative difference between 
+the highest (vortex> and lowest (sort) overheads is large. Referring to Table 1, note that small overheads 
+occur for programs with small text segments, and that larger overheads occur for the programs with large 
+text segments. Programs with small code working sets have relatively little chance of causing instruction 
+cache conflicts with the Morph profiling code. For larger programs, it is more likely that a cache conflict 
+between the application and the kernel profiling code will occur. To isolate these memory system effects 
+and quantify the relationship between code working set and profiling overhead, we constructed a set of 
+artificial tests, struwmun, srruwman .512KB, and strayman MB. Strawman is an eight-line C program consisting 
+of a tight loop that increments an integer variable. The key features of this program are that it is 
+compute bound with no I/O and no system calls, generates profile samples at the maximum rate, and makes 
+minimal use of the memory system, requiring one line in the instruction cache and no data cache references. 
+The trivial memory reference pattern of the strawman benchmark and the lack of system or library calls 
+make it possible to isolate the CPU overhead of profiling. The results for the strawman test show that 
+the lower bound for profiling overhead when samples are generated at the peak rate is about 0.07% (Table 
+5). Programs with larger working sets will tend to cause more cache conflicts with the kernel profiling 
+code. The worst case occurs for a program that occupies the entire second-level cache but does not generate 
+any self-conflict misses. For such a program, no misses occur when there is no kernel interference, but 
+with kernel interference up to two misses can occur for each cache line of kernel code accessed, one 
+to bring kernel code into the cache, and one to restore the displaced user code. We constructed the strawman 
+512KB test to create this worst-case behavior. The profiling overhead for strawman 512KB is OSO%, and 
+this gives an estimate of worst-case overhead for our monitor. Our strawman 512KB test is not the absolute 
+worst case for profiling overhead as it only interferes with the kernel in the instruction cache. An 
+artificial test that interferes in a pessimal way for both instruction and data references is conceivable, 
+but variability in kernel and user data layout makes it difficult to construct. For large programs with 
+self-conflict misses, kernel profiling activity will cause additional instruction cache misses for kernel 
+references but will tend not to cause new user instruction cache misses. An extreme case for our direct-mapped 
+512KB cache is a program that loops over a 1MB block of code, such that each user instruction reference 
+that crosses a cache line boundary generates a cache miss. We constructed the strawman 1MB test to create 
+this behavior. As expected, the profiling overhead for this case is 0.17%, less than the overhead for 
+the strawman 512KB case. To gain further intuition into sources of overhead for on-line monitoring, consider 
+the two required activities. The first is the recording of PC samples during the clock interrupt routine. 
+The Morph Monitor adds 72 instructions to each clock interrupt to record a PC sample in the sample buffer, 
+or a total of approximately 74,000 instructions per second. The overhead of these instructions depends 
+on their CPL For example, for a CPI of three, the overhead would be about 222,000 cycles, or approximately 
+0.10% for a 233 MHz machine. This is consistent with the overhead seen for strawman and for sort, the 
+smallest benchmark For applications with a large working set, the CPI of the profiling instructions will 
+be higher. For a CPI of 10, the overhead estimate would be about 740,000 cycles, or approximately 0.32% 
+of the machine. This correlates well with the overheads observed for the test workloads. The other source 
+of on-line sampling overhead is the writing of profile samples from the in-memory sample buffer to disk. 
+This overhead depends on the amount of idle time, which does not generate samples, and on the frequency 
+of logged events such as context switches and exec(j system calls. With a 1024 Hz clock interrupt rate, 
+profile samples are generated at a peak rate of approximately 8 KEl per second. With our current monitor 
+we have observed that l-24% of the unprocessed profile information is for logged events, with the remainder 
+occupied by profile samples. On days when the system is relatively busy and a large number of profile 
+samples are generated, logged events occupy less than 12% of the total space. The Monitor flushes the 
+sample buffer to disk every 10 seconds. Assuming conservatively that the profile samples are generated 
+at the peak rate of 8 KB per second and that the buffer contains 75% profile samples and 25% logged events, 
+the writing of the profile buffer to disk will generate 110 KB of disk write operations every ten seconds. 
+The samples are copied once on their way to disk, and this copy activity dominates the CPU activity required 
+for the write. This generates 110 KB of copy activity for each ten seconds interval in our pessimistic 
+scenario. Assuming 8-byte writes and a pessimistic ten cycles per write, this would add approximately 
+140,000 cycles of memory latency to each ten seconds of computation, or 0.006% overhead. The logging 
+of profile samples to disk also consumes some amount of disk bandwidth, although at 11 KB per second 
+the bandwidth is insignificant when compared to the write bandwidth of a modem high-performance disk. 
+As the writes are contiguous and the frequency of writes is low, the seek overhead required by writes 
+should not be significant, except for a badly fragmented disk. Overall, these overhead estimates are 
+consistent with the on- line profiling overheads observed for our test workloads. We conclude that profiling 
+overhead in Morph is very small and has a negligible impact on overall performance. 4.3.2 Off-line Profile 
+Processing Overhead Processing of raw PC samples occurs off-line and is deferred until off-peak hours 
+to avoid interfering with interactive users. For our current version of the Manager, profile samples 
+can be processed at a rate of 60 MB per minute. Again using the pessimistic assumption of 75% profile 
+samples and 25% logging enties, profile samples are produced at a peak rate of about 640 KB per minute. 
+Given that there are 1,440 minutes in a day, 900 MB (uncompressed) is an upper bound on the amount of 
+profile samples and logging information produced per day. It is not necessary to provide this much staging 
+space for profile samples. In our experience, the amount of profile samples generated in a day is typically 
+tens of megabytes, and profile staging space can be limited to this level. To control the amount of disk 
+space required, the system can simply discard samples. For systems with sufficient idle time, use of 
+a low-priority daemon to post-process the samples more frequently can also reduce staging space requirements. 
+Long-term profile storage occurs in the form of basic block counts. After being computed from the raw 
+samples, the basic block profiles of individual programs are integrated into the intermediate form representation 
+of the.program. Table 6 lists the disk space occupied by long-term storage of basic block profiles for 
+our test application suite. The sizes given are for uncompressed profiles. Compression further would 
+reduce profile storage requirements. The profile size is roughly proportional to the size of the program 
+code segment. As the number of basic blocks for a program is stable, the profile sizes do not change 
+over time. For our benchmark suite, the space requirements for storage of basic block profiles ranges 
+from 29% to 82% of the program text size. Table 6. Long-term Profile Storage. This table shows executable, 
+text, and profile sizes in kilobytes for our test workloads. The right-most column shows profile size 
+as a percentage of text segment size. The space requirement for long-term profile storage will tend 
+to increase in more sophisticated versions of Morph. Heuristics to decide when to re-optimize a program 
+will require history information to detect when changes in program usage patterns justify re-optimization. 
+Also, although our current set of optimizations is effective with basic block profiles, new optimizations 
+or refinements to our current optimizations may require different types of profiles. Further research 
+will be required to balance the tradeoff between profile storage space and effective re-optimization. 
+  5. Discussion Our work to date has demonstrated that automatic profiling and optimization is both 
+efficient and effective. There are a number of issues that must be resolved to make the system practical 
+for more widespread use. Our current system uses trivial heuristics to decide when to re-optimize (i.e. 
+re-optimize when triggered manually, re- optimize when new profiles are available). We suspect that more 
+sophisticated heuristics (i.e. re-optimize when program usage patterns change) could lead to substantial 
+improvements in the system. These heuristics must achieve a balance between optimizing rarely, so that 
+re-optimization occurs promptly and within the budget of available idle CPU cycles, and optimizing frequently, 
+to maximize the benefit from profile information. In our continuing work we are developing the profile 
+analysis techniques needed to implement improved heuristics. Our current system uses simple methods for 
+combining profile information. The continuous generation of profiling data raises the issue of how to 
+age profile data as it is collected over an extended period of time. There are a number of simple approaches. 
+This is a part of our continuing work. Before automatic optimization can be incorporated into mainstream 
+computing platforms, an infrastructure must be put into place that allows intermediate form representations 
+of program modules to be recovered from the application distribution. This issue must be fully resolved 
+before Morph- style automatic optimization becomes widely used. From a purely technical point of view, 
+the most straightforward solution would be to augment the shipping versions of executables with an intermediate 
+form representation of the program. This solution has major practical drawbacks, however, as it requires 
+new software standards and standards compliance across the software industry. Another possibllity is 
+to develop new ways of acquiring the additional information needed to derive intermediate form program 
+representations from current executables. Digital s FX132 [CH97, Rub961 provides an example of progress 
+in this approach. Our PostMorph tool represents another alternative. One of the greatest barriers to 
+obtaining conclusive results for Morph is the lack of a compelling suite of interactive benchmarks. The 
+ideal test for our system would be a suite of large, interactive benchmarks in a format that permits 
+rc- optimization. Unfortunately, source or intermediate form representations for such benchmarks are 
+not commonly available. Recent developments in late-code optimization [CL96, Rub96, RVL97] offer some 
+promise in addressing these issues. 6. Conclusions This paper describes a system for continuous low-overhead 
+profile collection designed to meet the unique requirements of automatic optimization. We achieve these 
+low overheads through statistical sampling of all system activity and by deferring processing of profile 
+samples for off-line processing. Our results show that continuous profiling can be achieved with very 
+low overhead and that the resulting profiles are effective when applied in profile-based optimization. 
+As high performance processors become increasingly dependent on super-scalar issue and deep memory hierarchies 
+for sustained performance, the importance of these optimizations will increase. The, prospect of practical 
+operating system support for automatic optimization introduces a host of opportunities for new research, 
+both in systems and in compilation. Our Morph testbed system demonstrates how a practical framework for 
+automatic optimization can be implemented for a UNIX system,, and provides a foundation for further research 
+in this area.  Acknowledgements Many members of the Harvard Machine SUIF project contributed time and 
+brainpower in maintaining the machine- suecific code ontimizations used in this oaoer. We would like 
+t&#38; specifically r&#38;nowledge Gang Chen and Cliff Young, who provided support for the optimizations 
+in the Morph Editor. [Fis97] [l-Q1 [Go0971 [Gwe96] [GWZ97 ] [KH921 [LRW9 I] F-J=1 [OSF93] [PH90] [Rub961 
+J. Fisher, Trace Scheduling: A Technique for Global Microcode Compaction. In IEEE Transactions on Computers, 
+Volume 30, Number 7, pages 478-490, July 1981. J. Fisher and S. Freudenberger, Predicting Conditional 
+Branches from Previous Runs of a Program. In Proceedings of the Fifth International Conference on Architectural 
+Support for Programming Languages and Operating Systems, ACM, pages 85-95, October 1992. M. Franz and 
+T. Kistler, Slim Binaries. Technical Report No. 96-24, Department of Information and Computer Science, 
+University of California, Irvine, June 1996. D. Goodwin, Interprocedural Dataflow Analysis in an Executable 
+Optimizer. In Proceedings of the 1997 ACM SIGPLAN Conference on Programming Language Design and Implementation, 
+ACM, pages 122-133, November 1997. L. Gwennap, Bringing Parallelism Out of the Closet. In Microprocessor 
+Report, pages .14-15, 9 December 1996. N. Gloy, Z: Wang, X. Zhang, J. B. Chen, and M. D. Smith, Optimization 
+with Statistical Profiles. Technical Report TR-02-97, Center for Reliable Computing, Division of Engineering 
+and Applied Sciences, Harvard University, April 1997. R. Kessler and M. Hill, Page Placement Algorithms 
+for Large Real-Index Caches. In ACM Transactions on Computer Systems, Volume 10, Number 4, pages:338-359, 
+November 1992. M. Lam, E. Rothberg, and M. Wolf, The Cache Performance and Optimizations of Blocked Algorithms. 
+In Proceedings of the Fourth International Conference on Architectural Support for Programming Languages 
+and Operating Systems, ACM, pages 63-74, April 1991. J. Lams and E. Schnarr, EEL: Machine Independent 
+Executable. In Proceedings of the ACM SIGPLAN 95 Conference on Programming Language Design and Implementation, 
+ACM, pages 291-300,. June 1995. Open Software Foundation Research Institute, ANDF Collected Papers, Volume 
+IV, Open Software Foundation, December 1993. See also http:l/www.opengroup.orgiRIlandfl K. Pettis and 
+R. Hansen, Profile Guided Code Positioning. In Proceedings of the ACM SIGPLAN 90 Conference on Programming 
+Language Design and Implementation, ACM, pages 16-27, June 1990. N. I Rubin, FX!32. Work-in-progress 
+talk at the Seventh International Conference on Architectural Support for Programming Languages and Operating 
+Systems, October 1996. See also http:l/www.digital.comlinfolsemiconductor~am~fx3~ fx.html [ABD97] [BCL94] 
+[CB93] [CH97] [Chr96] [CL961 [CMH96] [Co1951 [ EA97] We would also like to thank the anonymous reviewers 
+for their useful comments. We would especially like to thank our shepherd Jeff Mogul who provided valuable 
+feedback during the last stages of the preparation of this paper. The Morph project is supported by gifts 
+from Intel and Digital Equipment Corporation. Brad Chen is supported in part by an NSF CAREER Award, 
+CCR-9501365. Mike Smith is supported in part by DARPA grant number NDA904-97-C-0225 and by a National 
+Science Foundation Young Investigator Award, grant number CCR-9457779. Bibliography J. Anderson, L. 
+M. Bert, J. Dean, S. Ghemawat, M. R. Henzinger, S. Leung, R. L. Sites, M. T. Vandevoorde, C. A. Waldspurger, 
+and W. E. Weihl, Continuous Profiling: Where Have All the Cycles Gone? In Proceedings of the 16th ACM 
+Symposium of Operating Systems Principles (in this volume), October 1997. See also http:/lwww.research.digital.comlSRCJdcpi~ 
+B. Bershad, J. B. Chen, D. Lee, and T. Romer, Avoiding Conflict Misses Dynamically in Large Direct-Mapped 
+Caches. In Proceedings of the Sixth International Conference on Architectural Support for Programming 
+Languages and Operating Systems, ACM, pages 158170, October 1994. J. B. Chen and B. Bershad, The Impact 
+of Operating System Structure on Memory System Performance. In Proceedings of the 14th ACM Symposium 
+on Operating System Principles, ACM, pages 120-133, December 1993. A. Chemoff and R. Hookway, DIGITAL 
+FX!32-Running 32-Bit x86 Applications on Alpha NT. To appear in Proceedings of the USENIX Windows NT 
+Workshop, USENIX Association, Berkeley CA, August 1997. P. Christy, IA-64 and Merced-What and Why. In 
+Microprocessor Report, pages 17-19, 30 December 1996. R. Cohn and G. Lowney, Hot Cold Optimization of 
+Large Windows NT Applications. In Proceedings of the 29th Annual International Symposium on Microarchitecture, 
+IEEE, pages 80-89, December 1996. T. Conte, K. Menezes, and M. A. Hirsch, Accurate and Practical Profile-Driven 
+Compilation Using the Profile Buffer. In Proceedings of the 29th Annual International Symposium on Microarchitecture, 
+IEEE, pages 201-211, December 1996. Colusa Software, Omniware, A Universal Substrate for Mobile Code. 
+White paper from Colusa Software, http://www.colusa.coml K. Ebcioglu and E. Altman, DAISY: Dynamic Compilation 
+for 100% Architectural Compatibility. In Proceedings of the 24th Annual International Symposium on Computer 
+Architecture, ACM, pages 26-37, June 1997. [RVL97] [SE941 [Smi91] [Smi96] [SUIF94] [SW921 [TDF90] [Wa192] 
+N fJ71 [YJK97] T. Romer, G. Voelker, D. Lee, A. Wolman, W. Wong, B. Bershad, H. Levy, and J. B. Chen, 
+Etch, an Instrumentation and Optimization tool for Win32 Programs. To appear in Proceedings of the USENIX 
+Windows NT Workshop, USENIX Association, August 1997. StX also http:l/www.cs.washington.edu/homes/bershad/Etch/ 
+A. Srivastava and A. Eustace, ATOM: A System for Building Customized Program Analysis Tools. In Proceedings 
+of the ACM SIGPLAN 94 Conference Programming Language Design and Tttttrplementation,ACM, pages 196-205, 
+June 1994. See also Research Report 9412, Western Research Laboratory, Digital Equipment Corporation. 
+M. Smith, Tracing with Pixie. Technical Report CSLTR-91-497, Computer Systems Laboratory, Stanford University, 
+Stanford, CA, USA, November 1991. M. Smith, Extending SUIF for Machine-dependent Optimizations. In Proceedings 
+of the First SUIF Compiler Workshop, Stanford, CA, pages 14-25, January 1996. Stanford SUIF Compiler 
+Group, SUIF: A Parallelizing and Optimizing Research Compiler. Technical Report CSL-TR-94-620, Computer 
+Systems Laboratory, Stanford University, May 1994. A. Srivastava and D. Wall, A Practical System for 
+Intermodule Code Optimization at Link-Time. In Journal of Programming Languages, Volume 1, Number 1, 
+pages 1-18, March 1993. See also Research Report 92/6, Western Research Laboratory, Digital Equipment 
+Corporation. G. Taylor, P. Davies, and M. Farmwald, The TLB Slice -A Low-Cost High-Speed Address Translation 
+Mechanism. In Proceedings of the ITh Annual International Symposium on Computer Architecture, ACM, pages 
+355363,199O. D. Wall, Systems for Late Code Modification. In Code Generation --Concepts, Tools, Techniques, 
+Springer-Verlag, pages 275-293,1992. D. Wall and M. Powell, The Mahler Experience: Using an Intermediate 
+Language as the Machine Description. In Second International Symposium on Architectural Support for Programming 
+Languages and Operating Systems, ACM, April 1987. See also Research Report 87/l, Western Research Laboratory, 
+Digital Equipment Corporation. C. Young, D. Johnson, D. Karger, and M. Smith, Near-optimal Intraprocedural 
+Branch Alignment. To appear in Proceedings of the ACM SIGPLAN 97 Conference on Programming Language Design 
+and Implementation, ACM, pages 183-192, June 1997. 
+			

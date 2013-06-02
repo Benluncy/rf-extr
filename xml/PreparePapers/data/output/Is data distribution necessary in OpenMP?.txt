@@ -1,0 +1,580 @@
+
+ Is Data Distribution Necessary in OpenMP ? Dimitrios S. Nikolopoulos1, Theodore S. Papatheodorou1 3 
+Constantine D. Polychronopoulos2, Jes´us Labarta3and Eduard Ayguad´e 1Department of Computer Engineering 
+and Informatics University of Patras, Greece {dsn,tsp}@hpclab.ceid.upatras.gr 2Department of Electrical 
+and Computer Engineering University of Illinois at Urbana-Champaign cdp@csrd.uiuc.edu 3Department of 
+Computer Architecture Technical University of Catalonia, Spain {jesus,eduard}@ac.upc.es Abstract This 
+paper investigates the performance implications of data placement in OpenMP programs running on modern 
+ccNUMA multiprocessors. Data locality and minimization of the rate of remote memory accesses are critical 
+for sus­taining high performance on these systems. We show that due to the low remote-to-local memory 
+access latency ratio of state-of-the-art ccNUMA architectures, reasonably bal­anced page placement schemes, 
+such as round-robin or ran­dom distribution of pages incur modest performance losses. We also show that 
+performance leaks stemming from subop­timal page placement schemes can be remedied with a smart user-level 
+page migration engine. The main body of the pa­per describes how the OpenMP runtime environment can use 
+page migration for implementing implicit data distribu­tion and redistribution schemes without programmer 
+inter­vention. Our experimental results support the effectiveness of these mechanisms and provide a proof 
+of concept that there is no need to introduce data distribution directives in OpenMP and warrant the 
+portability of the programming model. 1. Introduction The OpenMP application programming interface [1] 
+provides a simple and .exible means for programming parallel applications on shared memory multiprocessors. 
+OpenMP has recently attracted major interest from both the industry and the academia, due to two strong 
+inherent ad­vantages, namely portability and simplicity. OpenMP is portable across a wide range of shared 
+mem­ory platforms, including small-scale SMP servers, scalable ccNUMA multiprocessors and recently, clusters 
+of worksta­tions and SMPs [1, 2]. The OpenMP API uses a directive­based programming paradigm. The programmer 
+annotates sequential code with directives that enclose blocks of code that can be executed in parallel. 
+The programmer does not need to worry about subtle details of the underlying archi­tecture and the operating 
+system, such as the implemen­tation of shared memory, the threads subsystem or the in­ternals of the 
+operating system scheduler. These details are entirely hidden from the programmer. OpenMP offers an intuitive, 
+incremental approach for developing parallel programs. Users can begin with an optimized sequential version 
+of their code and start adding manually or semi­automatically parallelization directives, up to a point 
+at which they get the desired performance bene.ts from paral­lelism. OpenMP follows the fork/join execution 
+model. An OpenMP PARALLEL directive triggers the creation of a group of threads destined to execute in 
+parallel the code enclosed between the PARALLEL and the corresponding END PARALLELclause. This computation 
+can be divided among the threads of the group via two worksharing con­structs, denoted by the DO and 
+SECTIONSdirectives. The DO-END DOdirectives encapsulate parallel loops, the iter­ations of which are 
+scheduled on different processors ac­cording to a scheduling scheme de.ned in the SCHEDULE clause. The 
+SECTIONS-END SECTIONS directives en­capsulate disjoint blocks of code delimited by SECTION directives, 
+which are assigned to individual threads for par­allel execution. The group of threads that participate 
+in the execution of a PARALLELregion is transparently scheduled on multiple physical processors by the 
+operating system. 1.1. OpenMP and data distribution OpenMP has recently become a subject of criticism 
+be­cause the simplicity of the programming model is often traded for performance. It is generally dif.cult 
+to scale an OpenMP program to tens or hundreds of processors. Some researchers have pin-pointed this 
+effect as a prob­lem of the overhead of managing parallelism in OpenMP, which includes thread creation 
+and synchronization. This overhead is an important performance limitation because it determines the critical 
+task size, that is, the .nest thread granularity that obtains speedup with parallel execution. Although 
+one could argue that the overhead of managing parallelism is a problem of the shared memory program­ming 
+paradigm in general, it has been shown that programs parallelized for shared memory architectures can 
+achieve satisfactory scaling up to a few hundreds of processors [3, 4]. This is possible with reasonable 
+scaling of the prob­lem size to increase the granularity of threads and reduce the frequency of synchronization. 
+Nevertheless, scaling the performance of shared memory programs on a large num­ber of processors requires 
+also some ad-hoc programmer interventions, the most important of which is proper distri­bution of data 
+among processing nodes. Data distribution is required to maximize the locality of references to main 
+memory. This optimization is of vital importance on mod­ern ccNUMA architectures, in which remote memory 
+ac­cesses can increase memory latency by factors of three to .ve. Effective data distribution is what 
+we consider to be the main performance optimization for OpenMP programs on contemporary ccNUMA multiprocessors. 
+Brie.y speaking, each page in the memory address space of a program should be placed on the same node 
+with the threads that tend to ac­cess the page more frequently upon cache misses. Unfor­tunately, the 
+OpenMP API provides no means to the pro­grammer for controlling the distribution of data among pro­cessing 
+nodes. It is interesting to note that some vendors of commercial ccNUMA systems have realized the importance 
+of data distribution and implemented HPF-like, platform­speci.c data distribution mechanisms in their 
+FORTRAN and C compilers [5]. Since OpenMP has become the de facto standard for parallel programming on 
+shared mem­ory multiprocessors, some vendors are seriously consider­ing the incorporation of data distribution 
+facilities in the OpenMP API [6, 7]. The introduction of data distribution directives in OpenMP contradicts 
+some fundamental design goals of the OpenMP programming interface. Data distribution is in­herently platform-dependent 
+and thus hard to standardize and incorporate seamlessly in shared memory programming models like OpenMP. 
+It is more likely that each vendor will propose and implement its own set of data distribution di­rectives, 
+customized to speci.c features of the in-house ar­chitecture, such as the topology, the number of processors 
+per node, the available intra and internode bandwidth, intri­cacies of the system software and so on. 
+Furthermore, data distribution directives will be essentially dead code for non-NUMA architectures such 
+as desktop SMPs, a fact which raises an issue of code portability. Finally, data distribution has always 
+been a burden for programmers. A programmer would not opt for a parallel programming model based on shared 
+memory, if its programming requirements are similar to those of a programming model based on message 
+pass­ing.  1.2. Contributions of the paper This .rst question that this paper comes to answer is up 
+to what extent can data distribution affect the perfor­mance of OpenMP programs. To answer this question, 
+we conduct a thorough investigation of alternative data place­ment schemes in the OpenMP implementations 
+of the NAS benchmarks on the SGI Origin2000 [8]. These implementa­tions are tuned speci.cally for the 
+Origin2000 memory hier­archy and obtain maximum performance with the .rst-touch page placement strategy 
+of the Origin2000. Assuming that .rst-touch is the optimal,, data distribution scheme for the OpenMP 
+implementations of the NAS benchmarks, we as­sess the performance impact of three alternative data dis­tribution 
+schemes, namely round-robin, random and worst­case page placement, which coincides with the page place­ment 
+performed by a buddy system. Our .ndings suggest that data distribution can indeed have a signi.cant 
+impact on the performance of OpenMP programs, although this impact is not as pronounced as expected for 
+reasonably balanced distributions of pages among processors, like round-robin and random distribu­tion. 
+This result stems primarily from technological fac­tors, since state-of-the-art ccNUMA systems such as 
+the SGI Origin2000 have very low remote-to-local memory ac­cess latency ratios [9]. Since data distribution 
+can have a signi.cant impact on performance, the next question that rises naturally is how can data distribution 
+be incorporated in OpenMP without modifying the application programming interface. The sec­ond contribution 
+of this paper is a user-level framework for transparently injecting data distribution capabilities in 
+OpenMP programs. The framework is based on dynamic page migration, a technique which has its roots in 
+the ear­lier dance-hall shared memory architectures without hard­ware cache-coherence [10, 11, 12]. The 
+idea is to track the reference rates from each node to each page in memory and move each page to the 
+node that references the page more frequently. Read-only pages can be replicated in multiple nodes. Page 
+migration and replication are the direct ana­logue to multiprocessor cache coherence with the virtual 
+memory page serving as the coherence unit. Page migration was proposed merely as a kernel-level mechanism 
+for improving the data locality of applications with dynamic memory reference patterns, initially on 
+non cache coherent and later on cache coherent NUMA multi­processors [12, 13]. In this work, we apply 
+dynamic page migration in an entirely new context, namely data distribu­tion. In this context, page migration 
+is no longer considered as an optimization. It is rather used as the mechanism for approximating implicitly 
+the functionality of a simple data distribution system. The key for leveraging dynamic page migration 
+as a data distribution vehicle is the exploitation of the iterative structure of most parallel codes, 
+in conjunction with infor­mation provided by the compiler. We show that at least in the case of popular 
+codes like the NAS benchmarks, a smart page migration engine can be as effective as a sys­tem that performs 
+accurate initial data distribution, with­out losses in performance. Data redistribution across phases 
+with uniform communication patterns can also be approxi­mated transparently to the programmer by the 
+page migra­tion engine. The runtime overhead of page migration needs to be carefully amortized in this 
+case, since it may easily outweigh the earnings from reducing the number of remote memory accesses. This 
+problem would occur in any data distribution system, therefore we do not consider it as a ma­jor limitation. 
+To the best of our knowledge, the techniques presented in this paper for approximating data distribution 
+and redis­tribution via dynamic page migration are novel. A second novelty is the implementation of these 
+techniques entirely at user-level, with the use of only a few operating system services. The user-level 
+implementation not only enables the exploration of parameters for the page migration poli­cies, but also 
+makes our infrastructure directly available to the user community. The remainder of this paper is organized 
+as follows: we present results that exemplify the degree of sensitivity of OpenMP programs to alternative 
+page placement schemes in Section 2. We then describe brie.y our user-level page migration engine in 
+Section 3. Section 4 contains detailed experimental results. We overview related work in Section 5 and 
+conclude in Section 6.  2. Sensitivity of OpenMP to page placement Modern ccNUMA multiprocessors are 
+characterized by their deep memory hierarchies. These hierarchies include typically four levels, namely 
+the L1 cache, the L2 cache, Table 1. Access latency to the different levels of the Origin2000 memory 
+hierarchy. Level Distance in hops Contented latency (ns.) L1 cache 0 5.5 L2 cache 0 56.9 local memory 
+0 329 remote memory 1 564 remote memory 2 759 remote memory 3 862 the local node memory and the remote 
+node memory. The memory hierarchy is logically expanded further if the re­mote node memory is classi.ed 
+according to the distance in hops between the accessing processor and the accessed node. Table 1 shows 
+the base contented memory access latency by one processor to the different levels of the Origin2000 memory 
+hierarchy on a 16-node system [14]. The nodes of the Origin2000 are organized in a fat hypercube topology 
+with two nodes on each edge. The difference in the access latency between the L1 and the L2 caches is 
+one order of magnitude. The difference between the access latency of the L2 cache and local memory accounts 
+for another order of magnitude. For each additional hop that the memory ac­cesses traverses, the memory 
+latency is increased by 100 to 200 ns. The ratio of remote to local memory access latency ranges between 
+2:1 and 3:1. The non-uniformity of memory access latency demands locality optimizations along the complete 
+memory hierar­chy of ccNUMA systems. These optimizations should take into account not only cache locality, 
+but also locality of references to main memory. The latter can be achieved if the virtual memory pages 
+used by a parallel program are mapped to physical memory frames so that each thread is more likely to 
+access local rather than remote memory upon a miss in the L2 cache. Page placement in ccNUMA systems 
+is considered as a task of the operating system and previous research came up with simple solutions for 
+achieving satisfactory data local­ity at the page level with page placement schemes imple­mented entirely 
+in the operating system [15, 16]. However, the memory access traces of parallel programs do not and can 
+not always conform to the memory management strat­egy of the operating system. The problem is pronounced 
+in OpenMP because the programming model is oblivious to the distribution of data in the system. This 
+section investi­gates the performance impact of theoretically inopportune page placement schemes on the 
+performance of the NAS benchmarks. 2.1. Experimental setup We used the OpenMP implementations of .ve 
+bench­marks, namely BT, SP, CG, MG and FT, from the NAS benchmarks suite [8]. BT and SP are simulated 
+CFD ap­plications. Their main computational part solves Navier-Stokes equations and the programs differ 
+in the factoriza­tion method used in the solvers. CG, MG and FT are com­putational kernels from real 
+applications. CG approximates the smallest eigenvalue of a large sparse matrix using the conjugate-gradient 
+method. MG computes the solution of a 3-D Poisson equation, using a V-cycle multigrid method. FT computes 
+a 3-D Fast Fourier Transform. All codes are it­erative and repeat the same parallel computation for a 
+num­ber of iterations corresponding to time steps. The imple­mentations are well-tuned by the providers 
+to exploit the characteristics of the memory system of the SGI Origin2000 and exhibit very good scalability 
+up to 32 processors [8]. The OpenMP implementations of the NAS benchmarks are optimized to achieve good 
+data locality with a .rst­touch page placement strategy [16]. This strategy places each virtual memory 
+page in the same node with the pro­cessor that reads or writes it .rst during the execution of the program. 
+First-touch is the default page placement scheme used by cellular IRIX, the Origin2000 operating system. 
+The NAS benchmarks are customized to .rst-touch, by exe­cuting a cold-start iteration of the complete 
+parallel compu­tation before the main time-stepping loop. The calculations of the cold-start iteration 
+are discarded, but the executed parallel constructs enable the distribution of pages between nodes with 
+the .rst-touch strategy. We conducted the following experiment to assess the im­pact of different page 
+placement schemes. Assuming that .rst-touch is the best page placement strategy for the bench­marks, 
+we ran the codes using three alternative page place­ment schemes, namely round-robin, random and worst-case 
+page placement. Round-robin page placement can be activated by setting the DSM PLACEMENT variable of 
+the IRIX runtime envi­ronment. To emulate random page placement, we utilized the user-level page placement 
+and migration capabilities of IRIX [17]. IRIX enables the user to virtualize the physi­cal memory of 
+the system and use a namespace for placing virtual memory pages to speci.c nodes in the system. The namespace 
+is composed of entities called Memory Local­ity Domains (MLDs). A MLD is the abstract representa­tion 
+of the physical memory of a node in the system. The user can associate one MLD with each node and then 
+place or migrate pages between MLDs to implement application­speci.c memory management schemes. Random 
+page placement is emulated as follows. Before executing the cold-start iteration, we invalidate the pages 
+of all the shared arrays by calling mprotect()1 with the PROT NONEparameter. We install a SIGSEGVsignal 
+han­dler to override the default handling of memory access vi­olations in the system. Upon receiving 
+a segmentation vio­lation fault for a page, the handler maps the page to a ran­domly selected node in 
+the system, using the corresponding MLD as a handle. For benchmarks with resident set size in the order 
+of a few thousand pages2, a simple random gener­ator is suf.cient to produce a fairly balanced distribution 
+of pages.  The worst-case page placement is emulated by enabling .rst-touch page placement and forcing 
+the cold-start iter­ation of the parallel computation to run on one processor. With this modi.cation, 
+all virtual pages of the arrays which are accessed during the parallel computation are placed on a single 
+node. This placement maximizes the number of re­mote memory accesses. Assuming a uniform distribution 
+of secondary cache misses among processors and a system with nnodes, a fraction of secondary cache misses 
+equal to n..is satis.ed from remote memory modules. For a n system with 8 nodes this amounts to 87.5% 
+of the mem­ory accesses and for a system with 16 nodes to 93.75% of the memory accesses. A second important, 
+albeit implicit, effect of placing all the pages on one node is the maximiza­tion of contention. All 
+processors except the ones on the node that hosts the data are contending to access the mem­ory modules 
+of one node throughout the execution of the program. Note that the worst-case page placement scheme de­scribed 
+previously is not totally unrealistic. On the con­trary, it corresponds to the allocation performed by 
+a buddy system which would allocate the pages with a best-.t strat­egy on a node with suf.cient free 
+memory resources. Many existing compilers make use of this memory allocation scheme. The IRIX kernel 
+includes a competitive page migration engine which can be activated on a per-program basis [9] by setting 
+the DSM MIGRATION environment variable. We use this option in the experiments and compare the results 
+obtained with and without the page migration engine. This is done primarily to investigate if the IRIX 
+page migra­tion engine is capable of improving the performance of page placement schemes inferior to 
+.rst-touch. The im­plementation of page migration in IRIX follows closely the scheme presented in [13] 
+for the Stanford FLASH multi­processor. Each physical memory frame is equipped with a set of 11-bit hardware 
+counters. Each set of counters con­tains one counter per node in the system and some addi­tional logic 
+to compare counters. The counters track the number of accesses from each node to each page frame in 1mprotect 
+is the UNIX system call for controlling access rights to memory pages. 2We used the Class A problem sizes 
+in the experiments.   memory. The additional circuitry detects when the number of accesses from a remote 
+node exceeds the number of ac­cesses from the node that hosts the page by more than a pre­de.ned threshold 
+and delivers an interrupt in that case. The interrupt handler runs a page migration policy, which eval­uates 
+if migrating the page that caused the interrupt satis.es a set of resource management constraints. If 
+the constraints are satis.ed the page is migrated to the more frequently ac­cessing node and the TLB 
+entries with the mappings of the page are invalidated with interprocessor interrupts. After moving the 
+page, the operating system updates its mappings of the page internally. The valid TLB entries for the 
+page are reloaded upon TLB misses by processors that reference the page after its migration.  2.2. Results 
+Figure 1 shows the results from executing the OpenMP implementations of the NAS benchmarks on 16 idle 
+pro­cessors of an SGI Origin2000. The system on which we experimented had MIPS R10000 processors with 
+a clock frequency of 250 Mhz, 32 Kbytes of split L1 cache per pro­cessor, 4 Mbytes of uni.ed L2 cache 
+per processor and 8 Gbytes of memory, uniformly distributed between the nodes of the system. Each bar 
+in the charts is an average of three independent experiments with insigni.cant variation. All execution 
+times are in seconds. The black bars illus­trate the execution time with the different page placement 
+schemes, labeled ft-, rr-, rand-and wc-, for .rst­touch, round-robin, random, and worst-case page placement 
+respectively. The gray bars illustrate the execution time with the same page placement schemes and the 
+IRIX page migration engine enabled during the execution of the bench­marks (labeled ft-IRIXmig, rr-IRIXmig, 
+rand-IRIXmig and wc-IRIXmig respectively). The straight line in each chart shows the baseline performance 
+with the native .rst-touch page placement scheme of IRIX. The primary observation from the results is 
+that using a page placement scheme other than .rst-touch does have an impact on performance, although 
+the magnitude of this im­pact is non-uniform across different benchmarks and page placement schemes. 
+In general, worst-case page placement incurs a signi.cant slowdown (50% 248%) for all bench­marks except 
+BT, in which the slowdown is modest (24%). The average slowdown with worst-case page placement is 90%. 
+On the other hand, round-robin and random page placement have generally a modest impact. Round-robin 
+incurs little slowdown in SP and CG (8% and 11% respec­tively), and modest slowdown in the rest of the 
+benchmarks (22% 35%). Random page placement incurs almost no slowdown for BT and SP (2% and 12% respectively), 
+mod­est slowdown for CG and MG (26% and 27%) and signi.­cant slowdown only for FT (45%). In general, 
+balanced page placement schemes such as round-robin and random appear to affect modestly the performance 
+of the benchmarks, compared to the best static page placement scheme. This is attributed to the low ratio 
+of remote to local memory access latency on the SGI Origin2000, which is no more than 2:1 on the 16-processor 
+scale. This important architectural property of the Origin2000 shows up in the experiments. A second 
+reason is that any balanced page placement scheme, such as round-robin and random can be effective in 
+distributing evenly the message traf.c incurred from remote memory accesses in the interconnection network. 
+The results show that the IRIX page migration engine has in general negligible impact on performance 
+with .rst­touch page placement. Activating dynamic page migration in the IRIX kernel provides only marginal 
+gains of 3% for CG and less than 2% for BT, SP and MG. Page migration is harmful for FT because it introduces 
+false-sharing at the page level. With the other three page placement schemes, dynamic page migration 
+generally improves performance, with only a few exceptions (BT with random page place­ment and CG with 
+round-robin page placement). In three cases, BT with round-robin and SP with round-robin and random placement, 
+the IRIX page migration engine is able to approximate the performance of .rst-touch. Notice how­ever 
+that these are the cases in which the static page place­ment schemes perform competitively to .rst-touch 
+and the performance losses are less than 12%. Dynamic page mi­gration from the IRIX kernel is unable 
+to close the perfor­mance gap between .rst-touch and the other page place­ment schemes in the cases in 
+which the difference is signi.­cant. Round-robin, random and worst-case page placement schemes still 
+incur a sizeable average slowdown (16%, 17% and 61% respectively). Only in one case, MG with worst­case 
+page placement, the IRIX page migration engine is able to improve performance drastically, without approach­ing 
+however the performance of .rst-touch. To summarize, the page placement scheme can be harm­ful for programs 
+parallelized with OpenMP. However, any reasonably balanced page placement scheme makes the performance 
+impact of mediocre page-level locality mod­est. In our experiments, this is possible due to the aggres­sive 
+hardware and software optimizations of the SGI Ori­gin2000, which reduce the remote to local memory access 
+latency ratio to 2:1. It is also enabled by the reduction of contention achieved by balanced page placement 
+schemes. The impact of page placement would be more signi.cant on ccNUMA architectures with higher remote 
+memory ac­cess latencies. It would be also more signi.cant on truly large-scale Origin2000 systems (e.g. 
+with 128 processors or more), in which some remote memory accesses would have to cross up to 5 interconnection 
+network hops and then a meta-router to reach the destination node. Unfortunately, NAS FT, Class A, 16 
+processors Figure 1. Impact of page placement on the performance of the OpenMP implementations of the 
+NAS benchmarks. execution time execution time 3 2 50 0 ft-IRIXmig 5 15 4 NAS BT, Class A, 16 processors 
+NAS SP, Class A, 16 processors ft-IRIXmigrr-IRIXrr-IRIXmig  10 8 6 4 2 0 rand-IRIXft-IRIXrand-IRIXmigft-IRIXmigwc-IRIXrr-IRIXft-IRIX 
+ ft-IRIX 1  wc-IRIXmig wc-IRIXmig rr-IRIXmig execution time execution time 0 NAS CG, Class A, 16 processors 
+NAS MG, Class A, 16 processors wc-IRIX 5 100 50 10 rand-IRIX ft-IRIX ft-IRIX ft-IRIXmigft-IRIXmigrr-IRIXrr-IRIXrr-IRIXmigrr-IRIXmigrand-IRIXrand-IRIXmigrand-IRIXmigwc-IRIXwc-IRIX 
+ wc-IRIXmig wc-IRIXmig access to a system of that scale was impossible for our ex­periments.  3. Using 
+dynamic page migration in place of data distribution The position of this paper is that dynamic page 
+mi­gration can transparently alleviate the problems introduced from poor page placement in OpenMP. In 
+particular, we investigate the possibility of using dynamic page migra­tion as a substitute for data 
+distribution and redistribution in OpenMP programs. Intuitively, this approach has the advantages of 
+transparency and seamless integration with OpenMP, because dynamic page migration is a runtime technique 
+and the associated mechanisms reside in the sys­tem software. The questions that remain to be answered 
+is how can page migration emulate or approximate the func­tionality of data distribution and if this 
+is feasible, what is the level of performance achieved by a data distribution mechanism based on dynamic 
+page migration. 3.1. User-level dynamic page migration To investigate the issues stated before, we have 
+devel­oped a runtime system called UPMlib (user-level page mi­gration library), which injects a dynamic 
+page migration engine to OpenMP programs, through instrumentation per­formed by the compiler. A pure 
+user-level implementation was possible, because the operating system services needed to implement a page 
+migration policy in IRIX are available at user-level. The hardware counters attached to the physical 
+memory frames of the Origin2000 can be accessed via the /proc interface. At the same time, MLDs enable 
+the migration of ranges of the virtual address space between nodes in the system. These two services 
+allow for a straightforward im­plementation of a runtime system which can act in place of the operating 
+system memory manager in a local scope. The only subtle detail is that the page migration service of­fered 
+at user-level is subject to the resource management constraints of the operating system. Brie.y speaking, 
+a user-requested page migration may be rejected by the op­erating system due to shortage of available 
+memory in the target node. IRIX uses a best-effort strategy in this case and forwards the page to another 
+node as physically close as possible to the target node. This restriction is necessary to ensure the 
+stability of the system in the presence of mul­tiple users competing for shared resources. Implementation 
+details of our runtime system are given elsewhere [18]. Our earlier work on page migration identi.ed 
+the inef­fectiveness of previously proposed kernel-level page mi­pages early enough to reduce the rate 
+of remote memory accesses while amortizing effectively the high cost of co­herent page movements. Furthermore, 
+the page migration decisions should be based on accurate page reference in­formation and not biased by 
+transient effects in the parallel computation. If page migration is to be used as a means for data distribution, 
+timeliness and accuracy are paramount. In the same work [19], we have shown that an effective technique 
+for accurate and effective dynamic page migra­tion stems from exploiting the iterative structure of most 
+parallel codes. If the code repeats the same parallel compu­tation for a number of iterations, the page 
+migration engine can record the exact reference trace of the program as re­.ected in the hardware counters 
+after the end of the .rst iteration and subsequently use this trace to make nearly op­timal decisions 
+for migrating pages. This strategy works ex­tremely well in codes with fairly coarse-grain computations 
+and access patterns. The infrastructure requires limited sup­port by the compiler for identifying areas 
+of the virtual ad­dress space which are likely to concentrate remote memory accesses and instrumenting 
+the program to invoke the page migration engine. The compiler identi.es as hot memory areas the shared 
+arrays which are both read and written in disjoint sets of OpenMP PARALLEL DO and PARALLEL SECTIONconstructs. 
+ 3.2. Emulating data distribution In this paper we show how the technique of recording reference traces 
+at well-de.ned execution points can be ap­plied in a page migration engine to approximate accurately 
+and effectively the functionality of manual data distribution and redistribution in iterative parallel 
+codes. The mechanism for emulating data distribution is straightforward to implement. Assume any initial 
+place­ment of pages. The runtime system records the memory reference trace of the parallel program after 
+the execution of the .rst iteration. This trace indicates accurately which pro­cessor accesses each page 
+more frequently, while the struc­ture of the program ensures that the same reference trace will be repeated 
+throughout the execution of the program, unless the operating system intervenes and preempts or mi­grates 
+threads3. The trace of the .rst iteration can be used to migrate each page to the node that will minimize 
+the max­imum latency due to remote memory accesses to this page, by applying a competitive page migration 
+criterion after the execution of the .rst iteration. Page migration is used in place of static data distribution 
+with a hysteresis of one it­eration. The necessary migrations of pages are performed early and their 
+cost is amortized well over the entire execu­tion time. The fundamental difference with an explicit data 
+gration engines as a problem of poor timeliness and ac­ 3This case is not considered in this paper, 
+but the reader can refer to a curacy [19]. A page migration mechanism should migrate related paper [20] 
+for details. ... call upmlib_init() call upmlib_memrefcnt(u, size) call upmlib_memrefcnt(rhs,size) 
+ call upmlib_memrefcnt(forcing,size) ... do step=1,niter call compute_rhs call x_solve call y_solve 
+ call z_solve call add if ((step .eq. 1) .or. (num_migrations .gt. 0)) then call upmlib_migrate_memory() 
+ endif enddo Figure 2. Using page migration for data dis­ tribution in NAS BT. distribution mechanism 
+is that data placement is performed with implicit information encapsulated in the runtime sys­tem, rather 
+than with explicit information provided by the user. In the actual implementation, the page migration 
+mech­anism is invoked not only in the .rst, but also in subse­quent iterations of the parallel program, 
+as soon as it de­tects at least one page to migrate. The mechanism is self­deactivated the .rst time 
+it detects that no further page mi­grations are required. In practice, this happens usually in the second 
+iteration, however there are some cases in which page-level false sharing might incur some excessive 
+page migrations. This is circumvented by freezing the pages that bounce between two nodes in consecutive 
+iterations. Figure 2 provides an example of using the previ­ously described mechanism in NAS BT. Calls 
+to the page migration runtime system are pre.xed by upmlib . The OpenMP compiler identi.es three arrays 
+(u,rhs and forcing) as hot memory areas and activates page reference monitoring for these areas by invoking 
+the upmlib memrefcnt(addr,size) function. After the execution of the .rst iteration, the program calls 
+upmlib migrate memory(), which scans the refer­ence counters of the pages that belong to hot memory ar­eas, 
+applies a competitive page migration for each page and migrates those pages that concentrate enough remote 
+mem­ory accesses to satisfy the migration criterion. The vari­able num migrationsstores the number of 
+page migra­tions executed by the mechanism in the last invocation of upmlib migrate memory()and deactivates 
+the mech­anism when set to 0.     3.3. Emulating data redistribution Emulating data redistribution 
+with dynamic page migra­tion is a more elaborate procedure. In general, data redistri­bution is needed 
+when a phase change in the memory ref­erence pattern distorts the data locality established by the initial 
+page placement scheme. Data redistribution needs some additional compiler support to identify phases.A 
+simple de.nition of a phase, which conforms also to the OpenMP programming paradigm, is a sequence of 
+basic blocks of parallel code with a uniform communication pat­tern between processors. Not all communication 
+patterns are recognizable by a compiler. However, simple cases like one-to-one, nearest neighbor, broadcast 
+and all-to-all can be relatively easily identi.ed. We use a technique known as record-replay in order 
+to use our page migration engine as a substitute for data redis­tribution. The compiler instruments the 
+program to record the page reference counters at the points of execution at which phase transitions occur. 
+The recording is performed during the .rst iteration of the parallel program. After the recording procedure 
+is completed, each phase is associated with two sets of hardware counters, one recorded before the beginning 
+of the phase and one before the transition to the next phase. For each page in the hot memory areas, 
+the runtime sys­tem obtains the reference trace during the phase in isolation, by comparing the values 
+of the counters attached to the page in the two recorded sets of the phase. The runtime system applies 
+the competitive page migration criterion using the isolated reference trace of the phase and decides 
+what pages should be moved before the transition to the phase, to im­prove data locality during the phase. 
+The page migrations identi.ed with this procedure are replayed in subsequent it­erations. Each page migration 
+is replayed before the phase during which the page satis.ed the competitive criterion in the .rst iteration. 
+The recording procedure is not used for the transition from the last phase of the .rst iteration to the 
+.rst phase of the second iteration. In this case, the run­time system simply undoes all page migrations 
+performed between phases and recovers the initial page placement. More formally, assume that a program 
+has nhot pages, denoted as Pi,i=1n. Assume also that one iter­ation of the program has kdistinct phases. 
+There are k-1phase transition points, j=1k-1. The runtime system is invoked in each transition point 
+and records for each page a vector of page reference counters Vi,j,vi,j,i=1n,j=1k-1. After the execution 
+of the .rst iteration, the runtime system computes the differ­ence Ui,j=Vi,j-Vi,j.. vi,j,i=1n,j=k-1. 
+The runtime system applies the competitive criterion using the values of the counters stored in Ui,j. 
+If the counters in Ui,jsatisfy the competitive criterion, page Piis migrated ... in every subsequent 
+iteration at the phase transition point j-1. For each page Pithat migrates at some transition point for 
+the .rst time during an iteration, the home node of the page before the migration is recorded, in order 
+to mi­grate the page back to it before the beginning of the next iteration. The record-replay mechanism 
+is accurate in the sense that page migration decisions are based on complete in­formation on the reference 
+trace of the program. How­ever, the mechanism is also sensitive to the overhead of page migration. In 
+the record-replay mechanism, page mi­grations must be performed on the critical path of the ex­ecution. 
+Let Tnom,jbe the execution time of a phase j without page migration before the transition to the phase 
+and Tm,jbe the execution of the same phase with the record-replay mechanism enabled. Let Om,jbe the over­head 
+of the page migrations performed before the transi­tion to phase jby the record-replay mechanism. It 
+is ex­pected that Tm,j<Tdue to the reduction of remote nom,j memory accesses achieved by the page migration 
+engine. The record-replay mechanism should satisfy the condition .... j.. (Tm,j+Om,j)<j.. Tnom,j. In 
+practice, this means that each phase should be computationally coarse enough to balance the cost of migrating 
+pages with the earn­ings from reducing memory latency. To limit the cost of page migrations in the record-replay 
+mechanism, we use an environment variable which instructs the mechanism to move only the nmost critical 
+pages, in each iteration, where nis a tunable parameter. The n most critical pages are determined as 
+follows: the pages are ... sorted in descending order according to the ratioa, fa whereis the number 
+of accesses from the node that hosts the page and ris the maximum number of re­ max mote accesses from 
+any of the other nodes. The pages that ... satisfy the inequalitya>thr, where thris a pre­ fa de.ned 
+threshold, are considered as eligible for migration. Let mbe the number of these pages. If m>n, the npages 
+... with the highest ratiosaare migrated. Otherwise, the fa mcandidate pages are migrated. Figure 3 provides 
+an example of using the record-replay mechanism in conjunction with the mechanism described in Section 
+3.2 in NAS BT. BT has a phase change in the z solve function, due to the initial alignment of ar­rays 
+in memory, which is performed to improve locality along the x and y directions. After the .rst iteration, 
+upmlib migrate memory() is called to approximate the best initial data distribution scheme. In the second 
+iteration, the program invokes upmlib record() be­fore and after the execution of z solve. The function 
+upmlib compare counters() is used to identify the reference trace of the phase and the pages that should 
+mi­grate before the transition to the phase. These migrations are replayed by calling upmlib replay() 
+before each call upmlib_init() call upmlib_memrefcnt(u, size) call upmlib_memrefcnt(rhs,size) call 
+upmlib_memrefcnt(forcing,size) ... do step=1,niter call compute_rhs call x_solve call y_solve if 
+(step .eq. 2) then call upmlib_record() else if (step .gt. 2) then call upmlib_replay() endif call 
+z_solve if (step .eq. 1) then call upmlib_migrate_memory() else if (step .eq. 2) then call upmlib_record() 
+ call upmlib_compare_counters() else call upmlib_undo() endif enddo Figure 3. Using the record-replay 
+mechanism for data redistribution in NAS BT. subsequent execution of z solve. The function upm­lib undo()performs 
+all the replayed page migrations in the opposite direction.  4. Experimental results We repeated the 
+experiments presented in Section 2, af­ter instrumenting the NAS benchmarks to use the page mi­gration 
+mechanisms of our runtime system. In the .rst set of experiments presented in this section, we evaluate 
+the ability of our page migration engine to re­locate pages early in the execution of the program, in 
+or­der to approximate the best possible initial data distribu­tion scheme. Figure 4 repeats the results 
+from Figure 1 and in addition, illustrates the performance of the iterative page migration mechanism 
+of our runtime system, with the four different page placement schemes (labeled ft-upmlib, rr-upmlib, 
+rand-upmliband wc-upmlib). A .rst observation is that with .rst-touch page place­ment, in all cases expect 
+CG, user-level page migration provides sizeable reductions of execution time (6% 22%), compared to the 
+native codes with or without page migra­tion from the IRIX kernel. For the purposes of this pa­per, we 
+consider this result as a second-order effect, at­tributed to the suboptimal placement of several pages 
+in  NAS FT, Class A, 16 processors Figure 4. Performance of our page migration runtime system with 
+different page placement schemes. execution time execution time 1 3 2 ft-upmlib rr-upmlib 6 4 2 0 rand-IRIXft-IRIX 
+5 15 4 0 50 ft-IRIX ft-IRIX ft-IRIXmig  150 100 rr-IRIXmig  wc-upmlib wc-upmlib execution time execution 
+time rr-upmlib NAS CG, Class A, 16 processors NAS MG, Class A, 16 processors 10 8 NAS BT, Class A, 16 
+processors NAS SP, Class A, 16 processors ft-IRIXmig ft-upmlib rr-IRIXrand-IRIXmigrand-upmlibwc-IRIXwc-IRIXrr-IRIX 
+wc-IRIXmig wc-IRIXmig 0 5 ft-IRIX 100 50 10 ft-IRIX rand-IRIXmigft-IRIXmigft-IRIXmigft-upmlibft-upmlibrr-IRIXrr-IRIXrr-IRIXmigrr-IRIXmigrr-upmlibrr-upmlibrand-IRIXrand-IRIXmigrand-upmlibrand-upmlibwc-IRIX 
+ wc-IRIXmig wc-IRIXmig wc-upmlib wc-upmlib wc-IRIX each benchmark by the .rst-touch strategy. We note 
+how­ever that this is probably the .rst experiment on a real sys­tem which shows some meaningful performance 
+improve­ ments achieved by dynamic page migration over the best static page placement scheme. The outcome 
+of interest from the results in Figure 4 is that with non-optimal page placement schemes, the slowdown 
+compared to .rst-touch is almost imperceptible. When the page migration engine of our runtime system 
+is enabled, the slowdown compared to .rst-touch is on aver­age 5% for round-robin, 6% for random and 
+14% for worst­case page placement. In the experiments presented in Sec­tion 2 the average slowdowns incurred 
+from round-robin, ft-IRIX ft-IRIXmig ft-upmlib ft-recrep random and worst-case page placement without 
+page mi­gration were 22%, 23% and 90% respectively. The slow­downs of the same page placement schemes 
+with page mi­gration enabled in the IRIX kernel were 16%, 17% and 61% respectively. Table 2 provides 
+some additional statistics which were collected by manually inserting event counters in the run­time 
+system. The second, third and fourth columns of the table report the slowdown of the benchmarks in the 
+last 75% of the iterations of the main parallel computation for round-robin, random and worst-case page 
+placement re­spectively4. This slowdown was always measured less than 2.7%, while in most cases it was 
+less than 1%. The results indicate that the page migration engine achieves robust and stable memory performance 
+as the iterative computations evolve. The .fth, sixth and seventh column of Table 2 show the fraction 
+of page migrations performed by our page migra­tion engine after the .rst iteration of the parallel computa­tion. 
+In three out of .ve cases, CG, FT and MG, all page migrations were performed after the .rst iteration 
+of the program. In the case of BT and SP some page-level false sharing forced page migrations after the 
+second and third iterations. However, 78% or more of the migrations were performed after the .rst iteration. 
+This result veri.es that the page migration activity and the associated overhead are concentrated at 
+the beginning of the execution of the pro­grams and are amortized well over the execution lifetime. The 
+overall results show that due to the effectiveness of the iterative page migration mechanism described 
+in Sec­tion 3.2, the performance of the OpenMP implementations of the NAS benchmarks is not sensitive 
+to the initial page placement scheme. Equivalently, the iterative page migra­tion mechanism can approximate 
+closely the performance achieved by the best static page placement scheme and therefore be effectively 
+used as a substitute for data distri­bution. 4The fraction 75% was somewhat arbitrarily selected, because 
+MG has only 4 iterations. The number of iterations for BT,CG,FT and SP are 200,400,6 and 15 respectively. 
+ NAS BT, Class A, 16 processors Figure 6. Performance of the record-replay mechanism in the synthetic 
+experiment with NAS BT. We conducted a third set of experiments, in which we evaluated the record-replay 
+mechanism. In these experi­ments, we instrumented BT and SP to use record-replay in order to deal with 
+the phase change the z solvefunction, as shown in Figure 3. Figure 5 illustrates the performance of the 
+record-replay mechanism with .rst-touch page placement and the page migration mechanism for data distribution 
+enabled only in the .rst iteration. This scheme is labeled ft-recrep in the charts. The striped part 
+of the ft-recrep bar shows the non-overlapped overhead of the page migrations per­formed by the record-replay 
+mechanism. In these exper­iments we set the number of critical pages to 20, in or­der to limit the cost 
+of replaying page migrations at phase transition points. For the sake of comparison, the .gure shows 
+also the execution time of BT and SP with .rst-touch with/without the IRIX page migration engine, as 
+well as the execution time with our page migration engine enabled only for data distribution. The results 
+show that the record-replay mechanism achieves some speedup in the execution of useful computa­tion, 
+marginal in the case of SP, up to 10% in the case of BT. Unfortunately, the overhead of page migrations 
+performed by the record-replay mechanism seems to outweigh this speedup. When looking at these experiments, 
+one should bear in mind that the speci.c architectural characteristics of the Origin2000 bias signi.cantly 
+the results. More speci.­cally, the low remote-to-local memory access latency ratio of the system and 
+the high overhead of page migration due to the maintenance of TLB coherence, limit the gains from reducing 
+the rate of remote memory accesses. In order to overcome the aforementioned implications, we attempted 
+to synthetically scale the experiment and in­ Table 2. Statistics from the execution of the NAS benchmarks 
+with different page placement schemes and our page migration engine. Benchmark Slowdown in the last 75% 
+of the iterations % of Migrations in the .rst iteration round-robin random worst-case round-robin random 
+worst case BT 0.3% 0.2% 0.9% 87% 82% 93% CG 1.1% 1.0% 2.7% 100% 100% 100% FT 0.5% 0.4% 0.8% 100% 100% 
+100% MG 0.5% 0.6% 0.5% 100% 100% 100% SP 0.8% 0.9% 1.4% 78% 81% 88%  ft-IRIX ft-IRIXmig ft-upmlib ft-recrep 
+ NAS BT, Class A, 16 processors NAS SP, Class A, 16 processors Figure 5. Performance of the record-replay 
+mechanism in NAS BT and SP . crease the amount of computation performed during each phase in the benchmarks. 
+The purpose was to enable the record-replay mechanism to amortize the cost of page mi­grations over a 
+longer period of time. We did this mod­i.cation without changing the memory access pattern and the locality 
+characteristics of the benchmarks as follows: we enclosed each function that comprises the main body 
+of the parallel in a sequential loop with 4 iterations. In this way, we were able to expand the parallel 
+execution time of z solvefrom 130 ms to approximately 520 ms on 16 pro­cessors. What we expected to see 
+in this experiment was a much lower relative cost of page migration and some earn­ings from activating 
+the record-replay mechanism between phases. The results from this experiment with NAS BT (shown in Figure 
+6) verify our intuition. The overhead of page migrations accounts for a small fraction of the exe­cution 
+time and the reduction of remote memory accesses shows up, since it is exploited over a longer time period. 
+In this experiment the record-replay mechanism provides an improvement of 5% over the version of the 
+benchmark that uses page migration only for data distribution.  5. Related work The idea of dynamic 
+page migration has been employed since the appearance of the .rst commercial NUMA archi­tectures more 
+than a decade ago. Aside from several im­portant theoretical foundations on page migration [21, 22] mechanisms 
+for automatic page migration by the operating system have been implemented in systems like the BBN Butter.y 
+Plus and the IBM RP3 [11, 12]. These systems had no hardware-supported cache coherence and the cost of 
+shared memory accesses was solely determined by the lo­cation of pages in shared memory. Different schemes 
+were investigated, such as migrating a page on every write by a different processor, migration based 
+on complete refer­ence information, or migration based on incomplete refer­ence information collected 
+by the operating system. Apply­ing fairly aggressive page migration and replication strate­gies on these 
+systems was feasible, because the relative cost of page migrations was not so high compared to the cost 
+of memory accesses. The effectiveness of dynamic page migrations in these schemes varied radically and 
+it was af­fected signi.cantly by the subtleties of the architecture and the underlying operating system. 
+ With the appearance of cache coherent NUMA multipro­cessors, dynamic page migration became a trickier 
+prob­lem. On the ccNUMA architecture, accesses to shared data go through the caches and the memory performance 
+of par­allel programs depends heavily on cache locality. In the .rst detailed study of the related issues, 
+Verghese et.al. [13] have shown that it is necessary to collect accurate page ref­erence information 
+in order to implement an effective dy­namic page migration scheme. Partial information like TLB misses 
+is not suf.cient. The same work proposed a com­plete kernel-level implementation of dynamic page migra­tion 
+and evaluated it using accurate machine-level simula­tion of a ccNUMA multiprocessor. The results have 
+shown that dynamic page migration can improve the response time of programs with irregular memory access 
+patterns, as well as the throughput on a mulitprogrammed system. The page migration engine of the Origin2000 
+is largely based on this work, however it has not been able to achieve the same level of performance 
+improvements thus far [4, 19]. The previ­ous work on dynamic page migration investigated in general the 
+potential of the technique as a locality optimizer. In our work dynamic page migration is placed in a 
+new context and used as a tool for implicit data distribution in OpenMP. This paper is among the .rst 
+to conduct a comprehensive evaluation of static page placement schemes on an actual ccNUMA multiprocessor. 
+Static page placement schemes for cache coherent NUMA multiprocessors were investi­gated via simulation 
+in [16, 23]. The study of Marchetti et.al. [16] identi.ed .rst-touch as the most effective static page 
+placement scheme for simple parallel codes. Bhuyan et.al. [23] have recently explored using simulation 
+the im­pact of several page placement schemes in conjunction with alternative interconnection network 
+switch designs on the performance of parallel applications on ccNUMA multipro­cessors. Their study is 
+oriented towards identifying how can better switch designs improve the performance of sub­optimal page 
+placement schemes that incur contention. The study provides also some useful insight on the relative 
+per­formance of three of the page placement schemes evaluated in this paper, namely .rst-touch, round-robin 
+and buddy al­location. The quantitative results of the study of Bhuyan et.al. and ours resemble in the 
+sense that non-optimal page placement schemes perform often quite close to .rst-touch under certain architectural 
+circumstances. Some quantita­tive assessment of page placement schemes appeared also in papers that evaluated 
+the performance of the SPLASH-2 benchmarks on ccNUMA multiprocessors [3, 4], however these studies focused 
+on analyzing the locality characteris­tics of the speci.c programs. The idea of recording shared memory 
+accesses and use the recorded information to implement on-the-.y locality optimizations was exploited 
+in the tapes mechanism [24]. This mechanism is designed for software distributed shared memory systems, 
+in which all accesses to shared memory are handled by the runtime system. The tapes mechanism is used 
+as a tool to predict future consistency protocol actions which are likely to require communication between 
+nodes. The domain in which the recording mechanism is applied in this paper is quite different. However, 
+both the tapes mech­anism and the record-replay mechanism presented in this paper exploit the iterative 
+structure of parallel programs. Data distribution is a widely and thoroughly studied con­cept, mainly 
+in the context of data-parallel programming languages like HPF. A direct comparison between HPF and OpenMP 
+is out of the scope of this paper. HPF is very expressive with respect to data distribution and providing 
+a one-to-one correspondence between HPF functionalities and page migration mechanisms would be rather 
+unreal­istic. What this paper emphasizes, is that some data dis­tribution capabilities which are critical 
+for sustaining high performance on distributed shared memory multiprocessors can be replaced by dynamic 
+page migration mechanisms.  6. Conclusion The title of this paper raised the question if data distribu­tion 
+facilities should be introduced in OpenMP or not. The answer given to this dilemma by the experiments 
+presented in this paper is no. This position is supported by two argu­ments. First, the hardware of state-of-the-art 
+ccNUMA sys­tems is aggressively optimized to reduce the remote-to-local memory access latency ratio so 
+much, that any reasonably balanced page placement scheme used by the operating sys­tem is expected to 
+perform within a small fraction of the op­timum. This trend is expected to persist in future architec­tures, 
+since all the related research is attacking the problem of minimizing remote memory accesses or reducing 
+their cost. Second, in cases in which the page placement scheme is a critical performance factor, system 
+software mecha­nisms like dynamic page migration can remedy the problem by relocating accurately and 
+timely during the execution of the program the poorly placed pages. The synergy of ar­chitectural factors 
+and advances in system software enables plain shared memory programming models like OpenMP to retain 
+a competitive position in the user community by preserving the fundamental properties of programming 
+with shared memory, namely simplicity and portability.  Acknowledgments This work was supported by the 
+E.C. through the TMR Contract No. ERBFMGECT-950062, the Greek Secretariat of Research and Technology 
+(contract No. E.D.-99-566) and the Spanish Ministry of Education through projects No. TIC98-511 and 
+TIC97-1445CE. The experiments were con­ducted with resources provided by the European Center for Parallelism 
+of Barcelona (CEPBA).  References [1] OpenMP Architecture Review Board. OpenMP Speci.ca­tions. http://www.openmp.org, 
+accessed April 2000. [2] H. Lu, Y. Charlie Hu, and W. Zwaenepoel. OpenMP on Networks of Workstations. 
+Proc. of Supercomputing 98: High Performance Networking and Computing Conference. Orlando, FL, November 
+1998. [3] C. Holt, J. Pal Singh and J. Henessy. Application and Ar­chitectural Bottlenecks in Large Scale 
+Shared Memory Ma­chines. Proc. of the 23rd Annual International Symposium on Computer Architecture, pp. 
+134 145. Philadelphia, PA, June 1996. [4] D. Jiang and J. Pal Singh. Scaling Application Perfor­mance 
+on a Cache-Coherent Multiprocessor. Proc. of the 26th International Symposium on Computer Architecture, 
+pp. 305 316. Atlanta, GA, May 1999. [5] R. Chandra, D. Chen, R. Cox, D. Maydan, N. Nedeljkovic, and J. 
+Anderson. Data Distribution Support for Distributed Shared Memory Multiprocessors. Proc. of the 1997 
+ACM Conference on Programming Languages Design and Imple­mentation, pp. 334 345. Las Vegas, NV, June 
+1997. [6] J. Levesque. The Future of OpenMP on IBM SMP Systems. Invited Talk. First European Workshop 
+on OpenMP, Lund, Sweden, October 1999. [7] J. Harris. Extending OpenMP for NUMA Architectures. Invited 
+Talk. Second European Workshop on OpenMP. Edinburgh, Scotland, October 2000. [8] H. Jin, M. Frumkin and 
+J. Yan. The OpenMP Implementation of NAS Parallel Benchmarks and its Performance. Technical Report NAS-99-011, 
+NASA Ames Research Center. October 1999. [9] J. Laudon and D. Lenoski. The SGI Origin: A ccNUMA Highly 
+Scalable Server. Proc. of the 24th International Sym­posium on Computer Architecture, pp. 241 251. Denver, 
+CO, May 1997. [10] BBN Advanced Computers Inc. Inside the Butter.y Plus. 1987. [11] W. Bolosky, R. Fitzgerald 
+and M. Scott. Simple but Effective Techniques for NUMA Memory Management. Proc. of the 12th ACM Symposium 
+on Operating Systems Principles, pp. 19 31. Lich.eld Park, AZ, December 1989. [12] M. Holliday Reference 
+History, Page Size, and Migration Daemons in Local/Remote Architectures. Proc. of the 3rd International 
+Conference on Architectural Support for Pro­gramming Languages and Operating Systems, pp. 104 112. Boston, 
+MA, April 1989. [13] B. Verghese, S. Devine, A. Gupta and M. Rosenblum. Op­erating System Support for 
+Improving Data Locality on CC-NUMA Compute Servers. Proc. of the 7th International Conference on Architectural 
+Support for Programming Lan­guages and Operating Systems, pp. 279 289. Cambridge, MA, October 1996. [14] 
+D. Culler, J. Pal Singh and A. Gupta. Parallel Computer Ar­chitecture: A Hardware/Software Approach. 
+Morgan Kauf­mann, August 1998. [15] R. Chandra, S. Devine, A. Gupta and M. Rosenblum. Scheduling and 
+Page Migration for Multiprocessor Compute Servers. Proc. of the 6th International Conference on Archi­tectural 
+Support for Programming Languages and Operating Systems, pp. 12 24. San Jose, CA, October 1994. [16] 
+M. Marchetti, L. Kontothanassis, R. Bianchini and M. Scott. Using Simple Page Placement Policies to Reduce 
+the Cost of Cache Fills in Coherent Shared-Memory Systems. Proceed­ings of the 9th International Parallel 
+Processing Symposium, pp. 480 485. Santa Barbara, CA, April 1995. [17] SGI Inc. IRIX 6.5 Man Pages. mmci-Memory 
+Management Control Interface. http://techpubs.sgi.com, accessed October 1999. [18] D. Nikolopoulos, T. 
+Papatheodorou, C. Polychronopoulos, J. Labarta and E. Ayguad´e. UPMlib: A Runtime System for Tuning the 
+Memory Performance of OpenMP Programs on Scalable Shared Memory Multiprocessors. Proc. of the 5th ACM 
+Workshop on Languages, Compilers and Runtime Sys­tems for Scalable Computers. Rochester, NY, May 2000. 
+[19] D. Nikolopoulos, T. Papatheodorou, C. Polychronopoulos, J. Labarta and E. Ayguad´e. A Case for User-Level 
+Dynamic Page Migration. Proc. of the 14th ACM International Confer­ence on Supercomputing, pp. 119 130. 
+Santa Fe, NM, May 2000. [20] D. Nikolopoulos, T. Papatheodorou, C. Polychronopoulos, J. Labarta and E. 
+Ayguad´e. User-Level Dynamic Page Mi­gration for Multiprogrammed Shared-Memory Multiproces­sors. Proc. 
+of the 29th International Conference on Parallel Processing. Toronto, Canada, August 2000. [21] D. Black 
+and D. Sleator. Competitive Algorithms for Replication and Migration Problems. Technical Report CMU-CS-89-201. 
+Department of Computer Science, Carnegie-Mellon University, 1989. [22] D. Black, A. Gupta and W. Weber. 
+Competitive Manage­ment of Distributed Shared Memory. Proc. of the IEEE COMPCON 89 Conference. San Francisco, 
+CA, February 1989. [23] L. Bhuyan, R. Iyer, H. Wang and A. Kumar. Impact of CC-NUMA Memory Management 
+Policies on the Applica­tion Performance of Multistage Switching Networks. IEEE Transactions on Parallel 
+and Distributed Systems, Vol. 11(3), pp. 230 245, March 2000. [24] P. Keleher. Tapeworm: High Level Abstractions 
+of Shared Accesses. Proc. of the 3rd Symposium on Operating Systems Design and Implementation, pp. 201 
+214. New Orleans, LA, February 1999.  
+			

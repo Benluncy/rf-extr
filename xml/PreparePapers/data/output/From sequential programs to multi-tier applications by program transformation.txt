@@ -1,0 +1,576 @@
+
+ From Sequential Programs to Multi-Tier Applications by Program Transformation Matthias Neubauer Peter 
+Thiemann Institut f¨ur Informatik, Universit¨at Freiburg, Germany {neubauer,thiemann}@informatik.uni-freiburg.de 
+ABSTRACT Modern applications are designed in multiple tiers to sep­arate concerns. Since each tier may 
+run at a separate lo­cation, middleware is required to mediate access between tiers. However, introducing 
+this middleware is tiresome and error-prone. We propose a multi-tier calculus and a splitting transfor­mation 
+to address this problem. The multi-tier calculus serves as a sequential core programming language for 
+con­structing a multi-tier application. The application can be developed in the sequential setting. Splitting 
+extracts one process per tier from the sequential program such that their concurrent execution behaves 
+like the original program. The splitting transformation starts from an assignment of primitive operations 
+to tiers. A program analysis determines communication requirements and inserts remote procedure calls. 
+The next transformation step performs resource pool­ing: it optimizes the communication behavior by transform­ing 
+sequences of remote procedure calls to a stream-based protocol. The .nal transformation step splits the 
+resulting program into separate communicating processes. The multi-tier calculus is also applicable to 
+the construc­tion of interactive Web applications. It facilitates their de­velopment by providing a uniform 
+programming framework for client-side and server-side programming.  Categories and Subject Descriptors 
+D.1.3 [PROGRAMMING TECHNIQUES]: Concurrent Programming Distributed Programming; D.1.2 [PROGRAMMING TECHNIQUES]: 
+Automatic Programming Program Transformation; F.3.2 [LOGICS AND MEANINGS OF PROGRAMS]: Semantics of Programming 
+Languages Operational semantics General Terms Design, Languages, Theory Permission to make digital or 
+hard copies of all or part of this work for personal or classroom use is granted without fee provided 
+that copies are not made or distributed for pro.t or commercial advantage and that copies bear this notice 
+and the full citation on the .rst page. To copy otherwise, to republish, to post on servers or to redistribute 
+to lists, requires prior speci.c permission and/or a fee. POPL 05, January 12 14, 2005, Long Beach, California, 
+USA. Copyright 2005 ACM 1-58113-830-X/05/0001 ...$5.00.  Keywords Type Systems, Concurrency, Application 
+Partioning 1. INTRODUCTION Building a modern application is no longer a taskof pro­gramming an isolated 
+machine. In many cases, the applica­tion has a distributed multi-tier architecture. It accesses data 
+on one or more database servers, its business logic runs on an application server, the presentation logic 
+is de­ployed on a web server, and the user interface runs on a web browser. Software for each tier is 
+developed separately with application-speci.c communication interfaces between the tiers. The designers 
+create these interfaces and the pro­grammers implement them using middleware. Hence, on top of their 
+usual coding and testing activity, programmers are also burdened with the quirks of distribution: testing 
+becomes more di.cult and .aws in middleware code often created by third-party programmers are potentially 
+an ad­ditional source of errors in the .nal application. The programmer s taskcan be alleviated by a 
+program­ming frameworkthat automatically prepares the program for the physical distribution. Thus, the 
+main development activity takes place in the simpler, non-distributed setting. Only integration testing 
+and performance testing (and, of course, .nal deployment of the application) involves the dis­tributed 
+production setting. The present paper proposes such a programming frame­workconsisting of a calculus, 
+a static analysis that per­forms an assignment of code to locations, and a range of program transformations 
+that automatically insert commu­nication primitives, perform resource pooling, and .nally split the program 
+into separate processes to run at separate locations. Locations in our sense are used as an abstraction 
+over the di.erent physical or logical places where tiers of the .nal application are supposed to reside. 
+As a starting point, we assume that the application con­sists of sequential programs that run concurrently 
+on a sin­gle server. Each program runs independently on behalf of a particular client. The programs do 
+not communicate explic­itly among themselves but they access and modify common resources on the server. 
+The taskof the transformation is thus to split a sequential program into pieces that run inde­pendently 
+from each other on di.erent hosts and to equip them with communication primitives so that the sequential 
+semantics of the original program is preserved. Each operation used in the sequential program carries 
+an annotation that indicates whether the operation is location independent. A location independent operation 
+must not have side e.ects and it must not depend on data stored at a particular location. For example, 
+any operation on a primi­tive datatypes is location independent whereas accessing or modifying a reference 
+is not. Location dependent operations carry a location annotation that indicates where the oper­ation 
+can safely take place. The interplay of all location annotations drives the static analysis of the program. 
+Op­erations on di.erent locations must not interfere with each other. For example, database queries must 
+run on the appli­cation server because the database connection is a reference that does not make sense 
+outside of the application server. In contrast, GUI operations run on the client because the GUI objects 
+are not present on the server. In principle, the result of the the splitting transforma­tion is directly 
+applicable to annotated programs but it would lead to programs sprinkled with short communica­tions. 
+Since repeated connection establishment is expensive, a separate program transformation performs resource 
+pool­ing by reusing established connections between locations. We describe the overall algorithm abstractly 
+in terms of transformation steps in a program calculus. The calculus is based on the lambda calculus 
+equipped with synchronous communication primitives. It is inspired by Gay and Hole s calculus of session 
+types [2]. Their calculus is a simply typed variant of the p-calculus with subtyping and models asyn­chronous 
+communication via ports and channels. Channels transmit heterogeneous data as prescribed by a session 
+type. Unlike Gay and Hole, we have chosen a lambda calculus because it is trivial to embed sequential 
+programs in it. In particular, our variant is based on a simply-typed, applied call-by-value lambda calculus 
+in A-normal form[1]. Com­munication in our calculus is stream-based (ports and chan­nels) with similar 
+operations as in the calculus of session types. A-normal form simpli.es the de.nition of the static and 
+dynamic semantics and has been used as an intermedi­ate language in several compilers. The result of 
+the transformation is a program with ex­plicit uses of typed communication primitives analogous to the 
+socket-based communication paradigm [15]. An imple­mentation would map the communication primitives to 
+the communication architecture provided by the chosen middle­ware. Alternatively, a direct implementation 
+in terms of the socket API is possible. A web application is a special case of a multi-tier appli­cation 
+where one or more tiers run on a web browser. Our frameworkis applicable to this case given a suitable 
+me­diator that implements channels on top of HTTP. In this special case, the splitting transformation 
+yields a client-side slice and a server-side slice of the application. The client s slice may be implemented 
+by applets and the server s slice with an arbitrary server-side scripting technology. The main contribution 
+of the paper is the partitioning algorithm. Its presentation consists of three steps: We specify a location 
+analysis that infers required com­munications between abstract locations. The analysis is stated in terms 
+of an annotated simple type system with subtyping. It is proved correct with respect to a location-aware 
+operational semantics using a type­soundness argument.  We present a suite of typed transformation rules 
+that merge several communications between identical part­ners into larger sections with stream-based 
+communi­  let rec show_topic (db, tid, tpc) = let stmt = string_append_4 ("SELECT * FROM messages", 
+" WHERE tid= ", tid, " ") in let msgs = sql_exec (db, stmt) in let hdr = string_append ("Topic ", tpc) 
+in let frame = gui_create_frame (hdr) in let _ = show_rows (db, frame, msgs) in gui_show_frame (frame) 
+and show_rows (db, frame, msgs) = let b = sql_cursor_has_more_elements (db, msgs) in if b then let row 
+= sql_cursor_get_next_row (db, msgs) in let cts = sql_cursor_get_column (db, row, "contents") in let 
+lab = gui_create_label (cts) in let _ = gui_frame_add (frame, lab) in show_rows (frame, msgs) else () 
+in ... Figure 1: Original sequential program cation. The rules are proven correct with respect to the 
+location-aware semantics extended with synchronous communication. A splitting transformation .nally extracts 
+concurrently running processes from the transformed expression. This transformation is also proved correct. 
+The target calculus is a language with channel-based communica­tion. Its type system is a novel variant 
+of the system of session types [2]. In the rest of the paper, we .rst motivate our suite of transformations 
+with an excerpt of a client-server applica­tion in Section 2. Section 3 introduces the source calculus, 
+a simply-typed, linearized, call-by-value lambda calculus. Section 4 develops the annotated type system 
+that speci.es location analysis for the source calculus. It formalizes its static and dynamic semantics 
+and proves type soundness. Section 5 introduces the multi-tier calculus which extends the source calculus 
+with explicit channel-based communica­tion primitives. Section 6 de.nes the transformation steps to implement 
+connection pooling and Section 7 presents the splitting transformation. Section 8 discusses related work, 
+and Section 9 concludes.  2. A TINY MULTI-TIER APPLICATION This section introduces an example application, 
+a message board, and shows and discusses the results of the location analysis and the splitting transformation. 
+For concreteness, the example is programmed in Ocaml [9] and is easy to trans­ late to the formal calculus 
+introduced in Section 3. A message board application enables its users to view and post messages attached 
+to certain topics on a centrally ac­cessible virtual blackboard. A message either starts a new topic 
+or it responds to a message in an existing topic. The application draws on at least two kinds of resources 
+that usually reside in di.erent physical locations: a central database server and a windowing environment 
+handling user let rec show_topic (db[S] , tid[S] , tpc[S] )= let stmt = string_append_4[S] ("SELECT * 
+FROM messages", " WHERE tid= ", tid, " ") in let msgs = sql_exec[S] (db, stmt) in [S -> C] let tpc = 
+transtpc in let hdr = string_append[C] ("Topic ", tpc) in let frame = gui_create_frame[C] (hdr) in let 
+_ = show_rows[S,C] (db, frame, msgs) in gui_display_frame[C] (frame) and (db[S] [S] show_rows , frame[C] 
+, msgs)= let b = sql_cursor_has_more_elements[S] (db, msgs) in [S ->C] letb=transbin if b then let row 
+= sql_cursor_get_next_row[S] (db, msgs) in let cts = sql_cursor_get_column[S] (db, row, "contents") in 
+[S ->C] let cts = transcts let lab = gui_create_label[C] (cts) in let _ = gui_frame_add[C] (frame, lab) 
+in show_rows[S,C] (frame, msgs) else ()[S,C] in ... Figure 2: Program after location analysis (fat client) 
+interactions. The database is accessible via a textual SQL interface and the windowing environment provides 
+the usual GUI widgets. The database contains one relation messages where each tuple describes one message 
+(topic, contents, au­thor, etc). Administrative .elds include a topic id (tid)and a .ag indicating whether 
+the message starts a new topic. Figure 1 shows two functions taken from the program.1 Show_topic implements 
+a basic operation of the message board, the display of a list of messages for a given topic. To do so, 
+it .rst queries the database using an existing database connection, db, for a given topic id, tid, and 
+presents the content .elds of the resulting message set in a new GUI frame. It relies on show_rows to 
+populate the GUI frame with a text label for each message with that topic id. The code relies on several 
+library functions to access the database and to perform GUI operations. In particular, the function sql_exec 
+returns a cursor to the result of an SQL query, the functions sql_cursor_... access the relation un­derlying 
+the cursor, and the gui_... functions create and manipulate appropriate GUI widgets. Not all library 
+functions are location independent. The sql_... operations are not because all take the database connection 
+db as a parameter. The annotation [S] indi­cates that the connection is only available on the server, 
+hence the location analysis prescribes that all sql_... op­erations must take place on the server, too. 
+In contrast, the GUI widgets can be created anywhere (gui_create_frame, gui_create_label,and gui_frame_add), 
+but there is also one operation, gui_display_frame, that must run on the 1In Ocaml, the left-hand side 
+of a let is a pattern, which has to match the value of the right-hand side. The pattern _ is a wildcard 
+pattern that matches any value. client machine (indicated by the [C] annotation). Opera­tions like string_append_... 
+are location independent and may execute anywhere. The location analysis assigns to each operation a 
+set of locations where the operation must take place. Starting from the operations with a .xed initial 
+assignment, loca­tion information is propagated through the program, and an [A -> B] implicit communication 
+y = transx is inserted whenever data x available at A is required but not yet available at location B. 
+The outcome of the analysis is determined by a propagation strategy. Depending on this strategy, the 
+analysis may produce fat clients or thin clients and it may choose to duplicate operations at multiple 
+lo­cations to avoid the overhead of transmitting their results. Figure 2 shows one possible outcome of 
+the analysis where the GUI widgets are constructed on the client. At this point, the program in Figure 
+2 may already be split into a client process and a server process. However, doing so would be ine.cient 
+because each trans builds a connection between client and server to transmit one data item. Our joining 
+transformation addresses this ine.ciency. It joins adjacent communications, thus switching from a message­based 
+style to a stream-based style. The main idea of the joining transformation is to introduce explicit channels 
+with open and close operations and then .oat open operations towards close operations in hopes of merging 
+them. The transformation has to go into some complication to deal smoothly with conditionals and with 
+recursion. Finally, the splitting transformation extracts from the an­notated program one slice for each 
+location. Running all slices in parallel is equivalent to running the original pro­gram. Figure 3 contains 
+the .nal program for the example. It contains two processes which share the communication port p 2 . 
+Each process has the same structure because it is essentially a slice of the original program. The server 
+pro­cess .rst opens the server end of a channel through port p using listen. Its slice of show_rows .rst 
+sends a boolean indicating whether further data is following. If that is the case, it sends the .rst 
+tuple and attempts to process the next tuple recursively. Otherwise, show_rows exits and the channel 
+is closed. The client process performs exactly the converse communications: it .rst opens the client 
+end of the channel and then receives data as it is sent. Technically, the communication is typed using 
+a session type of the form (string,µß.(boolean,.true . (tuple,ß) | false . e.)). The type describes the 
+possible sequences of communication events on a channel: .rst read a string; then repeatedly read a boolean; 
+then either read a tuple and continue or close the channel. The latter choice depends on the communication 
+labels true and false which are used in the type applica­tions chan{true} and chan{false}. They indicate 
+on the type level, which branch of the conditional is taken. Hence, true and false are not values, but 
+rather communication labels which have a status like record labels. In the explanation above, we have 
+glossed over intermedi­ate technical steps that introduce additional infrastructure in the term. For 
+example, one step introduces channels with open and close operations. We defer closer discussion of the 
+intermediate steps to subsequent sections (Section 6 and 7). 2The newPort expression will be written 
+.p in the calculus. let p = newPort in // server process || // client process let rec let rec show_topic 
+(db, tid, tpc) = show_topic () = let chan = listen (p) in let chan = connect (p) in let stmt = string_append_4 
+let tpc = recv (chan) in ("SELECT * FROM messages", let hdr = string_append ("Topic ", tpc) in " WHERE 
+tid= ", tid, " ") in let frame = gui_create_frame (hdr) in let msgs = sql_exec (db, stmt) in let _ = 
+show_rows [chan] (frame) in let send chan (tpc) in let close (chan) in let _ = show_rows [chan] (db, 
+msgs) in gui_display_frame (frame) let close (chan) in and () show_rows [chan] (frame) = and let b = 
+recv (chan) in show_rows [chan] (db, msgs) = if b then let b = sql_cursor_has_more_elements let chan{true} 
+in (db, msgs) in let cts = recv (chan) in let send chan (b) in let lab = gui_create_label (cts) in if 
+b then let _ = gui_frame_add (frame, lab) in let chan{true} in show_rows [chan] (frame) let row = sql_cursor_get_next_row 
+else (db, msgs) in let chan{false} in let cts = sql_cursor_get_column () (db, row, "contents") in in 
+... let send chan (cts) in show_rows [chan] (db, msgs) else let chan{false} in () in ... Figure 3: 
+Program split up into separate processes 3. SOURCE CALCULUS The underlying programming model is the 
+simply-typed call-by-value lambda calculus with integers, primitive oper­ations, and recursion. To simplify 
+matters, the calculus .A is an intermediate language. Its syntax is given by x.Var,i.Z Expressions e 
+::= halt |let d in e|if x then e else e|x( x) Statements d ::= x= pfun( x) |x= op ( x) |rec {r} r ::= 
+e|x( x)= e|r,r A .A expression is a sequence of let-bound statements, d, ending either in a halt instruction, 
+a conditional, or a jump with parameters. A statement either performs a primitive function, an operation, 
+or introduces a set of mutually re­cursive jump labels. All argument subterms in expressions and statements 
+are restricted to variables. A primitive function pfun( x)is free of side e.ects. Nullary primitive functions 
+serve as con­stants. An operation op( x) has unspeci.ed side e.ects. Ar­guments and results of primitive 
+functions and operations are restricted to .rst-order values. The notation x stands for the sequence 
+x1,...,xn where nderives from the context. We refrain from stating the type system or a semantics for 
+the source calculus because both are straightforward to derive from the de.nitions (for extended calculi) 
+in the sub­sequent sections.  4. INTRODUCING LOCATIONS A .A expression describes a computation at one 
+location. This section extends .A to .. A, which can express that cer­tain computations run on speci.c 
+locations (i.e.,tiers). In ..there is still only one program executing with one cen- A tralized locus 
+of control. However, at each location only a subset of the program s e.ect will be visible. Values of 
+variables are only available on a subset of locations, some operations are only available at speci.c 
+locations, and data must be moved explicitly from one location to another. Syn­tactically, there is one 
+new statement and one modi.cation: [A.B] A d ::= ···|x= transx|x= op ( x) [A.B] The statement x = transy 
+transmits the value of y from location A to location B,where A,B .N, a .nite set of locations. The value 
+of y must be available at A before executing the statement. Afterwards, the value is available through 
+x at location B as well as at all locations at which it was available through y. Typically, the trans 
+statement is used with x= y so that it just extends the availability of x to include B. Only base values 
+can be transmitted between locations. Functions and pointers (references) cannot be transmitted. The 
+statement op A( x) performs an operation that has a side e.ect on location A and thus is only available 
+on that location. The values of x must be available at A before executing the statement and the result 
+of the operation will be available only at A afterwards. The side e.ect of op A( x) is visible on A but 
+not on any other location. In the rest of this section, we .rst introduce the dynamic semantics of ..in 
+terms of a labeled transition system. A Next, we present a type system that tracks the location of values 
+in addition to their actual type. The type system ex­tends the system of simple types with location annotations 
+and annotation subtyping. Finally, we prove type soundness for this system. 4.1 Dynamic Semantics The 
+dynamic semantics of .A is de.ned by a small-step transition system. The intermediate states of the system 
+require an extension of the syntax, as usual. There are two kinds of computed values in the system: v 
+::= val(i; N) | fun(rec { r } ; f) A value can be either a constant i with a set of locations N, which 
+indicates where the value is available, or it can be a function consisting of a function name f and a 
+set r of mutually recursive function de.nitions (where f selects one of the function of r). Functions 
+do not carry a set of locations because they are assumed to be available at all locations. The original 
+expressions and statements are extended to admit values wherever bound occurrences of variables are allowed 
+in the original syntax. Evaluation steps produce traces of observations. Traces of observations, w . 
+l * , are words over observations, l: A( l ::= halt | i0 = op i) where halt is intended to register halting 
+expressions, and i0 = op A( i) to register a particular call pattern of operation op () executed on location 
+A.With locs(w), we denote the set of all locations, A, found all the observations of operations, i0 = 
+op A( i), occurring in the a trace w. Throughout the paper, we specify reductions as families of relations 
+indexed w by a trace, -. Figure 4 de.nes several notions of reduction for .A.The relation e wis the core 
+reduction relation which re­ -coree mains constant for the rest of this work. It describes eval­uation 
+steps that transform e to e producing no side ef­ w fect. The -t1 reduction deals with the Trans statement. 
+w The relation e-op e describes operations with side e.ects. w With -opA , we denote reductions of operations 
+on loca­tion A. In addition, we make use of the following combined wwwwww relations -imp = -core. -op, 
+-.I = -core . -t1, A,pure www -.I = -imp . -t1. A The rule for primitive functions substitutes the result 
+of the function as determined by dpfun (a partial function) in the rest of the term. The result is available 
+at those loca­tions where all arguments are available. A primitive opera­tion only happens at its designated 
+location and leaves its trail in the trace. Operations behave nondeterministically so they are modeled 
+by a relation d. This choice may seem odd at .rst. However, the model must include the possibil­ity that 
+on each location further processes run in parallel to the program. That is, we cannot model side e.ects 
+by pass­ing a state for each location because this state may change between two operations of our program 
+due to e.ects from another process. The nondeterministic model avoids pass­ing state explicitly and encompasses 
+arbitrary e.ects from other processes. The de.nition of a set of mutually recursive labels substi­tutes 
+a function value for each de.ned label. The function value consists of the label identi.er paired with 
+the de.ni­tion group. The conditional dispatches evaluation to the true or the false branch, as usual. 
+A function call extracts the selected function de.nition from the de.nition group and substitutes the 
+arguments into that function s body. Since the function s body may refer to other functions in the de.­nition 
+group, it is wrapped in a new let with the de.nitions f t = t N1 . N2 f t 2 = t 1 N1 . N2 N1N2 f (b, 
+N1) = (b, N2) f t 1 -. 0 = t 2 -. 0 G f a x : t G f a x : tt = t G f a x :G(x)G f a x : t Figure 5: Subtyping 
+and argument rules for .A of the same de.nition group.  4.2 Static Semantics Thetypesystemfor .A has 
+to model two facets of each value: its shape and the locations where it is available. It keeps track 
+of the shape using an underlying simply-typed system and adds location annotations and e.ects to keep 
+trackof the locations. Annotation subtyping produces pre­cise analysis results [16]. An annotated type, 
+t , is either a base type b paired with a set of locations N or a function type with a location set N 
+as latent e.ect. The meaning of an annotation N is that the associated data item must be present at all 
+locations in N. The e.ect on a function type indicates the set of locations that may execute operations 
+when the function is applied. N t ::= (b, N) | t -. 0 N .N There are three typing judgments. G f e ! 
+N states that e uses variables in G correctly and may perform operations at locations N.  G f d . G! 
+N states that d transforms G to G and may perform operations at N.  G f a x : t infers the type for 
+an argument position.  Subtyping in the system is structural and induced solely by the location annotations. 
+Subtyping as formalized by the judgment f t = t expresses that a value that is present at location set 
+N can substitute for a value that is only ex­pected at a subset N . N. Also, the e.ect annotation of 
+a subtype must be included in the annotation of the super­type. Figures 5 and 6 contain the subtyping 
+rules and the typing rules for expressions and statements. The halt expression has neither requirements 
+nor does it perform an e.ect at any location. The e.ect of a let statement is the union of the e.ects 
+of the statement and the body expression. A conditional needs only be executed on a location if one of 
+the branches contains code to be executed on that location. Hence, the value of the condition needs only 
+be available on the locations mentioned in the e.ect of the branches. A function application unleashes 
+the latent e.ect of the function. The rules for primitive functions and operations re.ect their operational 
+semantics but use subtyping to intersect the location sets implicitly. A recursive label is implicitly 
+available at all locations. The trans statement copies the value of y (which must be available at location 
+A)to location B and binds it to x with appropriately changed type. let x= pfun(...val(ij; Nj ) ...) in 
+e n let rec {fi( xi)= ei }i=1 in e if (val(0; N)) then e1 else e2 if (val(i; N)) then e1 else e2 n (fun(rec 
+{fi( xi)= ei }i=1; fj)) ( v) let x= op A(...val(ij; Nj ) ...) in e [A.B] let x= trans(val(i; N)) in e 
+e -core e -core e -core e -core e -core A( -op i=op i) e -t1 T T e[x.Nj )] if i= dpfun ( i) . Nj = Ø 
+.val(i; .e[fj .{fi ...}i=1; fj )]nj=1 .fun(rec n e2 if N =.Ø e1 if i.. =0 and N = Ø let rec xi)= ei 
+}ni=1 in ej[ xj .v] {fi( . T e[x. if ii) .d.A. Nj .val(i; {A})] = op( e[x. if A.N .val(i; N .{B})] 
+ Figure 4: Reduction rules for .A G f e! N G f halt ! Ø G f d.G! Nd G f e! Ne G f let d in e! Nd .Ne 
+G fa x:(b,N) N1,N2 .N G f e1 ! N1 G f e2 ! N2 G f if x then e1 else e2 ! N1 .N2 N G fa x1 : t -.0G fa 
+x 2 : t G f x1 ( x2)! N G f d.G! N (.1 =i =n)G fa xi :(b,N) G f x= pfun(x1,...,xn) .G(x:(b,N)) ! Ø (.1 
+=i=n)G fxi :(b,{A}) a G f x= op A(x1,...,xn) .G(x:(b,{A})) ! {A} Ni (.1 =j =n)G(fi : ti -.0)ni=1( xj 
+: tj) f ej ! Nj nNi G f rec {fi( xi)= ei }-.0)n i=1 .G(fi : tii=1 ! Ø G fa y :(b,N) A.N [A.B] G f x= 
+transy .G(x:(b,N .{B})) ! Ø Figure 6: Typing rules for .A  4.3 Properties of .A s and c which are only 
+available on S and C, respectively. source .rst completion SS x= s1 () x= s1 () [S.C] y = x+1 x= transx 
+c C (y) y = x+1 halt c C (y) halt second completion S x= s1 () y = x+1 [S.C] y = transy c C (y) halt 
+There are many further completions that perform additional useless transmissions. The example also shows 
+that there is no obvious notion of optimality or minimality for comple­tions. The .rst completion may 
+perform fewer operations on S whereas the second performs fewer operations on C. It is not clear which 
+is preferable without more information about C and S. For the moment, we leave this question to an implemen­tation 
+of the analysis in future work. The implementation will make its choice based on formalized preferences 
+between locations. The implementation may even introduce redun­dancy by performing a computation at more 
+than one loca­tion. This choice trades communication with computation. It is routine to prove type soundness 
+for the calculus .A. That is, evaluation of a typed closed expression either reaches halt after a .nite 
+number of steps or it keeps reduc­ing forever. The typing rules for values and the intermediate states 
+are straightforward. Lemma 2 (Type Preservation). Suppose Øf e ! N w and e-.I e then Øf e ! N , N .N,and 
+locs(w) .N. To connect .A with .A requires an erasure function |·|that maps an .A expression to an .A 
+expression by forgetting [A.B] A Lemma 3 about locations and removing all trans (Progress). If Øf e!N 
+then e = halt x statements. or On types, the erasure function strips away all location sets w there 
+exists e such that e and locs(w) .N. -.I e and all e.ects. Erasure has the following properties with 
+respect to the underlying unannotated calculus whose typing judgment is indicated with f0. Lemma 1. 1. 
+If G f e ! N then |G |f0 |e |. 2. If G f0 e then there exists some G , e ,and N such that G f e ! N and 
+|G |=G and e = |e|. The expression e constructed from e in the second part is A w Furthermore, we de.ne 
+the re.exive transitive closure -* of the evaluation relation as follows: III w w e * e-e e-* e e-e I 
+II ww e -e Type soundness follows by straightforward induction. Theorem 1. If Øf e! N then either e-w 
+* .I halt and A -.I e then there exists e a completion of e. The existence of completions is shown 
+w I * by inserting transmission statements to every location after locs(w) .N or, for each e ,if e A 
+and locs(w ) .N. every statement. Completions are not uniquely de.ned, in w I general. For example, 
+consider N = {S,C} and operations A such that e-.I e l . Label,x .Var,c .ChannelVar Statements d ::= 
+x = pfun( x) |x = op A( x) |rec {r } | c = open[A.B] |c = openP[A.B] (p) [A.B] | close[A.B] (c) |x = 
+transc(x) |c{l} r ::= e |x[ c]( x)= e ; r Expressions e ::= halt |let d in e |if x then e else e | x[ 
+c]( x) |.p.e Types and Type Environments N t ::= (b,N) |[ .] t -.0 G ::= Ø|G(x : t) Session Types and 
+Session Type Environments . ::= e |(b,.) |(b, .) |.li ..i.|ß |µß.. A T ::= Ø|T(c :B .) Figure 7: Syntax 
+of .MT  5. MULTI-TIER CALCULUS The multi-tier calculus, .MT , is our .rst calculus with ex­plicit communication 
+instructions. In the previous calculus, [A.B] .A, the statement x = transy just states the necessity 
+of a communication between nodes A and B in a declara­ [A.B] tive way. In contrast, .MT augments x = 
+transy with a channel argument and provides primitives that explicitly open and close a communication 
+channel. Figure 7 de.nes the syntax of the multi-tier calculus .MT . The main extension of this calculus 
+with respect to .A con­sists of statements to open a channel (open), to transfer data via a connection 
+(trans), and close the connection (close). In comparison to .A,the trans statement obtains a channel 
+parameter and functions receive additional channel parame­ters c. A channel value cannot be bound to 
+a normal variable because the channel changes its type with every communica­tion. Channel variables are 
+treated linearly to simplify the tracking of the change of type. Further extensions are added already 
+at this time so that the remaining transformation steps can all be expressed with­out leaving the calculus 
+.MT . After splitting, an open state­ment yields two statements that have to open channels of matching 
+type. The calculus has an expression .p.e that introduces a fresh port name and an openP statement that 
+opens a channel with a type prescribed by the port p.Open­ing channels with the same port ensures that 
+the channels session types match even if they occur in di.erent places in the program. Freshness of port 
+names ensures that each port value occurs at most once during the run of a program. As usual, introduction 
+of fresh names is commutative, that is, we consider expressions modulo the smallest compatible equivalence 
+relation =containing .p.e = e if p/.fv(e) .p..p .e = .p ..p.e. Finally, the statement, c{e}, applies 
+a channel to a stati­cally known label. Like a type application, it has no opera­tional e.ect. Intuitively, 
+c{e}selects one of several labeled types for the channel c:if c has session type .e ..,e1 . .1,...., 
+then its type changes to . after the channel appli­cation. Section 5.2 explains more about its role in 
+typing. The translation T[·] from .A to .MT is straightforward. T,G f e ! N Ø,G f halt ! Ø T,G f d .T 
+, G! Nd T ,G f e ! Ne T,G f let d in e ! Nd .Ne G fa x :(b,N) N1,N2 .N T,G f e1 ! N1 T,G f e2 ! N2 T,G 
+f if x then e1 else e2 ! N1 .N2 N G fa x :[ .] t -.0G fa z : t T=( c : .) T,G f x[ c]( z)! N A T(c :B 
+.),G f e ! N T,G f .c[A.B].e ! N T,G(p : Port .) f e ! N T,G f .p.e ! N Figure 9: Typing rules for target 
+(.MT ) expressions It replaces each occurrence of a statement [A.B] let x = transy in by a sequence of 
+statements that opens an explicit channel between locations A and B, transmits the current value of y 
+from A to B, binds the value to x, and closes both ends of the connection: [A.B] let c = openin [A.B] 
+let x = transc(y) in let close[A.B] (c) in 5.1 Dynamic Semantics The de.nition of the dynamic semantics 
+requires the ex­tension of the syntax with the same values as for .Ain Sec­tion 4.1. Additionally, a 
+new binder is needed to model an open communication channel. The expression e ::= ... |.c[A.B].e [A.B] 
+introduces a fresh linear name, c, for a channel be­tween locations A and B. w Figure 8 contains the 
+reduction rules, -t2, that handle the new communication statements, together with evalu­ation contexts, 
+E, that extend the reduction rules under binding constructs. [A.B] E ::=[ ] |.p.E |.c.E Opening a channel 
+introduces a fresh channel name. The transmission of a value is only possible through a channel connecting 
+the appropriate locations. Closing a channel [A.B] amounts to the removal of the channel binder for c. 
+The application of a channel to a label has no operational e.ect. w For .MT , we use three notions of 
+reductions: -MT,pure w wwis the E-compatible closure of -core. -t2, -MT is the ww w E-compatible closure 
+of -imp. -t2,and -is the MT(A) ww S w E-compatible closure of --­ core. t2 .B.B= A opB .  5.2 Static 
+Semantics The judgments of the static semantics of .MT extend the judgments of .A for expressions and 
+statements by a new type linear environment T which associates each channel e [A.B] let c = openin e-t2 
+e let c = openP[A.B] (p) in e1 -t2 e [A.B] let x = transc[A.B](val(i; N)) in e-t2 e [A.B] .c[A.B] 
+.let close[A.B] (c) in e-t2 e let c[A.B]{ l} in e-t2 [A.B] .c[A.B].e[c .. c] [A.B] .c[A.B].e[c .. c] 
+e[x .if A . N . val(i; N .{ B} )] e e Figure 8: Reduction rules for .MT T,G f d . T , G! N (. 1 = i 
+= n)G f a xi :(b,N) T,G f x = pfun(x1,...,xn) . T,G(x :(b,N)) ! e (. 1 = i = n)G f a xi :(b,{ A} ) T,G 
+f x = op A(x1,...,xn) . T,G(x :(b,{ A} )) ! op A() Ni (. j)( cj :Aj . j),G(fi :[ .]it i -. 0)in =1( xj 
+: tj) f ej ! Nj T,G f rec { fi[ ci]( xi)= ei } n i=1 Ni . T,G(fi :[ .]it i -. 0) ! e G f a y :(b,N) A 
+. N A [A.B] T(c :B (b,.)),G f x = transc(y) A . T(c :B .),G(x : t,N .{ B} )! e G f a y :(b,N) A . N B 
+[A.B] T(c :A (b,.)),G f x = transc(y) B . T(c :A .),G(x : t,N .{ B} )! e A T,G f c = open[A.B] . T(c 
+:B .),G! e G(p)= Port . A T,G f c = openP[A.B] (p) . T(c :B .),G! Ø A T(c :B e),G f close[A.B] (c) . 
+T,G! e A A T(c :B . li . .i. ),G f c{ lj}. T(c :B .j),G Figure 10: Typing rules for target (.MT ) statements 
+variable to its session type and the pair of locations con­nected by the channel. A session type, ., 
+denotes an .-regular language that describes the sequence of types that the rest of the ses­sion communicates 
+over on the channel. The type e indi­cates that no further communication can take place on a channel, 
+(b,.) sends a base value and continues according to .,and (b,.) receives a value and continues. The type 
+. l1 . .1,l2 . .2,.... is a conditional session type guarded by the labels l1,l2,... The channel application 
+c{ li} changes the type of c to .i. Each application of the recursion oper­ator must be expansive, that 
+is, a well-formed session type does not have subterms of the form µß1 ... µßn.ß1. Such subterms do not 
+correspond to regular trees. For example, the type from Section 2 (string,µß.(boolean,. true . (tuple,ß) 
+| false . e. )) denotes the language { string boolean (tuple boolean)n | n . N}.{ string boolean (tuple 
+boolean).} Since each communication on a channel changes its session type, the variables in T must obey 
+a linear typing discipline. Figure 9 contains the annotated typing rules for expres­ sions. The rules 
+re.ect the previous rule set for .A and impose additional demands on the use of channels. The halt expression 
+requires that all channels are closed. The conditional requires that all branches must use the channels 
+in the same way. The rule for let indicates that a state­ment transforms both environments. A function 
+call pass all channels to the function. The annotated typing rules for statements appear in Fig­ure 10. 
+Of the original rules, only the rule for function def­ initions changes signi.cantly. The additional 
+requirement is that a function may only refer to the channels passed as parameters, that is, a function 
+does not have free channel variables. The transmission of a value changes the type of the channel as 
+expected. Closing a channel requires that its session type is e, whereas opening a channel invents a 
+session type. Applying a channel to a label selects the cor­responding alternative in the channel s session 
+type. The subtyping rules remain unchanged. The argument typing rules change only marginally.  5.3 A 
+Notion of Bisimilarity To prove the correctness of the presented program trans­formations we need to 
+state relationships between source programs and their transformed counterparts. To this end, we consider 
+two programs equivalent if the perform the same side-e.ecting operations in the same order. This notion 
+of equivalence is best captured by a weakbisimulation [12]. The de.nition of a suitable bisimulation 
+requires that we split our transition rules in two parts: those reductions that w w do not have a side 
+e.ect, -R1 , and those that do, -R2 .The w corresponding observation relation -. R1,R2 makes transi­ 
+w w tions using -R1 until we reach a transition with -R2 keep­ w ing only the .nal observation of -R2 
+. Formally, the relation w -. R1,R2 is de.ned as follows: halt halt-. R1,R2 . I w ww e-R2 e e-R1 ee -. 
+R1,R2 e ww e-. R1,R2 ee-. R1,R2 e The halt expression is related to a non-terminating term .. w If we 
+make one observable step with -R2 , then the related expressions are also in the observation relation. 
+Unobserv­able steps may be prepended to the observation relation. Following Milner [10] and Gordon [3], 
+we de.ne weak bisimilarity co-inductively that is, as greatest .xed point using the following two functions 
+[- ],.-. that are parame­terized with respect to four transition relations: def (R 1,R 2,R 3,R 4)[S ]= 
+w { (e,f) | if e-. R1,R2 e w then . f with f-. R3,R4 f and e S f } def (R 1,R 2,R 3,R 4).S. = ]op (R 
+1,R 2,R 3,R 4)[S ] n (R 1,R 2,R 3,R 4)[S op def R1,R2,R3,R4 =gfpS.. (R 1,R 2,R 3,R 4)[S ]. (R 1,R 2,R 
+3,R 4)[S ] denotes pairs that reach a pair in S by a simulated common step, (R 1,R 2,R 3,R 4).S. is the 
+re­striction of the simulation in both ways. Weakbisimilarity, R1,R2,R3,R4 , is the greatest relation 
+with these properties, i.e., the greatest .xpoint of .S. . 5.4 Technical Results First, type soundness 
+is established in the usual way from a type preservation result and a progress result. Lemma 4 (Type 
+Preservation). If Ø ,Øf e! N and w e-MT e then Ø ,Øf e !N with N . N and locs(w) . N. Lemma 5 (Progress). 
+If Ø ,Øf e! N then either e= w halt or there exists e such that e-MT e and locs(w) . N. The translation 
+T [ ] de.ned at the beginning of this sec­tion preserves typing and results in programs with the same 
+observational behavior. Lemma 6. If G f e! N then (. G) Ø ,G fT [e] ! N. Lemma 7. T [· ] . www w .I 
+,op,MT,pure,op A,pure  6. FROM DATAGRAMS TO STREAMS The transformation T [] from the previous section 
+works correctly, but it produces ine.cient programs. Whenever a value from location A is needed at location 
+B, the program sends a datagram: it opens a channel from A to B, sends the value, and closes the channel, 
+again. The ine.ciency lies in the cost of connection establishment. Since this cost is much higher than 
+the cost of transmitting one value, it would be better if the cost for connection establishment were 
+amortized across as many value transmissions as possible. To avoid repeated connection establishment, 
+we de.ne a set of transformation rules on .MT terms that seekto join close and open statements for a 
+channel with the goal of reusing the channel for multiple communications. Es­sentially, the transformation 
+turns a sequence of datagram transmissions between two hosts into a stream connection. Figure 11 speci.es 
+the transformation in terms of a rela­ tion -. ES. The strategy for applying the transformation rules 
+is to .oat each open statement upwards in a list of statements until one of the following holds. 1. The 
+open meets a close with matching (or reversed) locations. In this case, the two channels are joined together 
+and both statements are eliminated. 2. The open reaches the beginning of a function body. If the function 
+is recursive, then the open is split o. in a separate non-recursive wrapper function. Then, the standard 
+inlining transformation can transport the open to all call sites of the function [14]. The transfor­mation 
+stops at functions that are not inlineable (e.g., certain toplevel functions).  3. The open reaches 
+the top of a branch of a conditional. There are two possibilities. If the other branch has amatching 
+open, then the transformation rule .rst inserts a channel application c{ l} with label et in the true-branch 
+and ef in the false-branch. If .t and .f are the original types of the channels in the true-and the false-branch, 
+then their type becomes . et . .t,ef . .f. so that the channels can be joined and hoisted in front of 
+the conditional. If no matching open is available in the other branch, then a transformation rule may 
+introduce a new chan­nel between the source and destination host that is opened and immediately closed. 
+Then joining takes place as before. Typing is preserved under the compatible closure . ES of the relation 
+-. ES. The transformation with . ES leads to weakly bisimilar programs. Lemma 8. If T,G f e! N and e. 
+ES e then there exists T such that T ,G f e ! N. Lemma 9. . ES . w ww w MT,pure,op,MT,pure,op  7. SPLITTING 
+TRANSFORMATION Given a type derivation for a .MT program, the splitting transformation extracts for each 
+location a program slice such that running all slices in parallel on their respective locations is equivalent 
+to running the original program. The transformation proceeds in three steps. The .rst step introduces 
+global port names for each connection. Port names serve as globally visible points of contact between 
+the processes generated in step number three. The second step pools together all introductions of port 
+names at the beginning of the program. The third step extracts the slices from the type derivation where 
+each slice contains a separate process for each location. 7.1 Port Introduction The .rst step of the 
+splitting transformation, the intro­duction of ports, P [· ], replaces each occurrence of [A.B] let c 
+= openin ... by a let expression with openP header that refers to an explicit port name and is surrounded 
+by a . abstraction introducing precisely that port name: .p.(let c = openP[A.B] (p) in ...) The translation 
+P [ ] preserves typing. The translation produces weakly bisimilar programs. Lemma 10. If T,G f e! N then 
+T,G fP [e] ! N. Lemma 11. P [· ] . w ww w MT,pure,op,MT,pure,op  7.2 Port Floating The next step moves 
+all port binders to the beginning of the program. Figure 12 speci.es the transformation in terms of a 
+relation -. PB. The second rule lifts a port binder out of an arbitrary function de.nition in the block. 
+Typing is preserved under the compatible closure . PB of the relation -. PB. Transforming with . PB leads 
+to weakly bisimilar programs. [A.B] let d in let c = openin e [B.A] let c = openin e [A.B] let close[A.B] 
+(c) in let c = openin e [A.B] let rec { f[ c]( x)= let c = openin e; r } in e [A.B] if x then (let c 
+= openin e1) [A.B] else (let c = openin e2) e -. ES let -. ES let -. ES e[c -. ES let -. ES let [A.B] 
+c = openin let d in e if x .. var(d) [A.B] c = openin e . c] rec { f [ c,c ]( x)= e; [A.B] f[ c]( x)= 
+let c = openin f [ c,c]( x); r } in e [A.B] c = openin . if et = ef if x then let c{ et} in e1 else 
+let c{ ef} in e2[c ..c] [A.B] -. ES let c = openin let close[A.B] (c) in e Figure 11: Extending the 
+scope of a channel (.MT ) let d in .p.e -. PB .p.let d in e if p .. var(d) let rec { f[ c]( x)= .p.e; 
+r } in e -. PB .p.let rec { f[ c]( x)= e; r } in e if p ..var(r) .{ f, x }. fv(e ) Figure 12: Floating 
+of port binders Lemma 12. If T,G f e ! N and e . PB e then T,G f e ! N. Lemma 13. . PB . w ww w MT,pure,op,MT,pure,op 
+ 7.3 .MT Without Magic As a last preparation of the splitting transformation, we replace the multi-location 
+communication operations in .MT by traditional communication operations and add an op­erator for concurrent 
+execution. For example, the x = [A.B] transc(y) statement of .MT speci.es sending of y at location A 
+and receiving of x at location B (via channel c) [A.B] at the same time. Also, the openand close[A.B] 
+(c) statements perform operations at two locations. Here is the additional syntax of the .nal calculus 
+.MTC. d::= ... | closeA (c) | c = listenA(p) | c = connectB(p) | sendA c(x) | x = recv B (c) e ::= ... 
+| e || e The expression e1 || e2 speci.es the interleaved execution of e1 and e2. The other statements 
+are the one-sided versions of the previous communication statements. Instead of an un­speci.c open statement 
+for establishing a channel between two locations, there are now listen and connect to cre­ate a server 
+end and a client end of a channel for a speci.c port. In the same manner, there are separate communica­tion 
+operations to send an outbound message and to recv an inbound message over an established channel. 7.4 
+Dynamic Semantics Again, the intermediate states need additional syntax: The .c.e expression introduces 
+a pair of fresh linear names, c and c, that model the two ends of a channel. w There are two notions 
+of reduction for .MTC: -MTC,pure ww w is the E-compatible closure of -core. -t3,and -MTC is ww the E-compatible 
+closure of -imp. -t3 (cf. Figure 13). Evaluation contexts are de.ned by E ::= [ ] | E || e | .p.E |.c.E. 
+Both relations consider expressions modulo the small­est compatible equivalence relation = satisfying 
+(for both kinds of .). .x.e = e if x/. fv(e) .x..y.e = .y..x.e e || e = e || e e || (e || e ) = (e || 
+e ) || e (.x.e) || e = .x.(e || e )if x/. fv(e ). The reduction rules in Fig. 13 workas follows. The 
+pair­ing of a listen command and a connect command for the same port results in a channel abstraction 
+where the chan­nel names are replaced by the paired names c and c.A send/recv pair for the same channel 
+c results in transfer­ring the value v from one end to the other. Closing both ends of a channel amounts 
+dropping the channel entirely. The application of a channel to a label is a synchronization construct. 
+It requires the same label application at the other end of the channel to proceed. w For .MTC,weuse -, 
+the E-compatible closure of MTC(A) ww w S -core. -t3 -opB, as the notion of reduction. .B.B=A  7.5 
+Static Semantics Figure 14 contain the typing rules for the new statements and expression. Each port 
+created by .p.e has a .xed session type associated with it. Since a port is globally available, its type, 
+Port ., does not carry a location set. The idea is that c = listenA(p) binds c to the server end of a 
+channel at lo­cation A. The channel inherits its session type . from port p. c = connectA(p) creates 
+the client end. Since sending and receiving of data is exactly reversed on the client, the session type 
+is mirrored indicated by overlining (cf. Fig­ure 15) before it is assigned to the new client end. The 
+send and recv operations peel o. one communication event from the channel type; send an outbound event, 
+and recv an inbound event. The revised close operation only closes one end of a channel. The rule for 
+concurrent execution splits the linear channel environment into two disjoint parts, one for each subprocess, 
+as indicated by the + operator. The value environment is let c1 = listenAe1 || let c2 B(p) in e2 -t3 
+.. (p) in = connecte .c.(e1[c1 . c] || e2[c2 . c])  let sendA c(v) in e1 || let x = recv B(c) in e2 
+e -t3 e1 || e2[x .. v] .c.(let closeA (c) in e1 || let closeB (c) in e2) e -t3 e1 || e2 let c{ l} in 
+e1 || let c{ l} in e2 e -t3 e1 || e2 Figure 13: Reduction rules for .MTC T, G f e ! N T1, G f e1 ! N1 
+T2, G f e2 ! N2 T1 +T2, G f e1 || e2 ! N1 . N2 T, G f d . T , G! N G(p)= Port . T, G f c = listenA(p) 
+. T(c :A .), G! Ø G(p)= Port . T, G f c = connectA(p) . T(c :A .), G! Ø G f a x :(b, N) A . N T(c :A 
+(b, .)), G f sendA c(x) . T(c :A .), G! Ø  T(c :A (b, .)), G f x = recv A(c) . T(c :A .), G(x : b)! 
+Ø T(c :A e), G f closeA (c) . T, G! Ø Figure 14: Typing for extended target syntax, .MTC . li . .i. = 
+. li . .i. e = e µß.. = µß.. ß = ß ., . = .,. .,. = ., . Figure 15: Mirroring of channel types copied 
+to both subprocesses and their e.ect is gathered.  7.6 Slice Extraction The .nal step starts with a 
+type derivation for Ø , Øf . The transformation T e p.e] in Figure 16 skips p.e ! N. N [. over the leading 
+port binders, extracts for each Ai . N the slice of operationsfor location Ai, and puts them in paral­lel. 
+The resulting program has the form .p. (e1 || ... || em). Strictly speaking, the transformation requires 
+a type deriva­tion as input. To avoid this clutter, the input term carries annotations. The annotation 
+@N provides the inferred ef­fect of an expression or statement. When handling a chan­nel, the transformation 
+needs to know the source and target locations of the channel. Again, the annotation @{ B, C}provides 
+this information. Both pieces of information are present in a type derivation. Lemma 14. Suppose that 
+Ø , Øf . p.e ! N. Then Ø , Øf N [. T e p.e] ! N. The transformed program is weakly bisimilar to the 
+orig­inal one if we consider e.ects on each location A separately. Lemma 15. Let Ø , Øf . For each location 
+A . N, p.e!N. it holds that T Ne [· ] . www w . MT(A), opA, MTC(A), opA  8. RELATED WORK The splitting 
+transformation is closely related to program slicing [17]. Recent advances in slicing deal with concur­rent 
+programs [11, 8], however, while slicing does not in­troduce new operations, our transformation maps 
+a sequen­tial program into a multi-threaded program. Another di.er­ence is that slicing is usually driven 
+by the program depen­dency graph, whereas our transformation is driven by loca­tion analysis which includes 
+dependency information through the typing rule for the conditional. Secure program partitioning (SPP) 
+[19] is a closely re­lated transformation that maps a sequential program to a distributed program. However, 
+the goals of SPP are quite di.erent. SPP starts from a program with con.dentiality and integrity annotations 
+for functions, data, and a number of hosts. From these annotations, SPP partitions the pro­gram such 
+that each host runs that part of the program for which its credentials are appropriate. The partition 
+further ensures that the host only receives data up to its con.den­tiality level and that data from the 
+host is only trusted up to its integrity level. In an extension of that work[20], the authors use replication 
+to increase the scope of SPP. Binding-time analysis [7, 5] can be seen as a special case of the location 
+analysis. For example, the TRANS construct is closely related to lifting. However, a binding-time analy­sis 
+distinguishes two modes of computation (static and dy­namic) whereas a location analysis for n locations 
+distin­guishes 2n di.erent modes. Our calculus may be viewed as an instance of the capa­bility calculus 
+[18] restricted to simple types and specialized to particular resources (channels and locations). This 
+spe­cialization enables us to exploit properties beyond the reach of the capability calculus. Session 
+types [2] have emerged as an expressive typing dis­ cipline for heterogeneous, bidirectional communication 
+chan­nels. Each message may have a di.erent type with the pos­sible sequences of messages determined 
+by the channel s ses­sion type. Such a type discipline subsumes typings for data­gram communication as 
+well as for homogeneous channels. Research on the parallel implementation of functional lan­guages is 
+concerned with the automatic detection of implicit parallelism and the speculative evaluation of expressions, 
+e.g., [13, 4]. Our analysis does not detect parallelism but de­termines independent slices of programs 
+with explicit com­munication interfaces. There is no speculative evaluation in our transformed programs, 
+although the splitting trans­formation (guided by the location analysis) may introduce redundancy by 
+performing location independent operations in more than one location simultaneously. 9. CONCLUSIONS 
+AND FUTURE WORK We have presented a location analysis that enables split­ting of an application into 
+slices that execute independently  Acknowledgment Toplevel Expressions TNe [.p.e] = .p.TNe [e] We 
+are indebted to the anonymous reviewers whose numer­T{eA1,...,Am} [e] = Te [e] ||... ||Te [e] if e .=.p.e 
+ous and extensive comments helped to improve the presen- A1 Am Expressions tation signi.cantly. Te A 
+[halt] = halt Te  A [let d in e] = let TAd [d] in TAe [e] 10. REFERENCES Te A [if x then e1 else e2@N] 
+ . [1] C. Flanagan, A. Sabry, B. F. Duba, and M. Felleisen. The if x then TAe [e1] else TAe [e2] A .N 
+essence of compiling with continuations. In Proceedings of the = 1993 Conference on Programming Language 
+Design and Implementation, pages 237 247, Albuquerque, NewMexico, halt otherwise Te A [x[ c]( z)@N] 
+. June 1993. (x)[TAt [c ]] TAt [z ] A .N [2] S. Gay and M. Hole. Types and subtypes for client-server 
+= halt otherwise interactions. In D. Swierstra, editor, Proceedings of the 1999 European Symposium on 
+Programming, number 1576 in Statements Lecture Notes in Computer Science, pages 74 90, Amsterdam, Td 
+ A [x = pfun( x)@N] The Netherlands, Apr. 1999. Springer-Verlag. . x = pfun( x) A .N [3] A. Gordon. 
+Bisimilarity as a theory of functional programming. = Theoretical Computer Science, 228(1-2):5 47, Oct. 
+1999. rec {} otherwise } [4] J. Greiner and G. E. Blelloch. A provably time-e.cient parallel Td x = 
+op AI ( x) implementation of full speculation. ACM Transactions on A . Programming Languages and Systems, 
+21(2):240 285, 1999. x = op AI ( x) A = A [5] F. Henglein. E.cient type inference for higher-order = 
+ rec {} }otherwise binding-time analysis. In Hughes [6], pages 448 472. [6] J. Hughes, editor. Functional 
+Programming Languages and TAd s = openP[B.C] (p) Computer Architecture, number 523 in Lecture Notes in 
+8 Computer Science, Cambridge, MA, 1991. Springer-Verlag. < c = listenA(p) B = A A [7] N. Jones, C. 
+Gomard, and P. Sestoft. Partial Evaluation and = c = connect(p) C = A Automatic Program Generation. Prentice-Hall, 
+1993. : rec {} otherwise [8] J. Krinke. Context-sensitive slicing of concurrent programs. In } Proceedings 
+9th European Software Engineering Conference, Td close[B.C] (c) A pages 178 187. ACM Press, 2003. . 
+ closeA (c) A = B .A = C [9] X. Leroy. The Objective Caml system release 3.02, = Documentation and user 
+s manual. INRIA, France, July 2001. rec {} otherwise http://pauillac.inria.fr/caml. n Td A [rec {fi[ 
+ci]( xi)= ei }i=1] [10] R. Milner. Communication and Concurrency. Prentice Hall, = rec {fi[TAt [c i]](TAt 
+[x i])= TAe [ei] }Englewood Cli.s, NJ, 1989. i=1 [B.C] [11] M. G. Nanda and S. Ramesh. Slicing concurrent 
+programs. In } n Td transc(x) A Proceedings of the International Symposium on Software 8 Testing and 
+Analysis, pages 180 190. ACM Press, 2000. < send c(x) A = B [12] D. Park. Concurrency and automata on 
+in.nite sequences. In = x = recv (c) A = C Proceedings of the 5th GI-Conference on Theoretical rec {} 
+otherwise Computer Science, number 104 in Lecture Notes in Computer : B AC  Td c{lj }Science, pages 
+167 1183. Springer-Verlag, 1981. . [13] S. L. Peyton Jones. Parallel implementations of functional c{lj 
+} A = B .A = C = programming languages. The Computer Journal, rec {} otherwise 32(2):175 186, 1989. 
+Parameter lists [14] S. L. Peyton Jones and J. Launchbury. Unboxed values as .rst Tt class citizens in 
+a non-strict functional language. In Hughes [6], A [E] =() . pages 636 666. Tt A [x ] ,x A .N Tt [15] 
+W. R. Stevens. UNIX Network Programming.Prentice Hall A [ = x,x@N] Tt A [x ] otherwise Software Series, 
+1990. [16] Y. M. Tang and P. Jouvelot. E.ect systems with subtyping. In W. Scherlis, editor, Proc. ACM 
+SIGPLAN Symposium on  Figure 16: Slice extraction in .MTC Partial Evaluation and Semantics-Based Program 
+Manipulation PEPM 95, pages 45 53, La Jolla, CA, USA, June 1995. ACM Press. [17] F. Tip. A survey of 
+program slicing techniques. J. Programming Languages, 3(3):121 189, 1995. in parallel and that communicate 
+via typed streams. The [18] D. Walker, C. Crary, and G. Morrisett. Typed memory analysis and the accompanying 
+transformations enable the management via static capabilities. ACM Transactions on development of distributed 
+applications in a local setting. Programming Languages and Systems, 22(4):701 771, July Each of the transformation 
+steps is proven correct. 2000. [19] S. Zdancewic, L. Zheng, N.Nystrom, andA.C.Myers.Secure Ongoing workconsiders 
+the e.cient implementation of program partitioning. ACM Transactions on Computer the location analysis. 
+The challenge is that the analysis Systems, 20(3):283 328, 2002. must be con.gurable with respect to 
+location preferences [20] L. Zheng, S. Chong, A. C. Myers, and S. Zdancewic. Using and communication 
+requirements. The present workonly replication and partitioning to build secure distributed systems. 
+In Proceedings of the 2003 IEEE Symposium on gives a speci.cation. Practical experience will show if 
+a Security and Privacy, page 236. IEEE Computer Society, 2003. polymorphic analysis is required. In general, 
+the mapping to tiers will be a multi-language issue that requires an additional translation step from 
+the framework s language to the desired target languages. Al­ternatively, a heterogenous frameworkmight 
+be considered where either the analysis applies directly to di.erent lan­guages.  
+			

@@ -1,0 +1,457 @@
+
+ Maintaining Hierarchical Graph Views Adam L. Buchsbaum* Jeffery R. Westbrook* Abstract We formalize 
+the problem of maintaining viewsof graphs. These are graphs induced by the contraction of vertex subsets 
+that are de- fined by associated hierarchies. We provide data structures that al- low applications to 
+refine and coarsen such views interactively and efficiently, in time linear in the number of changes 
+induced by any exploration operation. The problem is motivated by applications in graph visualization. 
+ Introduction Many naturally occurring graphs that are too large to analyze and display effectively 
+have associated semantics that induce a hierarchy of meaningful subgraphs. For example, a graph representing 
+U.S. telephone network traffic, in which ver- tices correspond to callers and edges to calls placed, 
+has an obvious hierarchy induced by area codes (first three digits of the phone number) and exchanges 
+(first six digits). Graphs of WWW traffic have similar structures, based on the domains and subdomains 
+in the IP address space. The associated se- mantics naturally define the manner by which applications 
+will interactively focus on areas of greater interest while si- multaneously aggregating information 
+in areas of lesser in- terest. We design data structures to navigate such hierarchies efficiently. Informally, 
+consider a graph with a hierarchy defined on its vertices. After generating the graph induced by contract- 
+ing each vertex into its highest representative (e.g., in the phone graph, contracting all the numbers 
+in a single area code into one super-vertex), we would like to expand the graph, by expanding a super-vertex 
+into its next-level com- ponents (e.g., an area code into its respective exchanges). This allows the 
+user to focus interactively on regions of inter- est for processing or display. Similarly, the user may 
+choose to contract such a region back into a super-vertex. The ma- jor problem is determining how to 
+connect newly expanded vertices to the rest of the induced graph without examining the entire underlying 
+graph. For example, if area code 973 "calls" area code 858 and the user expands 973 into its ex- changes, 
+not all of those exchanges might have calls into 858. More formally, we are given an undirected graph, 
+G, and an arbitrary, rooted tree, T, such that the leaves of T correspond to the vertices of G. In general, 
+the edges of "''*'-NT~T Labs, Shannon Laboratory, 180 Park Ave., Florham Park, NJ 07932; {alb, jef fw}Oresearch, 
+att. com. G can have weights from a given abelian group. At any time, we have a view of the graph, which 
+is a subset, U, of the nodes of T, such that every leaf of T (and thus vertex of G) has a unique ancestor 
+in U. The view induces a graph, G/U, which is formed by contracting each vertex of G into its representative 
+node in U and deleting resulting multiple and loop edges. The weight of an edge in G/U is the group product 
+of the weights of the underlying edges in G. (We give precise definitions in Section 2.) We define two 
+navigation operations on U: expand(U, v), which refines the view by replacing v E U by v's children (in 
+T); and the inverse, contract(U, v), which coarsens the view by replacing v's children by v. The operations 
+provide the updates to G/U, ideally in time linear in the number of changes. See Figure I. This problem 
+is natural and elegant in itself, and it also has strong motivation from graph visualization. Graph visu- 
+alization research focuses on aesthetics and clarity, i.e., con- veying the graph structure in an appealing 
+and unambigu- ous fashion [3]. Quantitative approaches such as minimiz- ing edge crossings, area, etc., 
+do not scale well to very large graphs, because of the lack of sufficient screen area. Typical screens 
+have 1280x1024 resolution, or about 1.3 million pix- els. Even large, multi-screen displays [ 19] only 
+offer about 10 million pixels. Displaying a graph with tens of millions or more elements on such devices 
+is problematic. There-fore, a recent paradigm shift in graph visualization empha- sizes topics such as 
+perspective views [12, 13, 16], clustered and compound graphs [6, 7, 10, 14, 17], overlaying graphs with 
+continuous surfaces [1], and user interfaces [8]. Much of this literature deals with finding the right 
+models, tech- niques, and metaphors for large graph display, but relatively little attention is paid 
+towards formal definitions or efficient solutions for the underlying algorithmic problems. In this paper 
+we contribute a formal definition of the problem of maintaining hierarchically induced graph views, and 
+we provide efficient data structures that support ex-pand and contract operations in optimal time for 
+unweighted graphs. In Section 2, we formally define hierarchical view maintenance problems. In Section 
+3 we present a data struc- ture that is simple, achieves optimal time per operation, and is likely to 
+be the method of choice for practical applica- tions, but has poor asymptotic space requirements. In 
+Sec- tions 4 and 5, we give a series of improvements. Our best result requires O(m log n) space for an 
+n-vertex, m-edge I 1 9 7 ~ 043~ -~ 2~202 ...... ()677 (a) (b) 1 1 236/~ .._ 36~ "~__ 272~ ~;2]~ i °° 
+236/~ ~_ _.. _ 3~_'~7 --2"72"]~ ~2/~ ~ °" 043~" - " ~ ; .'2~202 ...... 6677 043~~~2 "2~ 0"2" ..... 6677 
+ (c) (d) Figure 1: (a) A hierarchy tree, T, over a graph, G. Tree edges are solid. Graph edges are dotted. 
+The label of a node is the catenation of the labels of its ancestors: the root is labeled "1," its left 
+child "1-973" its left child "1-973-236" and so on. The labels at the leaves of T (vertices of G) are 
+phone numbers. For simplification, we omit edge weights from the picture. In a bad day for AT&#38;T, 
+the only calls are between the authors (who apparently traveled a bit). The view, U, in this picture 
+is {1}, i.e., the singleton set containing the root node; hence the induced graph, G/U, contains no edges. 
+(b) After expanding the root node, the new view, U', is { 1-973, 1-908, 1-858} (omitting the other children 
+of node 1, which do not affect the diagram); the edges of G/U ~ are shown dashed. (c) After expanding 
+node 1-908 in U', the new view, U", is { 1-973, 1-908-272, 1-858}; the edges of G/U" are shown dashed. 
+(d) After expanding node 1-973 in U", the new view, U m, is { 1-973-236, 1-973-360, 1-908-272, 1-858}; 
+the edges of G/U m are shown dashed. graph, G, and, after O(m log 2 n) preprocessing time, allows 2 Problem 
+Statement each expand and contract operation to be performed in opti- 2.1 Definitions. Let G = (V(G), 
+E(G)) denote a graph mal time, i.e., in time linear in the size of the change to the with vertex set 
+V(G) and edge set E(G). Let T be a rooted induced graph. We can accommodate insertions and dele- tree; 
+let L(T) be the set of leaves of T. For v E V(T): lettions of edges in G in O(log 3 n) time, but the 
+overall space children(v) be the set of children of v, and let leaves(v) berequirement then becomes O(m 
+log 2 n). These results are the set of leaf descendents of v. independent of the topology of the hierarchy. 
+We discuss We call a rooted tree, T, a hierarchy tree of G ifweighted graphs in Section 6. Our simple 
+data structure L(T) = V(G). For clarity, we refer to elements of V(G)extends to support weighted graphs 
+without change to the as vertices of G and to those of V(T) as nodes of T. For a resource bounds. Our 
+sophisticated data structures incur a graph, G, and a hierarchy tree, T, of G, we say that a subset log 
+n factor penalty in the expand times. We conclude in U C_ V(T)partitions G if the set {leaves(v) :v E 
+U} Section 7 with open problems and directions for future work. partitions V(G). We also call U a view 
+of G. DefineTable 1 in that section summarizes our results. II(T) = {U E 2 v(T) : U partitions G}. For 
+any u,v T such that neither u nor v is an ancestor of the other, define E(u, v) to be the set {{x, y} 
+ E(G) : x leaves(u)A y leaves(v)}. If IE(u,v)l > 0 then (u, v) is an induced edge of T with respect 
+to G, henceforth simply abbreviated induced edge. If each edge e E(G) has a weight, w(e) G, from a 
+given abelian group, (G, ®), then the weight of (u, v) is defined to be w(u,v) = (~){w({z,y}): {z, y} 
+ E(u,v)}. Let I(T,G) (abbreviated I(T) where clear) be the set {(u,v) : IE(u,v)l > 0} of induced edges 
+ofT. For any U II(T), we define G/U to be the induced graph (U, Eo'), where = {(u, v) e I(T, G): u, 
+v U). For any v U, let adju(v) be the set of nodes in T that are adjacent to v in G/U, and let incu 
+(v) be the set of edges that are incident upon v in G/U. Given a graph, G, and a hierarchy tree, T, of 
+G, we define the following operations. 1. expand(U, x), where U II(T) and x U. The result is U' = U 
+\ {x} U children(z). 2. contract(U, x), where U E II(T) and children(x) C U. The result is U' = U \ children(x) 
+U {x}. In the example in Figure 1, U' is the result of expand(U, 1), U" is the result of expand(U', 1-908), 
+and U'" is the result of expand(U", 1-973). U" is also the result of contract(U'", 1-973), etc. PROPOSITION 
+2.1. II(T) is closed under and complete for expand(., .) and contract(-, .). PROBLEM 2.1. (VIEW GENERATION) 
+Given a graph, G, a hierarchy tree, T, of G, and a view, U E II(T), generate the induced graph G /U. 
+Problem 2.1 can be solved in O(n + m) time and space, where n = IV(G)I and m = IE(G)I, using standard 
+graph contraction methods. PROBLEM 2.2. (VIEW MAINTENANCE) Given a graph, G, a hierarchy tree, T, of 
+G, and an initial view, U E II(T), maintain the induced graph G/U and the view U under expand(., .) and 
+contract(., .) operations. To maintain G/U means that at all times, we store an explicit representation 
+of G/U, e.g., an adjacency list cor- responding to adju(v) for each v E U. This representation must be 
+updated following any expand(U,.) or contract(U,.) operation. Problem 2.2 admits static and dynamic variants. 
+Static. Both G and T are fixed a priori. Dynamic graph. T is fixed, but G is subject to edge inser- 
+tions and deletions. Dynamic graph and tree. G is subject to edge insertions and deletions. T can undergo 
+leaf insertions and dele- tions and internal node splitting and merging (with cor- responding vertex 
+insertions and deletions on G). In this paper we address the static and dynamic graph variants of the 
+view maintenance problem. We concentrate on the unweighted case, for which all of our data structures 
+guarantee optimal expand and contract times, although we show how to extend our data structures to weighted 
+graphs. A trivial approach to the view maintenance problem is to recompute G/U by the static generation 
+method, in O(n + m) time and space, after each expand(., .) or contract(.,-) operation. While the space 
+requirement is optimum, the time is prohibitive. We therefore focus on improving the time bound, possibly 
+at the expense of space. 2.2 Preliminaries. For v E V(T): let depth(v) be the depth of v; let depth(T) 
+= ma.xvEv(T)depth(v); let p(v) be the parent of v; and let desc(v) be the set of descendents of v. Let 
+nca(vl, v2,... , vk) for k _> 2 be the nearest common ancestor of tree nodes vl, v2,  , vk. For v an 
+ancestor of w, if v ~: w, define c~(w) to be the child of v on the path from v to w; ifv = w, define 
+c~(w) = v; we call c~(w) the characteristic child of v with respect to w. In what follows, n = [V(G)[, 
+and m = IE(G)I. We assume there are no unary nodes in T; hence IV(T)I = O(n). This is without loss of 
+generality, because expansion down unary paths is a simple special case. In an O(n)-time preprocessing 
+phase, we perform a depth-first search (DFS) of T so that each node in T is assigned its DFS number and 
+depth. We abuse notation and use u itself to denote the DFS number of u E V(T); the context will clarify 
+any ambiguity. In particular, u < v means that u's DFS number is less than v's. If u < v (rsp., v < u) 
+and u is not an ancestor (rsp., descendent) of v, we say that u is to the left (rsp., right) of v in 
+T. Given O(n) preprocessing time, we assume the ability to compute the following on-line in O(1) time: 
+(1) nca(u, v) for any two nodes, u and v, of T, [11, 15]; and (2) the ith ancestor of any v E V(T), for 
+any 0 <_ i < depth(v) [2, 4]. We can thus compute c~,(v), which is the ((depth(v) - depth(u)) -1)th ancestor 
+of v if u ~ v, in O(1) time, and nca(vl,... , vk) in O(k) time by iterating the two-node nca algorithm. 
+Also, we abuse notation and define nca(u) = {{x, y} E E(G) : nca(x, y) = u}, which can be computed for 
+each u E V(T) in the linear-time preprocessing pass. We assume that G is undirected, but our methods 
+extend to directed graphs, by keeping one data structure built on the "rightward arcs" of G, and one 
+on the "leftward arcs" where "rightward" and "leftward" are with respect to the DFS numbers on L(T). 
+We also assume that T is given explicitly, although our methods extend to cases in which T is implicitly 
+defined by the operations depth(.), p(.), children(.), etc. 3 The Naive Approach In the naive approach, 
+the induced edges in I(T) are ex-plicitly stored along with pointers between them to facili- tate the 
+expand and contract operations. For a given induced edge (u, v) (assume u < v), define the left expansion 
+set, L(u, v), to be the set {(w, v) E I(T) : w E children(u)} of induced edges between children(u) and 
+v. The right ex- pansion set, R(u, v) is defined symmetrically: R(u, v) = {(u, w) E I(T) : w E children(v)}. 
+For each induced edge (u, v) there is a block of data. At any time, the edges in G/U will contain pointers 
+to the corresponding data blocks. The data block for (u, v) contains pointers to the sets L(u, v) and 
+R(u, v), which are maintained as linked lists of pointers to the data blocks for the appropriate induced 
+edges. The data block also stores two "reverse" pointers, which point to the data blocks for (p(u), v) 
+and (u, p(v) ), if they exist. In addition, for each vertex w, we store a linked list of pointers, N(w), 
+to induced edges (u,v) such that p(u) = p(v) = w. These are induced by the edges in nca(w). Expand. Given 
+a view U E rI(T) and the induced graph G/U, consider an expand(U, u) operation for some u E U, creating 
+new view U'. To execute this operation, we form the sets NL(U) = U L(u,v) (u,v) ~i.cv (u) and NR(u) 
+= U R(w,u). (w,u)eincv(u) Then Nz(u) tA NR(u) t3 N(u) gives the new set of edges between the children 
+of u and the remainder of U', which we add to G/U ~. We remove from G/U' the edges incident upon u in 
+G/U. Since each edge incident upon u gives rise to at least one edge incident upon a child of u, the 
+total time is O (EzEchildren(u)linctr'(Z)l) This time is optimal, and " we define the quantity Opt(U, 
+v) = ~ linctl(z)[ z E children ( v ) for future use. In particular, expand(U, v) can be performed in 
+O(Opt(U', v)) time. Contract. Let U' = contract(U,v) for some v ~/ U such that children(v) C_ U. Each 
+edge in U~echildren(~)incu(z) is examined in turn. Consider (z, w), z E children(v). If p(w) = v, then 
+the edge is dis- carded. Otherwise, follow the pointer in (z, w) to (p(z) _----v, w), add (v, w) to G/U', 
+and discard (z, w). We use a mark bit in the data block for (v, w) to ensure that (v, w) is added only 
+once. Processing an edge (w, z) is symmetric. The time is thus O(Opt(U, v)). Edge updates. To accommodate 
+updates to E(G), we maintain c(u, v) = IE(u, v)l for each induced edge (u, v) E I(T). To insert edge 
+{x, y}, we generate in a top-down fashion all pairs (u, v) such that u (rsp., v) is an ancestor of x 
+(rsp., y) and a proper descendent ofnca(x, y). To locate the data block for each (u, v), we store I(T) 
+in a dictionary. If (u, v) already exists, we increment c(u, v). Otherwise, we instantiate (u, v) as 
+a new induced edge with c(u, v) = 1, and insert it into I(T), L(p(u), v), and R(u, p(v)); if u and v 
+are in the current view, U, we add (u, v) to G/U. Deleting {x, y} engenders the inverse operations. For 
+each potential induced edge, (u, v), we decrement c(u, v). If c(u, v) becomes 0, we remove (u, v) from 
+I(T), L(p(u), v), and R(u,p(v)), and, if (u,v) was in the current G/U, we remove it from that as well. 
+The I(T) dictionary can be implemented with dynamic perfect hashing [5], giving O(1) worst-case time 
+per search and O(1) expected time per update, or with a search tree giving deterministic O(log n) bounds 
+per operation. Space requirement. The total space is bounded by the space for the L(.), R(-), and N(.) 
+lists, which is itself O " E E(G), let (~(~,,~)~z(r)IE(u,v)l).For edge {x,y} dz be the length of the 
+path from x to nca(x, y); define d u analogously. Then {x, y} contributes dz-d u = O(D a) to this sum, 
+where D = depth(T). Hence the total space required is ®(mD2). For long, skinny trees this can be f~(n2), 
+but for balanced trees O(m log z n) space suffices. THEOREM 3.1. Let D = depth(T). The naive method uses 
+O(mD 2) space, provides expand(U, v) (rsp., contract(U, v)) operations in O(Opt(U',v)) (rsp., O(Opt(U,v))) 
+time each, and accommodates insertions and deletions of edges into/from G in O( D 2) expected time each 
+with hashing or in O( D 2 logn) time with binary search trees. Preprocessing. Given the initial graph, 
+G, inserting each edge in E(G) yields an expected preprocessing time of O(mD2). We describe an alternative 
+method for preprocess- ing G to build the initial data structures, which traverses T top-down, discovering 
+induced edges along the way. While the incremental method is simpler, the top-down algorithm can be readily 
+extended to the more sophisticated data struc- tures of later sections. Partition the original edges 
+of G according to the ncas of their endpoints in T. Each node v E V(T), and the set of edges nca(v) that 
+have v as the nca of their endpoints, is considered in turn. All edges that can be induced by elements 
+of nca(v) are generated using the following procedure. The procedure will be called twice, once to generate 
+left expansion sets, and once to generate right expansion sets. We describe the left expansion set call; 
+the right call is symmetric. Two queues, QL and QR, are used to contain induced edges. Each edge e E 
+QL U QR has an associated set E(e), which is the set of edges that induce e. We will maintain as an invariant 
+that the induced edges on QL or QR partition the underlying edge set. Initially, compute the set of edges 
+induced among all children of v, and partition the set nca(v) among these edges. Inject each of these 
+edges onto QR. This can be done by first determining for each e = {x, y} E nca(v) the values i and j 
+such that c~(x) is the ith child and cv(y) the jth child of v according to some (arbitrary but fixed) 
+ordering of the children of v. Then nca(v) is sorted lexicographically according to (i,j), and an induced 
+edge is made for each unique (i,j) value. The total time is O([children(v)l + Inca(v) t). The main body 
+of the procedure is as follows. 1. While QR is not empty: (a) Pop induced edge e = {x, y} from QR, and 
+push it onto QL. (b) While QL is not empty: i. pop e' = {u, v} from QL; ii. compute the new induced 
+edges produced by expanding on u, and partition E(e') among these new edges, using a method similar to 
+that described above for the initialization step. Construct L(u, v) for e'; iii. inject each new induced 
+edge onto QL, unless it is equivalent to an original edge. (c) Expand on y, determine the resulting 
+induced edges as above, and inject them onto QR.  LEMMA 3.1. The algorithm requires O(mD 2) space and 
+expected time and generates exactly the set of induced edges that are induced by the original edges in 
+E( G). Compressed Trees To reduce the depth of T, and thus the preprocessing time and space required, 
+we use the heavy-path partition of T, as defined by Harel and Tarjan [11] and later used by Gabow [9]. 
+l Call tree edge (v,p(v)) light if 21desc(v)[ <_ Idesc(p(v))l, and heavy otherwise. Since a heavy edge 
+must carry more than half the descendents of a node, each node can have at most one heavy edge to a child, 
+and therefore deletion of the light edges produces a collection of node- disjoint heavy paths. (A node 
+with no incident heavy edges becomes a singleton, called a trivial heavy path.) l~an [18] originally 
+introduced heavy-path partitions, but defined in different terms; Schieber and Vishkin [15i later used 
+yet another variant. The compressed tree, C(T), based on tree T, is con- structed (in O(n) time) by 
+contracting each heavy path in T into a single node. Each tree edge in C(T) corresponds to a light edge 
+of T. Since there are O(logn) light edges on the path from any node to the root of T, C(T) has depth 
+O(logn). Let h(v), v E C(T), denote the heavy path of T that generates node v. Define h-l(v) = v for 
+all v E h(v). Figure 2(a) gives an example. For a pair of nodes u, v E C(T), define E(u, v) = {{x,y} 
+E E(G) : 3# E h(u), 3u e h(v), {x,y} e E(#, v)}. The induced edges of C(T) with respect to G form the 
+set I(C(T),G) = {(u,v) : u,v E C(T)A IE(u,v)l > 0}. A subtle point is that the induced edges of C(T) 
+may include pairs (u, v) where u is an ancestor of v and vice-versa. Expand and contract operations in 
+T will be supported by the induced edges in the compressed tree, using (u, v) E I(C(T)) to substitute 
+for all induced edges in I(T) between elements of h(u) and h(v). For current view U, each edge (#, v) 
+E G/U stores a pointer to the induced edge (h -1 (/z), h -1 (v)) E I(C(T)). Consider some u E C(T), and 
+let h(u) = (ul, u2, . . . , ul), ui E T, from top to bottom. Define a value curt(u) such that curr(u) 
+= i ifui E U for some i, curr(u) = 0 ifU contains an ancestor of ul, and curr(u) = g + 1 otherwise. As 
+in Section 3, define L(u, v) = {(w,v) E I(C(T)): PC(T)(W) = u}, and define R(u,v) symmetrically. Each 
+element q 6 L(u,v) is annotated by a value expandAt(q) as follows. Pointer q points to an edge that is 
+incident on a child c of u in C(T). Map c to the node ca 6 T such that el is the topmost node of h(c). 
+Node ca is a child in T of one of the uis. Set expandAt(q) = i. In addition, pointer q is annotated by 
+a value expandLimit(q), defined to be the maximum j such that there is a graph edge {x, y} such that 
+x 6 descT(ca) and y E deScT(vj), vj E h(v). The intuition behind expandAt(.) and expandLimit(.) is as 
+follows. Suppose we are expanding/z E T, and consider induced edge (~u,v). Let u = h-l(bt) and v = h-l(v). 
+Because the induced edge (u, v) in I(C(T)) represents all possible induced edges in I(T) between nodes 
+in h(u) and nodes in h(v), an edge q E L(u, v) should generate a real edge in G/U only if (1) the parent 
+of q's endpoint in h(u) is the node being expanded (i.e., if expandAt(q) = curr(u)) and (2) q has some 
+underlying graph edge whose right endpoint is a descendent of the node to which h(v) has currently been 
+expanded (i.e., ifexpandLimit(q) >_ curr(v)). Figure 2(a) gives an example of T, C(T), and L(u, v). We 
+also define set N(u) = {(h-l(c~),h-l(/3)) : (c~,/3) E N(#), /z E h(u)}. These are the induced edges of 
+C(T) that represent edges induced by those in nea(#), # E h(u). The elements of N(u) are annotated by 
+expandAt(.) values, as above. Next we give high-level descriptions of the expand and U? U v U U V ..... 
+,. " I14 ..... ," U c 2 c 3 c 4 .-" d 2 d 3 d 4 c 2 c 3 c 4 .-" d 2 d 3 d 4 "°, . o --o --~ ~, . ---, 
+- . ..° ", o- ....°-.oo.°°-°" "'~°.~ ............ "--.o ............ - c1"..c2 C3 c4 %'..c6 .'.ill .."d2 
+d3 d4 d5 Cl',.c 2 c 3 c 4 c~,, c 6 fli I ..'d 2 d 3 d 4 d 5 . ......... (aL.-- "~'-.... .-" "'--o.. 
+...... .-*" Figure 2: (a) Top: two pieces ofT. Tree edges are solid; graph edges are dotted; induced 
+edges are dashed. Thick edges form the heavy paths. Bottom: corresponding pieces of C(T); h(u) = (ul, 
+u2, ua, ua), and h(v) --- (Vl, v2, v3). Induced edge (u2, v2) in T corresponds to (u, v) in C(T). L(u, 
+v) = {(Cl, v), (c5, v)}. With respect to L(u, v): expandAt(Cl, v) = 2; expandLimit(cl,v) = 3; expandAt(cs,v) 
+= 3; expandLimit(cs,v) = 2. (b) As (a), after expand(., u2 ). Because curr(u) = 2 before the expand and 
+expandAt(cl, v) = 2, (cI, v) is instantiated in C(T), corresponding to (cl, v2) in T. Because expandAt(cs, 
+v) = 3 > curr(u) and expandLimit(cs, v) = 2 > curr(v), curr(u) is incremented to be 3, and (u, v) in 
+C(T) now corresponds to (u3, v2) in T. contract operations. Expand. Let U' = expand(U,#). Let u = h-l(/.,). 
+Examine each edge (#, v), /z < v, in turn. Let (u, v) be the corresponding edge of C(T). Let h(u) = (Ul,... 
+, u~). Note that Ucurr(u) = I ~. Find the set X = {q E L(u, v) : expandAt(q) = curr(u) A expandLimit(q) 
+>_ curr(v)}. For each q E X, find the induced edge (w, v) to which q points, and generate a new edge 
+(w, v) for G/U', where w is the topmost node in h(w). Map (w, v) E I(T) to (w, v) E I(C(T)). Finally, 
+if there exists any q E L(u, v) such that expandAt(q) > curt(u) and expandLimit(q) >_ curt(v), then add 
+edge (ucurdu)+x, v) to G/U' and map it to (u, v). Figure 2(b) provides an example. Process the edges 
+(v, #), v < /~, symmetrically, using R(-) sets. Finally, find the set {q E N(u) : expandAt(q) = curr(u)}, 
+and process it in the same way. To implement the expand operation efficiently, we store the elements 
+in L(u, v) as follows. Let BL(u,~) (i) = {q E L(u,v) : expandAt(q) = i}. The pointers in BL(~,~)(i) are 
+stored in decreasing order by expandLimit(.) value. The values of i such that BL(~,~)(i) is non-empty 
+are stored in increasing order, in a list BL(u, v). With each such i is also stored the maximum j such 
+that there exists a q E L(u, v) such that expandAt(q) > i and expandLimit(q) = j. With (u, v) we store 
+an expansion pointer into BL(u, v) that points to the successor of curt(u). This pointer will be advanced 
+as curt(u) increases during expand operations. Using the pointer, we can efficiently find the subset 
+of elements that should be used to generate new edges and also determine if (u, v) should be regenerated 
+when curr(u) is incremented. For brevity, we omit details. An analogous BR(u, v) data structure is built 
+for R(u, v). Contract. Let U' = contract(U, v), and let v = h-l(v). Let vl,... , vt be the children 
+of v in T, and for 1 < i < g, let vi = h-l(vi). Examine each edge (/.*,vi) incident on each vi and, if 
+# ~ children(v), add (#, v) to G/U' if it has not already been added. Map (#, v) to (h-l(#),h-t(v)). 
+To implement contract efficiently, we store with each (u,v) E I(C(T)) back pointers to L(p(u),v) and 
+R(u, p(v)). The back pointer to L(p(u), v) actually points to the element of BL(p(u), v) containing the 
+forward pointer to (u, v). When generating (/~, v) from (p, ui), the back pointer in (u, vi) is used 
+to initialize the expansion pointer in the edge (u, v) to which (/~, v) is mapped. The same rule applies 
+to the back pointer to R(u,p(v)). We omit further details. LEMMA 4.1. Operation expand(U, lz ) ( rsp., 
+contract(U, v ) ) can be implemented in O(Opt(U',/z)) (rsp., O(Opt(U, v) ) ) worst-case time per operation. 
+Edge updates. To accommodate edge updates to G, the data structures become slightly more complicated. 
+As before, we use dynamic perfect hashing [5] to locate the data blocks for induced edges, and we keep 
+a count c(u, v) = IE(u, v)l. Consider inserting edge {x, y} into G. For each newly created induced edge 
+(u, v) (u, v E C(T)), we must insert a pointer q to (u,v) into L(p(u),v). In O(1) time, we can compute 
+the expandAt(q) and expandLimit(q) values. The expandAt(q) value is the index of the node in h(u) that 
+is pT(C~(X)), i.e., the parent in T of the characteristic child of u (in C(T)) with respect to x. Similarly, 
+the expandLimit(q) value contributed by {x, y} is the index of the node in h(v) that is pT,(c,(y)). Symmetrically, 
+we insert a pointer to (u, v) into R(u, p(v)). For each (u, v) that was previously an induced edge, consider 
+the pointer q to (u, v) in L(p(u), v) (and symmet- rically in R(u,p(v))). Inserting {x,y} does not change 
+expandAt(q) but might increase expandLimit(q). To ac-commodate this potential change, we superimpose 
+on the BL(.) and BR(.) data structures binary search trees, the leaves of which are the elements of BL(.) 
+(or BL(.)) or-dered increasingly by expandAt(.) value. Over each sub- list for a distinct expandAt(.) 
+value we also superimpose a binary search tree, with the leaves ordered decreasingly by expandLimit(.). 
+We further maintain the leaves in each such tree in a doubly linked list, so that expand(., .) and contract(., 
+.) work as before. With this additional structure, insertion or deletion of a (u, v) into a BL(.) or 
+BR(-) struc-ture takes O(log n) time. (Changing expandLimit(q) there-fore also takes O(log n) time.) 
+To delete edge {x,y}, we need to determine if expandLimit(q) changes for any pointer q to an edge (u, 
+v) induced by {x, y}. To do so, we maintain with each (u, v) a binary search tree of distinct expandLimit(.) 
+values gener- ated for it by underlying graph edges. (We maintain one such structure for the "left expansion" 
+to (u, v) and one for the "right expansion.") With each value, we maintain a count of the number of graph 
+edges that induce that value for (u, v). The maximum value in this tree determines expandLimit(q) in 
+L(p(u), v) (and symmetrically in R(u,p(v))). Updating this new data structure takes O(log n) time for 
+each (u, v). THEOREM4.1. Let s = min{depth(T),logn}. The compressed tree method uses O(ms 2) space, pro-vides 
+expand(U, v) (rsp., contract(U, v)) operations in O(Opt(U', v)) (rsp., O(Opt(U, v) )) time each, and 
+accom- modates insertions and deletions of edges into~from G in O(s 2 logn) expected time each. Given 
+an initial graph G, the data structures can be built in one O(rns 2) expected time preprocessing pass. 
+PROOF (SKETCH): The time bounds for expand(U, v) and contract(U,v) follow from Lemma 4.1. Each graph 
+edge induces O(s 2) edges in C(T), and thus contributes to O(s 2) distinct expandLimit(.) values, yielding 
+the space bound. By the above discussion, for each induced edge, O(logn) work must be done to update 
+the BL(-), BR(.), and new expandLimit(.) data structures. The preprocessing time to build the data structures 
+for an initial graph, G, is only O(ms 2) (not O(ms 2 log n)), because we can build the initial binary 
+search trees superimposed on the BL(.), BR(.), and expandLimit(.) data structures in linear time. [] 
+5 An Implementation Using Less Space for the Static Problem To reduce the space we can avoid explicitly 
+representing all possible induced edges. For clarity of exposition, consider first the original tree 
+T. We extend the discussion later to cover the compressed tree C(T). Let (u,v) be an induced edge, let 
+E(u,v) = {(xl,yl},..., {a~k,yk}} for some k, and assume without loss of generality that xi is a descendent 
+of u and yi is a descendent of v for all i. For convenience we refer to xi as a left endpoint and Yi 
+as a right endpoint. Let u' = nca(xl,... ,xk) and v' = nca(yl,... ,Yk). Edge (u,v) is called fundamental 
+if u ~ u' and v = v'; otherwise (u, v) can be uniquely associated with the fundamental edge Intuitively, 
+we do not need to store expansion sets for a non-fundamental induced edge (u, v), because after an expand(U, 
+u), the graph edges in E(u, v) induce an edge to v from exactly one child of u. This child can be determined 
+from the associated fundamental edge (u~,vl), since the child must be an ancestor of u'. If (u, v) is 
+a fundamental edge, a modified left expansion set, denoted LM(u,v), is constructed from the standard 
+L(u, v) set as defined in Section 3 by replacing each pointer to a non-fundamental edge (u ~, v) by a 
+pointer to its associated fundamental edge. RM(u, v) is defined analogously. No space is allocated for 
+non-fundamental edges. Similarly, the pointers to edges induced by nca(u) are replaced by pointers to 
+the associated fundamental edges. With each induced edge in G/U we also store the associated fundamental 
+edge. Expand. Let U' = expand(U, u). As before, each edge (u, v) incident on u is used to derive the 
+set of induced edges between v and the children of u. For convenience, we only describe the processing 
+of an edge such that u < v. The processing for u > v is symmetric. Let (u', v') be the associated fundamental 
+edge. case u' ~ u. Let c = c~,(u'). Create a single new induced edge (c, v) and associate it with edge 
+(u', v'). case u' = u. Suppose LM(u, v') --(u!, vl),... , (u~, vk). For 1 < i <_ k, determine c = cu(ui), 
+create edge (c, v) and associate it with edge (ui, vi). Finally, add to G/U' the edges induced by nca(u), 
+using characteristic children in a similar way. Contract. Let U' = contract(U,v), and let children(v) 
+= {Vl,... ,Vk}. The edges incident on these children are grouped by their far endpoints. Consider a group 
+of edges (vii, u), (vi2, u),... , (vii, u) with common far endpoint u. If p(u) = v, these edges are discarded. 
+Oth- erwise, assume without loss of generality that u > v. (The case in which u < v is symmetric.) Create 
+a new induced edge (v, u), and determine the associated fundamental edge according to the following procedure. 
+ease g = 1, (i.e., only one child ofv is adjacent to u.) Create edge (v, u) and set its underlying fundamental 
+edge to be the same as that of (vii, u). case e > 1. Let (ail, bit),... , (ai,, bit) be the associated 
+fundamental edges for (vii,u),... , (vie,u). Deter-mine c = nca(bit,... , bit), and set the associated 
+fun- damental edge of (v, u) to be (v, c). Once the fundamental edge is determined for (v, u), edges 
+(vit , u), . . . , (vit, u) can be discarded. As in Section 3, we store the set of fundamental edges 
+in a dictionary, in order to locate their data blocks, using either a perfect hash table [5] or a binary 
+search tree. LEMMA5.1. With a hash table, expand(U,v) (rsp., contract(U, v)) can be implemented in deterministic 
+worst- case time O(Opt(U', v)) (rsp., O(Opt(U, v))). With a bi- nary tree, the time for contract(U,v) 
+becomes O(logn Opt(U, v)). Space Requirement. We show that the total number of fundamental edges is 
+O(mD). First, observe that the total space is bounded by the total number of elements in LM and RM sets. 
+Consider a particular induced edge e = (u, v). Suppose LM(u, v) contains k > 2 pointers. Then the edge 
+set E(e) is partitioned among k edges el = (c1, v),... , ek = (ck, v), where ci is a child of u. For 
+at least k -1 of the children, 2]E(ei)[ < [E(e)l. The space required for the k pointers is charged to 
+the underlying edges of these k -i sets, at a rate of 2/[E(ei)[ per edge in the ith set. This pays for 
+all the space. To calculate the amount charged to an individual un- derlying edge {z, y}, consider all 
+pointers to induced edges ei = (ui, v), for some fixed v, such that {z, y} is charged for the space for 
+the pointer. Examine these induced edges in order from deepest left endpoint to highest left endpoint. 
+Each time {x, y} is charged, it shares that charge with the set E(ei), and furthermore ]E(ei+l)[ > 2]E(el)[. 
+The total charged to {x, y} for one fixed endpoint v is therefore 2 2 O(1). IE ,)I-. 2 Since there are 
+O(D) ancestor endpoints of either z or y that can be fixed, the total space charge per edge is therefore 
+O(D), and hence the total space is O(mD). The following example shows that f~(mD) space is required in 
+the worst case. Let T be a complete binary tree on n leaves. Let TL (rsp., TR) be the left (rsp., right) 
+subtree of the root. Label each leftward tree edge 0 and each rightward tree edge 1. (A binary string 
+of length log n thus induces a path in T from the root to a unique leaf.) Number the n/2 leaves in TL 
+0 through n/2 -1. For 0 < i < n/2 -1, add an edge to G from leaf i in TL to the leaf in TR induced by 
+the string 1 o f(i), where .f(i) is the binary representation of i in least-to-most significant bit order. 
+We claim that for each internal node in TL of depth j, there are fundamental edges to all internal nodes 
+in TR of depth at most log n -j. The number of fundamental edges is thus O(n log n) = O(mD). Preproeessing. 
+Updating E(G) in the space-reduced data structure is not straightforward. Determining new fundamental 
+edges engendered by a new graph edge is not hard, but updating the LM(-) and RM(.) structures efficiently 
+does not seem feasible. To build the data structures a priori for a given graph, G, therefore, we modify 
+the top-down procedure, which we described at the end of Section 3, to generate all possible induced 
+edges and associated L and R sets. We only construct and store LM and RM sets when the induced edge is 
+also a fundamental edge (i.e., the L and R sets that the naive procedure constructs both have size larger 
+than 1). When an L set is converted into an LM set, the fundamental edge in LM(.) corresponding to each 
+entry e E L(-) is computed from the underlying edges E(p) by examining the left and right endpoints of 
+the edges, and determining their least common ancestors, respectively. Since the nca can be found in 
+O(1) time per endpoint, this does not increase the total processing time per underlying edge. The preprocessing 
+time is thus O(mD 2) (expected, if we use a hash table to facilitate contract operations), although the 
+space is reduced to O(mD). The procedure discovers if an L (rsp., R) set is to be saved as an LM (rsp., 
+RM) set when it is constructed and discards the set if it is not to be saved, so the total space is still 
+O(mD). THEOREM 5.1. Let D = depth(T). The space-reduced method uses O(mD) space and provides expand(U,v) 
+(rsp., contract(U,v)) operations in O(Opt(U',v)) (rsp., O(Opt(U,v) )) time each. Given an initial graph, 
+the data structures can be built in one O(mD 2) expected time pre- processing pass. 5.1 Space-Reduced 
+Compressed Trees. To achieve our best space result, we combine the space reduction tech-nique with compressed 
+trees. The fundamental edges be- tween compressed tree nodes are defined as for the un-compressed tree: 
+an edge (u, v) is fundamental if u and v are the ncas of the left and right endpoints, respectively, 
+of the edges in E(u, v). As before, any non-fundamental edge has an associated fundamental edge. When 
+convert- ing an L(u, v) set to an LM(u, v) set for a fundamental edge (u,v), the expandAt(.) and expandLimit(.) 
+values for the non-fundamental edges in L(u, v) are used to label the fun- damental edges that replace 
+them. Consider an expand operation U' = expand(U, I~). We first map each induced edge (/~, v), /, < v, 
+to its corresponding compressed tree edge, (u, v). Applying the space-reduced algorithm to the associated 
+fundamental edge (u', v'), we determine if the expansion can be implemented by simply sliding the endpoint 
+u down the tree path in C(T) towards u', or whether we need to use LM(u,v) to generate multiple new induced 
+edges in C(T). In the latter case, the compressed tree expansion algorithm is applied to the expandAt(.) 
+and expandLimit(.) values in LM(u', v') to determine the set of fundamental edges to extract, and the 
+space-reduced algorithm is then used to reconstruct actual induced edges in C(T) and the mapping in G/U'. 
+The symmetric operations are applied to edges where/, > v. The contract operation is likewise a straightforward 
+combination of the compressed tree and reduced space al- gorithms, and further details are omitted. There 
+is one in- novation required to combine the two techniques. In the ba- sic compressed tree algorithm, 
+we keep pointers into the LM and RM lists for each induced edge (u, v), corresponding to the current 
+depth to which the heavy paths h(u) and h(v) have been expanded. In the space-reduced compressed tree 
+implementation, the set of distinct expandAt(.) labels occur- ring on pointers are kept in a hash table, 
+along with a pointer to the appropriate list. To determine the effect of an expan- sion within h(u), 
+we search for curt(u) in this hash table. Either we find an appropriate pointer, or we find nothing, 
+in- dicating that there is no change during this expansion. This still keeps the running time O(1) in 
+the worst case, assum- ing perfect hashing, although the preprocessing time now becomes expected. This 
+change is actually made to facili- tate the contraction operation, as otherwise it is impossible to determine 
+efficiently the location within LM and RM lists after a contraction. Because the data structure is static, 
+we dispense with the binary search trees superimposed on the BL(. ), BR(. ), and expandLimit(. ) structures. 
+THEOREM 5.2. Lets = min{depth(T),logn). The space- reduced compressed tree method uses O(ms) space and 
+provides expand(U,v) (rsp., contract(U,v)) operations in O(Opt(U', v)) (rsp., O(Opt(U, v))) time each. 
+Given an initial graph, the data structures can be built in one O(ms 2) expected time preprocessing pass. 
+ 6 Weighted Graphs The naive data structure extends easily to weighted graphs. We include the weight, 
+w(u, v), as defined in Section 2, in the data block for each (u, v) E I(T). When inserting {x, y} into 
+E(G), we set w(u, v) +- w(u, v) ® w({x, y}) for each existing (u, v) such that {x, y} E E,(u, v); for 
+each new such (u, v), we set w(u, v) +-- w({x, y}). When deleting {x, y}, we set w(u, v) +- w(u, v) ®w 
+-1 ({x, g}) for the appropriate The space-reduced method extends similarly, because the weight of any 
+induced edge is that of its fundamental edge. The space and time bounds in Theorems 3.1 and 5.1 thus 
+remain unchanged for weighted graphs. Further, if only edge insertions (not deletions) are to be supported, 
+then (G, ®) can be a monoid. The compressed tree data structure becomes more com- plicated. The problem 
+is to determine w(u, v) when an induced edge (u, v) in I(C(T)) is initially created during an expand(., 
+.) operation. Assume without loss of gener- ality that the expansion was on a left endpoint, and thus 
+curr(u) = 1. Let j = curr(v). The weight w(u,v) should be set to Q){~,v}e~0,~,~j)w({x, v}). Consider 
+when edge {x, y} was added to E(G). For the corresponding induced edge q = (u', v) that is an element 
+of L(u, v), we computed expandAt(q) and expandLimit(q). The weight w( {x, y) ) contributes to w(u, v) 
+whenever curr(v) < expandLimit(q). We can thus build a data structure, WL(u, v), which stores in a binary 
+tree, for each distinct expandLimit(.) value occurring in L(u, v), the product of the weights of the 
+corre- sponding underlying edges. It takes O(log n) time to update WL(u, v), for each (u, v) affected 
+by an edge insertion or deletion. To determine w(u, v), we find the suffix product of the weights in 
+WL(u, v) such that expandLimit(.) >__ curr(v). This takes O(logn) time. We build a symmetric WR(u, v) 
+data structure with respect to R(u, v). Thus, expand(U, I~) takes O(logn Opt(U', #)) time. The other 
+bounds from Theorem 4. I remain unchanged. The extension follows through for the space-reduced compressed 
+tree data structure, again making the expand(U, #) time O(logn Opt(U',#)) in the weighted variant of 
+Theorem 5.2. 7 Conclusion We summarize our results for view maintenance in Table 1. Note that edge updates 
+in the compressed tree data structure take O(s 2 logn) update time, yet we can preprocess an initial 
+set of m edges in O(ms 2) time. In real applications, we envision that hierarchy trees would be balanced 
+and/or shallow, and so the compressed tree data structures would not be necessary. Furthermore, in applications 
+where the number of induced edges is small enough, the naive solution would be the method of choice. 
+Table 1: Summary of results. Let D = depth(T), s = min{D, logn}, Opt(U, v) = EzEchildren(v) lincv(z)[ 
+ We assume an O(n)-time preprocessing pass to perform a DFS of T, provide on-line computation of ncas 
+and level ancestors in T, and to compute C(T) if necessary. Data Preprocessing Structure Space Time 
+(expected) Naive O(rnD 2) O(mD 2) Compressed Trees O(ms 2) O(ms 2) Space Reduced O(mD) O(mD 9) Unified 
+O(ms) O(ms 2) *multiplied by O(log n) for weighted graphs. It would therefore be interesting to have 
+better characteri- zations of the number of induced (as well as fundamental) edges that are possible 
+for various classes of graphs and hi- erarchy trees. (Note that the lower bound from Section 5 on the 
+number of fundamental edges in a balanced hierarchy tree holds only for sparse graphs.) Other open problems 
+include: (1) linear-space data structures; (2) eliminating the log n expand penalty for the compressed 
+tree data structures for weighted graphs; (3) better dynamic graph data structures; (4) lower bounds; 
+(5) data structures for the dynamic graph and tree problem; (6) external memory data structures.  Acknowledgements 
+We thank James Abello for suggesting the area of hierarchi- cal graph navigation; Christian Duncan, Mike 
+Goodrich, and S. Muthukrishnan for stimulating discussions; and Emden Gansner for advice on graph display 
+research. References [1] J. Abello. Navigating graph surfaces. In Proc. 4th ICIAM, page 234, 1999. [2] 
+O. Berkman and U. Vishkin. Finding level ancestors in trees. JCSS, 48(2):214-30, 1994. [3] G. di Battista, 
+E Eades, R. Tamassia, and I. Tollis. Graph Drawing: Algorithms for the Visualization of Graphs. Prentice-Hall, 
+1999. [4] E E Dietz. Finding level-ancestors in dynamic trees. In Proc. 2nd WADS, volume 519 of LNCS, 
+pages 32--40. Springer- Verlag, 1991. [5] M. Dietzfelbinger, A. Karlin, K. Mehlhom, E Meyer auf der Heide, 
+H. Rohnert, and R. E. Tarjan. Dynamic perfect hashing: Upper and lower bounds. SIAM J. Comp., 23:738-61, 
+1994. [6] E Eades and Q.-W. Feng. Multilevel visualisation of clus- tered graphs. In Proc. GD '96, volume 
+1190 of LNCS, pages 101-111, 1997. [7] P. Eades, Q.-W. Feng, and X. Lin. Straight-line drawing Update 
+expand(U, v) contract(U, v) Time (expected) Time Time O(D 2 ) O(Opt(U', v)) O(Opt(U, v)) O(s 2 logn) 
+O(Opt(U',v))* O(Opt(U,v)) N/A O(Opt(U', v)) O(Opt(U, v)) N/A O(Opt(U', v))* O(Opt(U, v)) algorithms for 
+hierarchical graphs and clustered graphs. In Proc. GD "96, volume 1190 of LNCS, pages 113-127, 1997. 
+[8] P. Eades, W. Lai, K. Misue, and K. Sugiyama. Preserving the mental map of a diagram. In Proc. Compugraphics 
+'91, pages 24-33, 1991. [9] H. N. Gabow. Data structures for weighted matching and nearest common ancestors 
+with linking. In Proc. 1st ACM- SIAM SODA, pages 434-43, 1990. [10] D. Harel. On visual formalisms. C 
+ACM, 31(5):514-530, 1988. [11] D. Harel and R. E. Tarjan. Fast algorithms for finding nearest common 
+ancestors. SIAM J. Comp., 13(2):338-55, 1984. [12] M. Huang and P. Eades. A fully animated interactive 
+system for clustering and animating huge graphs. In Proc. GD "98, volume 1547 of LNCS, pages 374-383, 
+1998. [13] T. Munzner. Drawing large graphs with H3Viewer and Site Manager. In Proc. GD '98, volume 1547 
+of LNCS, pages 384-393, 1998. [14] S. North. Drawing ranked digraphs with recursive clusters. In Proc. 
+ALCOOM Wks. on Graph Drawing, 1993. [15] B. Schieber and U. Vishkin. On finding lowest common ancestors: 
+Simplification and parallelization. SIAMJ. Comp., 17(6):1253--62, 1988. [16] M.-A. Storey and H. Muller. 
+Graph layout adjustment strate- gies. In Proc. GD '95, volume 1027 of LNCS, pages 487-99, 1996. [17] 
+K. Sugiyama and K. Misue. A generic compound graph vi- sualizer/manipulator: D-Abductor. In Proc. GD 
+'95, volume 1027 of LNCS, pages 500-503, 1996. [18] R. E. Tarjan. Applications of path compression on 
+balanced trees. J. ACM, 26(4):690-715, 1979. [19] University of Minnesota PowerWall, 1998. http://www.lcse.- 
+umn.edu/research/powerwall/powerwall.html. 
+			

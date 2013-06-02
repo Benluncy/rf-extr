@@ -1,0 +1,435 @@
+
+ Performance Analysis and Optimization on the UCLA Parallel Atmospheric General Circulation Model Code 
+(Technical Paper) Authors John Z. Lou (presenting author) MS 168-522 Jet Propulsion Laboratory California 
+Institute of Technology 4800 Oak Grove Drive Pasadena, CA 91109 Email: lou@acadia.jpl.nasa.gov Phone: 
+818-354-4870 Fax: 818-393-3134 John D. Farrara Department of Atmospheric Sciences University of California, 
+Los Angeles Los Angeles, CA 90024 Email: farrara@atmos.ucla.edu Phone: 310-825-9205 0-89791-854-1/1996/$5.00 
+&#38;#169; 1996 IEEE Performance Analysis and Optimization on the UCLA Parallel Atmospheric General 
+Circulation Model Code John Z. Lou Jet Propulsion Laboratory, California Institute of Technology, Pasadena, 
+CA 91009 John D. Farrara Department of Atmospheric Sciences, University of California, Los Angeles, 
+CA 90025 Abstract An analysis is presented of the primary factors in.uencing the performance of a parallel 
+implementation of the UCLA atmospheric general circulation model (AGCM) on distributed-mem­ory, massively 
+parallel computer systems. Several modi.cations to the original parallel AGCM code aimed at improving 
+its numerical ef.ciency, load-balance and single-node code performance are discussed. The impact of these 
+optimization strategies on the performance on two of the state-of­the-art parallel computers, the Intel 
+Paragon and Cray T3D, is presented and analyzed. It is found that implementation of a load-balanced FFT 
+algorithm results in a reduction in overall execution time of approximately 45% compared to the original 
+convolution-based algorithm. Preliminary results of the application of a load-balancing scheme for the 
+Physics part of the AGCM code sug­gest additional reductions in execution time of 10-15% can be achieved. 
+Finally, several strategies for improving the single-node performance of the code are presented, and 
+the results obtained thus far suggest reductions in execution time in the range of 25-35% are possible. 
+ 1. Introduction The Earth s climate system is characterized by complex interactions and feedbacks among 
+its components. General circulation models (GCMs) of the atmosphere and ocean are among the most powerful 
+tools available for studies of the climate system and its variability. Numerical simu­lations performed 
+using GCMs are among the most computationally expensive scienti.c applica­tions because a large number 
+of three dimensional physical .elds need to be updated at each time step by solving a system of nonlinear 
+partial differential equations governing .uid motion on a rotating sphere, and also because a very long 
+simulation period is required to produce statistically signi.cant numerical results. Parallel computers 
+are thus natural tools for GCM simulations. An atmospheric GCM model was developed at UCLA by Arakawa 
+and co-workers [1] during the seventies, and the model is still being constantly upgraded by atmospheric 
+scientists there. The .rst parallel implementation of the UCLA AGCM model was developed as a collabora­tive 
+effort between Lawrence Livermore National Laboratory and UCLA. The performance results presented in 
+the paper by Wehner et al. [2] revealed that the parallel ef.ciency of the code on large numbers of processors 
+(> 100) is mediocre. In other words, the code does not scale well to a large number of processors. Here 
+scalability refers to the reduction of execution time as more processors are used for a .xed problem 
+size. The main objective of our work is to analyze the AGCM algo­rithm components and their parallel 
+implementations from a computational performance perspec­tive, .nd bottlenecks that hinder the parallel 
+scalability of the code, and use better algorithms and 0-89791-854-1/1996/$5.00 &#38;#169; 1996 IEEE 
+more ef.cient parallel implementation strategies to maximize the performance of the AGCM code on scalable 
+parallel systems. This paper is organized as follows: Section 2 gives a brief overview of the structure 
+of the parallel UCLA AGCM code and an analysis of its parallel performance, Section 3 discusses our optimization 
+strategies on the code to improve its performance on massively parallel systems, Sec­tion 4 presents 
+a performance comparison between the modi.ed parallel code and the original one, Section 5 offers some 
+of our thoughts on developing reusable template modules for GCM simula­tions, and .nally in Section 6 
+we present our conclusions. 2. Structure and performance of the parallel AGCM code The UCLA AGCM code 
+is a software package which simulates many physical processes. The reader is referred to Suarez et al. 
+[3] and references therein for a more complete description of the representations of the physical processes. 
+As a result of the different algorithms used to repre­sent the many different processes, the AGCM code 
+is complex and heterogeneous. There are, how­ever, two major components of the code: i) AGCM/Dynamics, 
+which computes the evolution of the .uid .ow governed by the primitive equations by means of .nite-differences, 
+and ii) AGCM/Phys­ics, which computes the effect of processes not resolved by the model s grid (such 
+as convection on cloud scales) on processes that are resolved by the grid. The results obtained by AGCM/Physics 
+are supplied to AGCM/Dynamics as forcing for the .ow calculations. The AGCM code uses a three dimensional 
+staggered grid for velocity and thermodynamic variables (potential temperature, pres­sure, speci.c humidity, 
+ozone, etc.). This three dimensional grid is formed by the Arakawa C-mesh [1] in the horizontal (latitude/longitude) 
+directions with relatively small number of vertical layers (usually much fewer than the horizontal grid 
+points). A cell in such a grid is a cube in spherical geometry with velocity components centered on each 
+of the faces and the thermodynamic variables at the cell center. The AGCM/Dynamics itself consists of 
+two main components: a spectral .ltering part and the actual .nite difference calculations. The .ltering 
+operation is needed at each time step in regions close to the poles to ensure the effective grid size 
+there satis.es the Courant-Friedrich-Levy (CFL) condition [4], a stability requirement for explicit time-difference 
+schemes when a .xed time step is used throughout the entire spherical .nite-difference grid. AGCM Main 
+Body Dynamics Dynamics Physics Spectral Filtering Finite Difference 72% time on 16 nodes 36% time on 
+16 nodes 86% time on 240 nodes 49% time on 240 nodes Figure 1. Execution times of major components in 
+the UCLA AGCM code A two-dimensional grid partition in the horizontal plane is used in the parallel implemen­tation 
+of the UCLA AGCM model. This choice of grid partition is based on the facts that column (vertical) processes 
+strongly couple the grid points which makes the parallelization less ef.cient in the column direction, 
+and that the number of grid points in the vertical direction is usually small. Each subdomain in such 
+a grid is a rectangular region which contains all grid points in the vertical direction. With this grid 
+partition, there are basically two types of interprocessor communications involved in the parallel AGCM 
+simulation. Message exchanges are needed among (logically) neigh­boring processors (nodes) in .nite-difference 
+calculations; non-nearest neighbor message-passing is needed for implementing the spectral .ltering operations. 
+Timing measurements on the main com­ponents of the original parallel AGCM code, using the2 × 2.5 × 9 
+(lat × long × vertical ) resolu­tion which corresponds to a144 × 90 × 9 grid, are shown in Figure 1. 
+As shown in Figure 1, the AGCM main body consists of a Dynamics module and a physics module, with preprocessing 
+and postprocessing parts excluded. Since preprocessing and postpro­cessing steps are only performed once, 
+whereas the main body part is iterated through a time step­ping loop in the AGCM simulation, the latter 
+is absolutely dominant in terms of execution time. Comparing the two modules in the main body, we can 
+see the Dynamics part is dominant in cost especially on large numbers of nodes. Furthermore, our timing 
+analysis on the Dynamics part indi­cates that the spectral .ltering is a very costly component with poor 
+scalability to large number of nodes (see Figure 1). Although the use of spectral .ltering in the UCLA 
+AGCM model improves the computational ef.ciency of the .nite-difference calculations by enabling the 
+use of uniformly larger time steps, the high cost of performing the .ltering, however, offsets a portion 
+of this perfor­mance gain. The inferior performance of the .ltering operation is due to the use of an 
+inef.cient .l­tering algorithm and the existence of a severe load imbalance in the .ltering stage. It 
+is clear from Figure 1 that in order to substantially improve the overall performance of the AGCM code, 
+some optimization must be done .rst on the .ltering part of the code [2]. 3. Optimization strategies 
+and implementations in the parallel AGCM code There are primary two ways to improve the performance of 
+a parallel code running on a distributed-memory message-passing computer. One way is to optimize its 
+single-node perfor­mance by using a more ef.cient computational algorithm, making more ef.cient use of 
+data cache or eliminating redundant operations in the code, which can usually be achieved by restructuring 
+the data structures, rewriting loops and using appropriate compiler switches for optimizations. Another 
+way is to improve its scalability (or parallel ef.ciency) to large numbers of processors so that one 
+can either reduce the solution time for a large problem by using more processors, or can solve increasingly 
+larger problems with more processors within a .xed amount of time. The scalability of a parallel code 
+is affected both by the ratio of communication cost to computation cost and the degree of load imbalance 
+in the code. As stated above, our timing results indicate the cost of spec­tral .ltering procedure is 
+a substantial part in the parallel AGCM code, especially when running on a large number of nodes. We 
+therefore focused our .rst effort on improving the overall performance of the .ltering part in the AGCM 
+code. 3.1) Spectral .ltering in the UCLA AGCM model The .ltering algorithm used in the UCLA AGCM model 
+is basically a set of discrete Fou­rier .lters speci.cally designed to damp fast-moving inertia-gravity 
+waves near the poles. These wave modes become numerically unstable when the CFL condition is violated 
+in the vicinity of the poles as a result of the increasingly smaller zonal grid distances as one approaches 
+the poles in a uniform longitude-latitude grid. The .lters contain a latitudinal dependence but are applied 
+over the complete longitudinal domain on every vertical layer. As discussed in [1], the .ltering operation 
+takes the form of an inverse Fourier transform in wavenumber space as M 1 is f'i------------------.f 
+() se i.(1) ()=-sS() (M +1) s =1 wherefs is the Fourier transform of a generic variablefs to be .ltered,Ss 
+is a prescribed () () () function of wavenumber and latitude, but is independent of time and height. 
+In particular, two types of .ltering are performed in the UCLA AGCM code. One is the so called strong 
+.ltering which is applied to about one half of the latitudes (poles to 45°) in each hemisphere; the other 
+is a weak .l­tering which is applied to about one third of the latitudes (poles to 60°) in each hemisphere. 
+The convolution theorem for Fourier transforms states that the .ltering as de.ned in (1) is mathemati­cally 
+equivalent to the convolution M ()= Snfin). (2) f'i.()( s =1 In the original AGCM code, .ltering was 
+performed using the convolution form in (2). In its paral­lel implementation, the summation de.ned in 
+(2) was implemented in several ways, involving either communications around processor rings in the longitudinal 
+direction, or communications in binary trees [2]. Letting N denote the number of grid points and P the 
+number processors in the lat­itudinal direction and since no partial summation is performed during the 
+data transfer, the ring approach requiresPlogP messages and a total transfer of NP data elements; the 
+binary tree requiresO 2P messages and a transfer ofO NP + NlogP () ()data elements [2]. The high cost 
+of the .ltering compared to the rest of the Dynamics module as shown in Figure 1 stems from two important 
+factors. The .rst is the use of convolution formulation (2) in physical space for the .ltering. Assuming 
+a three-dimensional grid for .ltering with dimensions NM ×K , where N, M, K, are dimensions in longitudinal, 
+latitudinal and vertical directions, × 2 respectively, the computational cost of doing convolution on 
+the grid is of order ON×MK), (× whereas the cost for the rest of Dynamics code is of order ON M ×K ). 
+The second is the exist­ (× ence of a severe load imbalance caused by the fact that only subdomains at 
+high latitudes require .l­tering. Solutions to these problems are somewhat obvious: (i) use the fast 
+Fourier transform (FFT) instead of performing direct convolution for the .ltering, and (ii) perform load 
+balancing before .l­tering by redistributing data to be .ltered from processors containing high latitude 
+subdomains to processors containing low latitude subdomains which either have very little .ltering to 
+do or are completely idle during the .ltering stage. 3.2) Ef.cient parallel spectral .ltering Since 
+the spectral .ltering is applied to lines of grid points at high latitudes and the grid decomposition 
+for the UCLA AGCM code is a two dimensional decomposition in the horizontal plane, the FFT operation 
+requires interprocessor communication. There are at least two possibilities to parallelize the FFT .ltering. 
+One is to develop a parallel one dimensional FFT procedure for pro­cessors on the same rows in the processor 
+mesh, so that this procedure can be applied to every line of data to be .ltered. The second approach 
+is to partition the data lines to be .ltered and redistribute them among processor rows in the latitudinal 
+direction so that FFTs on each data line can be done locally in each processor. The second approach essentially 
+involves a data array transpose. These FFT .ltering approaches have a computational cost of ON log NMK). 
+Again letting N (× ×× denote the number of data elements and Pdenote the number of processors in the 
+latitudinal direc­tion, the approach using the parallel one dimensional FFT requiresOP)messages and a 
+(logPtransfer ofON)data elements, while the approach using a local FFT after a data transpose (log NrequiresOP2 
+messages and a transfer ofON () ()data elements. Therefore the .rst approach requires fewer messages 
+but exchanges larger amounts of data than the second approach. We chose to implement the second approach 
+for the spectral .ltering in the AGCM code. The main reason for our choice is the relative simplicity 
+of implementing the data transpose and the possibility of using highly ef.cient (sometimes vendor provided) 
+FFT library codes on whole latitu­dinal data lines within each processor. Equator Pole Figure 2. An 
+illustration of data row redistribution for a load balanced .ltering. 3.3) Load-balanced parallel FFT 
+.ltering To solve the load-balance problem in .ltering, we need to redistribute the data rows to be .ltered 
+along the latitudinal direction. In the UCLA AGCM code, the spectral .ltering is performed at each time 
+step before the .nite-difference procedures are called. Weak and strong .lterings are performed on different 
+sets of physical variables, one variable at a time in the original AGCM code. To maximize the performance 
+ef.ciency from the load balance procedures, we reorganized the .l­tering process so that all weakly .ltered 
+variables are .ltered concurrently, as are all strongly .l­tered variables. This change is possible because 
+there is no data dependency among weakly .ltered variables, nor among strongly .ltered variables in the 
+.ltering process. Based on these consider­ations, we decided to implement a generic load balancing module 
+which does the following: given anMNprocessor mesh, with Mprocessors in the latitudinal direction and 
+Nprocessors in the × longitudinal direction, with L variables to be .ltered (weakly or strongly), each 
+with Rj ( j=1 L) rows of data to be .ltered, redistribute the data rows in the longitudinal direction 
+so that after redistribution, each processor will contain approximately (since total number of data rows 
+to be .ltered are usually not divisible by N) . . . . . . . . . . . . 7 7 7 7 . . . . . . . . . . . 
+. 1 2 2 2 Figure 3. Data row transpose in latitude direction following the row redistribution shown 
+in Figure 2. . L . .. Rj./ N (3) .. j =1 rows to be .ltered. If it could be assumed that exactly half 
+of the data rows in one hemisphere are to be .ltered, which is the case for the strong .ltering in the 
+AGCM code, the implementation of data redistribution for load balancing would be a relatively simple 
+task. All that would be required in this case is to redistribute data rows in a way which is symmetric 
+about the45° latitude line in each hemisphere. Since we need to do load balancing for both weak and strong 
+.lterings, a more general scheme is needed. We therefore decided to implement a code module which can 
+produce a balanced load in (3) regardless of the number of rows to be .ltered in each hemisphere. Figure 
+2 shows an example of how data rows for three variables are redistributed in a hemisphere in anM × 8 
+proces­sor mesh. The load redistribution is followed by a data row transpose and redistribution among 
+pro­cessors in the longitudinal direction. Figure 3 shows the data row transpose performed after the 
+row redistribution shown in Figure 2. The actual FFT .ltering is performed on data rows after the data 
+transpose, which is then followed by inverse data movements to restore the data layout which existed 
+prior to the .ltering. Due to the generality required for the load-balancing of the parallel FFT module, 
+some non-trivial set-up code is needed to construct information which guides the data movements for the 
+load-balancing and load-balanced parallel FFT. The set-up involves substantial bookkeeping and interprocessor 
+communications. Its cost is not an issue for a long AGCM simulation since it is done only once, and its 
+cost is also nearly independent of AGCM problem size. 3.4) Load balancing the physics component The 
+Physics component of the AGCM code consists of a large amount of local computa­tions with no interprocessor 
+communication required with the two-dimensional partition of the grid. The measured parallel ef.ciency 
+of the physics component with a22.5× 29 grid resolution is × about 50% on 240 nodes on Cray T3D. Since 
+there is no communication cost, it is only the load­imbalance in the column physics processing that drags 
+down the parallel ef.ciency. The distribution of computational load in the physics component varies dynamically 
+with space and time in the AGCM simulation. The amount of computation required at each grid point is 
+determined by several factors, including whether it is day or night, the cloud distribution, and the 
+amount of cumulus con­vection determined by the conditional stability of the atmosphere. Adding to the 
+dif.culty of phys­ics load-balancing is the unpredictability of the cloud distribution and the distribution 
+of cumulus convection, which implies an estimation of computation load in each processor is required 
+before any ef.cient load-balancing scheme can proceed. 3 4 3 4 1 2 1 2 3 4 3 4 1 2 1 2 3 3 4 4 3 3 
+4 4 1 1 2 2 1 1 2 2 Figure 4. Scheme 1: Cyclic data shuf­.ing among 4 processors to achieve a balanced 
+load distribution. Each data piece is indexed with the id of the pro­cessor where it is to be processed. 
+Several possibilities of achieving load-balancing have been considered. One way to achieve a balanced 
+load distribution is to perform a cyclic data shuf.ing among all processors. Sup­pose the total number 
+of processors is N, each processor divides its local data to be processed into N pieces, sends(N 1) pieces 
+of the data to other processors, and receives(N 1) pieces of data from other processors. Figure 4 shows 
+such a data shuf.ing among four processors. The complete data shuf.ing as shown in Figure 4 guarantees 
+a balanced load distribution as long as the load distri­bution within each processor is close to uniform 
+in space, a reasonable assumption when N is large. The main drawback of this approach is the cost of 
+performing all-to-all communications with a complexity of O(N2), and the division of each local data 
+into N equal pieces for N processors does not seem to be computationally ef.cient when N is large. Node 
+id = 1 Node id = 2 Node id =3 Node id =4 Load = 65 Load = 24 Load = 38 Load = 15 A: Initial load distribution 
+with original node id. 11 2 18 B: Node ids are sorted according to local data loads. Required data 
+moves are shown. Node id = 1 Node id = 2 Node id =3 Node id =4 Load = 39 Load = 24+11 Load = 36 Load 
+= 15+18+2 C: Load distribution after load-balancing. Figure 5. Scheme 2: An alternative which optimizes 
+communication cost. An alternative to a complete data shuf.ing for load balancing, but also guaranteeing 
+a good load distribution, is to use an approach similar to the one discussed in the previous section 
+for .ltering operations. First, the computation load for each processor needs to be computed or esti­mated 
+by some means. Let us look at a speci.c example for the sake of our discussion. Figure 5 illustrates 
+the steps needed to balance the load among four processors. In Figure 5A, the computing load in each 
+processor has been determined, and an integer weight is assigned to each local load. All the nodes are 
+then assigned a new node id through a sorting of all local loads. The sorting of local loads is performed 
+to simplify subsequent data movement which attempts to minimize the amount of interprocessor communication. 
+With the new node ids and weights of local load available, the required data moves can be carried out 
+in a way similar to that for balancing the .ltering load, as shown in Figure 5B. Figure 5C shows the 
+new load distribution after the data movement. It can be seen that the communication complexity of this 
+load-balancing approach is O(N), a signi.cant improvement over the complete data shuf.ing in scheme 1. 
+However, a potentially signi.cant over­head is incurred in operations to make the optimized data moves 
+possible which involve a number of global communications and a substantial amount of local bookkeeping.This 
+overhead cost was not a serious performance issue in the load-balancing for .ltering because it is the 
+cost from a pre­processing step that is done only once during the entire execution of the AGCM code, 
+but the over­head for physics load-balancing cannot be overlooked because it is associated with the cost 
+of each physics load-balancing. In addition, a decomposition of a local data load into many parts with 
+dif­ferent weights may not be a convenient thing to do. Node id = 1 Node id = 2 Node id =3 Node id =4 
+Load = 65 Load = 24 Load = 38 Load = 15 A: Initial load distribution in each processor. 7 25 B: Nodes 
+are assigned ranks. First pairwise data moves are shown.  44 C: Nodes are assigned ranks. Second pairwise 
+data moves are shown. Node id = 1 Node id = 2 Node id =3 Node id =4 Load = 36 Load = 31+4 Load = 31+4 
+Load = 36  D: Load distribution after second data movement. Figure 6. Scheme 3: Load-balancing with 
+pairwise data exchanges. The analysis of load-balancing scheme 2 and 3 lead us to think that it may 
+be more practi­9 cal in our case to devise a load-balancing strategy that may be less robust (if it is 
+applied only once), but more cost-ef.cient and easier to implement. The approach that we decided to adopt 
+requires only pairwise interprocessor communications for data movement and a small amount of bookkeep­ing. 
+The steps for this scheme can still be illustrated by using the previous example for four proces­sors, 
+as shown in Figure 6.The scheme also begins with an evaluation of the local load in each processor, as 
+shown in Figure 6A The data load is sorted and a rank is assigned to each processor as a result of the 
+sorting, and a pairwise data exchange between processors with rank i and rankN i + 1 is initiated, as 
+shown in Figure 6B. Due to the limitation of pairwise data exchange, the resulting load distribution 
+after the .rst data move may not be satisfactory. If this is the case, the load sorting and pairwise 
+data exchange can be repeated (as shown in Figure 6C). Figure 6D shows the load distribution after the 
+second data move. Since each load-balancing cycle (sorting and pair­wise data moves) is relatively low 
+in cost, the cost of performing it a few times could still be less than that of the two previous schemes 
+discussed. The number of sorting and pairwise communication steps needed in scheme 3 to achieve a satisfactory 
+load-distribution clearly depends on the initial load distribution. To evaluate the effec­tiveness of 
+scheme 3 for load-balancing the actual Physics component code, we .rst implemented the load-sorting part 
+in scheme 3, and used it as a tool to perform load-balancing on the physics component and to evaluate 
+the results without actually moving the data arrays around. To estimate local computing load in each 
+processor, a timing on the previous pass of physics component was performed at each processor and the 
+result was used as an estimate for the current physics comput­ing load. Tables 1 - 3 show the simulated 
+results on 64, 126 and 252 nodes of a Cray T3D. With P processors, the percentage of load-imbalance shown 
+in the last column of the tables is de.ned as . P . AverageLoad = .. LocalLoadi./ P .. i =1 (MaxLoad 
+ AverageLoad ) PercentageOfLoadImbalance = ------------------------------------------------------------------------ 
+AverageLoad Table 1: Load-balancing simulation for Physics with a22.5 × 29 grid × resolution on a88 
+node array on Cray T3D × Code status Max load (seconds) Min Load (seconds) % of load­imbalance Before 
+load-balancing 11.00 4.90 37% After .rst load-balancing 7.70 6.20 9% After second load-balancing 7.10 
+6.30 6% Scheme 3 can be seen as an iterative scheme that converges to a load-balanced state from a given 
+initial load-distribution state. The convergence rate of the scheme clearly depends on the initial state 
+as the results in Tables 1 - 3 indicate. On 126 and 252 nodes, it can be seen from Table 2 and 3 that 
+application of the scheme twice to the physics component can reduce the percentage of load­imbalance 
+to a reasonable level. One advantage of scheme 3 is its .exibility in making a compro­mise between the 
+cost and accuracy of the .nal load-balance. A pairwise data exchange is only needed when the load difference 
+in the pair of nodes exceeds some tolerance, and the iteration can stop as soon as the percentage of 
+load-imbalance falls within a prescribed tolerance. Table 2: Load-balancing simulation for Physics with 
+a 22.5 ×× 29 grid resolution on a914 node array on Cray T3D × Code status Max load (seconds) Min Load 
+(seconds) % of load­imbalance Before load-balancing 5.20 2.50 35% After .rst load-balancing 4.00 3.14 
+12% After second load-balancing 3.52 3.22 5% Table 3: Load-balancing simulation for Physics with a 22.5 
+×× 29 grid resolution on a14 × 18 node array on Cray T3D Code status Max load (seconds) Min Load (seconds) 
+% of load­imbalance Before load-balancing 3.34 1.12 48% After .rst load-balancing 2.20 1.70 12.5% After 
+second load-balancing 1.92 1.80 6%  3.4) Single node performance optimization With the use of the load-balanced 
+FFT .ltering module, we have been able to reduce the cost of .ltering signi.cantly in the parallel AGCM 
+code (see Section 4). With the2 × 2.5 × 9 res­olution on 240 nodes, for example, the .ltering cost dropped 
+from 49% of the cost doing Dynamics part to about 21%. Our timing of the code indicates the cost of communication 
+for exchanging val­ues at ghost grid points for the .nite-differencing is relatively insigni.cant, usually 
+around 10% of the cost of the Dynamics component on 240 nodes. With a load-balanced physics component, 
+we expect the overall execution time of the AGCM code be reduced by 10~15% on 240 nodes. We now turn 
+our discussion to the issue of single-node performance optimization for the AGCM code. As is typical 
+for a real-world application, the overall performance of the parallel AGCM code is well below the peak 
+performances on both Intel Paragon and Cray T3D nodes, which is usually an indi­cation that the cache 
+ef.ciency of the code is poor. Our main goal is to improve the single-node per­formance of the code - 
+minimize the execution time of the code on a single processor - with a machine-independent and problem-size 
+robust approach (i.e. without resorting to any assembly coding). We selected the advection routine from 
+the Dynamics component and a routine involved in the longwave radiation calculation from the Physics 
+component as the representative candidates for single-node performance analysis and optimization because 
+of the heavy local computing involved in these routines and their signi.cant cost in the AGCM code. Our 
+optimization effort started from improving some of the more obvious code segments, such as eliminating 
+or minimizing redundant calculations in nested loops, replacing some loops by Basic Linear Algebra Subroutines 
+(BLAS) library calls for vector copying, scaling or saxpy operations and enforcing loop-unrolling on 
+some large loops. We also tried to break down some very large loops involving many data arrays in hop­ing 
+to reduce the cache miss rate. When applying these strategies to the advection routine, we were able 
+to reduce its execution time on a single Cray T3D node by about 35%. BLAS routines are usually faster 
+than programmer s hand-coded loops in a high-level pro­gramming language for matrix-vector data processing 
+because they were optimized for pipelining computing and cache ef.ciency with assembly coding. It seems, 
+however, dif.cult for us to utilize the BLAS library beyond some low-level routines in a few places in 
+our code. In a code based on .nite-differencing schemes as the AGCM code, it is usually hard to cast 
+major parts of computation into matrix-vector type operations. Instead, we found that a large part of 
+the computations in our selected routines can be converted into what we call pointwise vector-multiply 
+, which, for exam­ple, have the following form in a two-dimensional nested loop: DO j = 1, N DO i = 1, 
+M Ci,j = Ai,j,s () () ×Bi() ENDDO ENDDO where the subscript s can be either a constant or equal to j. 
+The computation in the above loop is not one of the operations de.ned in the current BLAS library (e.g. 
+on Cray T3D). We think one possi­bility to achieve good performance for such a loop is to develop an 
+optimized library routine in assembly language which can recursively perform the following operation 
+on two vectorsa = { ,, ,a}and b = { ,, ,b} a1 a2 nb1 b2 m a .b= { , , ,ab,a,, b, } (4) a1b1 a2b2 mm m 
++1b1 a2mm where it is assumed that n is divisible by m. The interface of the routine can be such that 
+it takes as input a set of data arrays and returns the result array. If some optimization on such a pointwise 
+vec­tor-multiply operation is possible in terms of cache and pipelining, there is a good chance for us 
+to improve single-node performance for the AGCM code in a portable and robust fashion. The general idea 
+of cache ef.ciency optimization is to explore data locality of an applica­tion so that the data existing 
+in the cache can be reused as much as possible. In a .nite-difference application such as the AGCM code, 
+a major part of the local computations lie in the evaluations of .nite-difference equations which involve 
+a number of discrete .elds corresponding to physical vari­ables de.ned on computational grids. At each 
+grid point indexed by (i, j, k), the following type of code frequently occurs ( jk)= (ijk) + Df (ijk), 
+(5) ri,, ,, + ,, D1 f 1 mm where fi (i = 1, ..., m) are discrete .elds and Di (i = 1 ... m) are stencil 
+operators. Although it seems natural, as done in the AGCM code, to allocate storage corresponding to 
+discrete .elds in (5) as sep­arate data arrays, the cache ef.ciency in computing (5) on those separate 
+arrays is usually rather poor when the typical array size is much larger than the cache size or when 
+data stored in a large number of arrays are referenced in a statement of form (5), because in such cases 
+the cache-miss rate can be very high. One alternative to allocating separate data arrays is to declare 
+a single array for storing all the discrete .elds in (5). In a Fortran code, one can thus de.ne an block-oriented 
+array of the form ,,, ) . (6) f (m idim jdim kdim The use of a data array of the form (6) to evaluate 
+(5) could, in principle, reduce the cache-miss rate, because grid variables in the neighborhood of a 
+certain cell are stored closer to each other in mem­ory than the case when separate arrays are used. 
+When data arrays of the size32 × 32 × 32 in form (4) are used, our test code evaluating a seven-point 
+Laplace stencil applied to several discrete .elds showed a speed-up a factor of 5 over the use of separate 
+arrays on the Intel Paragon, and a speed-up factor of 2.6 was achieved on Cray T3D for the same size 
+data arrays. Encouraged by this result, we tried the use of block array in the advection routine, where 
+about a dozen three-dimensional arrays were combined into one single array. A performance comparison 
+between the code with block array and the code with separate arrays did not show any advantage of using 
+the block array. For some sizes of data array, the code with the block array underperformed the code 
+with separate arrays. A more careful examination of the advection routine revealed some con.icting factors 
+regarding the selection of a good data structure for cache ef.ciency. A basic fact is that the dry-convection 
+routine contains many different types of array-processing loops which reference a varying number of data 
+arrays. The block array may be a better data structure for cache ef.ciency in a loop referencing all 
+the grid variables in the block array, but it could be a worse data structure (than the separate arrays) 
+for code in other loops which only reference a small subset of grid variables in the block array. It 
+is therefore not easy to predict the overall effect on the cache performance for a non-trivial code when 
+a block array or separate arrays are used. A side-effect of using the block array is the poor readabil­ity 
+of the code, which makes it error-prone and harder to debug. Table 4: AGCM timings (seconds/simulated 
+day) with old .ltering module on Intel Paragon grid resolution:2 × 2.5 × 9 Node mesh Dynamics Dynamics 
+Speed-up Total time (Dynamics and Physics) 1 × 1 8702 1.0 14010 44× 848.5 10.3 1177 88× 366 23.8 443.5 
+830× 186 46.8 216  4. Performance studies Timings have been performed on the Intel Paragon and Cray 
+T3D (Some timing on IBM SP-2 were also performed, but are not shown here) for the parallel AGCM code 
+with the new .lter­ing module and the results were compared to those from the original code. The message-passing 
+.portability of the .ltering module was achieved by using MPI protocols in the code. Since the Table 
+5: AGCM timings (seconds/simulated day) with new .ltering module on Intel Paragon grid resolution:2 × 
+2.5 × 9 Node mesh Dynamics Dynamics Speed-up Total time (Dynamics and Physics) 1 × 1 8075 1.0 11225 44× 
+639.0 12.6 992.6 88× 207.5 38.9 306.0 830× 87.2 92.6 119.0 Table 6: AGCM timings (seconds/simulated 
+day) with old .ltering module on Cray T3D grid resolution:2 × 2.5 × 9 Node mesh Dynamics Dynamics Speed-up 
+Total time (Dynamics and Physics) 1 × 1 3480 1.0 5600 4 × 4 339 11.3 470 8 × 8 146 26.3 177 8 × 30 74 
+51.9 87.5 Table 7: AGCM timings (seconds/simulated day) with old .ltering module on Cray T3D grid resolution:2 
+× 2.5 × 9 Node mesh Dynamics Dynamics Speed-up Total time (Dynamics and Physics) 1 × 1 3230 1.0 4990 
+44× 256 12.6 397 8 × 8 83 38.9 122 8 × 30 35 92.3 48 UCLA AGCM code uses a NETCDF input history .le 
+and we do not have a NETCDF library avail­able on the Paragon, we had to develop a byte-order reversal 
+routine to convert the history data to use on Intel Paragon. We discuss here only timing results obtained 
+on the Intel Paragon, which are qualitatively similar to those obtained on the Cray T3D and the IBM SP-2. 
+Tables 4 - 7 show com­parisons of execution time for the Dynamics part and for the entire AGCM code (including 
+the Physics part) using the 9-layer model on Intel Paragon and Cray T3D. Tables 8 and 9 show a com­parison 
+of costs for doing the filtering using different versions of the filtering module with the 9­layer model, 
+and Tables 10 - 11 show the costs of filtering in the 15-layer model on Paragon and T3D. For all the 
+timing runs, a2 × 2.5 horizontal grid resolution is used. In comparison to the old AGCM code, the Dynamics 
+component in the new code is a little more than twice as fast on 240 nodes. The scaling (or speed-up) 
+of the entire code also improved significantly, which is clearly a result of the load-balanced filtering. 
+The load-balanced FFT filtering module runs about five times faster than the old convolution filtering 
+module on 240 nodes for both the 9-layer model and the 15­layer model. Tables 8 - 9 and 10 - 11 show 
+that the scaling of load-balanced FFT filtering for the 9­layer model is about 4.74 running on 240 nodes 
+versus running on 16 nodes with a parallel effi­ciency of 32%, and the scaling of load-balanced filtering 
+for the 15-layer model is about 5.87 with a parallel efficiency of 39%. The improved efficiency for the 
+15-layer model reflects the higher ratio of local computational load over interprocessor communication 
+cost when more vertical layers are added to the AGCM model. Although not shown here, we found the scaling 
+of the whole AGCM code for the 15-layer model is about the same as the 9-layer model. This could be the 
+result of the fact that in the 15-layer model, some additional load-imbalance is introduced in other 
+parts of the AGCM code. We would expect even better scaling be achieved for the parallel filtering as 
+well as for the overall AGCM code for higher horizontal and vertical resolution versions. The execution 
+times also consistently show that the parallel AGCM code runs about 2.5 times faster on Cray 3D than 
+on Intel Paragon Table 8: Total .ltering times (seconds/simulated day) on Intel Paragon for the2 × 2.5 
+× 9 grid resolution Node mesh Convolution FFT without load balance FFT with load balance 4 × 4 309.5 
+111.4 87.7 48× 240.0 88.0 53.7 88× 189.5 66.4 38.2 430× 99.6 43.7 22.2 830× 90.0 37.5 18.5  5. Software 
+design issues for GCM simulations Since GCM simulation codes are typically large software packages containing 
+tens of thousands lines of code, another goal of our work is to develop portable and reusable library 
+mod­ules and extensible template codes which will be useful for GCM type applications. The original parallel 
+AGCM code was implemented in F77 with a generic message-passing interface. The porta­bility of the code 
+was achieved by using macros for message-passing protocols and memory alloca­tion protocols. This macro 
+approach unfortunately also introduced some complications to the code maintenance and modi.cations. First, 
+the code needs to go through two macro preprocessors before a standard Fortran compiler can be applied, 
+which can cause problems when porting the code to a new machine because macro preprocessors may behave 
+differently. Embedding macros in the code also make changes to the code error-prone if one is not familiar 
+with how the macros will be expanded. We think the portability of the AGCM code can be achieved in a 
+simpler and more reli­able way. Our approach also de.nes generic interfaces for possibly machine-dependent 
+operations such as message-passing protocols and memory allocation, but the implementation of the interfaces 
+is wrapped in a small number of subroutines. These subroutines are selectively compiled depending on 
+the speci.c machine where the code is to run. We believe our approach can reduce the machine­dependent 
+portion of the code to a minimum and thus make maintenance and modi.cation of the code easier. We are 
+also identifying common algorithms and operation components from GCM applications, and developing code 
+modules which are reusable and extensible (as application tem­plates) in different GCM applications. 
+In our view, candidate components for GCM applications include ef.cient .nite-difference kernels, parallel 
+spectral .lters, communication modules for exchanging ghost-point values at domain-partition boundaries, 
+enforcing (physical) periodic bound­ary condition, load-balance modules, and fast (parallel) linear system 
+solvers for implicit time-dif­ferencing schemes. We believe that, within the scope of GCM applications, 
+these code components can be developed in a uni.ed, highly modular and ef.cient manner, and we think 
+an objected-ori­ented approach (at least for building the infrastructure of a generic GCM application) 
+implemented in an advanced scienti.c computing language like Fortran 90 can be used in the code development. 
+With these code components available, the prototyping and implementation of a new, portable and ef.cient 
+GCM code package for distributed memory parallel machines will be a lot easier. Table 9: Total .ltering 
+times (seconds/simulated day) on Cray T3D for the2 × 2.5 × 9 grid resolution Node mesh Convolution FFT 
+without load balance FFT with load balance 44× 123.5 44.6 35.1 48× 96.0 35.2 21.5 88× 75.8 26.4 15.3 
+430× 39.6 17.5 8.9 830× 36.0 15.0 7.4  6. Conclusion and future work We have presented our analysis 
+and optimization strategies to improve the overall perfor­mance of the parallel UCLA AGCM code on massively 
+parallel computers by implementing a load­balanced FFT .ltering module for the Dynamics component, and 
+a load-balancing module for the physics component. Performance comparisons of the AGCM codes with old 
+and new spectral .lter­ing modules show that a speed-up of a factor 2 is achieved as a result of our 
+work on 240 nodes. Our analysis shows that a load-balanced physics component could improve the AGCM code 
+perfor­mance by an additional 10~15%. We then discussed our preliminary efforts on single-node perfor­mance 
+optimization for selected subroutines from the AGCM code, including the lessons we learned from our attempts 
+to improve the cache ef.ciency, and the impact an optimized pointwise vector-multiply routine could have 
+on the code perforamnce. We also presented our views on mak­ing better software design for GCM applications 
+through developing ef.cient and reusable code components. A complete implementation of the load-balancing 
+module for the physics component is being developed. A complete implementation of the load-balancing 
+module for the Physics com­ponent will be .nished soon. Single-node performance tuning is our other main 
+on-going effort in the performance optiimization on the AGCM code. Table 10: Total .ltering times (seconds/simulated 
+day) on Intel Paragon for the22.5 × 15 grid resolution × Node mesh Convolution FFT without load balance 
+FFT with load balance 44× 802 304 221 48× 566 205 118 88× 422 150 85 430× 217 96 49 830× 188 81 37 Table 
+11: Total .ltering times (seconds/simulated day) on Cray T3D for the22.5 × 15 grid resolution  × Node 
+mesh Convolution FFT without load balance FFT with load balance 44× 320 121 88 48× 226 82 47 88× 168 
+60 34 430× 86 38 19 830× 75. 32 15  Acknowledgments This work was supported in part by the NASA High 
+Performance Computing and Com­munication for Earth and Space Sciences Project under Grant NAG 5-2224. 
+The authors wish to thank Dr. Robert D. Ferraro of Jet Propulsion Laboratory and Professor C. Roberto 
+Mechoso of University of California, Los Angeles, for their encouragement and support of this work. The 
+inves­tigations reported here were conducted on a Intel Paragon operated by the Concurrent Supercom­puting 
+Consortium at Caltech and a Paragon located at Jet Propulsion Laboratory, on a Cray T3D system operated 
+by the Jet Propulsion Laboratory, and on IBM SP2 operated by NASA Ames Research Center. References: 
+1. A. Arakawa and V. Lamb, Computational Design of the Basic Dynamical Processes of the UCLA General 
+Circulation Model. , Methods in Comp. Phys. 17 (1977) 173-265. 2. M.F. Wehner, A.A. Mirin, P.G. Eltgroth, 
+W.P. Dannevik, C.R. Mechoso, J. Farrara, J.A. spahr, Performance of a Distributed Memory Finite-Difference 
+Atmospheric General Circulation Model. , Parallel Computing 21, 1655-1675, 1995. 3. M.J. Suarez, A. 
+Arakawa, and D.A. Randall, The Parameterization of the planetary boundary layer in the UCLA General Circulation 
+Model: Formulation and Results. , Mon. Wea. Rev., 111, 2224-2243, 1983. 4. Introduction to the UCLA 
+General Circulation Model: Its History, Present State and Future Direction , UCLA Atmospheric Science 
+281 Course Note, Winter 1995.  
+			

@@ -1,0 +1,464 @@
+
+ Reducing False Sharing on Shared Memory Multiprocessors through Compile Time Data Transformations Tor 
+E. Jeremiassen Susan J. Eggers AT&#38;T Bell Laboratories* Department of Computer Science and Engineering 
+600 Mountain Ave. University of Washington Murray Hill, New Jersey 07974 Seattle, Washington 98195 tor@)research.att 
+.com eggersQcs. washington .edu Abstract processors reread different data that reside in the invalidated 
+cache block. We have developed compiler algorithms that analyze explic-False sharing is caused by a mismatch 
+between the mem­itly parallel programs and restructure their shared data to ory layout of write-shared 
+data and the cross-processor mem­reduce the number of false sharing misses. The algorithms ory reference 
+pattern to it. By changing the way shared data analyze per-process shared data accesses, pinpoint the 
+data is laid out in memory to better conform to the memory refer­structures that are susceptible to false 
+sharing and choose ence pattern, false sharing can be eliminated. In particular, an appropriate e transformation 
+to reduce it. The transfor-all data that are accessed by the same processor should be mations either 
+group data that is accessed by the same pro-grouped together, improving processor locality. Individual 
+cessor or separate individual data items that are shared. data objects that are accessed by multiple 
+processors should This paper evaluates that technique. We show through be separated and padded to the 
+size of a cache block. Al­simulation that our analysis successfully identifies the data though this restructuring 
+reduces false sharing, applying it structures that are responsible for most false sharing misses, universally 
+may have a negative impact on spatial locality and then transforms them without unduly decreasing spatial 
+that outweighs the gain in processor locality. Therefore, it locality. The reduction in false sharing 
+positively impacts is important to carefully balance the tradeoff between pro­both execution time and 
+program scalability when executed cessor and spatial locality, so as to maximize program per­on a KSR2. 
+Both factors combine to increase the maximum formance. achievable speedup for all programs, more than 
+doubling To this end we have developed and incorporated into the it for several. Despite being able to 
+only approximate ac-parafrase-2 [F GH+89] source-to-source restructurer a series tual inter-processor 
+memory accesses, the compiler-directed of compiler algorithms [JE92, JE94] and a suite of data transformations 
+always outperform programmer efforts to transformations. The algorithms analyze explicitly paral­eliminate 
+false sharing. lel programs; they produce information about each proces­ sor s memory reference patterns 
+that identifies data struc­tures susceptible to false sharing, decide whether transform­1 Introduction 
+ing them will pay off and then choose appropriate transfor­ mations. On bus-based, shared memory multiprocessors, 
+much of the This paper evaluates that technique. We show through unnecessary bus traffic. i.e., that 
+which could be elimi-simulation that the analysis successfully identifies the data nated with better 
+processor locality [AG88], is coherency structures responsible for most false sharing misses, and overhead 
+caused by false sharing [TLH94, EJ9 1]. False shar-makes appropriate tradeoffs between eliminating false 
+shar­ing occurs when multiple processors access (both read and ing and reducing spatial locality. For 
+example, with 128 byte write) different words in the same cache block. Although the cache blocks, 70y0 
+of the cache misses in our workload are processors do not actually share data, they incur its costs, 
+due to false sharing. The transformations eliminate 80% of because coherency operations manipulate cache 
+blocks. In them, while increasing other types of misses by only 19%. a write-invalidate coherency protocol 
+the overhead of false The overall effect reduces the total number of cache misses sharing takes the form 
+of extra invalidations when a proces-by half. No single transformation is responsible for the false sor 
+updates data and extra invahdation misses when other sharing reductions, even wit hin a single program: 
+all are important contributors to improved performance. *This work was performed while the author was 
+at the University The reduction in false sharing misses has two effects on of Washington. run-time performance 
+as measured on a KSR2: reductions This work was supported by IBM Contract No. 1S830046, ONR program scalability. 
+the in execution time and improved Of Grant No. NOO014-92-J-1395. NSF PYI Award #MIP-905S-439. and two, 
+improved scalability (better performance with increas- NSF grants CCR-9200S32 and CDA-9123308 ing numbers 
+of processors) is the decisive factor. Memory contention from false sharing in the untransformed programs 
+grows more than linearly with the number of processors. The compiler-directed transformations allevlate 
+this bottleneck. and extend scalability. often to the point where the max­imum achievable speedup more 
+than doubles. Before the point at which the performance of the unoptirnized programs no longer scales, 
+the compiler-optimized programs still have lower execution times, ranging from a modest (2%) to a more 
+sizable (58~0) amount. We also compare the compiler-optimized approach to sev­eral programs m which considerable 
+programming effort had been expended to improve data locality, including eliminat­ing false sharing. 
+Despite being able to only approximate actual inter-processor memory accesses, the compiler analy­sis 
+always outperforms programmer hand-tuning, often sub­stantially. The next section identifies the parallel 
+programming paradigm for which our algorithms are appropriate and de­scribes the particular model used 
+in our workload. Sec­tion 3 presents a brief overview of our compile time analysis, and describes the 
+shared data transformations and heuris­tics for applying them. Section 4 describes our methodology and 
+workload. Section 5 presents the experimental results which are the contribution of this paper. They 
+are based on both simulation and execution time experiments and com­ pare compiler-optimized programs 
+to both unoptimized and hand-optimized progra ms. Related work is discussed in sec­ tion 6, and section 
+7 concludes. 2 Model of Parallel Programming Our analysis and transformations are appropriate for shared 
+memory paradigms where accesses to shared data can be parameterized by variables that have different 
+values for dif­ferent processes. Examples of these variables include induc­tion variables of FORALL loops 
+in HPF [Hig93] and private variables, such as pzd in Figure 1, in the fork/join model. Our current implementation 
+targets programs that use the latter: coarse-grained, explicitly parallel C programs that execute on 
+shared memory multiprocessors. Examples of such programs can be found in the Stanford SPLASH appli­cation 
+suite [SWG91]. These programs currently execute on small to medium scale multiprocessors, both commercially 
+(e.g., Sequent Symmetry [LT88]. SGI Challenge [GW94], SPARCcenter 2000 [M. 93], and the KSR2 [Ken94] 
+) and in research environments (e.g., DASH [LLG+92], FLASH [LLG+94]). The granularity of parallelism 
+in these programs is coarse, on the level of an entire process. Our analysis assumes the number of processes 
+equals the number of processors and processes do not migrate. (This restriction can be relaxed to allow 
+a larger number of processes, but the analysis may then overestimate the amount of false sharing between 
+the processors. ) The programs conform to an SPMD model of parallel programmmg: the processes all have 
+identical code, but they need not take the same paths through the code. They may or may not access different 
+data. Processes are created explicitly, e.g., using a forko system call (Illustrated in Figure 1) They 
+are typically spawned in a loop that iterates over the number of processes, each value of the induction 
+variable (e. g., p~d) 1s stored in a prl~-ate (to each process) variable as a de facto process identifier. 
+We call this variable a process dzjferentzutzng varr,able (PDV) Process synchronization IS performed 
+using both locks and global barriers. Locks are used to enforce mutual excluslon, i.e., they seriahze 
+access to critical sections. Barriers seP­arate phases of program execution, When the control flow of 
+a process reaches a barrier, it must wait until all partlc­lpat]ng processes also reach it, Barriers 
+are often used m shared memory multiprocessors as a (relatively) inexpensive mechamsm to enforce large 
+sets of cross-process data depen­dence that otherwme would have to be enforced by a large number of locks. 
+1 While our workload consists of programs written in C, our compile-time analysis and transformations 
+rely on prop­erties that are more restrictive than what the C program­ming model rmovides. The most imDortant 
+constraints in­ .. volve pointers and separate compilation (a full description will appear in [Jer95] 
+). While our model allows for pointers, the full generality of pointers in C is restricted to reduce 
+pointer aliasing of statically allocated data to that induced by pointer type parameters to functions. 
+For example, pointers may only point to objects of the same type as in their declarations, and pointer 
+arithmetic and indirection through arithmetic expressions are disallowed. In order to ensure that any 
+shared data transformation is applied universally to all accesses to a target data structure, separate 
+compilation is restricted to only those modules that do not access shared data that may be targeted for 
+transfor­mat ion. 3 Compile-time Analysis and Transfor­ mations Since this paper evaluates the ability 
+of the static analysis to eliminate false sharing rather than the algorithms per se, we provide only 
+an overview of the analysis and transforma­tions. Section 3.1 briefly describes the compile-time analysis 
+used to pinpoint data structures that are susceptible to false sharing. Section 3 2 illustrates how our 
+four transformations eliminate false sharing, and Section 3.3 discusses under what conditions they are 
+applied. 3.1 Compile-t ime Analysis In order to determme which data structures are suscepti­ble to false 
+sharing, where locality may be improved, and which transformations to apply at compile time, we ana­lyze 
+a program and compute an approximation of the mem­ory access pattern of each of its processes, This compiler 
+analysis involves three separate stages. The first uses inter­procedural analysis of the control flow 
+to determine which sections of code each process executes, and annotates the nodes of the control-flow 
+graphs accordingly [JE92]2. The second performs non-concurrency analysis [MR93] interpro­cedurally by 
+examining the barrier synchronization pattern of the program, delineating the phases that cannot exe­cute 
+in parallel and computing the flow of control between them [JE94]. The thmd stage performs an enhanced 
+in­terprocedural, flow-msensitlve, summary side-effect analysis [Bar78, Ban79, Mye81, CK88b] and static 
+profiling on a per­process basis (based on the control flow determined in stage one) for each phase (determined 
+in stage two). Per-process references to shared data occur either as a result of the processes executing 
+different code (and thus ac­cessing different shared data) or by the irnphcit partitioning of arrays 
+across the processes when they execute the same code. Per-process control-flow analysis (stage 1) detects 
+the first case, and summary side-effect analysis and process dif­ferentiating variables (PDVS)3 (stage 
+3) help detect the sec­ lHPF has direct cc)llnt,erpart? to constructs In the fork/jo]n model For example, 
+Ite, at,,ons of FORALL loops a,-e forked ,mpl]cltly val­ues of the FORALL Il]tiuct,lon variables could 
+act as a PDVS, and there m an Impl]clt barrier ,~ftel-a FORALL 2Th,s reference dewr, bes the general 
+techmque, but a,, implemen­tation we no longer us<, 3As mcnt] oned Ill section 2 process dlfferent]atlng 
+variables are private var]ables that have value. t hat vary across the processes and are Invariant througho!lt 
+the I] fetlme of the processes ptd In F]gure 1 private int pid; Worko { SubPartl (proc) shared barrier_t 
+Barrl, Barr2, Barr3; while (converged != O) { Int proc; shared int NumProcs; SubPartl(pid); Wait_Barrier(&#38;Barrl); 
+celll = valuel [proc]; for ( pid = 1; pid < NumProcs; pid++) { SubPart2(pid); cel12 = value2[proc]; if 
+(forko == O) { Wait_Barrier(&#38;Barr2); Worko; if (pid == 1) exit(0); converged = TestConvergedo; Wait_Barrier(&#38;Barr3); 
+Worko; (a) (b) (c) Figure 1: Example program segments that illustrates the use of a process differentiating 
+variable in process creation (a), per-process control flow (b), and shared data access (c) in our parallel 
+program model. end. The side-effect analysis represents the sections of each array that each process 
+accesses using bounded regular sec­tion descriptors to describe the index expressions [HK91]. When a 
+regular section descriptor contains a PDV in the index expressions, we test whether the descriptor identifies 
+disjoint sections of the array for different values of the vari­able. The array is implicitly partitioned 
+across processes if the sections are disjoint. The per-process control-flow anal­ysis, on the other hand, 
+identifies control statements where the control flow of different processes diverges, and uses this information 
+to compute a separate control-flow graph for each process. Analyzing shared arrays and structures that 
+are indexed by PDVS, and applying the side effect analy­sis to the separate control-flow graphs yields 
+the sections of shared data that each process reads and writes. We improve upon traditional summary side-effect 
+analysis in two respects. First, to improve its accuracy we allow multiple regular sect ion descriptors 
+[CK88a, HK91] and only merge them when very little or no information will be lost, or when the number 
+of descriptors for a single array exceeds some small preset limit. (None of the arrays used in our benchmarks 
+required more than 10 descriptors). Second, to pinpoint data structures most responsible for false sharing, 
+we use static profiling to produce a weighting of the side­effects with respect to estimated execution 
+frequency. The non-concurrency analysis (stage 2) uses barrier syn­chronization points to determine which 
+portions of a pro­gram can execute in parallel and which cannot. It therefore detects the memory access 
+pattern of distinct phases of a program between barriers, and, more importantly, when the pattern shifts. 
+Coupled with static profiling, it determines the dominant sharing pattern in the program and restruc­tures 
+shared data for that pattern. Including all techniques in the source-to-source restruc­turer had little 
+impact on the overall compile costs. When techniques commonly used in optimizing compilers (such as 1s 
+an example. 4 A bounded regular sect]on descriptor 1s a vector of subscript posl­t,!ons In which each 
+element descr]bes the accessed portion of the array ]n that dlmenslon. Each element M either a simple. 
+Invariant expres­sion of program variables or constants (when the Index expression for that dimension 
+does not, contain an Induct Ion variable) a range (glv-Ing s,mple, Invariant expressions for the lower 
+boun<i I]pper bound a,ld str]cfe) or unknown (when the Index expressions are too , omplex C,I-I,al-lable) 
+ call and flow graph construction, alias, dependence and loop analysis) were included in our source-to-source 
+restructurer, the execution time of our algorithms made up only 5 %0 (on average) of the total running 
+time. 3.2 Shared Data Transformations In order to eliminate false sharing, data must be restruc­tured 
+so that (1) data that are only, or overwhelmingly, ac­cessed by one processor are grouped together, and 
+(2) write shared data objects with no processor locality [AG88] do not share cache lines. Two transformations, 
+originally devised for manual application, group and transpose and tndwectton [EJ91], address item (l); 
+the third, pad and altgn, is well known and addresses item (2). Group &#38; Transpose: Group &#38; transpose 
+(Figure 2a) physically groups per-process data together by changing the layout of the data structures 
+in memory. It gathers vectors in which adj scent elements are accessed by different proces­sors into 
+a group and then transposes it. If each processor s data is less than the cache block size, it may be 
+padded, so that no two processors data share a cache block. In addi­tion to eliminating false sharing 
+misses, this transformation Improves spatial locality. Indirection: When it is not possible to physically 
+change the data layout (because, for example, the affected per­process data structure is embedded into 
+the elements of a dynamically allocated list or graph), we can achieve a similar effect by using indirection 
+Indirection (Figure 2b) allocates data areas of memory for each processor, places shared data into them, 
+and locates the shared data with pointers that replace the values in the original data structures. Unlike 
+group and transpose, indu-ection has two possible sources of run time overhead: additional space for 
+the pointers, and an additional memory access for each reference to the data Pad &#38; Align: The third 
+transformation pads and aligns on cache block boundanes data (scalars or array elements) that are falsely 
+shared In the short term but write-shared by all processes over time. Padding the data structures in­creases 
+the data set size. and may therefore increase con­fhct and capacity misses, and reduce spatial locality 
+when Before: typeA Vectl [N] ~ typeB Vect2[N] w~j typeA Vect 1[N] mPmcessoro typeC Vect3[N] - typeD 
+Vect4[N] ~ B Processor 1 ~ Processor2 Aftec Struct { typeA Wed 1[N] I d t ypeA Vect 1; I 1typeB Vect2; 
+Cache Blocks I D Processor typeC Vect3; typeD Vect4;  mml m I BuffesO Bufferl Buffer2 BufferN } GTVect[N]; 
+(a) (b) Figure 2: Illustration of (a) group &#38; transpose and (b) indirection. a m-ocessor. accesses 
+the entire shared area. However, ,.iudi-at least an order of magnitude. This is done so that the cious 
+use of padding need not have these effects. In order reduction in false sharing will exceed any performance 
+loss for spatial locality to benefit write-shared data, it must be from reduced spatial locality. Except 
+for locks, which are al­synonymous with processor locality, i.e., a processor must ways padded, data 
+structures are only padded and aligned on access the data over a short period of time. If it does not, 
+cache block boundaries when both the reads and the writes other processors will invalidate the data before 
+it can be ref-exhibit sharing without processor or spatial locality. erenced. Therefore we only pad data 
+structures that lack processor locality, i.e., where the possible loss of spatial lo­ 4 Methodology and 
+Workload cal it y is insignificant relative to the savings in false sharing. Pad and align has been used 
+to eliminate false sharing in We perform both simulation and execution-time experimentsboth cache blocks 
+and pages in other work. Our application to quantify the effects of transforming shared data on theof 
+padding differs in that we apply it only when indicated by programs in our workload. False sharing reductions 
+andthe static analysis, as opposed to from feedback from off-line other cache miss metrics were measured 
+using trace-drivencache simulation profiles [TLH94], or based on programmer simulation. Each program 
+was traced (both before and af­knowledge [BFS89]. ter shared data was transformed), using a software 
+tracing tool for parallel programs [EKKL90]. Cache miss rates were Locks: Locks are also padded, to the 
+size of the cache analyzed with a multiprocessor simulator that emulates a block, rather than allocated 
+with the write-shared data they simple, shared memory architecture. The processors are as­ protect. Co-allocating 
+locks and data [TLH94] improves spa­ sumed to be RISC-like, with a 32 KB first level cache and an tial 
+locality, but generates coherence traffic when there is infinite second level cache5. We studied block 
+sizes ranging content ion for the locks. The processor that holds the busy from 4 to 256 bytes. lock 
+loses exclusive ownership of its cache block, because of Execution times were measured on a 56-processor 
+Kendall reads by waiting processors. Its writes to the data cause Square Research KSR2 [Ken94]. Each 
+processor has a 512 additional invalidations, and then invalidation misses when KB first level cache, 
+divided equally between data and in­ the waiting processors reread the status of the lock. Our struct 
+ions. The second level cache cent ains 32 MB, and uses approach of always padding locks decreases spatial 
+localitY, a coherency unit of 128 bytes. The second level cache miss but eliminates any false sharing 
+caused by lock contention. latency is 175 cycles, if it is serviced by a processor on the same ring, 
+and 600 cycles if the servicing processor is on a different ring. The KSR2 default lock data structure 
+is large (80 3.3 Transformation Heuristics Once all stages of the static analysis have been performed, 
+bytes) and aligned on cache block boundaries. To make we use a number of heuristics to detect which data 
+struc­ implementation-independent comparisons with the simula­ tures are susceptible to false sharing 
+and which transforma­ tions, and to study the effect of padding and aligning tions should be applied 
+to eliminate it. The heuristics were locks. we used KSR2 synchronization primitives to provide developed 
+by comparing the results of the per-process side­ a smaller ( 1 word), alternate implementation of locks 
+in the effect analysis to profiling information from simulations that untransformed versions of the programs. 
+showed the number of false sharing misses per data structure. Gauging the impact of the static algorithms 
+and transfor- The factors used in the heuristics to make the transforma­mations on program performance 
+and comparing the com­ tion decisions are the type (read/write, shared/per-process), piler analysis to 
+programmer efforts to eliminate false shar­stride (known/unknown) and frequency of access to the el­ 
+ing requires three versions of each program: an unopti­ements of a data structure. In order to apply 
+either group mized version, a compiler-transformed version and a hand­ &#38; transpose or indirection 
+to a data structure, the pattern optirnized version. The programs we collected had been of writes to 
+the data structure must be per-process and the hand-optimized for locality to varying degrees. In one 
+group, pattern of reads either per-process or read-shared without that included Maxflow [Car88], Pverify 
+[MDWSV87] and spatial or processor locality. If the pattern of reads is read­ shared with locality, the 
+data structure is transformed only infinite caches can be used to approximate very large (on the if the 
+number of writes dominate the number of reads by order of several megabytes) second level caches [Egg91]. 
+Program Description Lines of C Versions Maxflow Maximum flow in a directed graph 810 NC Pverify Logical 
+verification 2759 NCP Topopt Topological optimization 2206 NCP Fmm Fast multipole method (n-body) 4395 
+NCP Radiosity Equilibrium distribution of light 10908 NCP Raytrace Rendering of 3-dimensional scene 12391 
+NCP LocusRoute VLSI standard cell router 6709 CP Mp3d Rarefied fluid flow 1653 CP Pthor Circuit simulator 
+9420 CP Water N-body molecular dynamics 1451 CP Table 1: Benchmarks used in our study. Version refers 
+to (N)ot optimized, (C)ompiler optimized, or (Programmer optimized. Topopt [DN87], no effort had been 
+made to improve locality. For Pverify and Topopt, in particular, the programmers had constructed data 
+structures to match their natural way of thinking about the semantics of the program algorithms, rather 
+than for better memory system performance. To pro­vide hand-opt imized versions oft hese programs ( Pverify 
+and Topopt), we manually transformed them [EJ91]. In another group that comprised the original SPLASH 
+benchmark suite [SWG91] (LocusRoute, Mp3d, Pthor, Wa­ter) and the SPLASH2 benchmarks (From [SHHG93], 
+Ra­diosity and Raytrace [S GL94]), programs had been highly optimized for locality, including eliminating 
+false sharing. The SPLASH2 programs contained several easily identifi­able data structures whose elements 
+had been organized by processor (in our terminology, grouped and transposed), and padded. We undid these 
+transformations to produce unoptimized versions of the programs, but made no other changes. In addition 
+to providing a general comparison be­tween the compiler-directed and hand-tuned optimizations, these 
+hand-unoptimized programs enabled us to gauge the compiler s ability to detect and transform data structures 
+the programmer had chosen. The programmer efforts to im­prove locality in the original SPLASH benchmarks 
+were not as obvious. Therefore we left them as is. Results We present two sets of results to describe 
+the impact of our analysis and transformations on the benchmarks. The first demonstrates their overall 
+effectiveness in eliminating false sharing and the relative contribution of the different trans­formations, 
+all via simulation. The second measures the impact of eliminating false sharing on execution time and 
+program scalability and compares the compiler approach to that of programmer hand-tuning. Simulation 
+Results: Figure 3 and Table 2 show the re­sults of applying the algorithms and transformations to the 
+unopt imized programs in our workload. In the figure, the white portion of each bar is the miss rate 
+due to false shar­ing; the black portion represents the remaining misses. It also indicates what the 
+total minimum miss rate for that block size would be if false sharing were elimmated without any effects 
+on spatial locality. The compiler-directed shared data restructuring reduced false sharing in all programs 
+for all block sizes, regardless of the size of the original false sharing miss rate. (False shar­ing 
+is greater with larger block sizes; and in our programs the amount of false sharing, of course, varied.) 
+The greatest reductions occurred for From, Pverify and Radiosity, where on average more than 90?Z0 of 
+all false sharing misses were eliminated. False sharing miss rates in Maxflow, Raytrace and Topopt, were 
+also significantly reduced, although not to the same extent. In Maxflow and Raytrace, the remain­ing 
+false sharing is mostly caused by a few busy, write­ shared scalars that were allocated to the same cache 
+block. They did not appear as candidates for restructuring, because the static profiling underestimated 
+their dynamic access fre­ quency. The remaining false sharing misses in Topopt occur mostly in a write-shared 
+array that is dynamically parti­tioned across the processes in a revolving manner. False sharing misses 
+occur in the cache blocks that contain ele­ments from more than one partition. Since the partitioning 
+of the array is dynamic and revolving, the static analysis cannot detect the per-process accesses. Nor 
+does the array appear to the compiler to have poor spatial locality, because the writes to the elements 
+in a processor s partition occur with unit stride. Although, overall, the transformations were very success­ful 
+in eliminating false sharing misses, no single transforma­tion was responsible for the reductions for 
+all programs, or even for a single program. Group &#38; transpose and padding locks were most applicable, 
+used in 5 out of 6 programs. However, the majority of false sharing misses were elimi­nated by group 
+&#38; transpose and indirection. Unlike padding, these transformations are harder to apply using simulation 
+profiles; static analysis can more easily ensure that only data that are accessed by the same process 
+are grouped together. Our compiler-driven transformations provide this. One transformation (group &#38; 
+transpose) improves spatial locality, while others (indirection and pad &#38; align) decrease it. Since 
+both sets of transformations were applied to all but one program, our results reflect both effects. For 
+most pro­grams the change in spatial locality (as reflected by the black portion of the bars in Figure 
+3) was modest, since the effecix of the transformations canceled one another. The increase in misses 
+other than those attributable to false sharing was significant only for Maxflow (it almost doubled at 
+128 byte cache blocks ), which is restructured with two t ransforma­tions, both of which increase the 
+shared data size. However, for all programs and at all block sizes (data not shown) the reduction in 
+false sharing more than compensated for any decrease in spatial locality, and the total miss rate fell. 
+Execution Time Results: Eliminating false sharing af­fected two aspects of overall program performance: 
+execu­tion time and program scalability. The difference in execu­ 1.070 0.9% 0.870 o.7 %o 0.6?Z0 o.s% 
+o.4% n o.3% 0.2?70 0.170 0.070 1­ w coW m W m a m W m co -, ,-., CJ r.)m C J Pverify Radioslty Raytrace 
+Topopt Figure 3: Total cache miss rates for unoptimized (left) and compiler-transformed (right) versions 
+of programs for 16 and 128 byte cache blocks. (Recall that the KSR2 has a 128 byte block. ) The portion 
+of the miss rate that is due to false sharing is the white portion of each bar. Each program was run 
+on 12 processors, except for Topopt which was run on 9. tion time between the unoptimized and compiler-optimized 
+grams not only run faster, but, since they scale better with versions of the programs, over the range 
+of processors where the number of processors, the maximum performance they the unoptimized version still 
+scaled (i.e., where an increase can achieve is often much higher (Table 3, columns 2 and 3). in the number 
+of processors produced a drop in execu-This maximum performance difference is particularly strik­tion 
+time), progressively increased. Maximum improvements ing for From, Pverify, Radiosity and Maxflow, where 
+the were modest for Fmm (3~0), Radiosity (6~0) and Raytrace transformed versions exceed the maximum speedup 
+of the (2%), all programs in which we undid only the easily identi-original by factors of 2.1, 2.4, 2.7 
+and 3.1, respectively. fiable programmer transformations to produce unoptimized versions. Reductions 
+were better for the programs with no hand-tuning, Maxflow (50%), Pverify (58%) and Topopt (2o%) Situations 
+where the transformations had minimal performance impact occurred primarily when (1) there were few processors 
+accessing the shared data, and either (2) the Despite being based on algorithms and heuristics that absolute 
+miss rate value was small (Radiosity), or (3) the re-can only approximate dynamic per-processor accesses 
+and duction in false sharing misses, although large, was a small processor interaction, the compder-directed 
+transformations proportion of total misses and therefore had little effect on always outperformed programmer 
+efforts, sometimes more the total miss rate (From, Raytrace). than doubling the maximum obtainable speedup. 
+The com­ pder was able to eliminate more false sharing misses in all As the number of processors grew, 
+so did the mter-programs In some cases. it was simply more exhaustive in processor contention for data 
+structures that are falsely lts coverage For example, the programmer missed oppor­shared. At some threshold 
+number of processors. which tunities to apply group &#38; transpose in Pthor, Pverify and varies across 
+the programs, the memory contention created Topopt; indirection m Pverify and Topopt; and pad &#38; align 
+by false sharing had such a severe impact that it reversed the in Radiosity and Pthor, In others, it 
+made a better trade­speedup trend of the unoptimized versions of the programs off between spatial and 
+processor locality. For example, the However, the performance of the transformed versions con-programmer 
+padded and aligned an array in Raytrace that tinued to improve, reaching maximum scalabdity at a greater 
+the static analysis had concluded was not predominantly ac­number of processors (representative programs 
+appear In cessed on a per-process basis Finally, the programmer some-Figure 4) (The only exception was 
+Pverify, for which the un-times left locks unpadded or associated them with the data optlmlzed and compiler-optimized 
+versions both scaled to 16 they protected, Radlosity, LocusRoute and MP3D suffered processors ) Thus, 
+compiler-transformed versions of the pro-from both. Total reduction Fraction of reduction by transformation 
+Program in false sharing Group &#38; Transpose Indirection Pad &#38; Al ign Locks Maxflow 56.5% 49.2% 
+7.3% Pverify 91.2% 6.4% 81.6% 3.1% Topopt 79.9% 61.3% 18.6% Fmm 90.8% 84.8% 6.0% Radiosity 93.5% 85.6% 
+1.0% 6.8% Raytrace 78.3% 70.4% 3.3% 4.6% Table 2: The false sharing miss rate reduction broken down by 
+transformation. Numbers are averages over 8-256 byte cache blocks. Ravtrace Pverify Fmm 106 35 130 5 
+ 8 25 4 3 Original 2 10 a Compiler 2 I 5 Programmer 0 o 0 I I I I I I I I I I 0 10 20 30 40 50 o 10 
+20 30 40 50 0 10 20 30 40 50 No.of Processors No.of Processors No.of Processors Figure 4: The scalability 
+(speedup vs number of processors) of unoptimized, compiler-optimized and programmer-optimized versions 
+for 3 representative programs. Raytrace is typical of programs where the compiler and programmer approaches 
+were comparable, From, of those where programmer efforts brought little gain and Pverify, which falls 
+in between. All data points are speedups relative to the uniprocessor execution of the unoptimized version. 
+Note the different scales on the vertical axis. 6 Related Work The research that is most closely related 
+to ours is Torrellas et al. [TLH94], who reduced false sharing using a somewhat different set of transformations 
+that were applied manually. Like us, they pad and align records and busy scalars; how­ever, they did 
+not use group &#38; transpose or indirection, and they co-allocated locks with the scalars they protect 
+rather than placing them in separate cache blocks. In addition, they used detailed, trace-driven simulation 
+profiles, rather than static analysis, to determine which data structures suf­fered from false sharing 
+and to guide the application of the transformations. On average, for 64 byte cache blocks, they reduced 
+the number of shared misses b,v 10~0 and 13~o, for 16 and 32 processor simulations, respectively. In 
+cent rast, on a slightly different workload, our transformations reduced the total miss rate by an average 
+of 4991G (on the unoptimized programs, also for 64 byte blocks, but with 12 processors). Dubois et al. 
+[DSR+93] reduced false sharing with hard­ware, either by delaying invalidations (at the sender, receiver 
+or both) until special acqmre or release instructions were ex­ecuted, or by performing invalidations 
+on a word basis. De­laying invalidations both at the sender and the receiver and invalidating cache subblocks 
+consistently perform well. The former reduced false sharing misses by 85% to 100%; the lat­ter totally 
+eliminated them. These reductions were aclneved at the cost of increased memory traflic and additional 
+hard­ware complexity. The first approach requires a change in the instruction set architecture. as well 
+as hardware to im­ 185 plement invalidation buffers at each processor node. The second requires an invalid 
+bit per word in the cache block, and causes more invalidations when the writes exhibit spa­tial locality. 
+Several compiler approaches reorganize control structures rather than data. One group used workloads 
+that consisted of either loops or library routines that have fine-grain paral­lelism [JD91, GP91, PC89]. 
+Their studies recorded perfor­mance improvements only for the code fragments that were transformed. Therefore 
+the results are overly optimistic with regard to the expected performance of executing entire pro­grams. 
+Ju and Dietz [JD91] restructured a program frag­ment of several loops accessing array elements. Their 
+re­structuring algorithm applies loop transformations (such as loop distribution) and data layout transformations 
+(access­ing arrays in row or column major order), according to a coherency cost function. The restructuring 
+provided a 25~o improvement in execution time of the loops for a 64 KB cache. Gupta and Padua [GP91] 
+also examined sequential programs that were automatically parallelized at the loop level. They strip-mined 
+the loops to the size of the cache block and assigned each strip to a different processor. The decline 
+in miss ratios ranged from 470 to almost 60%, as block size was increased to 128 bytes. No execution 
+times were reported Peir and Cytron [PC89] partitioned loops to minimize inter-processor communication 
+when process­ing recurrences. Their mechanism for partitioning utilizes loop unrolling and dependence 
+vectors. Partitions are then scheduled on different processors. Maximum Speedup and Scalability (# of 
+ processors) Program Original Compder Programmer Maxflow 1.4 ( 8) I 4.3 (16) I Pverify 2.5 ( 16j 5.9 
+~16j 3.5 ( 8) Topopt 9.2 (44) 10.3 (28) 10.2 (28) Fmm 16.4 (20) 33.6 (48+) 16.4 (20) Radiosity 7.0 ( 
+8) 19.2 (28) 7.4 ( 8) Raytrace 7.0 ( 8) 9.6 (12) 9.2 (12) LocusRoute 12.3 (20) 12.0 (20) Mp3d 2.9 (28) 
+1.3 ( 4) Pthor 2.8 ( 4) 2.2 ( 4) Water 9.9 (40) 4.6 (12) Table 3: Maximum speedups for original, compiler-optimized 
+and programmer-optimized versions and the number of processors at which they occur. Note, for LocusRoute, 
+Mp3d, Pthor and Water only programmer-and compiler-optimized versions were available, while for Maxflow, 
+no programmer-optimized version was available. Wolf and Lam [WL91] and Kennedy and McKinley [KM92] do 
+similar work, but on complete programs. They reorganize control to improve locality in the inner loops. 
+They also detect a parallel loop, put it in the outermost legal position and tile (i.e., strip mine and 
+interchange) it if it contains spatial locality. Their transformations remove false sharing by improving 
+processor locality. Two studies focused on reducing false sharing in pages rat her than cache blocks. 
+Bolosky et al. [B FS89] eliminated false sharing by coalescing objects into a larger object or padding 
+individual objects to page boundaries, all manually. However, they do not quantify the effect of eliminating 
+false sharing. Granston [Gra93] presented a theory to identify and eliminate page-level sharing between 
+processors that occur in parallel do-loops. The transformations select blocking and alignment factors 
+that cause minimal overlap between sets of pages accessed by different processors. Conclusion In this 
+paper we have analyzed the effectiveness of compile­time analysis and shared data transformations in 
+reducing false sharing in explicitly parallel programs. Our results in­dicate that the static analysis 
+successfully identifies the data structures that cause most false sharing and restructures them to eliminate 
+it, while keeping the negative impact on spatial locality under control. No single transformation is 
+responsible for the false sharing reductions, even within a single program: all are important contributors 
+to improved performance. The reduction in false sharing misses brought different performance benefits 
+in different regions of the speedup curves. As long as the unoptimized programs experienced speedups 
+with increasing numbers of processors. the trans­formed versions improved execution time by modest (as 
+small as 2Y0) or more substantial (up to 58!ZO) amounts. Af­ter the point at which the unoptimized programs 
+no longer scaled, most compiler-transformed programs still continued to scale, resulting in more than 
+a doubling of the overall maximum speedups, on average. With the trend toward larger caches, larger coherence 
+umts, and longer memory latencies, false sharing will have an increasingly large, negative performance 
+Impact Regaining the performance will necessitate either a significant program­ming effort to improve 
+locality or the use of a compde-time system like ours. This paper argues for the latter, on three grounds. 
+The first is performance. Our particular static analyses led to transformations that were at least as 
+suc­cessful as programmer efforts, and sometimes more. The second is portability of the program source 
+across different cache architectures. The third is ease of programming. Hand transformations force the 
+programmer to focus on details of the caching structures and coherency operations, the shared data structures 
+layout in memory and the often nonintu­itive (particularly over the temporal domain) cross-processor 
+memory accesses to them, rather than the semantics of the programs. For our algorithms and transformations, 
+all three benefits were realized with only a 5% increase in compile time. 8 Acknowledgements We would 
+like to thank J. P. Singh and Josep Torrellas for providing us with many of the programs in our workload, 
+Craig Chambers, Kathryn McKinley, Anne Rogers, Jean-Loup Baer and Dean Tullsen for helpful comments on 
+an earlier draft of this paper and John Bennett for access to additional parallel machine resources. 
+References [AG88] A. Agarwal and A. Gupta. Memory-reference characteristics of multiprocessor applications 
+under math. In SIGMETRICS Conference on Measurement and Modeling of Computer Sys­tems, pages 215-225, 
+May 1988. [Ban79] J.P. Banning. An efficient way to find the side effects of procedure calls and the 
+aliases of variables. In Szxth Annual Symposzum on Princ~ples of Programming Languages, pages 29 41, 
+January 1979 [Bar78] J. Barth. A practical interprocedural data flow analysis algorithm. CA CM, 21(9):724­736, 
+September 1978. (BFS89] W.J. Bolosky, R.P Fitzgerald, and M.L Scott. Simple but effective techniques 
+for IW_JMA memory management. In Proceedings of the Twelfth ACM Sympostum on Operatzng Sys­tems Prznctples, 
+pages 19 31, December 1989. [Car88] [CK88a] (CK88b] [DN87] [DSR+93] [Egg91] [EJ91] [EKKL90] [GP91] [Gra93] 
+[GW94] [Hig93] F.J. Carrasco. A parallel maxflow implemen­tation. CS411 Project Report, Stanford Uni­versity, 
+March 1988.  D. Callahan and K. Kennedy. Analysis of interprocedural side effects in a parallel pro­gramming 
+environment. Journal of Parallel and Dwtributed Computing, (5) :517 550, 1988.  K.D. Cooper and K. Kennedy. 
+Interprocedural side-effect analysis in linear time. In Confer­ence on Programming Languages Design and 
+Implementation, pages 57 66, June 1988.  S. Devadas and A.R. Newton. Topological op­timization of multiple 
+level array logic. In IEEE Transactions on Computer-Aided De­sign, November 1987. M. Dubois, J. Skeppstedt, 
+L. Ricciulli, K. Ra­mamurthy, and P. Stenstrom. The detection and elimination of useless misses in multipro­cessors. 
+In 20th Annual International Sympo­sium on Computer Architecture, pages 88 97, June 1993.  S.J. Eggers. 
+Simplicity versus accuracy in a model of cache coherency overhead. IEEE Transaction on Computers, 40(8):893-906, 
+August 1991. S.J. Eggers and T.E. Jeremiassen. Eliminating false sharing. In International Conference 
+on Parallel Processing, volume I, pages 377-381, August 1991. S.J. Eggers, D.R. Keppel, E.J. Koldinger, 
+and  H.M. Levy. Techniques for efficient inline trac­ing on a shared-memory multiprocessor. In Proceedings 
+of the International Conference on Measurement and Modeling of Computer Sys­tems, pages 37 47, May 1990. 
+ M. Gupta and D. A. Padua. Effects of pro­gram parallelization and stripmining transfor­mations on cache 
+performance in a multipro­cessor. In International Conference on Parallel Processing, volume 1, pages 
+301-304, August 1991. E. D. Granston. Toward a compile-time methodology for reducing false sharing and 
+communication traffic in shared virtual mem­ory systems. In U. Banerjee, D. Gelern­ter, A. Nicolau, and 
+D. Padua, editors, Svcth  Workshop on Languages and Compders for Parallehsrn, pages 273-289, August 
+1993, M. Galles and E, Williams. Performance op­timization, implementation, and verification of the SGI 
+Challenge multiprocessor In Pro­ceedings of the Twenty-Seventh Hawau Inter­national Conference on System 
+Sc%ences. vol­ume I: Architecture, pages 134 143, January 1994. High Performance Fortran Forum Hzgh Per­formance 
+Fortran Speczflcatzon. January 1993. [HK91] [JD91] [JE92] [JE94] [Jer95] [Ken94] [KM92] [LLG+92] [LLG+94] 
+[LT88] [M 93] [MDWSV87] 187 P. Havlak and K. Kennedy. An implementa­tion of interprocedural bounded regular 
+sec­tion analysis. IEEE Transactions on Parallel and Distributed Systems, 2(3):350 360, July 1991. Y. 
+Ju and H. Dietz. Reduction of cache co­herence overhead by compiler data layout and loop transformation. 
+In U. Banerjee, D. Gel­ernter, A. Nicolau, and D. Padua, editors, Fourth Workshop on Languages and Compil­ers 
+jor Parallelism, pages 344 358. Springer Verlag, August 1991. T.E. Jeremisssen and S.J. Eggers. Computing 
+per-process summary side-effect information. In U. Banerjee, D. Gelernter, A. Nicolau, and D. Padua, 
+editors, Fifih Workshop on Lan­guages and Compilers for Parallelwm, pages 175 91, August 1992. T.E. 
+Jeremiassen and S.J. Eggers. Static anal­ysis of barrier synchronization in explicitly parallel programs. 
+In International Confer­ence on Parallel Architectures and Compila­tion Techniques, pages 171 180, August 
+1994. T.E. Jeremiassen. Using compile time analysis and transformations to reduce coherency traf­fic 
+on shared memory multiprocessors. Ph.D. thesis, University of Washington, to be pub­lished, 1995.  Kendall 
+Square Research. KSR/Serzes Prmc­ples of Ope~ations, revision 7.o edition, 1994. K. Kennedy and K. S. 
+McKinley. Optimizing for parallelism and data locality. In Proceed­ings of the 1992 ACM International 
+Confer­ence on Supercomputmg, pages 276 283, July 1992. D. Lenoski, J. Laudon, K Gharachorloo, W.-D. 
+Weber, A. Gupta, J. Hennessy, M. Horowitz, and M. Lam. The Stan­ford DASH Multiprocessor. IEEE Computer, 
+25(3):63-79, March 1992. D. Lenoski, J. Laudon, K Gharachorloo, W.-D. Weber, A. Gupta, J. Hennessy, M. 
+Horowitz, and M. Lam. The Stanford FLASH Multiprocessor. In Proceedings of the 21st Annual International 
+Symposzum on Computer Architecture, pages 302-313, April 1994. R. Lovett and S. Thakkar. The symmetry 
+mul­tiprocessor system. In Proceedings of the 1988 International Conference on Parallel Process­ing, 
+volume 1, pages 303 310, August 1988. M. Cekleov, et. al. SPARCcenter 2000: Multi­processing for the 
+90 s In IEEE COMPCON, pages 345-353, February 1993. H-K. T. Ma, S. Devadas, R. Wei, and A. Sangiovanni-Vincentelli. 
+Logic verification algorithms and their parallel implementation. In Proceedings of the 21th Desxgn Automation 
+Conference, pages 283-290, July 1987. [MR93] [Mye81] [PC89] [PGH+89] [SGL94] [SHHG93] [SWG91] [TLH94] 
+[WL91] S.P. Masticola and B.G. Ryder. Non­concurrence analysis. In Fourth ACM SIG-PLAN Symposium on Prmctples 
+&#38; Practzce of Parallel Programming, pages 129 138, May 1993. E. Myers. A precise inter-procedural 
+data flow algorithm. In Symposmm on Prmctples of Pro­gramming Languages, pages 219 230, January 1981. 
+ J.K. Peir and R. Cytron. Minimum distance: A method for partitioning recurrences for mul­tiprocessors. 
+IEEE Transactions on Comput­ers, 38(8):1203 1211, August 1989. c. Polychronopoulos, M. Girkar,  M. 
+Haghighat, C.L. Lee, B. Leung, and D. Schouten. Parafrase-2: An environment for parallelizing, partitioning, 
+synchronizing, and scheduling programs on multiprocessors. In International Conference on Parallel Processing, 
+volume 11, pages 39 48, August 1989.  J.P. Singh, A. Gupta, and M. Levoy. Visual­izat ion algorithms. 
+Performance and architec­tural implications. IEEE Computer, 27(7) :45 55, July 1994. J.P. Singh, C. 
+Holt, J.L. Hennessy, and A. Gupta. A parallel adaptive fast multipole method. In Proceedings of Supercomputmg 
+93, pages 54-65, November 1993. J.P. Singh, W. Weber, and A. Gupta. SPLASH: Stanford Parallel Applications 
+for Shared-Memory. Technical Report CSL-TR­91-469, Computer Systems Laboratory, Stan­ford University, 
+1991. J. Torrellas, MS. Lam, and J.L. Hennessy. False sharing and spatial locahty in multipro­cessor 
+caches. IEEE Transactions on Comput­ers, 43(6):651 663, June 1994.  M.E. Wolf and M.S. Lam. A data 
+locality optimizmg algorithm. In Conference on Pro­gramming Language Deszgn and Implementa­tion, pages 
+30-44, June 1991.  
+			

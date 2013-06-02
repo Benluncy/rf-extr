@@ -1,0 +1,415 @@
+
+ Non-concurrency Analysis. Stephen P. Masticola Barbara G. Ryder (masticol@lcs.rutgers. edu) (ryder@cs.rutgers. 
+edu) Department of Computer Science Rutgers University, New Brunswick, NJ 08903 Abstract. Non-conmu-rency 
+analysis is a set of techniques for statically identifying pairs (or sets) of statements in a concur­rent 
+progrmu which can never happen together. This infomtion aids programmers in debugging and manually optimizing 
+pro­grams, improves the precision of dat a flow analysis, enables opti­mized translation of rendezvous, 
+facilitates dead code elimination and other automatic optimization, and allows anomaly detection in explicitly 
+parallel programs. We present a framework for non­concurrence y analysis, capable of incorporating previous 
+analysis algorithms [CS88, D S91] and improving upon them. We show general theoretical results which 
+are useful in estimating nOn­concm-rent y, and examples of non-concnrmnc y emalysis frame­works for two 
+synchronization primitives: the Ada rendezvous and binary semaphores. Both of these frameworks have a 
+low­order polynomial bound on worst-case solution time. We pro­vide experiment al evidence that static 
+non-concurrency analysis of Ada programs can be accomplished in a reasonable time, and is generally quite 
+accurate. Our framework, and the set of refine­ment. components we develop, also exhibits dramatic accuracy 
+improvements over [D S91], when the latter is used as a stand­alone algorithm, as demonstrate ed by our 
+experiments. Introduction. Parallel and concurrent programs are often explicitly divided into tasks by 
+the programmer. The tasks may synchronize with each other at various points, to re­quest services or 
+information from each other, or to pre­vent races. If the synchronization structure is complex, it may 
+be difficult to determine a priori which parts of the program may, or may not, execute in parallel. Tay­lor 
+showed that determining this exactly is NP-hard Permission to copy without fee all or part of this material 
+is granted provided that the copies are not made or distributed for direct commercial advantage, the 
+ACM copyright notica and the title of the publication and its date appear, and notice is given that copying 
+is by permiaaion of tha Association for Computing Machinery. To copy otherwise, or to republish, requires 
+a fee and/or specific permiaaion. 4th ACM PPOPP,51931CA,USA @ 1993 ACM 0-89791 -589 -5/93 /0005 /0129 
+. ..$1.50 [Tay183b]; our objective, rather, is to obtain a close un­derestimate of non-concurrency, in 
+a time polynomial in the number of program statements. 1.1 Applications. Information about guaranteed 
+non-concurrency has a variety of uses in compilation and debugging. Specifi­cally, it is useful for program 
+understanding tools, data flow analysis [RS90, LC91], rendezvous optimization, dead code elimination, 
+and synchronization anomaly detection. Debuggers and program understanding tools. While debugging concurrent 
+programs, or tun­ing their performance, it may be valuable to know that some pair of code segments can 
+never happen together. For example, if the code segments that access a shared resource are non-concurrent, 
+the programmer can safely delete any locks that are protecting the resource. We envision a debugger that 
+includes a structured source code editor. On the user s command, the editor would highlight all code 
+that might be concurrent with the code at the current cursor position. Alternately, the debugger could 
+answer queries about whether two statements may be concurrent. Thus, non-concurrency analysis may become 
+a valuable addition to program understanding tools. Data flow analysis. If tasks pass data to each other 
+during rendezvous, non-concurrency information can eliminate some infeasible clef-use pairs. Statements 
+which are non-concurrent cannot rendezvous with each other; no definitions can reach uses via rendezvous 
+which can never occur. Similar examples exist for other classic data flow problems. Optimizing rendezvous. 
+Rendezvous can be op­ timized by choosing the proper implementation for a particular statement instance. 
+In a simple form of ren­ dezvous synchronization, signaling tasks call an accept­ ing task; both wait 
+until the call is completed. Each signaling task may call the accepting task from more than one call 
+point; the accepting task may also accept the calls at any of several entry points. Entries might be 
+implemented in two alternate 1.2 Previous work. ways: by polled flags or by call queues. Polling will 
+be more efficient when few call points can execute si­multaneously with the entry; beyond some threshold, 
+the time to poll will be greater than the overhead for queue management. Non-concurrency analysis might 
+determine that this threshold has not been reached for a particular entry, even though the total number 
+of call points is greater than the threshold. If so, we can gain speed by using polling. Dead code elimination. 
+Dead code can also be detected using non-concurrency information. If some statement in a task can never 
+happen together with any other statement in the program (including the be­ginning and end of the program), 
+then it can never hap­pen at all. The code may thus be eliminated from the program. If the code is dead 
+because some accept al­ternative of an entry can never rendezvous, then the entry may also be optimized 
+by removing the alterna­tive. In some cases, the code may be dead because some predecessor in the same 
+task must starve or deadlock; here, the dead code is only a symptom of a more serious anomaly. Synchronization 
+anomalies. More commonly, non-concurrency analysis has been applied to static de­tection of synchronization 
+anomalies, including races and deadlocks. A race occurs whenever two tasks may simultane­ously access 
+the same shared object (variable or re­source), and if at least one of those accesses changes the state 
+of the resource (e.g., advances a stream or writes a variable) .1 If we can prove that two accesses are 
+non-concurrent, then there can be no races between them. Callahan and Subhlok [CS88] apply this method­ology 
+to post/wait synchronization in programs without loops.z A deadlock occurs when several tasks mutually 
+wait on each other to advance. The statements at which these tasks wait are the head statements of the 
+dead­lock. Given a proposed head statement s, we can often decide that all proposed deadlocks which might 
+contain s must also contain statements that are non-concurrent with s, and thus do not represent actual 
+deadlocks. This allows us to prune s as a possible member of any deadlock [MR90, MR91b]. 1To guru-ant 
+ee that the program produces determinate results, we must usually also guarantee that conflicting statement 
+in­stances are totally ordered, rather than just non-concurrent. z Their later work [cKS90] incorporated 
+IOOPS, but the met ho dology the y used there is only tangentially related to non­conmummc y analysis. 
+Callahan and Subhlok [CS88] presented a method for polynomial-time static non-concurrency analysis in 
+pro­grams which use post/wait synchronization. Later, Duesterwald and Soffa [DS91] used similar methods 
+in the rendezvous model. Our technique can use these as components to refine non-concurrency information; 
+we adapted [DS91] as part of our empirical model. We show experimental evidence that for Ada programs, 
+an algorithm based only on [DS91] would miss much non­concurrence information that a broader range of 
+refine­ments can extract. Bristow, et. al. [BDER79] presented some early ideas related to non-concurrency 
+analysis; we describe the relation of their work to ours further in Sections 2 and 4. 2 Framework for 
+non-conCur­ rency analysis. Figure 1 shows the general framework used in non­concurrence analysis. The 
+framework must be special­ized for a particular tasking model and set of synchro­nization primitives. 
+E CHT refinement 2 CHT refinement r b Memory Fina I sync Final CHT 8 graph est imata Figure 1: General 
+framework of iterative non­concurrency analysis. The program is parsed, and a sync graph repre­sentation 
+of the program s synchronization behavior is generated. The sync graph represents only synchroniza­tions 
+and control flow between synchronization state­ments, and omits instruction timing and priorities, if 
+they exist in the source language. Non-concurrency results are thus conservative with respect this infor­mation; 
+knowledge of timing and priorities could add to non-concurrency information, but could never in­validate 
+a non-concurrency relationship between state­ments. Each node inthesync graph represents asynchro­nization 
+statement in the program. Directed control edges are placed from node m to n if there is a control path 
+from m to n that contains no tasking statements other than m and n. Sync edges represent synchro­nizat 
+ions, and are placed between all nodes that may synchronize with each other. Sync edges may be di­rected, 
+undirected, or multi-ended, depending on the synchronization model. The non-concurrency relation is labeled 
+CHT, for can t happen together. For each node n in the sync graph, CHT(n) is a set of nodes which have 
+no instances that can ever occur simultaneously with any instance of n, in any execution of the program. 
+Note that CHT(n) need not be the complete set of such nodes; the latter is denoted CIITPert (n). We obtain 
+an initial estimate CHTO (n) of CHT(n). If task instances are not created dynamically, we may use CHTo(n) 
+= Task(n) {n} as the initial estimate, where Task(n) is the set of nodes in the task containing n. We 
+refine each estimate CHTj of CHT to an es­timate CHT2+1 = ri( CHT) by applying one of a set of conservative 
+refinement analyses ri. We require that all refinements be monotone, inflationary, and conser­vative, 
+i.e.: vTi, n: [Vm : CHT(m) ~ CHT (m)] + [Ti( CHT)(n) ~ T~( CHT )(n)] A CHT(n) ~ Ti( CHT)(n) A [Vm : CHT(m) 
+< CHTP.T, (m)] + [Ti( CHT)(n) ~ CHTPert(n)]. As an example of a refinement, we may be able to decide, 
+from the construction of the sync graph and CHT~ information currently available, that all instances 
+of m happen before any instance of n, as is done in [CS88] and [DS91]. Thus, m G CHZ t+l(n) and n E CHTi+l 
+(m). Other forms of analysis are also pos­sible; these must be specialized to the tasking model being 
+analyzed. While refining CHT, we also eliminate extraneous sync edges from the sync graph. A sync edge 
+is ex­traneous if it cannot correspond to an executable syn­chronization. CHT information can be used 
+to find ex­traneous sync edges; eliminating extraneous sync edges can, in turn, improve CHT information. 
+Therefore, the sync graph and the CHT relation are refined in the same loop. When no refinement can add 
+any node to any of the CHT sets, we have reached a fixed point in the process of refinement. We then 
+terminate refinement, returning the final CHT set and sync graph. As long as the refinements satisfy 
+our requirements, they may be done in arbitrary order within the loop, and the same fixed point will 
+be reached [Mast93]. The refinements need not be commutative for this guarantee to hold. The refinement 
+process terminates after performing at most r[lV 12 refinements, where N is the set of nodes in the sync 
+graph and r is the total number of refine­ments available. This can be seen by a simple argument on the 
+height of the lattice of CHT relations. Thus, if each refinement terminates in time polynomial in the 
+size (nodes plus all edges) of the sync graph, then the entire CHT process also terminates in polynomial 
+time. Bristow, et. al. [BDER79] first mentioned the idea of iterative refinement of information similar 
+to CHT, using a graph representation of programs similar to our sync graphs. Their work concerned only 
+post/wait/clear synchronization, and they limited themselves to a single refinement. Our work thus gener­alizes 
+their theory; in addition, we provide experimental evidence of the effectiveness of the technique.  
+2.1 Widening and pseudotransitivity of the CHZ relation. The CHT relation is not generally transitive; 
+however, it admits two useful properties, which we call widen­ ing and pseudot? ansi iiviiy. We will 
+use these properties extensively in designing the refinements. We can sometimes discover a set of nodes 
+S for node n, such that whenever n is executing, some node(s) in S are executing as well. For example, 
+n may be a node inside a remote procedure and S the set of nodes that call the remote procedure. Note 
+that we do not require that a single node in S execute throughout the entire duration of n; the executing 
+members of S may change during n s execution. We can then improve our CHT(n) information using S as shown 
+in Theorem 1: Theorem 1 (Widening.) If there exists a set of nodes S such that some member(s) of S must 
+always execute together with n, and CHT(n) ~ CHTP,rf (n), then the nodes in f)n,E~ CHT(n ) cannot happen 
+to­gether with n. In general, a small S yields the greatest chance for adding information to CHT. We 
+can sometimes also expand CHT by finding S within CHT itself Corollary 1 (Pseudotransitivit y.) The nodes 
+in the set n CHT(n ) n EN Cii (n)-{n} cannot happen together with n, where N is the set of all nodes 
+in the sync graph and CHT(n) ~ CHTPe.f (n). Pseudotransitivity is especially useful in cases where widening 
+is being done to refine CHT, but some nodes have no set S. If we are manipulating relations as Boolean 
+matrices, we may refine CHT by pseudotransi­tivity at the same time, by using N CHT(n) {n} as a default 
+value of S for node n. Doing this incurs little ad­ ditional computation cost, may increase precision, 
+and eliminates complicated handling of special cases. Fur­thermore, we can sharpen the accuracy of Corollary 
+1 by considering pseudotransitivity on a task-wise basis: Corollary 2 (Task-wise pseudotransitivity.) 
+FOT any node n, and for any task T, n ~ T that must execute concurrently with n, the nodes in the set 
+n CHT(n ) rJ(ET-CHT(n) cannot happen together with n, where ClIT(n) ~ CHTPert (n). 3 Rendezvous. The 
+Ada rendezvous model is quite complex. We will give here a simplified version of the complete model, 
+with only the detail needed to illustrate CHT computation. For a more thorough treatment of the Ada rendezvous 
+model, see [ANS183]; for complete de­tails of CHT detection in a larger subset of Ada, see [Mast92, Mast93]. 
+In the Ada model, any task may signal other tasks, using a statement of the form <accept ingTask>. <S 
+ignalNme>. I he signaler blocks until the accepting task has accepted, and completed processing of, the 
+sig­nal. The accepting task accepts the signal at state­ments of the form, accept <signal> [do <block>; 
+end <signal>; ]. If no task has signaled, the accept­ing task blocks until one does; if multiple tasks 
+have signaled, one is selected arbitrarily3. The optional do block is then executed; it may also contain 
+rendezvous statements. While the do block executes, the signaling task remains suspended at the signaling 
+statement. The do block is often used to implement a remote procedure call. We exclude dynamic task creation 
+and task access variables from our Ada subset model. Thus, the set of task instances, and the program 
+statements which ren­dezvous with each other, are known precisely at compile time. In our work on Concurrent 
+C [Mast93], we pro­pose a non-concurrency analysis for the Concurrent C language [GR86], which includes 
+dynamic task creation. 3.1 Ada sync hypergraphs. Figure 2 shows a simple Ada program, and its sync hy­perg~aph 
+representation [MR9 lb]. Signaling statements are represented by a single signaiing nodq accept state­ments 
+are represented by an accept-in node and an accept-in node, with the subgraph for their do block (if 
+any) embedded between them. intstop . 0, task cl i, kogh whils 1, top 100P t2. *2, 1 acc.pt .1do --2 
+ t3. ea113, --3 t3..zit3, --4 and aocapt , --5 ta.,z, -. 6 d 100D , .nd tl, ta,k t2 i, kmgin while 
+! . top 1-s. C oc.vt .2, --7,8 tl..l, 9 acc.9t .2 , --10,11 end 100D , and t2, ta,k t3 i. im.alm while 
+Ist w 1-P .SCC09t ea113 , --12,13 &#38;CCWt .xit3 , --14, 15 end 10.w , .nd t3, begin for 1 in 1..100000 
+loop t3. c&#38;113, --16 t3. axit3, --17 u,d 100P, .top *= 1, ..I.+ , Figure 2: An example Ada program 
+and its sync hy­pergraph. Nodes b and e represent, respectively, the begin­ning and end of the program. 
+In addition, a task end node is included for each task, to distinguish the end of each task from the 
+end of the program. Doing so helps to eliminate special cases in certain analyses (Section 3.2. 1), and 
+enables the use of the task-wise pseudotran­sitivity of Corollary 2. Control flow is represented conventionally 
+by di­rected edges between nodes in the same task. Ren­dezvous are represented by three-ended sync hyper­ 
+edges, connecting each signaling node with each accept­in/accept-out pair of the same signal type. A 
+more detailed explanation of the sync hypergraph represen­tation may be found in [Mast92, Mast93]. In 
+our execution model, all program statements other than rendezvous are assumed to execute instanta­neously. 
+CHT remains conservative under this assump­tion [MR90].  3.2 Computation of CHZ . V/e exploit four refinements 
+for CHT information. Each of these is described briefly in the following sections. In [Mast92, Mast93], 
+we give more complete details of each refinement, and prove the correctness of each re­finement given 
+here, as well as polynomial worst-case time bounds. 3.2.1 Pinning analysis. 3T&#38; is ~ Silnpuficatioll 
+of the true Ada mociel, whi~l uses Pinning analysis is a general CHT refinement, based priority queues. 
+on widening the CHT relation using Theorem 1. Ex­ perimentation has shown that pinning analysis yields 
+a wealth of CHT information. Pinning analysis is best described by an example. Referring to Figure 2, 
+node 2 cannot begin execution until its predecessor, node 1, has finished. Node 1 can rendezvous only 
+with the pairs (7, 8) and (10, 11); thus, either node 8 or node 11 must complete immediately before node 
+2 starts. The successor of node 8 is node 9; the successors of node 11 are nodes 7 and and te2. Thus, 
+one of these must start at the same time node 2 does. We call nodes 7, 9, and te2 the partners of node 
+2. Node 9 can rendezvous only with node 2; node te2 cannot rendezvous with any other nodes. Node 7 can 
+only rendezvous with nodes 1 and 6; neither of these may execute together with node 27 since they are 
+in the same task as node 2. Thus, the partners of node 2 must continue executing at least as long as 
+node 2 does, and node 2 is said to pin its partners. The set {7, 9, te2} can thus be used as the set 
+S of Theorem 1 to refine the CHT information for node 2. Nodes may have the task end nodes of other tasks 
+as partners. Including the task end nodes in the sync hy­pergraph helps to eliminate a troublesome special 
+case in pinning analysis, which would occur if node e repre­sented the end of each task, as well as the 
+end of the program. 3.2.2 Remote procedure calls. The nodes embedded inside a remote procedure, and 
+the accept-out node for the procedure, may execute only while a signaling node that calls the remote 
+pro­cedure is executing. For instance, nodes 3, 4, and 5 of Figure 2 may execute only while node 9 is 
+executing. Thus, the set {9} can be used as the set S of Theorem 1 to refine the CHT information for 
+nodes 3, 4, and .5. 3.2.3 Critical section analysis. A critical section structure is a program construct 
+which is often used to enforce mutual exclusion between tasks, without blocking the calling task as the 
+remote proce­dure call does. In Figure 2, node pairs (3,4) and (16, 17) delineate call bodies of a critical 
+section structure, while node pair (12, 15) delineates the critical section body of the structure4. Both 
+call bodies and critical section bodies are sin­gle entry, single exit regions of the control flow sub­graph, 
+with additional restrictions detailed in [Mast92, Mast93]. The call bodies and critical section bodies 
+exclude their entry nodes, but include their exit nodes. 4While the stnacture shown has only one critical 
+section body, nndtiple critical section bodies are possible, with appropriate re­strictions. See [Mast92, 
+Mast93] for details. Knowledge about critical section structures can be used to derive CHT information 
+in the following ways: . No two call bodies of the same structure can exe­cute simultaneously. Thus, 
+every node in one call body for the structure may be placed in the CHT set of all nodes in other call 
+bodies. . The critical section body must execute concur­rently with some call body. Thus, the set of 
+nodes in all call bodies may be used as the set S of The­orem 1, for each node in any critical section 
+body. . Likewise, the call body must execute concurrently with some critical section body. Thus, the 
+set of nodes in the critical section bodies form the set S of Theorem 1, for each node in any call body. 
+ A more precise explanation of the behavior of critical section structures may be found in [Mast92, Mast93]. 
+Empirical work indicates that this type of critical sec­tion structure is moderately common in practice 
+(Table 1). 3.2.4 B4 analysis. B4 analysis attempts to discover pairs of nodes (m, n) such that all instances 
+of m must occur before any in­stance of n. We denote this relation as m. 6 B4 (n). If m s B4 (n), then 
+m c CHT(n), and n E CHT(m)5. Our approach in computing B4 sets is, in princi­ple, similar to that of 
+[DS9 1]; however, there are differ­ences in the set of Ada constructs addressed, the graph representation, 
+and the propagation of B4 information between tasks. We adapt the B4 computation to the sync hypergraph 
+model, as a CHT refinement, and also construct a lattice framework for iterative calculation of B4 . 
+Computation of B4 is done iteratively. We may place m c B4 (n) if any of the following is true: There 
+is a control path from m to n, but not from n to m. m is in the intersection of the B4 sets of all control 
+predecessors of n. m is in the intersection of the B4 sets of all nodes that can rendezvous with the 
+completers of n, i.e., the most immediate control ancestors of n that can complete a rendezvous. The 
+completers of any node may include signaling and accept-out nodes, and the program begin node b. Figure 
+3 illustrates the concept of completers; the completers of z are s 5 , a:, and S6. These rules sketch 
+the basics of B4 computation. 5[MR91b] detailed an extension of B4 analysis to produce CHT infomtion 
+within loop bodies. This extension was later shown to be potentially unsafe, although no problems occurred 
+in practice. D --a J ..; -------<. a. -. / . .... . .. .. ~6 ------< a . .. + . ,...,,.. ... ..... $..., 
+%.. .. a? ..... : am .%. / 5.. ...... . a. Y$ D  X:;; 5 --;..: ~<:,:, aom *2 -----< ....+ .... 
+n, .  ~ + . \ . G $ \ \ .............................. Completor edge a @ Completorof x + m s bsetof 
+B4cu io B4.sset. f. .d. Figure3: Completers ofnodez andcompletor edges to x. B4 lattice framework. Lattice 
+frameworks are a more complete encoding than the set of data flow equa­tions used in [CS88] or [DS91], 
+and can be used to de­duce precision and convergence time properties. We present here the lattice framework 
+we use for B4 calcu­lations; a similar framework is also used in a different concurrency analysis problem 
+in Section 4.2.3. This provides a simple illustration of how data flow prob­lems can be encoded as lattice 
+problems, when infor­ mation enters nodes through edges in different classes. Each edge class denotes 
+a different source of informa­ tion; therefore, a separate meet must be taken with respect to each edge 
+class. To accomplish this, we rep­resent information as a k-tuple, where k is the number of edge classes. 
+The lattice framework used for B4 analy­sis is a quadruple D = (G, L,F,M). G = (N, Ec, EC~~PM~~,), where 
+N and EC areas they were for the sync hypergraph, and Ec.~pletor, is the set Of pairs (m, n) such that 
+m can rendezvous with a com­pletor of n. Ec~~Plet~~. is called the set of completor (pseudo) edges. In 
+Figure 3, the completor edges to z are (sl, z), (a:, z), and (a:, z). L is a lattice of pairs of sets 
+of nodes, (C, S); the meet operation is element-wise set intersection. Intu­itively, if the framework 
+has a pair (C, S) at node n, then C is the set of nodes in B4 (n) due to control flow into n, and S is 
+the set of nodes in B4 (n) be­cause of stjnchronization at the completers of n. Thus, B4 (n) = C U S. 
+For all m E B4 (n), m E CRZ p,~.(n) and n E CHTPeTf (m). F : L + L contains the set of edge functions, 
+and is the closure of the set of all possible edge functions under meet and function composition. M : 
+(Ec U ECOmP1etor$) + F is a mapping from the edges of G to functions of F. Let CReach(m) denote the set 
+of nodes q such that there is a control path from q to m, possibly of length zero. If m E CReach(n) and 
+n @ CReach(m), then there is a control path from m to n, but not from n to m; thus, m c B4 (n). We map 
+a control or completor edge e = (m, n) to a function ~e E F as follows: fe((c,s)) = (C US UK., N) if 
+e is a control edge, or fe((c, s))= (N, c U 5 U L), if e is a completor edge. For either edge type, K, 
+= CReach(m) U {m} {p: m E CReach(p)}, i.e., the set of nodes q such that there is a control path from 
+q to m (possibly of zero length), but no control path of length >0 from m to q. We have shown in [Mast92, 
+Mast93] that the func­tions of F are monotone and inflationary, and are there­fore I-semibounded [MR91a]. 
+However, the framework is not Kam-Ullman rapid [KU76] because the edge func­tions are not, in general, 
+distributive.  3.2.5 Iterative refinement of CHT sets. In the four refinements listed above, CHT sets 
+are re­fined iteratively through two mechanisms. The most direct mechanism is seen in the refinements 
+that use widening (i.e., all except B4 ). Since widening propa­gates CHT sets between nodes, improvements 
+in CHT will also be propagated. Eliminating extraneous sync hyperedges is also im­portant for all four 
+refinements. Suppose that a hyper­edge includes signaling node s and accept-in node ai, and that s E 
+CHT(ai ). Then the hyperedge represents an unexecutable rendezvous. Such hyperedges intro­duce imprecision 
+in each of the refinements to CHT, and can be safely eliminated from the refinements once we know that 
+s E CHT(ai).  4 Binary semaphores. Binary semaphores, a specialization of integer-valued semaphores 
+[Dijk68], are essentially Boolean flags. Since rendezvous can be implemented using a number of binary 
+semaphores proportional to the number of ren­dezvous signal types, binary semaphores are at least as 
+powerful a synchronization mechanism as rendezvous. (This is in contrast to post-wait-clear synchronization, 
+in which the number of event flags must also increase with the number of signaling tasks.) Binary semaphores 
+are accessed only through the special commands p and v. A task executing the instruction P(X) suspends 
+execution until semaphore X = 1, then atomically decrements x to O. If several tasks execute p(X) simultaneously, 
+only one can pro­ceed until z is again set to 1. v(X) sets the value of X to 1. We assume that semaphores 
+are declared to be ei­ther initially set (i.e, equal to 1) or clear (i.e., equal to O). We will label 
+initially set semaphores as S~, and initially clear semaphores as Ci. 4.1 Binary semaphore sync graphs. 
+Figure 4 shows a program using binary semaphores, and its sync graph representation. p(X) and v(X) statements 
+are represented by p and v nodes, respec­tively; task end nodes, and the program begin and end nodes 
+b and e, are also included. Control paths between synchronization statements are represented by directed 
+control edges; a directed sync edge is drawn from each v(X) node to each p(X) node for the same semaphore 
+z. For such a set semaphore S, a sync edge is also drawn from the program begin node b to all P(S) statements. 
+bool *toll = false, Clearsomaphore Cl, C2 I Setsam.ph.r. s, ta.k tl i. hqin hi 1. !at Qp loop D[s) , 
+.-1 v (cl) .-2 p(caj, v(s), ;  .. end 100P , end tl, tack t2 ia bqin while I etop 100P p(s), 5 (cl) 
+, F.(C2) , : v (s1 e -d 100P, -­ end t2, task t3 i, begfn while 1atop 100P *(cl) , V(C2) , --;0  
+end 100P , end t3, E.9gin for i in 1..100000 loop null , end lC.OP , *top ,. tzue,  and , u Figure 
+4: An example program which uses binary sem­ aphore synchro nization, and the sync graph of the pro­ 
+gram.  4.2 Computation of CHT. We use three refinement analyses to estimate CHT: critical section and 
+B4 analysis, as with Ada, plus a new mu-tez analysis technique. Each of these is detailed in the sections 
+below. In the binary semaphore model, pinning does not occur, at least not at the abstraction level of 
+sema­phores, since a v node does not wait for a p node to clear the semaphore it sets. Therefore, we 
+cannot per­form pinning analysis. Also, since critical sections can be used to implement remote procedure 
+calls in the bi­nary semaphore model, we do not separate these two refinements. 4.2.1 Mutex analysis. 
+Set semaphores can easily be used to implement mutual exclusion. In Figure 4, the set semaphore S is 
+used to implement mutual exclusion between node sets {2, 3,4} and {6, 7, 8}. If we can detect program 
+structures that enforce mutual exclusion, we can use these structures as a source of CHT information. 
+Mutual exclusion is commonly enforced by embed­ding the exclusive code in a single-entry, single-exit 
+re­gion, with a p(S) statement as the entry and a v(S) stat ement as the exit, for some set semaphore 
+S. As wit h critical section structures, some additional rest ric­tions are also required, both on the 
+node types and connectivity of the regions, and on the use of p(S) and v(S) statements throughout the 
+program. If a set sem~ phore S obeys these restrictions, the-p and v statements aCthg on it define a 
+7?tUi!t?X 8iTUCiUTt?. The mutez bodies of a mutex structure are the re­gions bracketed by p(S) and v(S) 
+statements, excluding the entry node. If a node n is in a mutex body, then all nodes in other mutex bodies 
+of the same structure are in CHT(n).  4.2.2 Critical section analysis. Critical section structures in 
+a binary semaphore pro­gram are intended to function like those in a rendezvous program. One variant 
+of critical section structures uses a pair of clear semaphores to signal calls to, and re­turns from, 
+critical section bodies. In the program of Figure 4, semaphore Cl signals the call, and C2 signals the 
+return. The call bodies of the critical section struc­ture are delineated by entry/exit node pairs (2,3) 
+and (6, 7); the critical section body is delineated by node pair (9, 10). Note that call bodies (2, 3) 
+and (6,7) are enclosed in mutex structures. If they were not, then both call bod­ ies could simultaneously 
+call the critical section body. We require, as a condition of structural correctness, that all call bodies 
+be in each others CHT sets, since mutual exclusion of the call bodies could not otherwise be enforced. 
+However, the entry nodes of the critical sect ion bodies may be concurrent, since only one critical section 
+body can be entered when a single semaphore is set. Other variants of binary semaphore critical section 
+structures exist; empirical work must determine which variants are the most common in practice. Then, 
+frame­ works can be devised for recognizing them and extract­ing CHT information. For at least some variants, 
+(7HT . For all sync edges (n , n) such that n is not killed information is needed to determine whether 
+a candidate at the top of n, either: critical section structure is recognizable. Thus, refin­ing CHT 
+information can reveal further critical section structures, which can in turn propagate CHT informa­tion. 
+4.2.3 B4 analysis and the semaphore kill prob­lem. B4 sets in the binary semaphore model are generated 
+and propagated much as they are in the rendezvous model. To iteratively refine B4 information, we must 
+eliminate extraneous sync edges, as we did in the ren­dezvous model. There is an important difference 
+between the ren­dezvous and binary semaphore models, which affects the elimination of extraneous sync 
+edges. In the ren­dezvous model, sync edges may be eliminated solely on the basis of CHT information. 
+In the binary semaphore model, however, the sync edges have different seman­tics; completion of the tail 
+node represents an event that may enable the head node to complete execution, even when the head node 
+executes later than the tail node. To eliminate extraneous sync edges, we have to prove that the definition 
+of the semaphore at the tail cannot reach the use of the semaphore at the head. This is called the semaphore 
+kill problem we say that m = v(X) E SemKill(n) if no definition of semaphore X by m can reach a use at 
+n. This is true in at least two special cases: . n 6 Bl( m); or, . Between any instance of m and any 
+later instance of n, there must be another statement instance that sets or clears X. As in widening, 
+the statement instances that modify X need not correspond to any single statement. Bristow, et. al. [BDER79] 
+showed a special case so­lution of this problem for post/wait/clear synchroniza­tion, but they limited 
+themselves to problems in which the instances of a single statement modified X. Our SemKiU analysis for 
+binary semaphores is sim­ilar to reaching-definitions analysis, in that we attach generate and propagate 
+sets to control and syn­chronization edges [Mast93]. We use a lattice frame­work with multiple classes 
+of edges, similar to the B4 framework described in Section 3.2.4. We briefly outline a set of conditions 
+sufficient to determine that m = v(X) is killed when n completes. Our SemKill lattice framework is based 
+on these con­ditions. . n E B4 (m); or, . n # m, and either n = p(X) or n = v(X); or, m c B4 (n ) and 
+m is killed at n ; orj m = n ; or, . For all control predecessors n of n, m is killed at the bottom 
+of n and m E CHT(n). If m is killed at the top of n and m E CHT(n), then m is killed at the bottom 
+of n.  5 Experimental work. An experimental CHT analyzer was constructed for Ada, as part of a static 
+deadlock analysis tool. The experiments were conducted on a Sun Spare-2 proces­sor with 225 megabytes 
+of virtual memory. A total of 138 programs were successfully analyzed, using the polynomial-time analysis 
+techniques of Section 3. We also were able to obtain CHTPerf sets for 127 of these programs by exhaustive 
+state enumeration, in a man­ner similar to [Tay183]. The remaining 11 programs had state spaces too large 
+to enumerate within the available memory. Of the 127 programs for which we could deter­mine CH! f Perf 
+experimentally, a total of 115 programs act ually had pairs of rendezvous nodes in CHTPeTf. Execution 
+time. Figure 5 shows the time taken by CHT analysis, as a function of the number of nodes in the sync 
+graph. We see here that the actual time to estimate CHT is related to the size of the sync graph by a 
+low-order polynomial (i.e., a polynomial whose degree in [11 [ is < 5, since liV 15 is a factor of the 
+theoretical worst-case limit ); least-mean-square curve fittings also bear out this observation. For 
+all programs tested, the CHT refinement process stabilized in five or fewer iter­ations. Contribution 
+of the refinement techniques. Table 1 shows the number of programs for which each refinement of CHT contributed 
+to the total solution, and for which sync edges were pruned by CHT. From the table, we find that the 
+great majority of programs have some CHT information; those that do not are quite simple in structure 
+(i.e., one node per task). Pin­ning analysis disclosed at least some CHT information in 71.09 0 of the 
+programs. The B4 refinement was also of use in a sizable minority of the programs tested. Figure 6 shows 
+the relative contributions of each of the four techniques, as a percentage of the total num­ber of ordered 
+pairs (m, n) such that m c CHT(n). Pinning analysis and initialization are clearly the great­est contributors 
+to the total CHT information, though the other techniques catch additional special cases that can seriously 
+affect the accuracy of analyses which use CHT (e.g., deadlock detection). For instance, critical 7 1 
+0 0 0 g g ;0 0 g .g o z g 0 0 10 50 100 Nodes in sync graph Figure 5: Time to estimate CHT (in user CPU 
+seconds on a Spare-2 processor), versus number of nodes in the sync hypergraph. The line indicates the 
+0( IIV 15, fac­tor of the theoretical time bound. The scale is log-log for clarity; a straight line on 
+a log-log plot indicates a polynomial relation between z and y. Refinement Programs Percent Total programs 
+138 Initial 126 91.3 Pinning 98 71.0 B4 24 17.4 Remote proc. calls 11 8.0 Critical sections 9 6.5 Pruned 
+sync edges 25 18.1 Table 1: Number of programs with CHT contributions from each refinement, and for 
+which sync edges were pruned. Note that a single program may have CHT cent ribut ions from more than 
+one refinement. section structures can cause incorrect reporting of po­tential deadlocks, unless they 
+are recognized and their contribution to CHT is reported. Accuracy of CHT estimation. Figure 7 (left) 
+details the accuracy of the CHT estimate versus CHTP,rf. For the vast majority of programs seen, the 
+estimate was quite accurate. The plot shows that, for 92 of the 115 programs which had any pairs in CHTP.rf, 
+at least 9570 of all pairs were found. Comparison with [D S91]. Table 1 and Figures 6 and 7 (right) show 
+that, while the B4 analysis of [DS91] (and, by implication, [CS88]) are valuable as re­finements, they 
+clearly miss a large component of non­concurrence information in most programs. The other refinements 
+we have presented are needed to obtain the majority of CHT information in the majority of pro­grams. 
+Effect iveness of CHT in deadlock detection. 0 20406080 Initial % of CHT Pinning % of CHT 0204060S0 ~L 
+0204060S0 O 20 40 60 80 B4 % of CHT Remote proc call% of CHT I_ 0204060S0 Critical sections % of CHT 
+ Figure 6: Histograms of the relative number of or­dered CHT pairs contributed by initialization, pinning, 
+B4, remote procedure call, and critical section analyses. The z axis is the percent of pairs contributed 
+by the re­finement shown. The y axis is the number of programs in which the specified percent of pairs 
+was contributed by the refinement. The 12 programs with no CHT pairs are omitted. CHT information has 
+proven vital in static polynomial­time deadlock detection [MR91b, Mast92, Mast 93]. To find deadlocks, 
+we detect (but do not enumerate) cycles in the sync graph that might correspond to deadlocks. In such 
+cycles, the nodes which represent deadlocked statements must be able to happen concurrently. We use CHT 
+to prune away some spurious cycles, which helps to eliminate false alarm reports of deadlock. To determine 
+the effectiveness of CHT in prevent­ing false alarms, we compared the false-alarm rate with, and without, 
+CHT pruning. False alarms were found by comparing the results of our polynomial analysis against those 
+of full concurrency state enumeration; we could thus detect false alarms in 127 candidate pro­grams. 
+We found that the use of CHT information prevented 34 false alarms, i.e., 87.2V0 of the 39 false ~  
+1,,,, .__.. d O 20 40 60 80 020406060 % perfeot CHT -All A perfect CHT -S4 onty Figure 7: Left: Histogram 
+of percent of pairs found by estimation, versus number of programs. All four of the CHT refinements of 
+Section 3 were used. Right: Histogram of percent of pairs found by using only the B4 refinement. This 
+would be the result of the analysis of [DS91]. alarms that occurred when CHT was not used. Thus, non-concurrency 
+information is crucial to the practical effectiveness of our deadlock detection system. Conclusions. 
+Non-concurrency information about concurrent pro­grams has a variety of uses in program analysis, op­timization, 
+and anomaly detection. It is possible to estimate non-concurrency information in time polyno­mial in 
+the number of synchronization statements in the program. Experimental work has shown that these estimates 
+are quite accurate, and that obtaining them takes little time in practice. References [ANSIS3] American 
+National Stzmlards Institute. ANSI/MIL-STD IS15A (19s3) reference mnnual for the Ada pro­gramming language. 
+United States Government Printing Office, Washington DC, 1983. [BDER79] Bristow, G., Drey, C., Edwards, 
+B., and Riddle, W. Anomzly detection in conment programs. Fourth IEEE InWT7Mt20na[ Conference on Software 
+Engineering, Munich, 1979, 265-273. [CSSS] Callahan, D. and Subhlok, J. Static analysis of low­level 
+synchronization. SIGPLAN/SIGOPS Wo?+shop on Parallel and Distributed Debugging, 1988, 100-111. [CKS90] 
+Callahan, D., Kennedy, K., and Subhlok, J. Analy­sis of event synchronization in a parallel programming 
+tool. %d ACM SIGPLAN Symposium on Principles and PTactice of Parallel Programming, 1990, 21-30 [Dijk6S] 
+Dijkstra, E. W. Co-operating sequential processes. In Programming Languages, F. Genuys, ed., Academic 
+Press, 1968, 43-112. [DS91] Duesterwald, E. and Soffa, M. L. Concurrency analysis in the presence of 
+procedures using a data-flow frame­work. ACM Symposium on Testing, Analysis and Veri­fication (TAV4), 
+Vancouver, October 1991, 36-4S. [GR86] Gehani, N. H. and Roome, W. D. Concurrent C. Soft­ware Practice 
+and Experience, 16:9, September 1986, 821-844. [KU76] Kam, J. B. and Ulhnzn, J. D. GlobaI data flow analy­sis 
+and iterative algorithms. Journal of the A CM, 23:1, January 1976, 15 S-171. [LC91] Long, D. L. and Clarke, 
+L. A. Data flow analysis of concurrent syst ems that use the rendezvous model of synchronization. ACM 
+Symposium on Testing, Analy­sis and Verification (TAV4), Vancouver, October 1991, 21-35. [Mast92] Mazticola, 
+S. P. Detecting deadlocks in the Ada accept. . . do and select constructs. LCSR-TR-190, Laboratory for 
+Computer Science Research, Rutgers Uni­versit y, 1992. [Mast93] Masticola, S. P. Static detection of 
+deadlocks in poly­nomial time. Ph.D. thesis, Department of Comput er Sci­ence, Rut gers University, 1993. 
+In preparation. [MR90] Masticola, S. P. and Ryder, B. G. Static infinite wait anomzly detection in polynomial 
+time. 199o Interna­tional Conference on Parallel Processing, Chicago, Au­gust 1990, 2:78-87. ISBN O-271-0072tLl. 
+[MR91a] Marlowe, T. J. and Ryder, B. G. tProperties of data flow frameworks: a unified model. Acts Informatica, 
+28:2, 1991, 121-164. [MR91b] Masticola, S. P. and Ryder, B. G. A model of Ada pro­grams for static dea+lock 
+detection in polynomial time. 1991 A CM/ONR Workshop on Parallel and Distributed Debugging, Santa Cruz, 
+CA, May 1991, 91-102, Also ACM SIGPLAN Notices 26:12, December 1991, 97-lo7. [RS90] Reif, J. H. and Smolka, 
+S. A. Data flow analysis of dis­tributed communicating processes. International Jour­nal of Parallel 
+Programming, 19:1, 1990, 1-30. [TaylS3] Taylor, R. N. A generzl-purpose algorithm for anzly% ing concurrent 
+programs. YYCommunications of the A CM, May 19S3, 362-376. [Tay183b] Taylor, R. N. Complexity of analyzing 
+the synchro­nization structure of concurrent programs. Acts Infor­matica, 19, 19S3, 57-S4. 
+			

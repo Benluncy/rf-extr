@@ -1,0 +1,667 @@
+
+ Formally Optimal Boxing Fritz Henglein &#38; Jesper Jorgensen DIKU, Department of Computer Science University 
+of Copenhagen, Universitetsparken 1 DK-21OO Copenhagen @ Denmark e-mail: henglein@diku.dk &#38; knud@diku.dk 
+Abstract An important implementation decision in polymorphically typed functional programming languages 
+is whether to rep­resent data in boxed or unboxed form and when to transform them from one representation 
+to the other. Using a langnage with explicit representation types and boxing/unboxing ope­rations we 
+axiomatize equationally the set of all explicitly boxed versions, called completions, of a given source 
+pro­gram. In a two-stage process we give some of the equa­tions a rewriting interpretation that captures 
+eliminating boxing funboxing operations without relying on a specific implementation or even semantics 
+of the underlying lan­guage. The resulting reduction systems operate on con­ gruence classes of completions 
+defined by the remaining actuations E, which can be understood as moving box­in g/uiLboxing operations 
+along data flow paths in the source progl am. We call a completion eopt formally optimal if ev­ ery other 
+completion for the same program (and at the same representation type) reduces to e opt under this two-stage 
+re­duction. We show that every source program has formally optimaJ completions, which are unique modulo 
+E. This is accom­plished by first polarizing the equations in E and orienting them to obtain two canonical 
+(confluent and strongly nor­m dizing) rewriting systems. The completions produced by L,:roY s and poulsen 
+s algorithms are generafly not formally optimal in our sense. The rewriting systems have been implemented 
+and ap­plied to some simple Standard ML programs. Our results show that the amount of boxing and unboxing 
+operations is also in practice substantially reduced in comparison to Leroy s completions. This analysis 
+is intended to be inte­grated into Tofte s region-based implementation of Standard ML currently underway 
+at DIK~J. Keywords Representation analysis, polymorphism, type inference. Pern-rbion to copy without 
+fee all or part of this material is granted provided thet the copies ere not mede or distributed for 
+direct commercial adventage, the ACM copyright notica and the titfe of the publication and its date appeer, 
+and notice is given thet copying is by permission of the Association for Computing Machinery. To copy 
+otherwise, or to republish, requires a fee endor specific permission. POPL 94-li94, Portfand Oragon,USA 
+@ 1994 ACM 0-89791636-0/ 94/001..$3.50 1 Introduction 1.1 Representation analysis Revreseratdion analvsis 
+seeks to optimize the run-time rep­resentation of elements of data types in high-level program­ming languages. 
+A problem specific to polymorphically typed languages such as Standard ML or Haskell is how to represent 
+the actual arguments to polymorphic functions. The polymorphic (generic) parts of arguments to a polymor­phic 
+function can be of any type and will usuaJly be called with actual arguments of different types. There 
+are several possible ways of implementing such polymorphic functions. The predominant one is to ensure 
+that actual arguments are represented uniformly, independent of their actual type, using boxed representations. 
+A boxed representation of a data structure is a pointer to some area in memory where the actuaf contents 
+of the data structure reside. 1 The point of this representation is that it has the same size for all 
+types of data structures. By passing only arguments in boxed representation a (truly) polymorphic function 
+can be correctly implemented by a single piece of code since it is guaranteed to nrwer actually inspect 
+the data structure itself. Other operations, however, such as integer addition or a conditional checking 
+the value of a Boolean expression require access to the contents of the data and are penalized by the 
+additional level of indi­rection incurred by boxing, as they first have to unboz the represent ation; 
+i.e., dereference the pointer. Furthermore, boxed representations require more space than unboxed rep­ 
+resentations thus increasing the space demand ancl garbage collection costs. Parameter passing, on the 
+other hand, is generally more efficient for boxed than unboxed data repre­sent ations. Thus there are 
+competing demands on the repre­sentation of dat a in a program. A boxed representation can, of course, 
+be transformed to an unboxed representation at run-time, and vice versa. These conversions cau contribute 
+substantially to the run-time cost of a program, however, both in terms of time and space. Boxing anaiysis 
+is a special representation analysis that seeks to minimize the need for run-time conversions whilst 
+satisfying the representation demands on all data in a pro­gram. Boxing analysis can be facilitated by 
+making repre­sentation choices and boxing/unboxing operations in a pro­gram explicit. This amounts to 
+a translation to a language 1The elements of small data structures such as pointer-sized in­teger representations 
+may be considered simultaneously boxed and unboxed. In the following we shall think of these as two separate 
+rep­resentations with associated trivial boxing and unboxing operations. with explicit boxed and unboxed 
+types and new operations denoting boxing andunboxing operations without, however, changing the underlying 
+program. We shall call these ex­plicit boxing and unboxing operations (repr-esentation) coer­cions. There 
+are, in principle, many different possible trans­lations for the same program corresponding to different 
+rep­resentation choices for the data structures in the program and different needs for representation 
+coercions. We shall refer to any one of these translations as a cornpietionof the underlying program. 
+The question then is: which comple­tion should be chosen for a given program? In a naive translation 
+every expression is translated to (a computation of) its boxed representation where operations that need 
+to inspect the contents of snch a representation use explicit unboxing operations. The rationale for 
+making boxing explicit is that some boxing/unboxing operations can be eliminated in the later transformational 
+stages of snch a compiler [P JL91], as for example in the Glasgow Haskell Compiler. Other translations 
+may elide some of these boxing and unboxing operations directly; e.g., the type inference based translations 
+of Leroy [Ler92] and Poulsen [Pou93]. 1.2 A coercion calculus for boxing Beyond offering yet another 
+translation we seek to formu­ late and answer the more fundamental qnestions that un­ derlie the very 
+purpose of boxing analysis and, more gener­ally, similar static analyses: Given two completions for the 
+same program, which of them is better? What does it mean for one completion to be better than another 
+completion in the first place? Which programs, if any, have opti­mal completions; i.e., completions that 
+are bet t er than any other for the same program? Can such optimal completions be computed, and how? 
+Of course, it doesn t make mnch sense to compare the quality of completions on the basis of their actual 
+run-time cost on a specific computer assuming a specific language implementation. In any scenario where 
+we take the actual semantics of the langnage fully into ac­couni the answer to the last two questions 
+would be no on recursion-theoretic grounds anyway (assnming the language is universal, of course). If 
+we can pick any one of a collection of completions for a given program it is a fundamental assumption 
+that all com­pletions mnst be coher-enfi i.e., they have the same observa­tional behavior. Our approach 
+is to assume that we know nothing eke about the programming language than that any two completions of 
+the same program are coherent. For a paradigmatic functional language we show that coherence can be axiomatized 
+by an equational theory; i.e., a theory of equations of the form e =e where e , e are comple­tions of 
+the same program (for a given result representation type). This axiomatization contains the equations 
+box; unbox . L and unbox; box = L, which express that first boxing and then immediately unboxing (or 
+the other way round) a value (boxed value) is observationa.lly indistinguishable from do­ing nothing 
+at all to the value. We interpret these equations as left-to-right rewriting rules in accordance with 
+our expec­tation that performing a pair of coercions is operationally more expensive than doing nothing 
+at all. Thk gives us a rewriting system modulo the remaining equational axioms. These remaining equations 
+intuitively simply push coer­cions back and forth -e.g., from actual argument to formal parameter in 
+a function application bnt they do not elim­inate them. The rewriting system gives us a relatively simple 
+ and coarse notion of quality: if e =+- e then e is bet­ter than e , and if e =+-* e for all completions 
+e of a given program then e is an optimal completion (modulo the remaining equational axioms mentioned 
+above). Unfor­tunately the resulting notion of rednction is not Church-Rosser; i.e., there are two coherent 
+completions that have no common reduct and are thns locally optimal. This is due to the fact that a box 
+;unbox-redex may only be elimi­nated at the expense of introducing a unbox ;box-redex, and vice versa. 
+ By prioritizing elimination of unbox; box-redexes over box; unbox or the other way round, however, we 
+arrive at two formal optimatity criteria for completions. We show that every program has a formally optimal 
+completion at any given representation type under each of the two priori­tizations. This is accomplished 
+by orienting the equations E as left-to-right or right-to-left rewriting rules depending on the polarity 
+of the coercions involved. (Any simple-minded orientation of E leads to nonconfluence and nontermination 
+of Knuth-Bendix completion. ) The resulting two rewriting systems can be used to compute specific optimal 
+comple­tions. Formulating boxing analysis in the framework of a for­mal coercion calculus has the advantage 
+that the results we obtain are extremely general and robust: 1. They apply to any interpretation whatsoever 
+of the underlying programming language; e.g., to a call-by­value, call-by-name, or lazy interpretation 
+of our func­tional Iangnage. 2. They can be combined with other optimizations unre­lated to boxing as 
+the calculus makes few assumptions about the underlying language or its implementation technology. 3. 
+They admit talking about optimality relative to an explicit, formally specified criterion. 4. They leave 
+a great degree of freedom as optimality is accomplished up to a well-defined congruence relation on completions; 
+for example, the notion of optimalit y is not overcommitted by insisting on syntactic unique­ness.  
+ 1.3 New results The contributions in this paper are: A general framework and robust criterion for the 
+qual­ity of boxing completions, which accounts for the costs of boxing/unboxing operations, but abstracts 
+from other langnage properties and implementation con­cerns. Proof of the existence of formally optmml 
+(boxing) complets ons and their uniqueness rnodulo an equa­tional theory for moving boxing and nnboxing 
+ope­ rations along data flow paths. Our notion of formal optim.slity is independent of any specific properties 
+of the underlying programming language. A rewriting-based algorithm for computing formally optim~ completions, 
+which are uniformly better than those described in [PJL91, Ler92, Pou93] in our (for­mal) sense. An 
+experimental implementation of the algorithm and test results for a call-by-value language that support 
+empirically that our completions are also better in practice than those reported in the literature previ­ously. 
+The boxing algorithm and the quality of its output is ap­ parently the most immediate and practically 
+most relevant contribution of our work. It could certainly have been pre­ sented, together with the empirical 
+results, independently of the coercion calculus and its formal optimality criteria. But this would have 
+been unsatisfactory in several respects: With a proliferation of different algorithms for the same problem 
+there is a clear need for a systematic comparison between them. Using exclusively empiricaJ data is unsatis­factory 
+for this purpose as they can only report on system perform ante where the interaction of boxing with 
+other sys­tem properties changes frequently and is difficult to quan­tify. Our optimality criterion is 
+simple, natural and facili­tates a completely formal comparison of boxing completions; furthermore, it 
+makes the basis of comparison explicit and thus, if nothing else, facilitates a substantive criticism 
+of its rationale. Our boxing algorithm has been developed from a system­atic analysis of the coercion 
+calculus and its optimality cri­terion. Without the general framework it would doubtlessly appear ad 
+~OC. It would also be impossible to say anything about its robustness and global properties; for example, 
+the algorithm produces the same completion when given ei­ ther one of the completions of [P JL91, Ler92, 
+Pou93] as its initiaJ input. This follows from the coherence of all com­pletions and the Church-Rosser 
+and strong normalization properties of the rewriting systems.  1.4 Notation and terminology Since most 
+of the notation in this paper is fairly standard, we will only describe the notation that is not. The 
+notation [Z +di]tmeans substitute ti for the i th occurrence of z in t ,for some fixed ordering of occurrences 
+of zin -t. We will also use the term [z wfi]tasa pattern. If a term t matches this pattern then the part 
+of t that matches the i th occurrence of z in t will have to match ti. Ordinary substitution [z +xt ]t 
+will SJSObe used as a pattern in a similar way, except that then all the occurrences of z will have to 
+mat ch the same expression. We use the notation ~ for tuples, and i!i selects the i th element of ~. 
+If E is a tuple of variables and ~ a tuple of terms of the same length then [Tfi-+atsubstitution is parallel 
+of the variables iu z for the corresponding elements of ~. Free indices are always assumed universality 
+quantified, i.e. if we write z,+ this means for all z ~i=tiand the range of z is assumed given by the 
+cent ext. We use ~ for syntactic equality to distinguish it from provable equality =. We write A 1-e 
+=+R e to indicate that e rewrites to e modulo the equational theory axiomatized by A. The rewrit i rig 
+rules are given by R. Often R will be a set of equa­tions E oriented uniformly from left to right or 
+from right to left, in which case we shall write E+ or E+, respectively. 2 A functional language: Core-XML 
+Our setting is a polymorphically typed higher-order func­tional language. We shall restrict ourselves 
+to a smsll core language with no primitive types, called Core-XML in [HM93], to develop our theory. In 
+Section 6 it is shown how to extend our results to arbitrary type constructors such as integers, Booleans, 
+pairs and lists and to (monomorphically or polymorphically typed) constants such as a fixed point operator 
+and primitive operations for other kinds of type constructors. e E Expression ; x E Variable; T c Type 
+u c TypeScheme .._ e .. $I,lz:r .e]eelletz:a= eine .. T .. &#38; I 7--+ r u ::= 7-Iva.a Figure I: Syntactic 
+categories of Cor~XM.L The syntactic constructs for expressions, types and type schemes in Core-XML are 
+given in Figure 1. We call an expression e well-formed (or simply a Core-XML expression) under type assumption 
+r if P 1-e : a is derivable from the inference rules in Figure 2 for some type scheme a. It is easy to 
+see that there is at most one typing derivation for e, which SJSOdetermines a. A type normalized Core-XML 
+expression is one that sat­isfies the following two conditions. Type abstractions oc­cur only as the 
+bound expression of let-expressions; i.e., let x = ACY1.Arxl ....Aan. el in ez. We shall abbreviate this 
+to let z = AaI ...an. el in ez. Type applications are only allowed for variables; i.e., z{rl }{TZ }... 
+{~,}. This will be written as t{rl ...rn}. PROVISO: Henceforth all Core-XML expressions will be as­sumed 
+to be type normalized. Usually ML is presented as an implicitly typed language [Mi.178, DM82]. By erasing 
+all occurrences of types and type schemes in expressions (including curly brackets, colons, pe­riods 
+and A s) in the typing rules for Core-XML, we ar­rive at the implicitly typed language of Core-ML expressions 
+[HM93]. In contrast to Core-XML an implicitly typed Core-ML expression e may have many different typing 
+derivations. Every one of its typing derivations, however, corresponds to a unique explicitly typed Core-XML 
+expression whose era­sure is e, and vice versa. Our point of departure for boxing analysis is that we 
+are given an explicitly typed Core-XML expression or, equiva­lently, a Core-ML expression and a specific 
+typing derivation for it. Even though the specific nature of typing derivations is irrelevant for typability 
+of implicitly typed expressions the quality of boxing analysis is very much dependent on which typing 
+derivation is chosen for a Core-ML expression; i.e., one derivation may result in less boxing than another 
+for the same Core-ML expression. More on this in Section 7. 3 Explicitly boxed Core-XML Explicitly boxed 
+Core-XML is a refinement of Core-XML in which representation types (boxed/unboxed types) and conversions 
+between these are made explicit. 3.1 Representation types Representation types p are just the standard 
+types of Core-XML, together with one additional type constructor, [.]. 17t-el:a r{z:a}l-e2:~  r{z:u}+z:u 
+ rt-letz:rr =elinez:~ L Figure 2: Typing rules for Core-XML Types of the form [p] are boxed t~pes; they 
+describe ele­ments that have been boxed. Types with any other top­level type constructor (in our case 
+only -+) are unboxed types; their elements are not boxed. Since doubly boxed representations are useless 
+we prohibit boxed types of the form [[p]]. Boxed types may otherwise, however, occur in­side both boxed 
+and unboxed types. We add type variables denoted by metavariables a, ,fl for unboxed and boxed types, 
+respectively. Type schemes are now prenex-quantified repre­sentation types where the quantification is 
+over boxed type variables only. Abstract syntax definitions of representation types, boxed and unboxed 
+types, and type schemes are given in Figure 3. p e RepType; u E UnboxedTyped; rr ~ BoxedType; c G PolyType 
+p ::=VIT v ::= Crlp-+p n  [v] .. pl a ::= p [Vp.a  Figure 3: Representation types DEFINITION 1 The 
+(rmderiging) standard type (or type er­a use) IPI of representation type- p is the type-arrived--at by 
+erasing all occurrences of [.] in p and treating both boxed and unboxed type variables as standard type 
+variables. We say that p represents Ipl. We say p is valid for (closed) Core-XML expression e if e has 
+type lpi. 0 3.2 Coercions Repre9entchorz coercions (or simply coercions) are opera­tions that coerce 
+an element from one representation to an­other. The primitive coercions are box :uw [w] unbox :[V]-V 
+where boxu coerces an unboxed element of type w to a boxed representation, and unbox. takes such a boxed 
+representation and coerces it back to the unboxed representation. Beyond these primitive coercions we 
+add the identity co­ ercion L. (at every type r), composition of coercions c, c writ ten in diagrammatical 
+order c; c and coercions induced by the type constructors. In our case these are coercions of the form 
+c~c and [cl. A coercion of the form cac appli~s to functions ~ by (wrapping them with the input coercion 
+c and the output coercion c . The result is an un­ boxed function where c is applied to the input before 
+it is passed to j and c is applied to the result of ~ before it is ret urned as the output. A coercion 
+of the form [c] applies c to the underlying unboxed value of a boxed representation and ret urns a boxed 
+representation for the result. We will sometimes omit subscripts on coercions when these are not important 
+for the presentation. The rules for forming coercions are displayed in Figure 4. In the following we 
+will use c, c , d, etc. to denote arbitrary coercions. The formation rules for coercions are sufficient 
+to con­struct coercions that can transform a value from any one of its representations to any other representation: 
+PROPOSITION 2 Let PI, PZ be arbitrary representation types. Then IPII = IP21 * (3C) E C:p, -pz. Q Indeed 
+this is possible even without the [.]-coercion con­structor. We have added it solely to facilitate coercion 
+fac­toring and simplification underneath boxed representa­tions for ~+ EP+-reduction modulo q$ (see Section 
+5), where we may introduce box; unbox-redexes in order to eliminate unbox; box-redexes. 3.3 Type inference 
+rules The type inference system for explicitly boxed Core-XML is almost identical to the standard type 
+system. See Figure 5. There are two noteworthy differences, however. 1. Quantification in type schemes 
+is only over boxed type variables. The fact that these type variables indeed range over boxed types only 
+is captured in the rule for type application: a polymorphically typed expression can only be applied 
+to a boxed type, not an unboxed type. 2. There is an additional rule for applying coercions to expressions. 
+ DEFINITION 3 (Erasure, completion) The erasure (or underlying Core-XIklL ezpresszorz) Iel of an explicitly 
+boxed Core-XML expression e is the (standard) Core-XML expression arising from e by erasing all occur­ 
+rences of coercions (including angled brackets) and replac­ ing all represent ation type occurrences 
+p by \p 1. We say e is a (boxing) completion of Iel at type p if e has type p. 0 4 Axiomatization of 
+completion congruence A given Core-XML expression e can have many completions. Without going into the 
+semantics of Core-XML we assume that all completions of e at a specific representation type Ec:pl---+pl 
+t-c : pz+pz I-c:p%+p I--c : p +p bLp:p-p b C+c : pl -+p2M pl-+p2 k C;c :p+ p 1-boxu : v + [v] 1-unbox. 
+: [v] w v k I-c: [c]: v vv [v] - [v ] Figure 4: Coercion formation rules r{z:pl}t-e:p2 r 1-k:pl. e : 
+p1+p2 rkel:u r{~:a}t-e2:p I 1-letz: a=elinez:p rl-e:a if /3 @ FV(r) I 1-A/3.e : V~.U 17i-e:r Ec:p+p r 
+1-(c)e : p rl-el:p1+p2 rl-e1e2:p2 r{$:a}Fz:a rl-e:b p.ff r * e{~} : [/3*lf]~ I 1-e2:p1 Figure 5: Typing 
+rules for the explicitly boxed CoreML language have the same observational (input/output) behavior, but 
+possibly different performance. In fact we shall assume noth­ ing else about the semantics of explicitly 
+boxed Core-XML, and in fact nothing at all about the semantics of standard Core-XML. DEFINITION 4 (Completion 
+congruence) Representation co­ercions c and c are congruent, written c ~ c , if they have the same type 
+signature p + p . Explicitly boxed expres­sions e and e are congruent, written e ~ e , if they have the 
+same erasure and type (under the same type assumptions); that is, they are completions of the same expression 
+at the same representation type. El In this section we shall give an axiomatization of com­pletion congruence 
+by a typed equality theory. The point of this is that the axioms can be grouped into a pure equality 
+theory E that moves coercions along data flow paths with­out eliminating them, and a small group consisting 
+of two axioms that express that boxing composed with unboxing in either order is equal to the identity 
+coercion. In Section 5 we interpret the second group as rewriting rules modulo E to capture the intuition 
+that boxing and unboxing coercions are more expensive than the identity, but that the effects of moving 
+along data flow paths are not taken into account. (Note that for any specific semantics moving coercions 
+does make quite a difference this is the most important part of a semantics that is disregarded in our 
+treatment!) ­ (C;c ) ;C = c; (c ;C ) (1) C;l.= c (2) L;c=c (3) (c, + C2); (C, + c, ) = (cl ; C,) + (C2;C2 
+) (4) I,+I,=L (5) [cl] ; [C21 = [cl ;C21 (6) [Ll =L (7) C; boxv~ = box~ ; [c] (8) unbox~ ;C == CC] ; 
+unboxv~ (9) box ; unbox = L (d) unbox ;boxv = $ (~) Figure 7: The ~ and $ rules for coercions 4.1 Coercion 
+coherence Consider the equality axioms in Figures 6 and 7 for coer­cions. We assume that the coercions 
+on both sides of an equality are well-formed and have the same type signature. We denote the single equality 
+axiom box; unbox = t by 4, and unbox ;box = L by $. DEFINITION .5 (Coercion equality) We say c and c 
+are A-equal, written A t-c = c , if c = c is derivable from the equality axioms A and the equations in 
+Figure 6 together with reflexivity, symmetry, transitivity and compatibility of = with arbitrary contexts. 
+0 If A in the definition is empty we say c and c are equal and write E c = c . Note that equality is 
+not just synt attic identity; e.g., we have k La + La = Lm+.m. LEMMA 6 (Coherence of coercions) Coercions 
+c and c are congruent if and only if they are W-equal; i.e., c = c iff 4+ 1-c = c l  4.2 Expression 
+coherence Let us extend the equality axioms for coercions with the equality axioms for explicitly boxed 
+Core-XML expressions in Figures 8 and 9. The expressions on both sides of an equality are assumed to 
+be well-formed and to have the same type in a single type environment. In other words, the equations 
+in Figures 8 and 9 should be understood as abbreviations for more complex rules for typed equality. For 
+example, rule 10 is an abbreviation for: 17 be:p rk(~o)e:p Figure 6: Equality rules for coercions I 
+l-(~P)e=e:p = DEFINITION 7 (Completion equality) We say eand e are A-equal, A t-e = e , if e = e is 
+derivable from the axioms A together with equations in Fig­ures 6 and 8 and rules for reflexivity, symmetry, 
+transitivity and compatibility of =. 0 THEOREM 8 (Coherence of completions) Explicitly boxed expressions 
+e and e are congruent if and only if they are E$@equal; i.e., e ~ e ifFEq$~ Ee = e PROOF: (If) Assume 
+Eq$@ ~ e = e . By inspection of E we can verify that e and e have the same erasure. Since both e and 
+e are completions at the same type they are congruent, i.e., e G e . (Only if) We will prove this by 
+induction on the struc­ture of the common erasure of e and e . We call an ex­plicitly boxed Core-XML 
+expression head coercion free (cf. [CG90]) if it is not of the form (c)e. Without loss of gener­ality 
+we may assume that coercions are only applied to head coercion free expressions and that every head coercion 
+free sub expression has exactly one coercion applied to it. This follows from (c)(c )e = (c ;c)e, and 
+e= (c)e (see Figure 8). Now assume that we have r 1-e : p and r 1-e : p: Base case 1: le 1 = z{?}. Let 
+e -(c )z{~} and e = (c ) z{~}. Let r be the type of z{~} and T the type of x{~}. Note that ~ and r have 
+the same type erasure ~ = r . By Proposition 2 there exists a coercion cwith type signature r -r . Since 
+c; C ~d C both have the same type signature we obtain: (c )x{T} = Lemma 6 (C; C )Z{7} = Equation (11), 
+Figure 8 (c ) (c)~{~} = Equation (15), Figure 9 (C )Z{7} Base case 2: le 1 -z follows from Lemma 6. 
+Inductive step 1: le 1 s Xz :r~ .el. Assume that e ~ (c )h :p , el and e G (c )Ax :p .el . Since C has 
+type signature P -+P1 * p and c has type signature p -+.pl -+ p for some types PI and PI by Lemma 6 there 
+exists a coercion d such that I#ti 1-c = cl -+cz ;d and g$~ F c = c1 +cZ ; d. In fact, without loss of 
+generality d = LO or d = boxu where p=[v]. So in either cases d is completely determined by p. This 
+means that, under E#@-equalit y, we have e = (d)~z:pd .(cz )[z+(cl )z] el and e = (d)h:pd .( Cz )[Z++(CI 
+) Z]el for some type pd and by induction (cz )[z+(cl )$]el = (cz )[z++(cl ) z]el which proves that e 
+=e . Inductive step 2: Ie 1 s e, ez. Let e s (c )(el ez ) and e a (c )(el ez ). We know that there exists 
+a coercion d such that (d)ez and ez have the same type. Let the inverse d-l of a coercion d be a coercion 
+such that #@ t-d-l; d = L (such a coercion always exists according to Proposition 2). We then have, under 
+E@&#38;equality: (c )(el e2 )  . . (L-+c )el e2 ((d- ;d)-+c )el ez (d~~)(d-l~c )el ez = (d- -+)elel 
+(d)e~ = (induction) (d- -+)elel ez = (induction) (L-+c )el ez = (c )(el ez ) Inductive step 3: Ie 1 ~ 
+let x = AiY. el in ez. We will only show this in the case where the tuple @ has length one. The other 
+cases are similar. So the case we prove is Ie 1 a let z = Aa. el in ez. Let e s (d )(let z = A~.el in 
+ez ) and e s (d )(let z = A~ .el in ez ). Since elf and el have the same type erasure there exists a 
+coercion c(~) such that (c(/3))e1 and e] have the same type. We then have: (d )(let z = A@ .el in ez 
+) = let x = A@. el in (d )ez = let z = A~ .(c(/3)-l)(c(~) )el in (d )ez = let z = A,B. (c(/3))el in (d 
+)([z{[v,]}~(c( ~,)-1)(~{[~]})] ez ) = (induction) let x =A/3. el in (d )([~{[~i]}t+ (c(~i)- )(~{[w,] 
+})]ez ) = (induction) let z = A,B. el in (d )ez . (d )(let z = A~.el in ez ) This shows that if any two 
+congruent completions of a Core-XML expression are observationally indistinguishable a prerequisite for 
+our assumption that we are aLlowed to pick any completion of a program at aLl then the observa­tional 
+congruence of explicitly boxed Core-XML must satisfy E@@-equality, and vice versa. Otherwise one could 
+find two congruent completions with different observable behavior.  4.3 Positive and negative coercions 
+It is difficult to reason directly about reduction systems on congruence classes defined by an equational 
+theory. What we would actually like to do is to characterize E-equality by a canonical term rewriting 
+system that commutes with @-reduction and q$-reduction. Finding a confluent rewrit­ing system for E-equality 
+is not straightforward, however. In particular, the E-equations cannot simply be oriented in one direction 
+or the other since they will inevitably lead to critical pairs without common reducts. Consider for exam­ple 
+the rules of Figure 9 oriented from left to right. In the expression ((c~c )~z.e) e both rules 12 and 
+13 are applicable, and Knuth-Bendix com­ pletion appears not to terminate. Note that by following one 
+reduction path we might fail to eliminate a box/unbox pair using ~ or @ that could be eliminated by following 
+the other path. The main idea behind the reduction system for E@ J­ equality we are about to describe 
+is that coercions may be split up into two kinds of coercions that interact differently with the E-equations. 
+The two kinds of coercions are called positive and negative coercions. DEFINITION 9 (Positive and negative 
+coercions)   lsE!YYJ Figure 8: Equality rules for coercion application (c -+ d)k.e = Az. (d)([zt+(c)x]e) 
+(12) ((c + d)e) e = (d)(e ((c)<)) (13) (d)let x = A~. (c)e in [z xz{~}]e = let z = A/3. e in (d)([z 
+t--(c)z{~}] e ) (14) (C)Z{T} = X{F } (15) Figure 9: Equality rules for explicitly boxed expressions 
+A coercion c is positive if c:+ is derivable from the rules in Figm-e 10 and negative if c: is derivable. 
+0 A coercion may be neither positive nor negative. By adding a superscript + or to a coercion we indicate 
+that a coercion is in fact positive or negative. (These annotations can be regarded as side conditions 
+that have to hold before a rule may be applied. So in the equations of Figure 11 a superscript + on a 
+coercion means that the coercion has to be positive for the rule to be applicable.) However, it can be 
+shown that it is always possible to factor a coercion c into a positive coercion c1 + and a negative 
+coercion C2-such that @J 1-c = CI ~ C2-, and into a negative coercion c] -and a posltlve coercion cz 
++ such that #@ E c = CI ; C2 +. C: d:+ C:+ d:+ C:+ L,:+ box.:+ c-+. d:+ c;d:+ [c] :+ C:+ d: C: d: C: 
+Lr: unboxu : c+.d: c;d:-[C] : Figure 10: Positive and negative coercions The positive coercions alone 
+define a subtype hierarchy on representation types. DEFINITION 10 We define p ~ p if there exists a positive 
+coercion c+ such that !-c+ : p -p . 0 PROPOSITION 11 The representation types of any (stan­dard) type 
+r-(i.e. , representation types whose type erasure is r) form a finite lattice under <. 0 4.4 A Polarized 
+Axiomatization of congruence comple­tions To define our reduction system we first define a new axiom­atization 
+of completion congruence which takes the polarity of coercions into account. Most importantly, the new 
+equa­tions can be easily oriented in one or the other direction to yield a confluent rewriting system 
+together with @ respec­tively @reduction. First we need to define notation used in our new axiom­atization. 
+DEFINITION 12 For every representation type p(~), i.e. with type variables ~, we define a coercion ~(F,~) 
+parameterized over the tuples of coercions E and ~ in the following way: &#38;(?jF) = c!i ,@lJ2 (d) = 
+h (a,q+;2 (CJ) [U](C,T) = [@,a)l 1 The equations of the new axiomatization, shown in Fig­ure 11, are 
+those of Figure 9 where all but the last equation have been split into two polarized equations with side 
+con­ditions on the polarity (+ or ) of the coercions occurring in them. The only exception is the last 
+equation in Figure 9. If we had chosen to treat it analogously to the other equations we would have obtained 
+the following rules: (C-)Z{T} = Z{T } (15- ) (C+)Z{F} = X{F } (15+ ) Thk would, however, not be strong 
+enough to characterize E~@equality. If one examines rule 15 more closely one will notice that c must 
+have signature ~I+x]p -[@--#]p where the type of z is V,b .p (we assume without loss of generality t,hat 
+the type of x is only quantified over one type variable). Furthermore, one can show #@ E c = ~(d,d l), 
+where i-d : rr + # and t-d-l:~ ~x. From this one can see, if we regard rules 15 and 15+ as a left-to-right 
+rewrite rule, that rule 15- is more restrictive than rule 15-since it requires more of the structure 
+of the coercion involved. The following lemma will be used in proving Theorem 14: LEMMA 13 Let c1, C2, 
+dl, etc. be tuples of coercions. Then the following results hold: 1. 44 ~ @Zdl ~dz ) = Z_ti,~) ; ~(=,~) 
+ 2. r#J@!-p(c,r) ; ~(r,d) = ~(~,d) ; ~(~,r) 0  Let EP be the set of equations in Figure 11. We have 
+the following theorem: THEOREM 14 For all completions e and e : E@~Fe=e iff EP#@i-e=e PROOF: (Only if) 
+This is trivial for all equations except equations 15+ and 15-. We will therefore cover one of these 
+cases here. Equation 15 -is shown by the following: (~(c-,L))~{~} (~(c-,(c-~ ;c-))z{7r} : (Lemma 13) 
+(fl(Lc-))(P(c-, (c-) -l))z{T} = (13) (P(~,c-))~{~ } Equation 15-is shown similarly ((c+ + d-)}k. e = 
+Xz .(d-)([z~(c+)x]e) (12-) Ax. (d+)([zt+(c-)z]e) = ((c ~ d+))kz .e (12+) (d-)(e ((c+)e )) = ((c+ ~ d-)e) 
+e (13-) (((c -+ d+))e) e = (d+)(e ((c )e )) (13+) (d-)let< = A~.e in [z +(c-)z{r}]e = let z = A~.(c~)e 
+in (d-)( [z +z{~ }]e ) (14-) let x = A~. (c+)e in (d+)([z +z{x}]e ) = (d+)let z = A/3. e in [z ~(c+)z{~ 
+}]e (14+) (~(~-, ~))~{z} = (l(T, C-)) Z{F } (15-) (P(~, ~))~{fi} = (P(e, r))z{~ } (15+) Figure 11: Polarized 
+Equslity equations for explicitly boxed expressions (if) All cases except equation 15 are fairly straightfor­ward. 
+We will cover equations 13 and 15. First equation 13: ((c~d)e) e = (factoring) ((c+ad-)(c--d+)e) e = 
+(13-) (d-)( ((c--d+)e) (c+)e ) = (13+) (d-)(d+)(e ((c-) (c+)e )) = (d)(e ((c)e )) Then on to equation 
+15. We will only proof this for the case where the type of z have the form V,B. P (the proof for b ~.p 
+is similar). The signature of c in equation 15 is then ~+r]p -[,B+m ]p and we may therefore prove #@ 
+1-c = p(djd l) where 1-d: ~ -T and 1-d-l : r Q r. We now have: (CJx{?r} ([(dd- ))~{~} = (Lemma 13) (/JW1))(~(b))z{~} 
+= (factoring) (/j@_l))(~(d-,L) = (15+) )(~(d+,~))~{~} (fl(d- ))(fl(d-, ~))(~(~,d+))z{m } = (Lemma 13) 
+(/j@-l))(fl(L>d+))(~(d-,L))z{T } = (15-) (/jW1))(~(@+))M@= (Lemma 13) -))z{m } = (Lemma 13)  $$;;- 
+))(~( ,d) )z{~ } 5 Reduction of completions The axiomatization of completion congruence by EP@/L equality 
+gives a local characterization of congruence of completions: Any completion of a Core-XML expression 
+e can be transformed to any other completion of e at the same type by substituting equals for equals; 
+i.e., by replacing any subexpression that matches one side of an equation by the other side. In this 
+section we treat @ and @ as rewriting rules corresponding to improvement s of a completion, but taken 
+modulo all the remaining equations. 5.1 Optimal coercions Our aim is to find completions with a minimum 
+of box­ ing und unboxing operations without, however, taking the actual operational semantics of explicitly 
+boxed Core-XML into account beyond the fact that it must satisfy EPq$@ equality. Let us take a look at 
+the equations for coer­cions then. Clearly, @ and ~ eliminate primitive coercions when applied as left-to-right 
+rewriting rules whereas the remaining-coercion equations just express differences in the presentation 
+of a coercion (C;c );c = C;(c ;C ) C;L* c L;c=+c I,+L+I, (c~d); (c ~ d ) =+-(C ;C) -(d; c ) [~]= L [cl 
+; [c ] a [c; c ] box;[c] =+ c;box [c] ;unbox ==+ unbox ;C box ;unbox ==+ L (d-) unbox; box ==+ L (ti+) 
+unbox ;C; box ==+ [c] (*-) Figure 12: Coercion reduction DEFINITION 15 (Formally optimal coercions) A 
+coercion c is (formally) optimal if all congruent coer­cions c = c can be reduced to c by @&#38;reduction. 
+0 Clearly, every coercion equal to an optimal coercion is also optimal. We shall see that, for every 
+coercion type signature I--r with Irl = 1~ 1, optimal coercions exist and are unique modulo coercion 
+equality. Consider the coercion reduction rules in Figure 12. We write c ==+; c if c reduces to c by 
+these rules. THEOREM 16 The coercion reduction system in Figure 12 has the fol­lowing properties. 1.It 
+is confluent. 2. It is strongly normalizing. 3. If c =.+~ c then 1-c =+$+ c . 4. It preserves polarity; 
+that is, if c is positive or negative and c -L c , then c is also positive, respectively negative. 5. 
+If c is a normal form then:  CEL, e C = box, . c -unbox, c G C -+C , C ~ (C +C ) ;box, 01 C E unbox; 
+(c ~c ) where c and c are normal forms, or  c -[c ] where c is a normal form.  0 This theorem guarantees 
+that optimal coercions exist and are unique: COROLLARY 17 For all p, p with Ipl = Ip 1 there exists a 
+unique optimal coercion R c: p ---A p . 0 By analysis of R-normal forms we can also guarantee that all 
+optimal coercions can be uniquely +/ and /+ factored: COROLLARY 18 1. Every optimal coercion c has a 
+unique +/ -factoring; that is, there exist unique d~, d; such that 1-c = d~;d~. 2. Every optimal coercion 
+c has a unique /+-factoring; that is, there exist unique d;, d: such that E c = d~; d;. 0  5.2 Optimal 
+completions We saw that all congruent coercions can be #@-reduced to a unique optimal coercion. For explicitly 
+boxed Core-XML ex­pressions we could interpret # and @ as left-to-right rewrit­ing rules rnodzdo (or 
+under) E; that is, on the E-congruence classes of explicitly boxed Core-XML expressions. This ex­presses 
+that we consider any two E-equal completions as indistinguishable in terms of boxing performance in a 
+for­mal sense whereas rewriting with # or ~ is an improvement of the boxing performance of a completion. 
+Unfortunately, q$+-reduction on E-congruence classes is not Church-Rosser; that is, there are congruent 
+completions that have no common reduct. Consider, for example, the two completions el -let id:Vp.p-8 
+= A~.Ay:~.y in (k:int .Z + (unbox) (id{[int]} (box) x)) (if ... then 2 else (unbox) (id{[int]} (box) 
+5)) ez = let id:V~./3~/3 = A~ .Ay:,f3 .y in (~x:[int] . (unbox)z + (unbox) (id{[int]} z)) (if ... then 
+(box)2 else (id{[int]} (box) 5))  Neither one of them is reducible to the other by @&#38; reduction 
+modulo E. The main difference between el and ez is the representation type of z. In el it is unboxed 
+whereas in ez it is boxed. By introducing a box;unbox-pair in front of the constant 2 in el we can ~-reduce 
+(modulo E) el to ez. Conversely, by int reducing an unbox ;box-pair in front of (id{[int]} (box)5) in 
+.2 we can q$-reduce (modulo E) ez to el. Thus we can trade off a box;unbox-redex for an unbox; box­redex. 
+By prioritizing elimination of one kind of redex over the other we end up with a formal notion of optimality 
+that en­tails that, for any given represent ation type, every source Core-XML expression has an optimal 
+completion that is unique modulo EP-equality. 5.3 ~-free and q$-free completions In the example above 
+we saw that by introducing a redex of one kind (say ~) we could eliminate a redex of the other kind (@). 
+Thk is an improvement if redexes of the second kind are considered arbitrarily more expensive than redexes 
+of the first kind. But it is not obvious which of the two kinds of redexes should be considered more 
+expensive. Thus we shall pursue two different notions of optimdity. In the first we get rid of all @redexes 
+first even at the cost of introducing additional gi-redexes and then getting rid of all @redexes without 
+letting @-redexes slip back in. In the second we, dually, get rid of all @-redexes first, possibly introducing 
+new @-redexes, and then eliminate all +-redexes without readmitting @redexes. DEFINITION 19 (@-free completions, 
+qLfree completions) 1. We say a completion e is ~-}ree if every congruent com­pletion e ~ e v-reduces 
+to e under E@-equality; i.e, Eq$+ e *$ e. 2. We say a completion e is q$-free if every congruent com­pletion 
+e ~ e ~-reduces to e under E@-equality; i.e., E$ ke =+; e.  Because of the strong global requirement 
+that all congru­ent completions must be ~-reducible modulo Ed to c for c to be called ~-free it is not 
+even clear that @-free completions (or @free completions) exist. This can be shown, however, by orienting 
+the EP-equations from right to left, treating them as rewriting steps modulo q$-equality, and combining 
+them with @&#38;reduction on coercions. We shall refer to the resulting system somewhat loosely as @-E--rewriting 
+modulo ~, even though ~-rewriting is not modulo 4. LEMMA 20 (Properties of ~+ E~-reduction modulo 4) 
+@-E~-reduction modulo c# is canonical; that is, it is strongly normalizing and confluent. PROOF: Strong 
+normalization: Without loss of generality we may assume that every completion has exactly one coer­cion 
+applied to each subexpression in the underlying Core-XML expression, since a consecutive coercion application 
+(c)(cf)e is equal to (c ; c)e and a subexpression e without a coercion is equal to (J)e. Let c1, . . 
+. . c~ be the vector of all coercion occurrences in a completion in some particular order such that they 
+are in one-to-one correspondence with the subexpressions of the underlying Core-XML expression. Since 
+completion rewrit­ing does not change the underlying Core-XML expression, a completion rewriting step 
+corresponds to a rewriting step on this vector. A ~+-reduction step operates on a single element of the 
+coercion vector above. By Theorem 16 #@-reducing a coer­cion is strongly normalizing. Thus there can 
+be only finitely many @reduction steps at the beginning of the reduction or after an EP-step is executed. 
+An E; step generally operates on several coercions in the coercion vector simultaneously. Consider the 
+type sig­natures of the coercions in the coercion vector. An E=-step rewrites at least one coercion F 
+c: p --+ p to a new coercion c that has domain type or range type properly increased in the subtype hierarchy 
+of Definition 10. Since the subtype hierarchy has only finite ascending chains (Proposition 11) it follows 
+that EP-steps can only be applied a finite number of times. Thus every @-EP--reduction sequence is finite. 
+Confluence: Since ~+ E~-rewriting modulo i#Jis strongly normalizing it is, by Newton s Lemma, sufficient 
+to show local confluence; that is, if e has overlapping redexes and reduces by single rewriting steps 
+to e1 and ez then there exists a common reduct e to which both el and ez reduce, possibly in several 
+steps. Let us consider such triples e, el, e~. By Theorem 16 y@­reduction on coercions is confluent. 
+Note that ~-redexes do not overlap with any Ep+ -redex due to the polarization and orient ation of the 
+EP rules. We only have to worry about overlaps of EP+ -rules modulo ~-equality. There are only two kinds 
+of overlaps: 1. Application of the same rule to the same subexpres­sion, only with different coercions; 
+e.g., ((c; ~ c;); C)kz.e =+ (E)Aq.(c~)([z w (c~)z]e) and ((d; + d;); Z)kz.e ==$. (d) Az.(dJ)([z t-(d~)z]e) 
+where ~~(c; +c; );c=(d; +d:); d. In this case it is sufficient to show that # b E_*+ C;; c; ~l-d~$d;;d: 
+for some positive c:, d: and negative c1-, d4 , where and d: have the same range type p, since then c: 
+we can apply the same rule again to each of the two different reducts to get a common reduct. By choosing 
+the maximal representation type greater than domain types of G and d for p this is easily accomplished. 
+2. Overlaps due to three pairs of adj scent rules in Fig­ure 11: 12 /12+, 13 /13+, and 14 /14+. Let us 
+con­sider 12-/12+: (c; + df)kz.(d~)([z w (c~)z]e) can be rewritten to (c; ~ d~)(c~ + d~)~z.e and to kz.(d~)(d~)([z 
++ (c~)(c~)z]e). For the first redllct we get furthermore .  = +; (+/--fact.) Similarly, we can rewrite 
+the second reduct to the same final completion above. ~z.(d~)(d~)([x + (c$)(c~)z]e) = k.(d;; df)([z t-+ 
+(c;; c~)z]e) *J (+/--fact.) ku.(d~; dj)([z * (c:; c~)z]e) = ~~.(d:)(dj)([~ * (c; )(c~)~]e) *EF (c: + 
+d~)k. (df)([z E-+ (c~)z]e) In these reductions we used the fact that every coer­cion can be @@-reduced 
+to a +/ -factored coercion by Corollary 18. The other two pairs of rules with critical pairs are han­dled 
+completely analogously. This completes the proof. 0 Having a canonical reduction system for EP#@-equality 
+and thus for congruence it follows that every congruence class of completions contains both @-free and 
+#-free com­pletions. THEOREM 21 (Existence and uniqueness of ~-, resp. q$-free completions) Let e be 
+a (closed) , Core-XML exrnession and let o be a valid represent ation type for e. 1. Then e has a @-free 
+completion e at p; e is further­more uniquely determined up to EP qkequalit y. 2. e has a @-free completion 
+e at p; e is uniauely de­  . . termined up to EP&#38;equalit y. PROOF: We only give a proof of 1. The 
+proof of 2 is similar. (It requires a lemma analogous to Lemma 20.) Consider all the (congruent ) completions 
+of e at p. By Theorems 8 and 14 we know that they are all EP@@equal, By Lemma 20 ~-11~-rewriting modulo 
+~ is canonical. It reduces any two congruent and thus EP~ +-equal com­pletions to a normal form e.f 
+that is unique up to @-equality. Thus enf is a @free completion of e. It can be shown that any ~-free 
+completion of e at p must be E= ~-equal to e~fi 0 Intuitively, a @-free completion prefers to keep data 
+in a boxed representation and unboxes a representation only when it is sure the unboxed value is required 
+by some opera­tion. This way passing arguments to polymorphic functions and returning their results can 
+be expected to be efficient whereas operations requiring unboxed data such as integer operations may 
+be inefficient due to the cost of unboxing arguments and boxing the results. Dual to this, a ~-free completion 
+prefers to keep data in unboxed representation; it boxes a value only when it is sure to be required 
+due to a call to a polymorphic function. Thus primitive operations will generally be executed fast as 
+no coercions need to be performed for neither the arguments nor the result, but calls to polymorphic 
+functions may be ex­pensive due to the need for boxing (parts of) the arguments and unboxing (parts of) 
+the resnlt. Since the degree of polymorphism in a program tends to be greatest when higher-order functions 
+are used a @ free completion will generally be better for higher-order pro­grams, especially if there 
+is little ground type processing such as arithmetic operations. On the other hand, @free completions 
+will generally do best where there is little poly­morphism and/or lots of operations on ground types. 
+ The rules for @+ E~-rewriting modulo @ suggest an ex­plicit construction of ~-free completions: take 
+an arbitrary completion and execute the @-reduction system until a nor­mal form is reached . Analogously 
+for @-free completions. An even simpler method consists of devising syntax-directed translations that 
+produce a ~-free or qLfree completion di­rectly. The canonical construction of a ~-free completion con­sists 
+of keeping all data in their maximally boxed repre­sentation (i.e., representing a standard type by the 
+maximal type in the representation type hierarchy) and boxing a un­boxed value as soon as it is produced 
+by some operation and unboxing it just before it is used by some operation. The canonical construction 
+of a &#38;free completion con­sists of keeping all data in their minimally boxed represen­tation where 
+an unboxed value is only boxed just before it is passed to a polymorphic function and the result of a 
+poly­morphic function is immediately unboxed. This is actually the construction described by Leroy [Ler92]. 
+ 5.4 Optimal @-free/@-free completions The two constructions above for a @-free and a ~-free com­pletion 
+are canonical since they use a universal standard representation (maximally boxed or minimally boxed) 
+for all data independent of their context. They are not optimal since they typically cent ain many q$-, 
+respectively +-redexes modulo EP-equality. We shall now set out to construct opti­ mal @-free and ~-free 
+completions, which have no remaining redexes and are thus @q$-normal forms modulo E. DEFINITION 22 (Optimal 
+@-free/@-free completions) 1. A completion e is a (formally) optimal $-free comple­tion if e is ~-free 
+and every congruent ~-free comple­tion e ~-reduces to e modulo E; i.e., E k e =+$ e. 2. A completion 
+e is a [formally) optimal #-free comple­tion if e is #-free and every congruent +-free completion e ~-reduces 
+to e modulo E; i.e., E 1-e ~~ e.  u 1$ e have shown that @-free completions are EpqLequal, and ~-free 
+completions are EP@-equaL There are canonical rewriting systems for ~-reduction and ~-reduction modulo 
+Ep. As a result we obtain our main theorem: THEOREM 23 (Existence of $-free and q$-free optimal com­pletions) 
+ Let e be a (closed) Core-XML expression and let p be a valid represent ation type for e. Then e has 
+both an optimal t$free completion and an optimal ~-free completion at p. Furthermore, both are unique 
+modulo EP. !2 For the proof we employ again a rewriting system. ThE time we use q$+ E~-rewriting. This 
+rewriting system oper­ates on equality classes defined by the coercion equations in Figure 6 and the 
+application equations in Figure 8. Note that the EP-equations are oriented from left to right, oppo­site 
+to the orientation we had chosen for ~-EP+-reduction modulo @. The proof of the theorem is omitted. It 
+is analogous to the proofs of Lemma 20 and Theorem 21. 6 Implementation We have written a prototype 
+implementation in Haskell of our rewriting systems. The implementation handles the Core-XML language 
+extended with a conditional, pairs, a fixed-point operator and arbitrary polymorphic constants. Polymorphic 
+constants enable us to introduce lists by just adding a list type to the implementation. The implementation 
+is parameterized in such a way that one can specify from what canonical completion reduction is going 
+to start, and what reduction system is to be used: (4 F c =+-* +-E; c, + C =+&#38;~-C, @ t_ C ==+;-E~ 
+C, or 1-c =+.$-~~ c). (Recall that reduction to an optimal completion involves two phases.) Running 
+the system will produce a normal form com­pletion in the form of an SML-program in which box and unbox 
+operations behave like the identity function, but also perform profiling operations. That is, besides 
+returning its input the box and unbox coercions count how many times they are called. The final result 
+of running such an SML program is the actual result together with a count of the box and unbox operations 
+executed. 6.1 Adding new type constructors Adding new type constructors like pairs, list, etc., is quite 
+simple. If we add a new type constructor (e.g., for list types p list) we also have to add a new constructor 
+(e.g., map c) on coercions, and we have to extend Figure 6 with some new equations for this new coercion 
+constructor. For list these rules are map LP = Lp ttst map (c ;d) = (map c); (map d) In terms of category 
+theory type constructors can be seen as functors, and the rules above are simply the two conditions that 
+must hold for a functor. 6.2 Handling of primitives Extending our work to handle language primitives 
+and poly­morphic constants is straightforward and elegant. We will show how one can derive very natural 
+rules for conditionals directly from rules 15-and 15+ of Figure 11. The type of the conditional is if_ 
+then_ else_: v a.(bool, cr, a)~a. Treat­ing the conditional as a free variable we see that equations 
+15-and 15+ provide the necessary and sufficient coherence conditions. Since language primitive are implemented 
+in-Iine we can dispense with the requirement that they be applied only to boxed types. Instantiating 
+equation 15-to if -then -else _ yields (~~~~*P,*P~+c-)(if _ then _ else .){/}= (( Lbool,C-,C-)-+Lp) (if 
+_ then_ else _){p}  for any negative coercion c : p --+ p. Applying both sides of the equation to argument 
+(el, ez, e3) we obtain the natural equation (c-)if el then e, else e, = if el then (c-)ej else (c )es 
+ In this way one can develop specific rules for program con­ structs like condition al, fix-point operator, 
+pairing, and primitive operations. Polymorphic constants can be han­dled directly by ueing rules 15-and 
+15+. We give one more example to show the connection of equations (15), (15-), and (15+) to what Wadler 
+has termed free theorems (see Reynolds [Rey83] and Wadler [Wad89]). Assume that we have a function r 
+such as reverse with type VIY. a list-+a list.If we instantiate rule 15 to this we get (t-map c-)r{p 
+} = (map c--+~)r{p} but this is essentially, if we disregard the instantiation, the same as map c or=romapc 
+which is a well-known free theorem.  6.3 Performance results Figure 13 gives results of some experiments 
+performed with our implementation. The six programs that were selected for the experiments were: insert-sort, 
+a insert sorting pro­gram where the insert function is polymorphic; flip-list, which flips the elements 
+of a list of pairs of integers; leroy, which is an almost pathological program for which Leroy s benchmark 
+shows a major slow-down compared to a fully boxed implementation; pouken, a program for which Poulsen 
+[Pou93] reports that his algorithm gives very poor results (30 0/300 box/unbox-operations); sieve, which 
+com­putes the prime numbers between 1 and 100; and poly, a constructed example program with a lot of 
+polymorphism. The example programs insert-sort, flip-list, leroy, pouken are all taken from [Pou93]. 
+For all six programs we have generated three comple­tions, the optimal ~-free normal form, the optimal 
+q$-free normal form and Leroy s completion. We have run the three completions and counted the number 
+of box and unbox ope­rations performed. Figure 13 shows the results. The results indicate that the optimal 
+@-free normal form completions found by our system are generally better and oft en much better than Leroy 
+s completion, especially when a lot of polymorphism is involved, like in poly. In one case, sieve, Leroy 
+s completion performs fewer unbox-operations than the optimal @-free normal form we produce. The rea­son 
+for this is that the optimal @free completion we produce places unbox operations as late as possible 
+thus possibly duphcating unboxing operations. 7 Related work 7.1 Boxing The substantial cost of manipulating 
+data in boxed represen­tation, especially for numeric programs, has been observed in both dynamically 
+typed high-level languages like LISP and statically typed polymorphic languages such as Stan­dard ML, 
+and Haskell. Most of the efforts in LISP implementation have focused on optimizing number representations 
+by keeping them in unboxed form [Ste77, BGS82, KKR+ 86]. Peterson [Pet89] uses an elaborate execution-frequency 
+based criterion for the cost of representation coercions. In this setting he shows how the optimal placement 
+of coercions can be reduced to a well-known network flow problem. Common to all these ef­forts is the 
+intent to optimize representations of atomic data, particularly numbers. Indeed in Peterson s framework 
+ope­rations on pairs and lists simply require boxed arguments. Program Completion insert-sort opt. @free 
+norm. rm opt. #-free norm. 289 307 Lerov 156 307 I flip-list opt. @-free norm. 20 I 20 opt. ~-free norm. 
+30 35 Lerov 20 20 leroy opt. +-free norm. 709 709 opt. #-free norm. 446 446 4 Leroy 1219 1219 poulsen 
+opt. @-free norm. 3 3 opt. #-free norm. 3 3 Leroy 31 31 sieve opt. @-free norm.   =T--=-l opt. @free 
+norm. 436 I 748 Leroy 411 748 poly opt. t$free norm. E  =t=l opt. #-free norm. Lerov u Figure 13: Performance: 
+benchmarks Steenkiste and Hennessy, however, have found that in a suite of ten LISP programs up to 80% 
+of the representation coer­cions are list tagging/untagging operations. Peyton Jones and Launchbury [P 
+JL91] and Leroy [Ler92] suggested making representation types and boxing and un­boxing operations explicit 
+in programs. Even though there are some technical differences, the languages they use are at the core 
+the same: Core-ML with explicit boxing/unboxing coercions. Peyton Jones and Launchbury do not provide 
+a method of inferring a completion, but concentrate on the seman­tics of their explicitly boxed language 
+and on optimization of boxing by program transformation. Those optimizations are, for example, a form 
+of common sub expression elimi­nation that cannot be formalized in our framework as the transformations 
+may change the underlying program. Leroy describes a translation of Core-ML expressions to explicitly 
+boxed Core-ML expressions. This translation is not deterministic as it depends on the specific typing 
+deriva­tion of the underlying Core-ML expression, but every trans­lation of such a source Core-ML expression 
+is a completion in our sense (not the other way round, however). The ex­perimental results of incorporating 
+his boxing analysis in the Gallium compiler for CAML Light show that the result­ing performance can be 
+drastically different from the orig­inal compiler that uses canonically boxed representations. The results, 
+though, are not uniformly better, The canon­ically boxed completions are +-free whereas Leroy s is @ 
+free in our terminology. The results are in line with our general considerations that indicate that monomorphic 
+pro­grams should generally fare better with a @-free completion whereas highly polymorphic programs are 
+likely to be bet­ter off with a +-free completion. Our rewriting system for @free completions will improve 
+the result of Leroy s comple­tion by eliminating all @redexes, and our rewriting system for @-free completions 
+will improve the canonically boxed completion by eliminating all g$-redexes. Using Leroy s framework 
+Poulsen [Pou93] presents a more involved translation, but draws on constraint solving to eliminate more 
+boxing/unboxing operations than Leroy s translation in many, but not all cases. The interesting aspect 
+of Poulsen s completions is that they, just like our optimzd completions, are not required to have a 
+canonically defined representation type for the types occurring in type appli­cations as in Leroy s work, 
+but determines an appropriate representation type as part of the constraint solving process. On the other 
+hand it appears that some boxing/unboxing operations are built into the constructors of the language 
+and are not accounted for in the question of optimizing the boxing in the program. Given a Core-ML expression 
+with type r the result of a boxing analysis depends on the particular typing derivation chosen. Leroy 
+s completion uses implicitly the derivation obtained by Algorithm W [Mi178] since his translation per­forms 
+type inference and boxing simultaneously where let­bound variables receive the principal type of the 
+bound ex­pression. (Peyton-Jones/Launchbury and Poulsen also ap­pear to assume that type inference is 
+performed in the style of Algorithm W.) The principal type of a function is the most polymorphic type 
+and thus imposes the most box­ing demands on the arguments to the function. A more monomorphic derivation, 
+on the other hand, could still yield the same type for the whole expression, but using more monomorphic 
+types for the local variables. Bj@ner gives an algorithm called M for finding a minimally polymorphic 
+typ­ing derivation [Bj@92]. Minimally polymorphic derivations do not aJways exist, but his algorithm 
+generally lowers the local degree of polymorphism in comparison to Algorithm W. Note that our boxing 
+analysis does not presuppose a specific typing derivation for a Core-ML expression, but in­terfaces with 
+any of its type derivations, which is represented by an explicitly typed Core-XML expression. 7.2 Coherence 
+and equivalence The notion of coherence appeared first in computer sci­ence literature in the work of 
+Breazu-Tannen, Coquand, Gunter, Scedrov [BTCGS91, BTGS90] and Curien, Ghelli [CG90, Ghe90]. They use 
+it to give interpretations of sub­type based systems, where application of the subtyping rule is interpreted 
+by an (explicit) coercion. Since a given pro­gram with subtyping may have many different translations 
+it is integral to prove that all of them are coherent for the se­mantics (via arbitrary translation and 
+interpretation of the target program) to be well-defined. Thatte describes a method for inferring very 
+powerful implicit coercions between isomorphic types in a type in­ ference system enriched with coercions 
+between arbitrary isomorphic types. Our application can be viewed as simple variant of this problem as 
+arbitrary representation types of the same standard type and only those can be coerced to each other. 
+On the other hand Thatte does not deal with optimizing the coercions required in this fashion. The notion 
+of completion and its congruence theory is inspired and closely related to the work reported in [Hen93], 
+which explicates type tagging and untagging operations in dynamiczdly typed languages. The purpose of 
+doing so is completely analogous to boxing analysis: to eliminate most statically type tagging and untagging 
+operations and to im­ plement only the remaining ones whiIe still obtaining safe program execution; i.e., 
+well-defined program behavior. See also the work by Cartwright, Fagan and Wright on soft typ­ing [CF91, 
+WF92]. 8 Conclusion and further work We have presented a calculus, formal optimality criteria and rewriting-based 
+algorithms for finding good representations of data as boxed or unboxed data in a polymorphically typed 
+programming language. The word good here is to be un­derstand in a very general and broad sense. What 
+has been left out is a detailed analysis of specific language properties and implementation considerations 
+that have an effect on the actual performance. This haa been done to make the results universal) and 
+applicable in different settings, even different semantics of the same language. Judging by experimentation 
+with some short Standard ML programs our formally optimal completions also tend to be consistently better 
+in practice than previously de­scribed boxing analyses if we count only the number of box­ing/unboxing 
+operations executed. Since no implementation decisions are made at the time the boxing analysis is con­ducted 
+its output should combine well and without much interference with later implementation phases. The general 
+framework of treating boxing analysis as a translation of a program to a language with explicit boxing 
+and unboxing operations, due to Leroy [Ler92] and implicit also in Peyton Jones and Launchbury [PJL91] 
+encapsulates boxing analysis as a single phase. The representation type of an explicitly boxed program 
+specifies its interface and thus allows separate compilation of program modules. There are several problems 
+with making full use of boxing-optimized programs: 1. Garbage collection often requires tagging of heap­allocated 
+data with explicit type and size information. Thus an unboxed representation may well have to be tagged 
+(= boxed) anyway to accommodate the garbage collect or. 2, A boxed representation is the result of an 
+evaluation. In lazy languages often boxed representations are re­quired since the evaluation of an expression 
+is not stat­ically known to terminate or to be advantageous. Thus an expression determined to be best 
+kept in unboxed form by our boxing analysis may still have to be boxed at run-time. For the future we 
+plan to devise efficient algorithms for computing optimal boxing completions, which also take ac­count 
+of control dependencies and carefully place coercions at points where they get executed with minimum 
+run-time frequency. We expect to use analyses such as Peterson s [Pet89] for this purpose. Finally, we 
+intend to integrate our boxing analysis af­ ter region inference has been performed into the region­ 
+based implementation of Standard ML currently underway at DIKU (see [TT94] ). The use of region-based 
+memory management also obviates the need for global garbage col­ lection and thus the first of the two 
+restrictions above. Acknowledgements We would like to thank Neil Jones for first pointing out the applicability 
+of the framework of dynamic typing to box­ing analysis. Special thanks go to Eigil Rosager Poulsen from 
+whose thesis most of our test examples were taken. We would aJso like to thank the following people with 
+whom we have had interesting and fruitful discussions on formally optimaJ boxing: Anders Bondorf, Christian 
+Mossin, Robert Gluck, David Sands and Mads Tofte. References [BGS82] R. Brooks, R. Gabriel, and G. Steele. 
+An op­timizing compiler for lexicaJly scoped LISP. In Proc. SIGPLAN 82 Syrnp. on Compiler-Con­struction, 
+Boston, Massachusetts, pages 261 275, June 1982. SIGPLAN Notices, Vol. 17, No. 6. [Bj@92] Nikolaj Bj@ner. 
+Minimal typing derivations. DIKU Student Report, July 1992. [BTCGS91] V. Breazu-Tannen, T. Coquand, C. 
+Gunter, and A. Scedrov. Inherit ante as implicit coer­cion. Information and Computation, 93(1) :172 221, 
+July 1991. Presented at LICS 89. [BTGS90] V. Breazu-Tannen, C. Gunter, and A. Scedrov. Computing with 
+coercions. In M. Wand, edi­tor, Proc. ACM Symp. on Lisp and Functional Programming (LFP), Nice, France, 
+pages 44­60, 1990. [CF91] R. Cartwright and M. Fagan. Soft typing. In Pr-oc. ACM SIGPLAN 91 Conf. on 
+Pr-o­grarnming Language Design and Irnpiementa ­tzon, Toronto, Ontario, pages 278-292. ACM, ACM Press, 
+June 1991. [CG90] P. Curien and G. Ghelli. Coherence of sub­sumption, In A, Arnold, editor, Proc, 15th 
+Coil. on Trees in Algebra and Programming, Copen. hagen, Denmark, pages 132 146. Springer, May 1990. 
+[DM82] L. Damas and R. Milner. Principal type schemes for functional programs. In Proc. 9th Annual ACM 
+Syrnp. on Principles of Program­ming Languages, pages 207 212, Jan. 1982. [Ghe90] G. Ghelli. Proof Theoretic 
+Studies about a Minimal Type System Integrating Inclusion and Parametric Poigmorphisrn. PhD thesis, Uni­versit 
+a di Piss, Dipartimento di Informatica, March 1990. [Hen93] Fritz Henglein. Dynamic typing: Syntax and 
+proof theory. Science of Computer-Program­ming, 1993. Special Issue on European Sympo­sium on Programming 
+1992 (to appear). [HM93J Robert Harper and John Mitchell. On the type structure of Standard ML. ACM Transac­tions 
+on Programming Languages and Systems (TOPLAS), 15(2):211-252, April 1993. Based on paper presented at 
+POPL 88. [KKR+86] D. Kranz, R. Kelsey, J. Rees, P. Hudak, J. Philbin, and N. Adams. ORBIT: An op­timizing 
+compiler for Scheme. In Pr-oc. SIG-PLAN 86 Symp. on Compiler Construction, pages 219-233, 1986. [Ler92] 
+[Mi178] [Pet89] [PJL91] [POU93] [Rey83] [Ste77] [TT94] [Wad89] [WF92] X. Leroy. Unboxed objects and polymorphic 
+typing. In Proc. 19th Annual A CM SIGPLAN-SIGA CT Symposium on Principles of Program­ming gLanguages 
+(POPL), Alb uquerque, New Mexico, pages 177 188. ACM Press, Jan. 1992. R. Milner. A theory of type polymorphism 
+in programming. J. Computer and System Sci­ences, 17:348 375, 1978. J. Peterson. Untagged data in tagged 
+envi­ronments: Choosing optimaJ representations at compile time. In Proc. Functional Pro­gramming Languages 
+and Computer Architec­ture (FPCA), London, England, pages 89 99. ACM Press, Sept. 1989. Simon Peyton 
+Jones and John Launchbury. Unboxed values as first class citizens. In Proc. Conf. on Functional Programming 
+Lan­guages and Computer Architecture (FPCA), Cambridge, Massachusetts, pages 636-666. Springer, Aug. 
+1991. Lecture Notes in Com­puter Science, Vol. 523. Eigil Poulsen. Representation analysis for ef­ficient 
+implementation of polymorphism. Mas­ter s thesis, DIKU, University of Copenhagen, 1993. J. Reynolds. 
+Types, abstraction and parametric polymorphism. Information Processing, pages 513-523, 1983. G. Steele. 
+Fast arithmetic in MacLisp. In Proc. 1977 MA CSYMA User-s Conference, NASA Scientific and Technical Information 
+Oficel Washington, D. C., July 1977. Mads Tofte and Jean-Pierre TaJpin. Imple­mentation of the typed 
+call-by-value ~-calculus using a stack of regions. In Proc. 21st An­nual ACM SIGPLAN SIGA CT Symposium 
+on Principles of Programming Languages (P OPL), Portland, Oregon (this proceedings). ACM, ACM Press, 
+Jan. 1994. P. Wadler. Theorems for free! In Pr-oc. Func­tional Programming Languages and Computer Architecture 
+(FPCA), London, England, pages 347 359. ACM Press, Sept. 1989. A. Wright and M. Fagan. Soft typing and 
+global represent ation optimization. Manuscript, July 1992.   
+			

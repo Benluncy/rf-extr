@@ -1,0 +1,579 @@
+
+ Data Caching Tradeoffs in Client-Server DBMS Architectures Michael J. Carey*, Michael J. Franklin , 
+Miron Livny*, Eugene J. Shekita**+ *Computer Sciences Department, University of Wisconsin-Madison **IBM 
+Almaden Research Center ABSTRACT In this paper, we examine the performance tradeoffs that are raised 
+by caching data in the client workstations of a client-server DBMS. We begin by presenting a range of 
+lock-based cache consistency algorithms that arise by viewing cache consistency as a v~iant of the well-understood 
+problem of replicated data management. We then use a detailed simulation model to study the performance 
+of these algorithm over a wide range of workloads end system resource configurations. The results illustrate 
+the key performance tradeoffs related to client­server cache consistency, and should be of use to designers 
+of next-generation DBMS prototypes and products. 1. INTRODUCTION With networks of powerful workstations 
+becoming common­place in scientific, engineering, end even office computing environments, client-server 
+software architectures have become a common approach to providing access to shared services and resources. 
+Most commercial relational database management systems today are based on client-server architectures, 
+with SQL queries and their results serving as the basis for client-server interactions [S ton90a]. In 
+the past few years, a number of object-oriented DBMS (OODBMS) prototypes and products have appeared, 
+virtually all of which are based on client-server archi­tectures. Unlike relational database systems, 
+client-server interactions in an 00DBMS take place at the level of individual objects or pages of objects 
+rather than queries [DeWi90]. Proto­types based on object-level interactions include Orion [Kim90] and 
+02 [Deux90]. Prototypes based on page-level (or multi-page block) interactions include ObServer [Hom87] 
+end the EXODUS storage manager [Cere89a]. ObjectStore [OD190] is a commercial 00DBMS based on page-level 
+interactions. In such architectures, it is possible to cache date in the local memories of client workstations 
+for later reuse. Caching can reduce the need for client-server interaction, lessening the net­work traffic 
+and message processing overhead for both the server and its clients. It also enables client resources 
+to be used by the DBMS, thus increasing both the aggregate memory and the aggregate CPU power available 
+for database-related processing. An example of a wortdoad where caching can be highly beneficial is the 
+Sun Engineering Database Benchmark [Catt90a]. Tlus work was done while the author was with the Computer 
+Sci­encesDepartment, University of Wisconsin-Madison. This research was partially supported by the Defense 
+Advanced Research Projects Agency under contracts NO0314-88-K-0303 and NAG-2-61 8 and by the Nationrd 
+Science Foundation under grant IRf­8657323. Permission to copy without fee all or part of this material 
+is granted provided that the copies are not made or distributed for direct commercial advantage, the 
+ACM copyright notice and the title of the publication and its date appear, and notice is given that copying 
+is by permission of the Association for Computing Machinery. To copy otherwise, or to republish, requires 
+a fee and/or specific permission. @ 1991 ACM 0-89791-425-2/91 /0005 /0357 . ..S1 .50 Caching is not a 
+performance panacea, however. To incor­porate caching, the DBMS must include a cache consistency pro­tocol. 
+Such a protocol may be complex, it may entail substantial processing overhead, end its impact on system 
+performance may be workload-dependent. The cache consistency protocol might actually increase the load 
+on the server and/or the client worksta­tions due to its overheed, particularly when there are many client 
+workstations. Another potential pitfall, which depends on the concurrency control scheme used, is the 
+late discovery of data conflicts. Thus, the potential consequences of adding caching to a client-server 
+DBMS deserve investigation. In this paper, we examine the data caching performance trade­offs discussed 
+above. We begin by presenting a range of lock­based cache consistency algorithms that result from recognizing 
+that cache consistency is simply a variant of the replicated data management problem. We then describe 
+a detailed simulation model that was developed to study their performance over a wide range of workloads 
+end system resource configurations. We focus our attention on systems where client-server interactions 
+are page-based. This approach, also referred to as the block server approach [Ston90b], was shown to 
+perform well for CAD-style data access patterns in a recent performance study [DeWi90]. Also, this choice 
+was motivated by a desire to under­stand performance tradeoffs in our own page-based, client-server storage 
+managers [Cere89a, Shek90]. The performance of transaction-oriented cache consistency algorithms has 
+been examined in several related contexts. The one previous client-server data caching study is the HP 
+Labora­tories work ~ilk90]. Our work differs in several ways. Firs4 we employ a much more detailed model 
+of buffering, the impor­tance of which will be clear from our results. Second, we study a broader range 
+of DBMS workloack. Our work is also related to studies of shemxl-disk architectures, including work by 
+Bhide [Bhid88J and by a DBMS performance group at IBM Yorktown [Den90]. Our work differs from these efforts 
+in several ways. Firs~ shared-disk end client-sewer DBMS architectures are quali­tatively different. 
+In a client-server DBMS, clients must interact with the server, so the server is a natural center of 
+activity that can be used to assist in cache management. Also, shared-disk DBMS configurations tend to 
+involve relatively few machines. Second, our range of cache consistency algorithms goes beyond those 
+found in the shared-disk literature, including algorithms that propagate changes rather then invalidating 
+other cached copies. Another closely related effort is the Harvard work on transaction-oriented distributed 
+memory hierarchies [Bel190]. This work assumes a decentralized, shared-nothiig architecture and a communications 
+network with hardware broadcast suppor~ yielding a very different set of resource-related performance 
+tradeoffs. Also, our work is loosely related to studies of mul­tiprocessor cache coherency algorithms 
+(e.g., [Arch86]) end of caching in distributed file systems (e.g., [Howa88, Nels88] ). The remainder 
+of the paper is as follows: Section 2 describes our architectural assumptions and cache consistency algorithms. 
+Section 3 describes our simulation model. Section 4 describes experiments and results. Section 5 presents 
+our conclusions. 2. CACHE CONSISTENCY ALGORITHMS 2.1. Page Server Architecture The generaI architecture 
+of a caching cIient-server DBMS is depicted in Figure 1. The system consists of a database server which 
+is connected to N client workstations via a local area net­work. The system s seconduy storage, which 
+is comected to the server, include the disks on which the database is stored and a (mirrored) disk for 
+the log. The software of the DBMS haa com­ponents that reside on the server and on the clients, so applica­tions 
+running on cIient workstations can view the DBMS essen­tially as a local service. The DBMS has buffer 
+pool space avail­abIe on both the server and the clients, and it is free to manage this space as it sees 
+fit in order to optimize its overall perfor­mance. In the page server architecture, pages are the unit 
+of client-server data transfer and also serve as the unit of data cach­ ing and cache consistency.1 We 
+assume that each client application (CA) runs as a process (i.e., in art address space) that is separate 
+from the DBMS. We further assume that the DBMS itself consists of a multi-threaded database server (DS) 
+process and a collection of multi-threaded client database (CD) processes. It is aIso assumed that there 
+are one or more client application processes and exactly one database client process per workstation. 
+We will not concern ourselves with the details of how the client application and database processes interact 
+within a client workstation. All we require is that client applications cart somehow submit requests 
+to the client database process in order to control (i.e., begin, commit, and abort) transactions and 
+to read and write objects in the database. Also, the database client and server processes can communicate 
+both synchronously rmd asynchronously with respect to client application processes in order to handle 
+cache misses, updates, and cache consistency. Finally, since the state of database client processes outlives 
+client transactions, they ~e free to cache data both within and across transaction boundaries as long 
+as system­wide cache consistency is maintained. Workstation 1 Workstation N Other recent work on client-server 
+cache consistency [W11k90] haa approached the problem from first principles. In that work, two algorithms 
+were developed and analyzed. One of the algorithms was developed by viewing cached pages as snapshots 
+of server pages and characterizing them according to their current state relative to the server s versio~ 
+this is similar to approaches found in multiprocessor cache coherency algo­rithms [Arch86]. The other 
+algorithm is based on art analogy with notification ideas horn the active database area. Both of these 
+algorithms required that certain conditions be checked and later rechecked in order to avoid potential 
+race conditions between transactions. Given the general system model described above, a cleaner approach 
+can be obtained by recognizing that cached data are just like replicated data in a distributed DBMS, 
+though they reside in main memory rather than on disk.2 Thus, all of the well-known results on replica 
+management [Berrt87] can be applied. Given this observatio~ we now present five candidate algo­rithms 
+for maintaining client-server cache consistency. The first algorithm is a basic two-phase locking scheme, 
+based on the pri­mary copy approach to replica management ~em87], in which data is not cached between 
+client lranaactions. The second algo­rithm extends the first to allow for inter-transaction data caching. 
+The other three algorithms are based on an optimistic vsriant of two-phase locking [Care89b], in which 
+updates to remote copies of replicated data are deferred until end-of-transaction. In all five algorithms, 
+the client database process must request data from the database server if a cache miss occurs, and data 
+can be safely cached within the context of a single tranaactiw, it should not be necessary for a transaction 
+to re-fetch the same data again unless its working set is larger thart the available client buffer space. 
+Also, committing a transaction involves sending a commit message with copies of all updated pages and 
+their asso­ciated log records back to the server. This allows the server to handle future requests for 
+the modiied data dkectly even if the client workstation ia turned off or crashes in the meantime. 2.2. 
+Basic Two-Phase Locking (B2PL) The firstis primary locking algorithm a copy algorithm [Bem87] in which 
+the client database process discards cached data between transactions. Transactions set read locks on 
+the data pages that they access, upgrading their read locks to write ,.m.--------------m. i locks if 
+an item is to be updated. All ftrst-time lock requests are . . . . . I 1 , , t , 1 1 Server 1 ; log disk 
+, , 1, ............................................._ , Figure 1: Cache Architecture of a Client-Server 
+DBMS In tlus study, we focus our attention on the caching of data; index pages must be handled via a 
+separate mechanism in order to suppott the necessary level of concurrent activity. sent to the server, 
+which serves as the primary copy site. Subse­quent requests for locks on pages that the transaction has 
+already locked do not require any interaction with the server as long as the mode of the new request 
+is the same as that of the existing lock. Read lock requests and page access requests are combined, and 
+the server returns the requested page after obtaining a read lock on the page for the requesting client 
+transaction. All locks are held until the transaction either commits or aborts. Deadlocks are handled 
+through centralized deadlock detection on the server when lock waits occur. Deadlock resolution aborts 
+the transrtc­tion with the most recent initisl stsrtup time smong those involved in the deadlock. 2.3. 
+Caching Two-Phase Locking (C2PL) The second algorithm is a refinement of B2PL in which inter­tranaaction 
+data caching is permitted. Aa in B2PL, all locking 2If the workstations have local disks, it is possible 
+to cache data on secondary storage. Local disk caching is beyond the scope of thk paper, however, and 
+will be addressed in future work. and deadlock detection duties are the responsibility of the server. 
+2.4.1. Update Invalidation (02PL-1) Thus, all first-time lock requests require a round-trip message interchange 
+between client and server database processes. Unlike B2PL, however, the contents of the client buffer 
+pool are retained across transactions. Despite this retentio~ C2PL guarantees that transactions always 
+read valid data by having the server piggy­back updated copies of pages, when necessary, on reply messages 
+to lock requests. In order for the server to know when an updated page must be supplied, a lock request 
+includes the locally known log sequence number (LSN) of the page if the page is cached at the requesting 
+client. The server compares this LSN with the page s true LSN to determine if the cached copy is still 
+valid, To facilitate the LSN check, the server maintains a table con­taining the LSNS of all pages that 
+are currently cached on one or more client workstations. It does so by recording the LSN when it provides 
+a page to a client. Clients inform the server when they no longer have a copy of a given page. For example, 
+when a client elects to replace a clean cached page, it discards that page and then notifies the server 
+by piggybacking a list of recently dis­carded pages on the next message that it sends to the server. 
+2.4. Optimistic Two-Phase Locking (02PL) The next three algorithms, referred to collectively as rhe 02PL 
+family of cache consistency algorithms, are all based on a read-one/write-all [Bem87] optimistic locking 
+scheme studied in [Care89b] for distributed replica management. These algorithms differ from C2PL in 
+tha4 prior to transaction commit time, clients set read and write locks locally without obtaining locks 
+at the server. When a client requests a page from the server, a read lock is acquired and held on the 
+server only long enough to obtain a stable copy of the page to send back to the client. The server keeps 
+track of which client caches have current copies of which pages. Note that optimistic locking schemes 
+have also been pro­posed for shared-disk systems, for example, the semi-optimistic pass-the-buck locking 
+scheme of [Yu87]. In the 02PL algorithms, client updates are performed locally, but they are not permitted 
+to migrate back to the server until the update transaction enters its commit phase. At that time, the 
+client sends a commit message to the server containing a copy of each page that has been updated by the 
+transaction, the server then acquires update-copy locks (similar to write locks) on these pages on behalf 
+of the update transaction. Once these locks have been acquired, the server sends a prepare-to-commit 
+message to all other clients that contain cached copies of any of the updated pages. These clients request 
+update-copy locks on the updated data on behalf of the committing transaction.3 Once all the relevant 
+update-copy locks have been obtained, variant-specific 02PL actions are taken. Update-copy locks are 
+exclusive locks that enable certain deadlocks to be detected early. When a committing transaction requests 
+an update-copy lock for an item that is locked with a read lock by another transaction, the committing 
+update transac­tion will wait until the reader completes. A conflict between art update-copy lock and 
+a write lock indicates an impending dktri­buted deadlock, and it can be resolved as such without further 
+delay. Other deadlocks, including distributed deadlocks, are dealt with by having the client and server 
+database processes check for local deadlocks, and by having the server periodically check for distributed 
+deadlocks ala [Ston79]. 3If an update-copy lock request is made for a page that is no longer cached at 
+a given client site, the site sunply ignores this lock request. In the invalidation variant of 02PL, 
+the variant-specific action is the invalidation of other cached copies of updated pages; that is, a committing 
+update transaction acquires update-copy locks on all copies (i.e., at the server and at other clients) 
+of the updated pages. At the server, tltese locks enable the committing transac­tion to safely install 
+its updates. On other clients, however, they enable it to safely invrdidate cached copies of the updated 
+pages. once all updated pages have been invalidated at a client, the client sends a prepared-to-commit 
+message back to the server, releases its update-copy locks, and then drops out of the commit protocol. 
+The server cart commit the update transaction when all sites containhtg cached copies of the updated 
+data have responded. At this point only the server and the client that ori­ginated the update have copies 
+of the updated data. 2.4.2. Update Propagation (02PL-P) In the propagation variant of 02PL, the variant-specific 
+action is the propagation of updates to all cached copies of the updated pages. Thus, the 02PL-P algorithm 
+keeps all clients informed of arty changes made to the data resident in their local caches. As in 02PL-1, 
+a committing update transaction acquires update-copy locks on all copies of pages to be updated. In this 
+case, however, these locks are used to enable the committing transaction to safely install its updates 
+on every machine that holds a copy of the updated data. Since updates must be installed on the server 
+and all clients atomically, 02PL-P employs a two-phase commit protocol rather than the one-phase commit 
+that suffices for 02PL-I. Also, the prepare-to-commit messages that the server sends to clients in this 
+case must include copies of the relevant updates; these updates are installed during the second phase 
+of the commit protocol to avoid overwriting valid cached pages before the outcome of the update transaction 
+is certain! 2.4.3. A Dynamic Algorithm (02PL-D) Me 02PL-I and 02PL-P algorithms were motivated by dif­ferent 
+workloads. As we will show in Section 4, each algorithm provides significant performance benefits under 
+the right condi­tions. The dynamic variant of 02PL attempts to invalidate cached copies of data when 
+invalidation is appropriate and to pro­pagate changes when doing so seems more beneficial. This dynamic 
+algorithm, 02PL-D, propagates updates like 02PL-P unless it detects that it is doing so too frequently. 
+In 02PL-D, an update to a page will lead to art invalidation of the page instead of a change propagation 
+if a caching client notices that (i) it has already propagated a change to thk page, and (ii) the page 
+has not been re-referenced by the client since that time. Clients that do no propagation in response 
+to a prepare-to-commit message from the server cart drop out of the commit protocol at the end of the 
+tirst phase, as in 02PL-I. 2.5. Performance Tradeoffs We have presented five algorithms for client-sewer 
+cache consistency, all based on viewing cached pages as replicated data. We now consider some of their 
+qualitative differences. B2PL is the simplest approach and will serve as a baseline against which to 
+evaluate the other approaches. C2PL, which extends B2PL to support caching across transaction boundaries, 
+extends the aggregate memory of the DBMS to include the buffer space on the client workstations. In contrast 
+to B2PL and C2PL, 4 Note: The installation of these updates has no affect on the posi­tion of the updated 
+pages in the clients LRU chains. which require the server to handle all lock requests, the 02PL algorithms 
+extend C2PL by taking a more optimistic approach. The 02PL algorithms allow client transactions to execute 
+entirely locally between cache misses, communicating with the server only at commit time (to handle updated 
+pages); therefore, tran­sactions that run without cache misses can execute with no server interactions 
+until they reach their commit point. Among the 02PL algorithms, 02PL-I invalidates other cached copies 
+of updated pages at this poin~ whereas 02PL-P propagates changes to these copies. 02PL-D is a simple 
+dynamic algorithm that attempts to combine the best features of these two static 02PL variants. Finally, 
+compared with B2PL and C2PL, all three 02PL variants allow additional concurrency since they detect data 
+conflicts later; of course, this can lead to more aborts. 3. MODELING A CLIENT-SERVER DBMS  3.1. Database 
+and Workload Models We now describe our client-server DBMS simulation model, which has been constructed 
+using the DeNet simulation language [Livn88]. Table 1 presents the parameters used to model the database 
+and its workload. The database is modeled as a collec­tion of DatabaseSize pages of PageSize bytes each. 
+The system workload is generated by a collection of NumC1ients client workstations. Each client workstation 
+generates a single stream of transac­tions, where the arrival of a new transaction is separated from 
+the completion of the previous transaciton by an exponential think time with a mean of ThinkTime. A client 
+transaction reads between 0.5 .Transactiotssize and 1.5 .TransactionSize distinct pages from the database. 
+It spends an average of PerPageIrsst CPU instructions processing each page that it reads (this amount 
+is doubled for pages that it writes); the actual per-page CPU requirement is drawn from an exponential 
+distribution. To model locality, each client workstation has hot and cold regions of the database associated 
+with it. HotBounds and ColdBounds s$ecify the (possibly overlapping) ranges of pages in the client s 
+hot and cold regions, espectively. Pages to be referenced are drawn uni­formly from the client s hot 
+region with probability HotAc­cessProb; otherwise the page is drawn from its cold region. HotWriteProb 
+and ColdWriteProb specify the region-specific probabilities of writing a page that has ~een-read. - System-wide 
+DatabaseSize Size of database in pages PageSize Size of a page NumClients Number of client workstations 
+Per Client ThinkTime Mean think time between client xactions TransactionSize Mean no. of pages accessed 
+per xaction PerPageIrW Mean no. of instructions per page on read (doubled on write) HotBounds Page bounds 
+of hot range ColdBounds Page bounds of cold range HotAccessProb Prob. of accessing a page in the hot 
+range HotWriteProb Prob. of writing to a page in the hot range ColdWriteProb Prob. of writing to a page 
+in the cold range Table 1: Database and Workload Parameters 3.2. Client-Server Execution Model In the 
+simulator, the client component includes a Source, which generates the workload, a Client Manager, which 
+executes transaction reference strings generated by the Source in accor­dance with the chosen cache consistency 
+protocol; a CC Manager, which is in charge of concurrency control (i.e., lock­ ing); a Buffer Manager, 
+which manages the client buffer pOOI; and a Resource Manager, which models the other physical resources 
+of the client workstation. The server is organized simi­larly, except that it is controlled by the Server 
+Manager, which acts in response to the requests sent to it by the clients. Client transactions execute 
+on the workstations that submit them. When a transaction references a page, the Client Manager must lock 
+the page appropriately and check the local buffer pool for a cached copy of the pagq if no such copy 
+exists, algorithm­dependent steps ase taken in reaction to the buffer miss. Both locking and buffer management 
+are simulated in detail based on referenced page numbers. Once a local copy of the page exists, the transaction 
+processes the page and decides whether or not to update it. In the event of an update, further processing 
+is fol­lowed by algorithm-dependent tqxlate-handling actions. At com­mit time, the Client Manager sends 
+a commit request together with any updates to the server, which then takes the appropriate algorithm-dependent 
+commit actions; an exception is tha~ in the 02PL algorithms, read-only transactions can commit without 
+any commit-time server interaction. In the event of a transaction abo~ which can occur due to a deadlock 
+the Client Manager arranges the abofi asks the Buffer Manager to purge any updated pages, and then resubmits 
+the same transaction. In addition to the transaction-induced processing costs men­tioned in Table 1, 
+the simulation model includes the system­ related costs given in Table 2. One such cost is the cpu cost 
+to send or receive a message, which is modeled as FixedMsgInst instructions per message plus PerByteMsgInst 
+instructions per message byte. The size of a control message (e.g., a lock request or a commit protocol 
+packet) is given by the parameter Con­tro/MsgSize; messages that contain one or more data pages are sized 
+based on Table 1 s PageSize parameter, Other costs include LockZnst, the cost involved in a lock/unlock 
+pair on the client or server, and RegisterCopyInst, the cost (on the server) to register and tmregister 
+(i.e., to track the existence of) a newly cached page copy or to look up the copy sites for a given page. 
+The DeadlockInterval indicates the frequency with which the server performs global deadlock detection 
+in the 02PL algo­ rithms, at which time it exchanges messages with all of the FixedMsgInst PerByteMsgInst 
+ControlMsgSize Size in bytes of a control message LockInst RegisterCopyIrsst No. of instructions to register/uruegister 
+- DeadlockInterval Global deadjock detection interval ClierUCPU Instruction rate of client CPU ServerCPU 
+Instruction rate of server CPU ClientBujSize Per-client buffer size ServerBufSize Server buffer size 
+ServerDisks Number of disks at server MinDiskTime Minimum disk access time MaxDiskTime Maximum disk access 
+time NetworkBandwidth Network bandwidth Table 2: System and Resource Parameters clients in order to 
+obtain copies of their waits-for graphs. 3.3. Physical Resource Models The model parameters that specify 
+the physical resources of the system are also listed in Table 2. Included are the client and server MIPS 
+ratings (ClientCPU and ServerCPf.J) and their respective buffer pool sizes (ClientBujSize and ServerBujSize). 
+The service discipline of the client and server CPUS is first-come, first-sewed (FIFO) for message processing 
+and processor-sharing for all other services; message processing preempts other CPU activity. The client 
+and server buffer pools sze both managed via an LRU replacement policy, and the server writes dirty pages 
+back to disk only when they are actually selected for replace­ment. Note that, on clients, dirty pages 
+exist only during the course of a transaction. Dirty pages are held on the client until commit time, 
+at which point they are copied back to the serveq once the transaction commits, the updated pages are 
+marked as clean on the client. The parameter ServerDisk specifies the number of database disks attached 
+to the server, and each is modeled as having an access time that is uniformly distributed over the range 
+from Min-DiskTime to MaxDiskTime. The disk used to service a given request is chosen at random from among 
+the server diska, so the model assumes that the database is uniformly partitioned across all disks. The 
+service discipline for the disks is FIFO? Finally, a very simple network model is used in the simulator 
+s Network Manager componen~ the network is modeled as a FIFO server with a service rate of Network-Bandwidfh. 
+A simple model is sufficient because our experi­ments assume a local area network, where the actual time 
+on the wire for messages tends to be negligible and the main cost issue is the CPU time for sending and 
+receiving messages. Despite its simplicity, this cost assumption has been found to provide rea­sonably 
+accurate performance results [Lsz086]. 4. EXPERIMENTS AND RESULTS 4.1. Metrics and Parameter Settings 
+The primary performance metric employed in this study is system throughput (i.e., transaction completion 
+rate). Additional metrics are used in the analysis of the experimental results. Metrics presented on 
+a per commit basis are computed by dividing the total count for the metric by the number of transac­tion 
+commits over the duration of a simulation run. To ensure the statistical validity of our resuks, we verified 
+that the 9@%o confidence intervals for transaction response times (computed using batch means [Sarg76]) 
+were sufficiently tight. The size of these confidence intervals was within a few percent of the mean 
+in almost all cases. Throughout the paper we discuss only perfor­mance differences that were found to 
+be statistically significant. Tables 3 and 4 present the database and workload parameter settings used 
+in the experiments reported here. Table 3 contains default settings that are used in all of the experiments 
+(except where otherwise noted). The number of client workstationa is varied from 1 to 25 in order to 
+study how the cache consistency algorithms scale, and the think time at the workstations is zero. The 
+default per-page CPU processing time is 30,000 instructions. The database size is 1,250 pages, with a 
+page size of 4 kilobytes. We used a relatively small database in order to make simulations 3 Logging 
+is not explicitly modeled as it was not expected to im­pact the relative performance of the algorithms 
+based on experience with an earlier study [Care89b]. E Table 3: Database and Workload Parameter Settings 
+ involving fractionally large buffer pools feasible in terms of simulation time; moreover, our intent 
+is to capture that portion which is of current interest to the client workstations. Note that the most 
+important factor here is the ratio of the transaction and client-server buffer pool sizes to the database 
+size, not the abso­lute database size itself. Table 4 describes the workloads considered in this study. 
+These workloads and the motivation for them will be described as the experiments are presented. These 
+workloads were designed to allow the exploration of the performance tradeoffs for client­server cache 
+consistency algorithms. None of these workloads was derived from a real 00DBMS application, as such applica­tions 
+are difficult to come by. Table 5 shows the settings used for the system overhead and resource-related 
+parameters. The experimental results presented Parameter HOTCOLD PRIVATE TransactionSize 20 Daszes 16 
+r)ages HotBounds ColdBounds ! HotAccessProb 0.8 0.5 ColdAccessProb 0.2 0.5 HotWriteProb 0.2 0.2 ColdWriteProb 
+0.2 0.0 Parameter FEED UNIFORM TransactionSize 5 pages 20 pages HotBounds lto50 ColdBounds rest of DB 
+whole DB HotAccessProb 0.8 ColdAccessProb 0.2 1.0 HotWriteProb 1.0/0.0 ColdWriteProb 0.0/0.0 0.2 Table 
+4 Workload Parameter Vahtes for Client n FixedMsgImt 10,000 instructions PerByteMsgInst 5,000 instructions 
+per 4 kilobyte page ControWfsgSize 256 bytes Lockfnst 300 instructions RegisterCopyInst 300 instructions 
+DeadlockInterval 1 second ClientCPU 5 (or 15) MIPS ServerCPU 10 (or 50) MIPS ClientBujSize 5Y0, 10Yo, 
+25V0, or 50V0 of database size ServerBujSize 109ZO,257. or 50~0 of database size ServerDisks 2 disks 
+MinDiskTime 10 millisecond MaxDiskTime 30 milliseconds Network3andwidth 32 megabits pcr second Table 
+5: System and Resource Parameter Settings here were obtained with 5 MIPS client CPUS and a 10 MIPS server 
+CPU. We also ran experiments with 15 MIPS clients and a 50 MIPS server; the absolute performance results 
+were dif­feren~ but the basic lessons were the same, so we do not present those results. We also conducted 
+experiments with a range of client and server buffer pool sizes in order to understand how these important 
+system parameters influence caching-related per­formance. Due to space limitations, only a representative 
+subset of our results is presented here. h most of our experiments, we show how the cache con­ sistency 
+algorithms scale with the number of client workstations. Each client workstation adds both addhional 
+work and additional resources to the system. Ideally, we would like the system throughput to scale linearly 
+with the number of clients. In prac­tice, there are several possible impediments to linear system scaleup. 
+These include (i) the formation of a bottleneck at the server CPU or disks, (ii) the formation of a data 
+contention bottleneck, or (iii) an increase in the overall pathlength of tran­sactions (i.e., if additional 
+messages or more disk accesses are required of all transactions). 4.2. Experiment 1: HOTCOLD Workload 
+In the HOTCOLD workload, each client has its own 50-page hot region of the database to which 80% of its 
+accesses are directed the remaining accesses go elsewhere in the database. Transactions each read an 
+average of 20 pages, updating pages with a probability of 20%. This models a situation where dif­ferent 
+clients favor disjoint regions of the database, but where some read/write overlap exists (since the hot 
+range of each client overlaps the cold range of all other clients). Skewed client access distributions 
+are imprtant to study since some OODBMS developers expect them to be common in OODBMS applications [Catt90b, 
+Wein90]. 4.2.1. HOTCOLD -Small Client Buffer Pool Figure 2 shows the overall system throughput as a function 
+of the number of clients for the HOTCOLD workload with a rela­tively large server buffer (ServerBuf.Tize 
+= 5070 of the database size) and small client buffers (ClientBujlYize = 5% of the database size). Figure 
+3 shows the average transaction response times. The three optimistic 2PL (02PL) algorithms perform the 
+besg followed by caching 2PL (C2PL). The basic 2PL scheme (B2PL) performs the worst. Initially, all three 
+02PL algorithms perform alike, as do the pair of server-locking algorithms (C2PL and B2PL). All provide 
+near-linear scaleup in the range from 1 to 5 clients, as shown by their near-linear throughput increases 
+and fairly flat response time curves in this range. The superior performance of the 02PL algorithms in 
+the 1-5 client range is due to their considerable message savings. In this range, the 02PL algorithms 
+require an average of 18-19 mes­sages to be processed per transaction on the server (counting both message 
+sends and receives), as opposed to 52 messages per tran­saction for the server-locking algorithms. Each 
+client has its own 50-page hot range, covering a~o of the database, while client buffers are sized at 
+5% of the database. Thus, in the 02PL algo­rithms, most requests for hot pages can be satisfied without 
+server interaction, whereas C2PL and B2PL have to request locks from the server for every new page accessed 
+by a transaction. Indeed we can see from Figure 4 that 65% of the 02PL read requests can be processed 
+without a server message since the 02PL algo­rithms send messages to the server only on cache misses 
+(and at commit time for update transactions). The fact that this savings in messages is indeed the cause 
+of the superior performance of the 02PL algorithms is confirmed by Figure 5, which shows that both the 
+number of disk reads and and the total number of disk I/Os (including writes) per transaction are the 
+same for all five algorithms in the 1-5 client range. Looking out beyond 5 clients in Figures 2-3, we 
+see that the 02PL algorithms retain their performance advantage, but that all of the algorithms lose 
+their lines scaleup behavior. The throughput of each algorithm improves in a sublinear fashion in the 
+5-10 client range, and then throughput actually decreases for awhile before starting to level off again 
+at 25 clients. This behavior is explained by Figures 4-5 and by the server CPU and disk utilizations. 
+Since each client has a 4% hot range, but also accesses pages outside of thii range, the server buffer 
+pool size being 50% of the database causes the server hit rate to suffer at 10 clients and beyonr+ the 
+server is no longer able to retain all of the clients hot pages in order to handle hot cache misses without 
+disk 1/0. This is evident in the server hit rates of Figure 4 and the disk I/Os of Figure 5. Eventuall~, 
+the server hh rate decreases to 50% or slightly less, where 50% s what would be expected for a uniform 
+(instead of skewed) reference stream. Moreover, once the server becomes I/O-boun&#38; which occurs in 
+the 10-15 client range, the increased server I/O pat.hlength for transactions (caused by this hit rate 
+dropoff) is sufficient to induce the thrash­ing that is evident in Figure 2. B2PL suffers the most from 
+the dropoff in server hits as clients are added. As shown in Figure 5, B2PL s dependence on server buffering 
+leads to a significant I/O increase when the server can no longer retain the hot pages for all clients. 
+C2PL does not suffer in this manner since it retains client buffer con­tents across transactions. The 
+slight performance advantage of C2PL prior to this region is due to the fact that its messages tend to 
+be shorter than those of B2PL, as not all C2PL lock grsnt mes­sages carry data pages. The 02PL algorithms 
+thrssh due to 1/0 activity beyond 10 clients, as discussed above, but they still per­form the best since 
+caching pays off and these algorithms have a much smaller CPU pathlength due to their message savings. 
+02PL-1, the invalidate-based variant of 02PL, performs a bit better in Figures 2-3 due to a slightly 
+higher buffer hit rate at the server (Figure 4) and a small 1/0 savings that results (Figure 5). As compared 
+to C2P~ the 1/0 savings provided by 02PL-I is due to the fact that 02PL-I has a slightly larger effective 
+client buffer pool in C2PL, outdated pages are retained in client buffers, whereas they are invalidated 
+immediately in 02PL-I. These outdated pages take up space in C2PL S LRU stack instead of becoming immediately 
+reusable as they do in 02PL-I.6 As compsmd to the other 02PL algorithms, 02PL-I s better server hit rate 
+is due to the fact that in 02PL-P and 02PL-D, hot pages are removed horn the client buffer only when 
+they become the least recently used page in the buffer. In 02PL-I however, hot pages are also removed 
+from the client buffer by the invalidation process. Such hot pages are likely to be in the server s buffer 
+when re-referenced by the client, since the update that caused the invalidation places an up-to-date 
+copy of the page at the server, 4.2.2. HOTCOLD -Larger Client Buffer Pool Figure 6 shows the overall 
+throughput results for the HOTCOLD workload when the client buffer size is increased to 25% of the database. 
+In comparison with Figure 2, it can be seen that the additional aggregate memory is strictly beneficial 
+for alf algorithms except B2PL and 02PL-P. Since B2PL does not 6 We instrumented the client buffer pool 
+ccxle and found that in this experiment, C2PL s effective buffer size is about 5% smaller due to the 
+presence of outdated pages in the 25-client case. 20 4.0 1.0 1 0 D2PL-1 0.9 ++-. +.. 3s -.. B* A OWL-D 
+ 16. R1 u0.s . e 3.0-O 02PL.P /\ f .< T -. s clLmr8 f h )S UPL . Pe r 2.s. + BZ L ! o r . 0 U, 0.6. 
+. n u ~~e seamer +.. s H ~ 2.0-0.s . e i %.w__B_>.--fS h t = ss----=8 P S. 0.4-1 T u 1.5. I i R 
+o 02nA t m a 03 A OZPL.D e 1.0. t o cnmP 0 mrl.-P 4. i0.2 x CZPL xe?.PL 0 0.s o + B?PL + B2PL 0.1 
+I L I l::t } 5 10 2025 5 10 2025 5 10 2025 # Cllm;s # clien45 # Clim15 Figure 2: Throughput (Tmrsactiorr/see) 
+Figure 3: Respcxrse Time (see) Figure 4: Client and Server Buffer Hit Rates (HOTCOLD, Buffers: 50% server, 
+5% client) (HOTCOLD, Buffers: 50% server, 5% cfient) (HOTCOLD, Buffers: 50% server, 5% chat) 14 1.0 ,.* 
+25 D1 i.. 1 0 mm.] ,, 0.9 ++--+.. * clients ; 12 AOM,D , 1 B / 20. u 0.8 , Af 1------: \ ~ c 10. XC2PL 
+, T f 0.7. . o rnfLP / y h c +B2PL e % , r . . . server e 0 15. r 0.6. ,~-..--B--~zc~=====~ a 8. 
+u ~:%z:z==lf ===--a=___ s .. --e--.--e -----e -~-:--­y 0.s. :. :.­ .. -+ P ---P 6. P 10- t 0.4­ e r 
+u R D D2PI.I ,,$ t #46 ~ 03. A -D c 4. lolal,,~ t o mm--d 5 i 0.2 0 DZPL.P o rnPL-P m 2> 0 XC2PL X 
+C?.PL Y 0.1 + B2PL + B2PL 1 1 ~~ l:, t 5 10 2025 5 10 2025 5 10 2025 * Chm;s # Clim;5 # Climr!i5 Figure 
+5: Disk Reads and Total I/O per Commit Figure 6: throughput (Tmnsactiordsec) Figure 7: Cfient and Server 
+Buffer Hit Rates (HOTCOLD, Buffers: 50%. server, 5% client) (HOTCOLD, Buffers: 50% server, 25% client) 
+(HOTCOLD, Buffers: 50% server, 25% client) 14- 40 n 02PL-I 12-/S 0MA5 32 o 02rvP 1 u 10. T : ~%. x am 
+,t ,t --Q P XUPL d h +MPL ~ , ---­ + B2PL n a r r ,, --­ // t o 24. ,J 6 ,B-­; 120. , ,/ ,,, e u ,1,/ 
+ r 8 Es hw ,j: , , s 6. P 16. P ,;2/ i u u 0 ,* rea&#38;rs t t t 4. 60. P, -.---ss -----)S-----X ,;y 
+-. . --+--.--+ -----+ e G ,1,, ,:. a +,8. (y 02PLP 2. 30. XcMt. +B2PL 5 10 20 25 # Ctids Figure 8: 
+Avg. Number of Updatera per Trans. Figure 9: Throughput (Transaesiorr/see) Figure 10 llrrorsghput ( fkartsactiodsec) 
+(HOTCOLD, Buffers: 50% server, 25% client) (PRIVATE, Buffers: 50% server, 25% cfient) (FEED, Buffers: 
+50% server, 25% client) 363 retain its buffer contents between transactions, it performs exactly as before 
+(recall that we model only the first-time page references of transactions, as caching withii the scope 
+of a single transaction will aid all algorithms identically). 02PL-P, the propagate-based 02PL algorithm, 
+benefits from the increased memory for awhile, but as the system grows its performance suffers; also, 
+it is outperformed significantly by the other two 02PL afgorithrns. The curves in Figure 6 are roughly 
+similar to those of Figure 2, and they can be similarly explained. The B2PL algorithm performs here just 
+as it did with the 5~0 client buffer size. In contrast, the C2PL algorithm clearly benefits from the 
+added memory. The reason is shown in Figure 7. The client hit rate of C2PL is significantly higher in 
+thii case since the client s hot region (4~o of the databaxe) tits in its buffer pool with room (21% 
+of the database) for cold pages as well. C2PL is strictly CPU-bound at the server in this case due to 
+&#38;e­quent lock request messages. Of the 02PL algorithms, 02PL-I performs the bes~ followed closely 
+by 02 PL-D. Both thrash at high loads due to an increase in the average number of disk 1/0s per transaction. 
+Unlike the previous case, however, the additional 1/0s are due to writes: When the server is unable to 
+retain the hot pages for all clients in memory, it has to replace some of them, and when they are dirty, 
+it must write them back to disk, since they are retained in the corresponding client buffer pool, removing 
+them at the server does not significantly impact the number of disk reads. 02PL-P performs significantly 
+worse here due to the fact that it will repeatedly propagate a hot page s updates to all clients that 
+recently accessed it as a cold page (and therefore still have a copy in their buffer pool). This is evident 
+in Figure 8, which shows the average number of remote clients that the server must contact in order to 
+commit a transaction. For large system configurations, this leads 02PL-P to become CPU-boun&#38; and 
+it thrashes due to the increased server CPU pathlength caused by its propagation messages. This effect 
+was not observed in the previous case because, with a small client buffer, LRU replacement kept the number 
+of cached cold pages to a minimum. Since 02PL-I invalidates such counterproductive, remotely-cached copies 
+of hot pages, this is less of a problem for 02PL-I (see Figure 8), and thus it manages to remain I/O-bound. 
+02PL-D propagates updates once to remote copies before recognizing that propagat­ing changes to them 
+is counterproductive, leading it to perform slightly worse than 02PL-I but much better than 02 PL-P. 
+Figure 7 shows an interesting effect (that only slightly affects the relative performance of the cache 
+consistency schemes). The server hit rate for each of the schemes is initially (in the 1-5 client range) 
+lower than one might expec~ This is because the client and server buffer contents are highly correlated 
+in this range. For example, in the 1-client case, when the client misses on a cold region page, it has 
+only a 2570 chance of finding the page in the server buffer pool because one half of the server s buffer 
+pool is essentially a mirror-image of the client s own buffer pool. This effect disappears once the number 
+of clients becomes sufficient to randomize the server buffer contents. 4.3. Experiment 2: PRIVATE Workload 
+In the PRIVATE workload, each client has a 25-page hot region of the database to which 50% of its accesses 
+are directed, the other 50% of its accesses are directed to a 625-page read-only region. Thus, there 
+is no read/write sharing of data in this work­load. This workload is intended to represent situations 
+such as large, CAD-based engineering projects in which each engineer works on disjoint portions of an 
+overall design while read-sharing a standard library of components [Wein90]. Figure 9 preserm the overall 
+throughput results for this work­ load with ServerBujSize = 50% and ClientBujSize = 25~o, as in the experiment 
+just discussed. The general shapes of the curves are very similar to those of Figure 6 since the nature 
+of the work­loads is similar. B2PL and C2PL perform very much like in Fig­ ure 6, for virtually identical 
+reasons. B2PL is again I/O-bound due to server buffer misses, while C2PL is CPU-bound due to its lock 
+request messages. With this workload, all three 02PL algo­rithms perform identically; this is because 
+it is never the case that an updated page is present in a remote buffer pool. The explanation for the 
+shape of their curves is the same as for 02PL-I in Figure 6 of the preceding experiment. The main thing 
+to notice here is that all three 02PL algorithms offer significant performance improvements over C2PL 
+and B2PL. Caching is very beneficial for this workload allowing the 02PL algorithms to execute transactions 
+with many fewer messages, so 02PL s performance is server I/O-limited. 4.4. Experiment 3: FEED Workload 
+We now turn our attention to an information feed workload where client #1 produces data that all other 
+clients consume. This is intended to approximate an environment like stock trad­ing, where a database 
+of stock prices might be maintained by an information feed and then accessed heavily by other worksta­tions. 
+80% of client #1 s accesses (reads and updates) are directed to database pages 1-50; 80~0 of the accesses 
+of the other clients, which are read-only, go to this region as well. Figure 10 presents the throughput 
+results for thii workload, again for ServerBuflize = 50% and C lieniBujSize = zs~.. The throughput results 
+for the writer (client #1) and readers (remain­ing clients) are separated in order to provide a clear 
+picture of the impact of this heterogeneous workload. The 02PL algorithms outperform the two server-locking 
+algorithms, Among the 02PL algorithms, 02PL-P provides the best performance, 02PL-D is nex~ and 02PL-I 
+performs quite a bit worse than these two. Since the pages in the hot region of this workload are updated 
+by client #1 and are used heavily by all the readers, these results are not surprising; propagation is 
+clearly the right approach for such a workload. For all algorithms, the addition of clients (readers) 
+leads to an increase in the overall reader throughput, as each one adds a new transaction stream. Adding 
+clients also leads to a decrease in the writer throughpu~ as each new client is a source of additional 
+server loading and data contention. The results of this experiment are explained by the message requirements 
+of the algorithms. Due to the message intensity of the two server-locking algorithms, these algorithms 
+become CPU-bound at the server with 10-15 clients (i.e., 1 writer and 9-14 readers). They are therefore 
+unable to provide additional reader throughput beyond thii point. 02PL-I suffers from a simil­ar, but 
+much less extreme, fate; each update by client #l leads to the invalidation, and subsequent re-access 
+at the server, of the updated data. 02PL-P performs the best because it requires few messages; the server 
+CPU does not become a bottleneck in the 1-25 client range. 02PL-D performs almost as well, but does enough 
+invalidation to cause a loss of performance. At this poin~ it should be noted thag though 02PL-D has 
+generally performed a bit worse than the better of the two static 02PL algorithms for each of the workloads, 
+it has also tended to perform significantly better than the lesser 02PL algorithm in cases involving 
+significant performance differences. 4.5. Experiment 4: UNIFORM Workload Up to now, we have explored 
+skewed workloads for which it is intuitive that some form of caching should be beneficial. In ths experiment, 
+we examine the UNIFORM workload in which 88 1.0­0 07.PL-1 0.9. A 02PLD B u 0.8. 0 n2PL.P 6 T 6f T 
+X C?PL h 0.7. hf + B?PL re r 00r uu g4. 4 d hhi t P O D2PLl P u u A D2PLD O 02PLI t o u2rLP A 
+O?YLD a 22 t X C?PL O U2PLP 1 IH := + B2PL XC2PL 0 +B2PL 0.1 I I tR I___ 5 1015202.5 5 10152025 5 
+10 202s# chum # clLenLr # Ctids Figure 11: Throughput (Transaction/see) Figure 12: Throughput (Transaction/see) 
+Figure 13: Chent and Server Brtffer Hit Rates (UNIFORM, Buffers:-50% server, 5% chent) (UNIFORM, Buffers: 
+50% sesver, 25% chent) (UNIFORM, Buffers: 50% server, 25% chent) 1.01 121 y ]a*:-+_+._+.-_ -+_..+.+ 
+0.9- D 02PL-I 10. A 02PL-D 0.8. s o 02PL-P T e 0.7­ h X C?PL redr 8­v + B?PL r 0.6. 0 e u r g 6- P6. 
+u h J e t0.4.~ P riu n U2PL1 0 02PL-I 4. t4. I 0.3-: Q D2PLD A D2PL-D cs 0 0 02F1.-P 0.2. i c1 02PL-P 
+m2 2. xe2PL X C?PL m 0.1. + B2F% + B?PL i tI, 1 5 10 202s 5 10 2025 0.1 0.20.3 0.4 0.5 0.60.7 0.8 
+0.9 1.0# clLcnJ5 # Ctien~5 Write Probabtity Figure 14: Disk Reads and Total I/O pr Commit Figure 15: 
+Setver Resouree Utilizations Figure 16: Tbrouput (TPS) vs. Write Prob. (UNIFORM, Buffers: 50% server, 
+25% client) (UNIFORM. Buffers: 50% server, 25% client) (UNIFORM, 10 Clients, Buffers: 50% SSV,25% cli) 
+ each client transaction reads an average of 20 pages, chosen uni-of the uniform access pattern, and 
+the fact that the hit rate server formly from among all of the pages in the database, updating an k already 
+5f) %o (once the correlation effect discussed earlier is average of 209 o of the pages read. damped out), 
+the additional client buffer space does not improve performance aa dramatically here aa in Experiments 
+1-3. 02PLI Figure 11 presents the throughput results for the UNIFORM provides a modest performance improvement 
+over C2PL due to workload with ServerBujSne = 50??0 and ClientBujSize = 5Y0. art effect that was also 
+encountered in the HOTCOLD workload; All five of the cache consistency algorithms provide essentially 
+that is, 02PL-I provides a larger effective client buffer pool than the same level of performance in 
+W case due to the small client C2PL because invalidated pages are immediately freed, rather buffer size 
+and the lack of locality. Figure 12 shows the than taking up buffer pool space as they do in C2PL. This 
+is evi­ throughput for the UNIFORM workload with ServerBuf­dent in Figure 13, though some of the difference 
+there is due to Size = 50% and CiietiBufSize = 25%. With this much larger restart-induced buffer hits, 
+and in Figure 14, where 02PL-I is client buffer size, performance differences now exist herween the seen 
+to require fewer I/Os per transaction than C2PL. The other various algorithms. 02PL-I performs the bes~ 
+followed by C2PL two 02PL algorithms are unable to benefit similarly from the and 02PL-D with 02PL-P 
+and then B2PL providing the worst lack of outdated pages because of their high CPU overheads. overall 
+throughput. As usual, the performance of B2PL is They utilize the server CPU much more heavily than 02PL-1, 
+unchanged from the small client buffer results, whereas each of propagating updates to other clients 
+instead of simply invalidat­ the other algorithms benefi~ to some extent horn the additional ing the 
+updated pages. Moreover, propagation is simply not client buffer space (except for 02PL-P at 25 clients). 
+The results in Figure 12 are due to a combination of factors that cart be beneficial here.7 02PL-P suffers 
+slightly more due to understood by examimng the buffer hit rates (Figure 13), fhe number of I/Os per 
+transaction (Figure 14), the server resource 7 We instrumented our simulator to keep track of the fraction 
+of atl utilizations (Figure 15), and tie data contention level. propagated pages that ase used by the 
+client befote the page is replaeed or overwritten by another propagation. Here, only 10-15% of the pagea 
+pro- The difference between C2PL and B2PL indicates the perfor­ pagated by 02PL-P acttsatly proved usefut 
+in this sense. mance increase due to the availability of client buffers; because propagations because 
+02PL-D only propagates once to a page before invalidating it. Finally, all of the caching algorithms 
+can be seen to thrash in Figure 12; this is due largely to data conten­tion (i.e., transaction restarts). 
+Figure 16 shows how throughput is affected as the write pro­bability for transactions is varied in the 
+10-client case. As the write probability goes to zero, performance converges for all algorithms except 
+B2PL. This is because all the other algorithms benefit from caching, and their effective buffer pool 
+size and propagation-related differences disappear in the absence of updates. Conversely, when the write 
+probability becomes very large, the optimistic locking approach of the 02PL algorithms causes their performance 
+to suffer. 4.6. Additional Experiments The results from two other exerirnents are worth noting here (see 
+[Care90] for details). One experiment studied an extremely high contention workload in which the C2PL 
+and B2PL algo­rithms out performed the 02PL algorithms due to 02PL s late resolution of conflicts. This 
+result could be anticipated from Fig­ure 16. The other experment examined the impact of longer application 
+pathlength (i.e, more CPU processing per page) sml found that with low data contention, the difference 
+among the algorithms was negligible (as expected), However, in a higher contention case, the 02PL algorithms 
+outperformed the others. 5. CONCLUSIONS In this paper, we have examined the performance tradeoffs associated 
+with caching data on client workstations in a client­server DBMS architecture. We began by presenting 
+five lock­based cache consistency algorithms that arose by viewing the cache consistency problem as a 
+variant of the problem of repli­cated data management in a distributed DBMS. Two of the algo­rithms that 
+were presented always set locks at the server, while the other three are more optimistic in their approach 
+to locking. Among the latter group, one uses invalidation to maintain con­sistency in the face of updates, 
+another bases its approach on pro­pagation of updated values, and the third algorithm is a dynamic scheme 
+that attempts to combine both approaches. We used a detailed simulation model to study the performance 
+of these algo­rithms over a wide range of workloads and system configurations. The results of our performance 
+study indicate that caching can improve performance significantly for some workloads, although we also 
+studied workloads where the performance improvement due to caching was marginal or even nonexistent. 
+We found that the invalidation-based optimistic algorithm (02PL-1) performed quite well for many wor!-doads, 
+while its propagation-based coun­terpart (02PL-P) performed better in a workload designed to cap­ture 
+an information feed application. 02PL-P was also found to be rather workload-sensitive, however, and 
+had problems when scaled to large system configurations with some of the workloads that were investigated. 
+The dynamic algorithm (02PL-D) managed to track the performance of the better 02PL algorithm for each 
+workload studied, performing close to (but never quite as well as) the better of the static 02PL algorithms. 
+Lastly, the caching server-locking algorithm (C2PL) was generally outper­formed by the better of the 
+02PL algorithms, except in the case of a workload that had an extremely high level of data contention. 
+In addition to these algorithm-oriented results, our study has indi­cated the importance of using a detailed 
+model of buffering when investigating client-server cache consistency tradeoffs. ACKNOWLEDGEMENTS We 
+would like to thank David DeWitt for many lively dkcus­ sions regarding workload modeling and other aspects 
+of thk work. We also thank Rick Cattell of Sun and Dan Weinreb of Object Design for their input regarding 
+00DB workloads. REFERENCES ~A.rc~86 Archibald J., and Baq, J.-L., Cache Coherence Pro­: ~valuation I)smj 
+a IWdtdprocessor Simulation Model, ACM TOCS 4,4, NOV. 1 86. [Bel190] BeHew, M., Hsu, M., and Tam, V.-O., 
+U date Propa­gation in Distributed Memo Hierarchy, Proc. 6t /? Int 1. Con&#38; on Data Eng., Los Angeles, 
+?A, Feb. 1990. [Bern87] Bernstein, P., Hadzilacos, V., and GoodmatL N., Con­currency Control and Recovery 
+in Database Systems, Addison-Wesley, 1987. Bhid88] Bhide, A., and Stonebraker, M., An Anal Sk of Three 
+\ ransaction Processing Architectures, Proc. 14th J LDB Co@., 1988. Care89a] Care M., et u1, Storage 
+Mana ement for Ob ects $ L XODUS, in 8 bJect-&#38;lented Concepts, W. and F. Lochovsky, a *ases adA@ 
+-9. cations, Kim eds., Add=on-Wesley, 1 [Care89b] Carey, M. and Livny~ M., Conflict Detection Trade­offs 
+for Replicated Data , to appear ACM TODS. M J ef al Data Cachin Tradeoffs in Client­~?~~?~i~~~ctii;;~res 
+Cornp. Sci. &#38; #994, University of Wisconsin-Madiso~ January i991. Catt90a] Cattell, R., and Skeen 
+J., Engineering D@abase b enchmark, Tech. Rep., Database kng. Group, Sun Microsys­tems, April 1990. [Catt90b] 
+Cattell, R., personal communication, Nov. 1990. an90] Dan, A., Dias, D., rmd Yu, P., The Effect of Skewed 
+~taA~ess onBufferHits and Data Contention inaDataShar­rng Envuonmen~ Proc. 16th VLDB Conf., Aug. 1990. 
+~1))~90] Deux, O., et al, The Story of 02, IEEE TKDE Mar. [DeWi90] DeWitt, D., et al, A Study of Three 
+Alternative Workstation-Server Architectures for Ob ect-Oriented Database Systems, Proc. 16th VLDB Conf., 
+Aug. 1490. [Horn87] M. Hornick and S. Zdonik, A Shared, Se mented Memo S stem for an Object-Oriented 
+Database, AC M!roIs 5, 1, Jan.? 98f. [Howa88] Howard, J., et al, Scale and Performance in a Distri­ buted 
+File System, + ACM TOCS 6, 1, Feb. 1988. [Kim90] Km, W., et al, The Archhecture of the ORION Next- Generation 
+Database System, IEEE TKDE 2, 1, March 1990. Lazo86 Lazowska, E., et al, File Access Performance of bisk~essh 
+orkstations, ACM TOCS 4,3, Aug. 1986. Livn88] Livny, M., DeNet User s Guide, Version 1.0, Comp. L ci. 
+Dept., Univ. of Wisconsin, Madison, 1988. ~els88] Nelson, M., Welch, B., and Ousterhou~ J., Caching in 
+the Sprite Network File System, ACM TOCS 6, 1, Feb. 1988. [OD190 Object Design, Jnc., ObjectStore Technical 
+Overview, Aug. 19b0. Sargen4 R., Statistical Analysis of Simulation Output ~~~~~roc 4th Annual Symp. 
+on the Simulation of Computer Systems, 1976. Shek90] Shekita, E., and Zwillin M., Cricke~ A Ma ed k ersistent 
+Object Store, Proc. 4th ? ti 1. Workshop on Pers. !?bj. Sys., Martha s Vineyard, MA, Sept. 1990. [&#38;on79] 
+Stonebr &#38;er M., Con.urren. Control rmd Con­sistent of Multilple ~opies of Data in distributed INGRES, 
+IEEE ~rans. on Sojiiv. Eng. SE-5,3, May 1979. [Ston90a] Stonebraker, M., et al, Third-Generation Data 
+Base System Manifesto, SIGMOD Record 19,3, Sept. 1990. [Ston90b] Stonebraker, M., Architecture of Future 
+Database Systems, Data Eng. 13,4, Dec. 1990. [Wein90] Weinreb, D., personal communication, Nov. 1990. 
+[Wilk90] Wilkinson, W., and Neimat, M.-A., Maintainin ~u~­ :is~~y of Client Cached Data, Proc. 16th VLDB 
+Co d. [Yu871 Yu, P., et al, Analysis of Affinity Based Routing in Multi-System Data Sharing, Perf Evaluation 
+7,2, June 1987.  
+			

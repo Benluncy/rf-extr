@@ -1,0 +1,487 @@
+
+ Compiling Dynamic Mappings with Array Copies l?abien COELHO (coelho@cri .ensmp. fr) Centre de Recherche 
+en Informatique, Ecole des mines de Paris, 35, rue Saint-Honor6, F-77305 Fontainebleau cedex, FRANCE. 
+phone: (+3310) 164694852, fax: (+33[0) 164694709 URL: http: //www. cri .ensmp. fr/pips Abstract Array 
+remapping are useful to many applications on dis­ tributed memory parallel machines. They are available 
+in High Performance Fortran, a Fortran-baeed data-parallel language. This paper describes techniques 
+to handle dy­namic mappings through simple array copies: array remap­ping are translated into copies 
+between statically mapped distinct versions of the array. It discusses the language re­strictions required 
+to do so. The remapping graph which captures all remapping and liveness information is pre­sented, as 
+well as additional data-flow optimizations that can be performed on this graph, so as to avoid useless 
+remap­ping at run time. Such useless remapping appear for arrays that are not used after a remapping. 
+Live array copies are also kept to avoid other flow-dependent useless remapping. Finally the code generation 
+and runtime required by our scheme are discussed. These techniques are implemented in our prototype HPF 
+compiler. 1 introduction Array remapping, i. e, the ability to change array map­pings at runtime, are 
+definitely useful to applications and kernels such as ADI [16], linear algebra solvers [19], 2D FFT [10], 
+signal processing [17] or tensor computations [2] for ef­ficient execution on distributed memory parallel 
+computers. HPF [15, 12] provides explicit remapping through realign and redistribute direct ivea and 
+implicit ones at subroutine calls and returns for array arguments. This paper discusses compiler handling 
+of remapping and associated data flow optimization. 1.1 Motivation Remapping are costly at runtime because 
+they imply com­munication. Moreover, even well written HPF programs !hpf$ align uith B: : A !hpf$ distribute 
+B (block,*) ,.. !A is remapped !hpf$ realign A(i, j) with B(j, i) ! A is remapped again !hpf$ redistribute 
+B(cyclic, *) Figurel: Possible direct A remapping !hpf$ align with B:: C !hpf$ distribute B(block,*) 
+... ! C is remapped !hpf$ realign C(i,j) with B(j,i) ! C is remapped back to initial! !hpf$ redistribute 
+B(*,block) Figure2: useless c remappings !hpf$ align with T :: &#38; !hpf $ A,B,C,D,E !hpf$ distribute 
+T(block) ... ABCDE ... !hpf$ redistribute T(cyclic) ... AD... Figure3: Aligned array remappings may 
+require useless remapping. In Figure 1 the change of both alignment and distribution of A requires two 
+remap­pings while it could beremapped at once from (block,*) to (*, cyclic) rather than using the intermediate 
+(*, block) mapping. In Figure 2 both Cremappings are useless because the redistribution restores its 
+initial mapping. In Figure 3 template T redistribution enforces the remapping of all five aligned arrays, 
+although only two of them are used after­wards. In Figure 4 the consecutive calls to subroutine foo remap 
+the argument on entry in and on exit from the rou­tine, and both back and forth remappings could be avoided 
+between the two calls. Moreover, between calls tofoo and bla, array Y is remapped from (cyclic) to (block) 
+and then from (block) to (cyclic(2)) while a direct remap­ping would be possible, All these examples 
+do not arise frombadlywritten programs, butfrom anormaluseofHPF features. They demonstrate theneed forcompile-time 
+data flow optimizations toavoid remappingsat run time. 1.2 Related work Such optimizations to avoid useless 
+remapping commu­nications, especially interprocedural ones, have been dis­cussed [11, 18]. It is shown 
+[11] that the best approach to handle subroutine calls is that callers must comply to callee requirements. 
+We follow this approach. In contrast to these papers we rely on standard explicit interfaces to real 
+Y(1OOO) !hpf$ distribute Y(block) interface subroutine foo(X) real X(1OOO) !hpf$ distribute X(cycllc) 
+end subroutine subroutine bla(X) real X(1OOO) !hpf$ distribute X(cyclic(2)) end subroutine end interface 
+... Y ... call foo(Y) call foo(Y) call bla(Y) ,.. Y ... Figure 4: Useless argument remapping !hpf$ 
+template T1,T2 !hpf$ align with Ti :: A ... A if (.. ;j then !hpf$ realign with Tz :: A ... A ... endif 
+ !hpf$ redistribute T2 ... A ... Figure 5: Ambiguity of remapping provide the needed information about 
+caflees while enabling similar optimizations. We do not expect real applications to provide many remapping 
+optimization opportunities at the interprocedural level. Moreover requiring mandatory interprocedural 
+compilation is not in the spirit of the HPF specification. Also, the techniques presented in these papers 
+cannot be extended directl:q to HPF because HPF two-level mapping makes the reaching mapping problem 
+not as sim­ple as the reaching definition problem. Both the alignment and distribution problems must 
+be solved to extract actual mappings associated to arrays in the program. The Static Distribution Assignment 
+scheme [18] tohan­dle dynamic array references is very similar to our approach which uses distinct copies 
+for each array mapping. Both schemes have been developed concurrently. Such techniques require well behaved 
+programs: remappings should not ap­pear anywhere in the program, to avoid references with am­biguous 
+mappings as shown in Figure 5. We go a step further by suggesting [4] that the language should forbid 
+such cases. This is supported by our experience with real applications that require dynamic mappings: 
+ambiguous mappings are rather bugs to be reported. Our approach is unique from several points. First, 
+our optimizations are expressed on the remapping graph which captures all mapping and use information 
+for a routine. This graph can be seen as the dual of a contracted control-flow graph as noted in [18]. 
+The advantage is that our graph is much smaller than the usual control-flow graph. Second, read and write 
+uses of arrays are distinguished, enabling the detection of live copies that can be reused without commu­ 
+! hpf $ distribute A(block) ,.,. A ., if (.. .) then ! hpf $ redistribute A(cyclic) ... A .., endif 
+... ! no reference to A !hpf $ redistribute A(cyclic(lO)) ... A ... Figure 6: Other ambiguity of remapping 
+ nication in case of a remapping. Third, our runtime can handle arrays with an ambiguous mapping, provided 
+that it is not referenced in such a state. This requirement is weaker than the one for well behaved programs 
+[18, 11], since it enables cases such as Figure 6. 1.3 Outline This paper describes a practical approach 
+to handle HPF remapping. All issues are addressed: languages restrictions (or corrections) required for 
+this scheme to be applicable, ac­tual management of simple references in the code, data-flow optimitations, 
+down to the runtime system requirements, This technique is implemented in our HPF compiler [3]. First, 
+Section 2 presents the language restrictions, the handling of subroutine calls and our general approach 
+to compile remapping. Second, Section 3 focuses on the defi­nition and construction of the remapping 
+graph which cap­tures all necessary remapping and livenees information on a contracted control flow graph. 
+Third, Section 4 discusses data-flow optimizations performed on this small graph. These optimizations 
+remove all useless remapping and de­tect live or may-be-live copies to avoid further communica­tion. 
+Finally, Section 5 outlines runtime requirements im­plied by our technique, before concluding. 2 Overview 
+This paper focuses on compiling HPF remapping with array copies and on suggesting optimization techniques 
+to avoid useless remapping. The idea is to translate a program with dynamic mappings into a standard 
+HPF program with copies between differently mapped arrays, as outlined in Fig­ure 7: the redistribution 
+of array A is translated into a copy from Al to Az; the array references are updated to the ap­propriate 
+array version. 2.1 Language restrictions In order to do so, the compiler must know statically about mappings 
+associated to every array references. Thus the HPF language must be restricted to enable the minimum 
+static knowledge required to apply this scheme. Namely: 1. References with ambiguous mappings due to 
+the control-flow of the program are forbidden. Hence the compiler can figure out the mapping of ~ray 
+references and substitute the right copy. dynamic mappings hpf$ distribute A(cyclic) . . . A . . . 
+hpf$ redistribute A(block) . . . A . . . ! ! static mappings ! allocatable AI,A2 !hpf$ distribute Al(cyclic) 
+!hpf$ distribute Az(block) allocate Ai ... Al ... ! remapping allocate A2 As= Al deallocate Al ! done 
+... As ... Figure 7: Translation from dynamic to static mappings 2. Interfaces describing mappings of 
+arguments of called subroutines are mandatory. Thus all necessary infor­mation is avaiIable for the caller 
+to comply to the ar­gument mapping ofits callees. 3. l%mzscriutive marminm associated tosubroutineargu­ 
+ ..­ merits are forbidden. This feature can be replaced b~a more precise mapping descriptions [6], or 
+could be en­abled but would then require an interprocedural com­pilation such es cloning [18]. Condition 
+lisillustrated in Figure5: Array Amappingis modlfie dbytheredistribute ifthe realign was executed before 
+at r untime, otherwise A is aligned ~ith template Tl and get through Tz redistribution unchanged. However 
+there may be an ambiguity at a point in the program if the array is not referenced: in Figure 6afterthe 
+endif and before the final redistribution the compiler cannot know whether Array A isdistributed block 
+orc,yclic, but the mapping ambiguity is solved before my reference to A. With these language restrictions 
+the benefit of remap­ping is limited to software engineering issues since it is equivalent to a static 
+HPF program. It may also be ar­gued that expressiveness is lost by restricting the language. However 
+it must be noted that: (1) software engineering is an issue that deserves consideration; (2) the current 
+sta­tus of the language definition is to drop remapping as a whoIe (by moving them out of the core language 
+as sim­ple approved extensions [12]) because they are considered too difficult to handle; (3) we have 
+not encountered any real application so far that would benefit from the full ex­pressiveness of arbitrary 
+flow-dependent remapping. Thus it makes sense to keep the simple and interesting aspects of remapping. 
+Further powerful extensions can be delayed un­til applications need them and when compilation techniques 
+are proven practical and efficient. These language restrictions are also required to compile remapping 
+rather than to rely on generic library functions. Indeed, for compiling a remapping into a message passing 
+SPMD code [5] both source and target mappings must be implicit remapping interface subroutine CALLEE(A) 
+intent(in), real:: A(1OOO) hpf$ distribute A(block end subroutine end interface  real B(1OOO) !hpf 
+$ distribute B(cyclic) ::11 CALLEE(B) ... I ! explicit remapping I real B(1OOO) !hpf$ dynamic B !hpf$ 
+distribute B(cyclic) ... !hpf$ redistribute B(block) ! livenees: B is read call CALLEE(B) !hpf$ redistribute 
+B(cyclic) ... Figure8: Translation ofa subroutine call known. Then the compiler can take advantage of 
+all avail­able information to g~nerate efficient code. The implicit philosophy is that the compiler handles 
+most of the issues at compile time, with minimum left to run time. But the language must require the 
+user to provide the necessary in­formation tothe compiler. Ifnot, only runtime-oriented ap­preaches are 
+possible, reducing the implementor s choices, but also performances. 2.2 Subroutine arguments Subroutine 
+argument mappings will be handled as local remappings by the caller. This is possible ifthe caller knows 
+about the mapping required by callee dummy arguments, hence the above constraint to require interfaces 
+describ­ing argument mappings. The intent attribute (in, out or inout) provides additional information 
+about the effects of the call onto the array. It will be used to determine live copies over call sites 
+without interprocedural techniques. Subroutine calls are translated as explicit remapping in the caller 
+as suggested in Figure 8. Our scheme respects the intended semantics of HPF argument passing: the ar­gumentis 
+the only information the calleeobtainsfiom the caller. Thus explicit remapping of arguments within the 
+callee will only affect copies local to the subroutine. Un­der more advance calling conventions, it may 
+bethought of passing live copies along the required copy, so as to avoid further useless remapping within 
+the subroutine.  2.3 Discussion The current HPF specification includes features (inherit di­rective 
+for transcriptive mappings, possible ambiguous map­pings, etc.) that make the runtime approach mandatory, 
+at least for handling all cases. Another side-effect of op­tional interfaces, transcriptive mappings 
+and weak descrip­tive mappings is that the compiler must make the callee handle remapping as a default 
+case. But the callee has both less information and optimization opportunities [1I]. These features improve 
+expressiveness, but at the price of performance. Delaying to run time the array mapping handling of references 
+means delaying the actual address calculations and reduces compile time optimizations which are mandatory 
+to cache-ba~ed processors. Also compiling for an unknown mapping makes many communication optimiz~ tions 
+impractical. Expensive and more complex techniques can be used to generate good code when lacking information: 
+partial or full cloning of subroutines to be compiled with dif­ferent assumptions, that requires a full 
+interprocedural anal­ysis and compilation [18]. Another technique is run time partial evaluation that 
+dynamically generates an optimized code once enough information is available [7]. However even though 
+there are overheads and the runtime is complex. As HPF is expected to bring high performance, tran­scriptive 
+and ambiguous mappings seem useless. They re­strict the implementor choices and possible optimization. 
+Moreover no real-life application we have encountered so far require them to reach high performance levels. 
+3 Remapping graph GR This section defines and describes the construction of the remapping graph. This 
+graph is a subgraph of the control fiow graph which captures remapping information such as the source 
+and target copies for each remapping of an array and how the array is used afterwards, that is a liveness 
+in­formation. Subsequent optimizations will be expressed on this small graph. 3.1 Definition In the following 
+we will distinguish the abstract array and its possible instances with an associated mapping. Arrays 
+are denoted by capital typewriter letters as A. Mapped arrays are associated a subscript such as Az. 
+Differently subscripted arrays refer to differently mapped instances. The remapping graph is a very small 
+subgraph of the control flow graph. The vertices of the graph are the remap­ping statements whether explicit 
+or added to model implicit remapping at call sites. There is a subroutine entry point vertex vo and an 
+exit point u.. An edge denotes a pos­sibie path in the control flow graph with the same array remapped 
+at both vertices. The vertices are labeled with the remapped arrays. Each remapped array is associated 
+one leaving copy and reaching copies at this vertex. Arrays are also associated a conservative use-information: 
+Namely whether a given leaving copy may be not referenced (N), fully redefined before any use (D), only 
+read (R) or maybe modified (W). Figure 9 shows a label representation. Array A remap­ping links reaching 
+copies {1, 3} to the leaving mapping 2, the new copy being only read (R). The vertex is a remap­ping 
+for axray A. It maybe reached with copies Al and Aqand must be left with copy Az, As this copy will only 
+be read, the A{l,3}~2 Figure 9: Label representation compiler and runtime can decide to keep the reaching 
+copy values which are live, A shorthand is used in some figures when several arrays share the same reaching 
+and leaving mappings: All concerned arrays are specified as a prefix, and the use information over the 
+arrow is specified for each array, respectively. This provides a precise liveness information that will 
+be used by the runtime and other optimizations to avoid remap­ping by detecting and keeping live copies. 
+However it must be noted that this information is conservative, because ab­stracted at the high remapping 
+graph level. The collected information can differ from the actual runtime effects on the subroutine: 
+an array can be qualified as Wfrom a point and not be actually modified. The remapping graph definition 
+is more formally presented in Appendix A. 3.2 Construction The remapping graph described above holds 
+all the remap­ping and Iiveness information. The next issue is to build this graph. The construction 
+algorithm builds the remap­ping graph and updates the control graph to (1) switch array references to 
+the appropriate copy, distributed as expressed by the program, (2) reflect implicit remapping of array 
+ar­guments through explicit remapping and (3) check the con­ditions required for the correctness of our 
+scheme. Subroutine argument mappings are handled as local remapping by the caller. Implicit remapping 
+are trans­lated into explicit ones at call site in the caller. The actual array argument is copied if 
+needed into a copy mapped as the corresponding dummy mgument before the call, and may be copied back 
+on return. The intent attribute (in, out or inout ) provides information about the effects of the call 
+onto the wray and will be used to determine live copies. Within the subroutine compilation, three added 
+vertices (call v., en­try vo and exit v.) model the initial and final mappings for the dummy arguments 
+and local variables. Dummy argu­ments and local arrays are associated their initial mapping on exit from 
+vertex vO. v. and u. allow to attach dummy arguments the use information derived from the intent at­tribute 
+to model imported and exported values. Then the construction starts by propagating the initial mapping 
+copy of the array from the entry point of the sub­routine. The ~R construction algorithm pushes array 
+ver­sions along the control graph and extract a simpler graph to reflect the needed runtime copies to 
+comply to the in­tended semantics of the program. This construction can be described as a set of data-flow 
+problems detailed in Ap­pendix B. Mappings are propagated from the entry point and updated at remapping 
+statements. This can be de­composed into two dataflow problems, one for alignments and one for distributions. 
+However our implementation per­forms both propagation concurrently, focussing directly on array mappings. 
+The propagation tags array references with their associated mappings and performs some transforma­tions 
+to handle subroutine calls. Second, the use informa­tion is propagated backwards from references to remapping 
+statements. Finally the contracted graph is defined by prop­ subroutine remap(A ,m) parsmeter(n=1000) 
+C A~O intent (inout) :: A real, dimension(n, n): : A,B,C !hpf$ align with A: : B,C  o A{O)~O BC%O !hpf$ 
+distribute * A(block,*) . . . B written, A read if ( .B read) then 1 ABC (0)% 1 !hpf$ redistribute Acyclic,*) 
++1 J A p written, A B read else !hpf$ redistribute A(block, block) +2 ... p written, A read end if do 
+i=l, m+p !hpf$ redistribute A(block,*) +3 . . . C vritten, A read !hpf$ redistribute A(*, block) +4 
+. . A vritten, A C read enddo end subroutine remap +E Figure 10: Code example agating remapping statements 
+over the control graph. 3.3 Example Let us focus on the routine in Figure 10. It contains four remapping, 
+thus with the added call, entry and exit ver­tices there are seven vertices in the corresponding remapping 
+graph. There are three arrays, two of which are local. The sequential loop structure with two remapping 
+is typical of ADI. Figure 11 shows the resulting remapping graph. The Iiveness information is represented 
+above the arrow. The rationale for the 1 to E and 2to E edges is that the loop nest may have no iteration 
+at runtime, thus the remapping within the array may be skipped. Since all arrays are aligned together, 
+they are all aflected by the remapping statements. Four different versions of each array might be needed 
+with respect to the required different mapping. However, the live­ness analysis shows that some instances 
+are never referenced such as B3 and Cl. 4 Data flow optimization The remapping graph !-7~constructed 
+above abstracts all the Iiveness and remapping information extracted from the con­trol flow graph and 
+the required dynamic mapping specifica­tions. Following [11] we plan to exploit as much as possible this 
+information to remove useless remapping that can be detected at compile time, or even some that may occur 
+un­der particular run time conditions. These optimizations on GR are expressed as standard data flow 
+problems [14, 13, I]. 4.1 Removing useless remapping Leaving copies that are not live appear in GR with 
+the N (not used) label. It means that although some remapping on an array was required by the user, this 
+array is not referenced afterwards in its new mapping. Thus the copy update is not needed and can be 
+skipped. However, by doing so, the set of copies that may reach latter vertices is changed. Indeed, the 
+whole set of reaching mappings must be recomputed. 2 ABC {0)~ 2 3 ABC {1,2,3)~ O 4 ABC {0]= 3 E A {l,2,3)&#38; 
+O v Figure 11: Remapping graph for Figure 10 C A%O Q 2 A{O}~ 2 B{O)~ C ~ 3 A{l,2&#38;0 B{O,lfk C(3)&#38; 
+O 4 A{O)&#38; 3 B{O,lfk C{O)~ 3   E A {1,2,3)&#38;O Ii! Figure 12: Example after optimization It is 
+required to update this set because we plan a compila­tion of remapping, thus the compiler must know 
+all possible source and target mapping couples that may occur at run time. This recomputation is a may 
+forward standard data­flow problem. It is detailed in appendix C. First useless remapping are removed 
+(unused leaving mappings). Sec­ond reaching mappings are computed again from remaining leaving mappings. 
+This optimization is shown correct: All remapping that are useless are removed, and all those that may 
+be useful are kept. Thus it is optimal, provided that remapping remain in place. Figure 12 displays the 
+remapping graph of our example after optimization. From the graph it results that array A may be used 
+with all possible mappings {O, 1, 2, 3}, but array B is only used with {O, 1} and array C with {O, 3}. 
+Array C is not live but within the loop nest, thus its instantiation can be delayed, and may never occur 
+if the loop body is never executed. Array B is only used at the beginning of the program, hence all copies 
+can be deleted before the loop. !hpf$ distribute A(block) +0 A read if (. ..) then !hpf $ redistribute 
+A(cyclic) +1 . A written else !hpf$ redistribute A(cyclic(2)) + 2 . . A read endif !hpf$ redistribute 
+A(block) +3 . . . A read end Figure 13: Flow dependent live copy The generation of the code from this 
+graph is detailed in Section 5. 4.2 Dynamic live copies Through the remapping graph construction algorithm, 
+array references in the control graph ~C were updated to an array version with a statically known mapping. 
+The remapping graph holds the information necessary to organize the copies between these versions in 
+order to respect the intended se­mantics of the program The first idea is to allocate the leaving array 
+version when required, to perform the copy and to deallocate the reaching version afterwards. However, 
+some copies could be kept so as to avoid useless remapping when copying back to one of these copies if 
+the array was only read in between. The remapping graph holds the necessary information for such a technique. 
+Let us con­sider the example in Figure 13 and its corresponding remap­ping graph in Figure 14. Array 
+A is remapped differently in the branches of the condition. It may be only modified in the then branch. 
+Thus, depending on the execution path in the program, array copy AO may reach remapping state­ment 3 
+live or not. In order to catch such cases, the liveness management is delayed until run time: dead copies 
+will be deleted (or mark as dead) at the remapping statements. Keeping array copies so as to avoid remappings 
+is a nice but expensive optimization, because of the required mem­ory. Thus it would be interesting to 
+keep only copies that may be used latter on. In the example above it is useless to keep copies Al or 
+Az after remapping statement 3 because the array will never be remapped to one of these distribu­tion. 
+Determining at each vertex the set of copies that may be live and used latter on is a may backward standard 
+data flow problem: leaving copies must be propagated backward on paths where they are only read. This 
+is detailed in Ap­pendix D. 4.3 Other optimizations Further optimization can be thought of, as discussed 
+in [11]. Array kill analysis, for instance based on array regions [8, 9], tells whether the values of 
+an array are dead at a given point in the program. This semantical analysis can be used to avoid remapping 
+communication of values that will never be reused. Array regions can afso describe a subset of values 
+which are live, thus the remapping communication could be restricted to these values, reducing communication 
+costs further. However such compile-time advanced semantical analyses are not the common lot of commercial 
+compilers. Our prototype HPF compiler includes a kill directive for 0 A Lo   1 A{O)&#38; 1 2 A{ O}> 
+2  3 A{l,2&#38;0 $ Figure 14: Corresponding (JR interface subroutine f oo (X) !hpf $ distribute X(block) 
+end subroutine end interface !hpf$ distribute A(cyclic) .. A if (. ..) then !hpf $ redistribute A(cyclic(2)) 
+.,. A end if ! A is cyclic or cyclic(2) ! foo requires a remapping call foo(A) Figure 17: Subroutine 
+calls the user to provide this information. The directive creates a remapping vertex tagged D. Remapping 
+can be moved around in the control flow graph, especially out of loops. From the code in Figure 15 we 
+suggest to move the remapping as shown in Figure 16. This differs from [11]: the initial remapping is 
+not moved out of the loop, because if t < 1 this would induce a useless remapping. The remapping from 
+block to cyclic will only occur at the first iteration of the loop. At others, the run­time will notice 
+that the array is already mapped as required just by an inexpensive check of its status. 5 Runtime issues 
+The remapping graph information describing array versions reaching and leaving remapping vertices must 
+be embedded into the program through actual copies in order to fulfill the requirements. Some opt imizat 
+ions described in the previous sections rely on the runtime to be performed. 5.1 Runtime status Some 
+data structure must be managed at run time to store the needed information: namely, the current status 
+of the array (which array version is the current one and may be referenced) and the live copies. The 
+current status of an array can be kept in a descrip­tor holding the version number. By testing this status, 
+the runtime is able to notice which version of an array reaches a remapping statement, what may be flow-dependent. 
+This descriptor enables the handling of programs with ambiguous mappings provided that no actual reference 
+to such an array !hpf$ distribute A(block) .,. A do i=l, t !hpf$ redistribute A(cyclic) . . . A !hpf$ 
+redistribute A(block) enddo A Figure 15: Loop invariant remappings ! save the reaching status reaching(A)=status(A) 
+!hpf$ redistribute A(block) call foo(A) ! restore the reaching mapping if (reaching(A)=l) then !hpf $ 
+redistribute A(cyclic) elif (reaching(A) =2) then !hpf$ redistribute A(cyclic(2)) endif Figure 18: Mapping 
+restored is performed before a remapping. In order to test whether a version of a given array is live 
+at a point, a boolean in­formation to be attached to each array version. It will be updated at each remapping 
+vertex, depending of the latter use of the copies from this vertex. If interpreted strongly, Constraint 
+1 may imply that ar­rays as call arguments are considered as references and thus should not bare any 
+ambiguity, such as the one depicted in Figure 17. However, since an explicit remapping of the ar­ray 
+is inserted, the ambiguity is solved before the call, hence there is no need to forbid such cases. The 
+issue is to restore the appropriate reaching mapping on return from the call. This can be achieved by 
+saving the current status of the ar­ray that reached the call as suggested in Figure 18. Variable reaching(A) 
+holds the information. The saved status is then used to restore the initial mapping after the call. 
+5.2 Copy code generation The algorithm for generating the copy update code and live­ness information 
+management from the remapping graph is out lined in Figure 19. Copy allocation and deallocation are inserted 
+in the control flow graph to perform the required remapping, using the sets computed at the GR optimization 
+phase. The first loop inserts the runtime management initializa­tion at the entry point. All copies are 
+denoted as not live. No copy receives an a priori instantiation. The rationale for doirm so is to delav 
+this instantiation to the actual use of .. the array, that may occur with a different mapping or never, 
+as Array C in Figure 10. The second loop nest extracts from the remapping graph the required copy, for 
+all vertex and all remapped arrays, if there is some leaving mapping for this arrav at this Doint. CoDies 
+that were live before but that are not live any more are ~leaned, i.e. both freed and marked as dead. 
+Finally a full cleaning of local arrays is inserted at the exit vertex. Figure 20 shows a generated copy 
+code for the remapping vertex in Figure 9. It must be noted that dead arrays (D) do not require any !hpf$ 
+distribute A(block) A do i=l, t !hpf$ redistribute A(cyclic) .. A enddo !hpf$ redistribute A(block) . 
+. A Figure 16: Optimized version for A E S(VO) append to V. status(A)=l for a ~ C(A) append to live(A~)=false 
+vo end for end for for ~E V(~R) {?J.} for AES(v) if (LA(v) #l) then append to v if (status(A)# LI(v)) 
+then append to v allocate ALA(V)if needed append to v if (not live(AL, (V))) then if (UA(V) # D) then 
+for a E R,(zJ) {L.(v)} append to v if (status (A)=a) AL, (U)=A= 1( end for end if append to v live(AL,(V) 
+)=true append to v endif append to v etatus(A)=LA (v) append to v endif end if for a E C(A) M,(v) append 
+to v if (live (AO)) then append to v free A. if needed append to v live(Ao)=f alse append to v endif 
+ end for end for end for for all A for a EG(A) append to v. if (live(A. ) and needed) free A. end for 
+end for all Figure 19: Copy code generation algorithm if (status (A)#2) then allocate Az if needed if 
+(not live(A2)) then if (status (A)=l) A2=A1 if (status (A)=3) A2=A3 live(A2)=true  end if status(A)=2 
+endif Figure 20: Code for Figure 9 actual array copy, thus none is generated, avoiding commu­nication 
+at run time. Moreover, there is no initial map­ping imposed from entry in the subroutine. If an array 
+is remapped before any use, it will be instantiated at the first remapping statement encountered at runtime 
+with a non empty leaving copy. Finally, care must be taken not to free the array dummy argument copy 
+which belongs to the caller. Another benefit from this dynamic live mapping man­agement is that the runtime 
+can decide to free a live copy if not enough memory is available, and to change the corre­sponding liveness 
+status. If required latter on, the copy will be regenerated, i.e. both allocated and properly initialized 
+with communication. Since the generated code does not aa­sume that any live copy must reach a point in 
+the program, but rather decided at remapping statements what can be done, the code for the communication 
+will be available. Conclusion In this paper, we have shown a pratical approach to compile HPF dynamic 
+mappings. It consists of substituting dynamic arrays by static ones, and of inserting simple array copies 
+between these arrays when necessary. Implicit remapping at call site are translated into explicit ones 
+in the caller. We have discussed the language restrictions needed to apply this scheme, and argued that 
+no high performance application should miss the restricted features. We have also presented optimizations 
+enabled by our technique, to remove useless remapping and to detect live copies that can be reused with­out 
+communication. Finally runtime implications have been discussed. Most of the techniques described in 
+this paper are implemented in our prototype HPF compiler [3]. It is available from http: Ihruu. cri. 
+ensmp. frlpipslhpf c. html. The standard statically mapped HPF code generated is then compiled, with 
+a special code generation phase for handling remapping communication due to the explicit array copies. 
+Acknowledgment I am thankful to Corinne ANCOURT,B4atrice CREUSILLET, lhngois IIUGOIN,Pierre JOUVELOT 
+and to the anonymous referees for their helpful comments and suggestions. References [1] Alfred V. Aho, 
+Ravi Sethi, and Jeffrey D. Unman. Compilers Principles, Techniques, and Tools. Addison-Wesley Publishing 
+Company, 1986. [2] Jem-Yves Berthou and Laurent Colombet. Experi­ences in Data Parallel Programming on 
+Cray MPP mw chines. First High Performance Fortran (HPF) Users Group Conference, Santa Fe, NM, USA, February 
+1997. [3] Fabien Coelho. Contributions to ,High Performance Fortran Compilation. PhD thesis, Ecole des 
+mines de Paris, October 1996. [4] Fabien Coelho. Discussing HPF Design Issues. In Euro­Pur 96, Lyonj 
+Fkance, pages 1.571-1.578, August 1996. LNCS 1123. Also report EMP CRI A-284, Feb. 1996. [5] Fabien Coelho 
+and Corinne Ancourt. Optimal Com­pilation of HPF Remappings. ,lounal of Parallel and Distributed Computing, 
+38(2) :229-236, November 1996. Also TR EMP CRI A-277 (October 1995). [6] Fabien Coelho and Henry Z~ngaro. 
+ASSUMEdirective proposal. TR A 287, CRI, Ecole des mines de Paris, April 1996. [7] Charles Consel and 
+Franqois Noel. A General Approach for Run-Time Specialization and its Application to C. In Symposium 
+on Principles of Programming Language, pages 145-156, January 1996. [8] B6atrice Creusillet. A,rmy Region 
+Analyses and Appli­cations. PhD thesis, Ecole des mines de Paris, Decem­ber 1996. [9] B6atrice Creusillet 
+and Fran~ois Irigoin. Interprocedu­ral array region analyses. Int. J. of Pamllel Program­ming (special 
+issue on LCPC), 24(6):513-546, 1996. [10] S.K.S. Gupta, C.-H. Huang, and P. Sadayappan. Im­plementing 
+Fast Fourier lhnsforms on Distributed-Memory Multiprocessors using Data Redistributions. Parallel Processing 
+Letters, 4(4):477-488, December 1994. [11] Mary W. Hall, Seems Hiranandani, Ken Kennedy, and Chau-Wen 
+Tseng. Interprocedural Compilation of For­tran D for MIMD Distributed-Memory Machines. In Superwmputing, 
+pages 522-534, 1992. [12] HPF Forum. High Performance Fortmn Language Specification. Rice University, 
+Houston, Texas, Novem­ber 1996. version 2.0. [13] Ken Kennedy. A survey of data flow analysis tech­niques. 
+In S. Muchnick and N. Jones, editors, Progmm Flow Analysis: Theory and Applications, pages 5-54. Prentice-Hall, 
+Inc., Engelwood Cliffs, 1979. [14] Gary A. Kildall. A unified approach to global program optimization, 
+In Symposium on Principles of Program­ming Language, pages 194 206, 1973. [15] Charles Koelbel, David 
+Loveman, Robert Schreiber, Guy Steele, and Mary Zosel. The High Performance Fortmn Handbook. MIT Press, 
+Cambridge, MA, 1994. [16] Ulrich Kremer. Automatic Data Layout for Distributed Memory Machines. PhD thesis, 
+Rice University, Hous­ton, Texas, October 1995. Available as CRPC-TR95­559-s. [17] Peter G. Meisl, Mabo 
+R. Ito, and Ian G. Cumming. Parallel synthetic aperture radar processing on work­station networks. In 
+International Parallel Processing Symposium, pages 716-723, April 1996. [18] Daniel J. Palermo, Eugene 
+W. Hodges IV, and Prithvi­raj Banerjee. Interprocedural Array Redistribution Data-Flow Analysis. In Language 
+and Compilers for Pamllel Computing, pages aa.1-aa.15, August 1996. San Jos6, CA. [19] Loic Prylli and 
+Bernard Tourancheau. Efficient Block Cyclic Data Redistribution. In Euro-Par 96, Lyon, Fkance, pages 
+1.155-1.164, August 1996. LNCS 1123. Ahio INRIA RR 2766. !hpf $ distribute T(*,block) !hpf $ align A(i,j) 
+with T(i,j) if (.. .) then ! hpf $ realign A(i,j) with T[j,i) endif !hpf $ redistribute T(block,*) Figure 
+21: Several leaving mappings A Remapping Graph Definition If(7isagraphthen V(!7)is itssetofvertices 
+and&#38;(LO itsset of edges. Successors of a vertex are designated by SUCC(V) and predecessors bypred(v). 
+vertices v(~~): thevertices arethe remapping statements. They can be explicit (realign, redistribute) 
+or added in place of implicit remapping at call sites. There is a subroutine entry point vertex and an 
+exit vo point u.. edges&#38;(GR):each edge denotes a possible path in the con­trol flow graph with the 
+same array remapped at both vertices and not remapped in between. labels: intheremapping graph, each 
+vertex vismsociated S(v), thesetof remapped wrays. Foreach anay A c S(v) wehave some associated infor­mation 
+(depicted in Figure 9): LA(v): The (or none, noted J-) leaving array copy, i.e. the copy which must be 
+referenced after the remap­ping; note that HPF allows several leaving mappings as depicted in Figure 
+21: array A is remapped at the redistribute to (block,*) or (*, block) depending on the execution of 
+the realign. We assume that no such cases occur to simplify this presentation. Ill(v): the set ofreaching 
+copies for the Array A at Vertex v. In the general case with several leaving copies, distinct reaching 
+copy sets must be associated to each possible leaving copy. CIA(V): describes howtheleaving copy might 
+be used after­wards. It may be never referenced (N), fully redefined before anyuse(D), only read (R) 
+or modified(U). The use information qualifiers supersede one another in the given order, i.e. once a 
+qualifier is assigned it can only be updated to a stronger qualifier. The default value is Ii. This provides 
+a precise live information that will be used by the runtime and other optimizations to avoid remapping 
+by detecting and keeping live copies. How­ever it must be noted that this information is conserva­tive, 
+because abstracted at the high remapping graph level. The collected information can differ from the ac­tual 
+runtime effects on the subroutine: an array can be qualified as Wfrom a point and not be actually modi­fied. 
+ Each edge is labelled with the arrays that are remapped from at the sink vertex when coming from the 
+source vertex: A(v, v ). Note that ACA(v, u ) * AGS(v) and AES(v ) B Remapping Graph Construction Here 
+is a data flow formulation of the construction algo­rithm. First, let us define the sets that will be 
+computed by the datafiow algorithms in order to build L7R: REACHING(V): the set of arrays and wciated 
+mappings reaching vertex v; these arrays may be remapped at the vertex or left unchanged, thus going 
+through the vertex. LEAVING(V): the set of arrays and associated mappings leav­ing vertex v; one leaving 
+mapping per array is assumed for simplifying the presentation. REMAPPED(V): the set of arrays actually 
+remapped at vertex v. (note that if several leaving array mappings Me al­lowed, this information is associated 
+to array and map­ping couples instead of just considering arrays). EFFECTSOF(V): the proper effect on 
+distributed variables of vertex v, i.e. these variables and whether they axe never referenced, fully 
+redefined, partially defined or used. This basic information is assumed to be avail­able. EFFECTSAFTER(V): 
+the distributed variables and associated effects that may be encountered after v and before any remapping 
+of these variables. EFFECTSFROM(V): just the same, but including also the ef­fects of v. REMAPPEDAFTER(V): 
+the distributed variables and associ­ated remapping vertices that may be encountered di­rectly (without 
+intermediate remapping) after v. REMAPPEDFROM(V): just the same, but including also v. The following 
+function computes the leaving mapping from a reaching mapping at a given vertex: Aj = IMPACT(Ai,v): the 
+resulting mapping of A after v when reached by Ai. For all but remapping vertices Ai = IIj, i.e. the 
+mapping is not changed. Reahgnrnents of A or redistributions of the template Ai is aligned with may give 
+a new mapping. The impact of a call is null. ARRAY(Ai)=A: the function returns the array from one of 
+its copies. operator : means but those concerning, that is the opera­tor is not necessarily used with 
+sets of the same type. Now, here is the construction algorithm expressed as a set of data flow equations. 
+inout D outN u I Iw Figure 22: Array argument use E A%O o Figure 23: Initial ~R Input to the construction 
+algorithm . control flow graph ~C with entry vo and exit v. vertices 9 the set of remapping vertices 
+VR, which includes Vertex vo and Vertex v.. . the proper effects of vertices on distributed variables 
+EFFECTSOF(V) (the default for VR is no effects). . for any remapped array at a vertex, there is only 
+one possible leav~rig mapping. This assumption simplifies the presentation, but could be removed by associating 
+remapped information to array mappings instead of the array.  Updating L% (arguments) first let us 
+update &#38; to model the desired mapping of ar­guments. . Add call vertex v= and an edge from v= to 
+V. in ~c, Reaching and Leaving mappings They are computed starting from the entry point in the program. 
+Propagated mappings are modified by remapping statements as modeled by the IMPACTfunction, leading to 
+new array versions to be propagated along gc. This propa­gation is a may forward datafiow problem. init 
+ializat ion: . REACHING = 0 . LEAVING = @ . add all argument distributed variables and their asso­ciated 
+mappings to LEAVING and LEAVING.  . update EFFECTSOF(V=) and EFFECTSOF(W. ) as sug­gested in Figure 
+22: If values are imported the array is annotated as defined before the entry point. If values are exported, 
+it is annotated as used after exit. This models safely the caller context. The callee is assumed to comply 
+to the intended semantics. m o (A{i} ~ k) 1 0 call foo(Ak) 1 0 call foo(A) + v. O (A{k} + i) Figure 
+24: Call with a prescriptive inout-intended argument . add all local distributed variables and their 
+associated initial mapping to LEAVING. Figure 23 shows the initial remapping graph with an inout intended 
+array argument A and a local array L. propagation: . the array mappings reaching a vertex are those leaving 
+its predecessors. REACHING(V)= U LEAVING v Epred(v) . the array mappings leaving a vertex are updated 
+with the statement ~mpact on tie array mappings reaching this vertex. LEAVING(V)= LEAVING(V)U U IMPACT(a,V) 
+aEtiEAc1llNG(v) Updating references For all vertices v c V(~c) VR so that EFFECTSOF(V] on .. is not 
+N: . if[{m c LEAVING(V), ARRAY(~) = A}l > 1 then issues an error, because there is more than one mapping 
+for a given array . else substitute the references with the corresponding array copy. . note that there 
+may be none if some piece of code is dead. Remapped arrays They are directly extracted from REACHING; 
+they are those transformed by IMPACT. REMAPPED(V)= ARRAY(nz) u @@lEACHINC(V)rn#lMPACT( ~,V) Updating 
+GC (calls) . calls with distributed arguments are managed as shown in Figure 24: pred(~) = pred(v), succ(vt.) 
+= {v}, pred(v.) = {v}, SUCC(V.)= SUCC(V),pred(v) = {w}, SUCC(V)= {v.} REMAPPED = {A} . VR is updated 
+accordingly: VR= VR U {b, v,} Summarizing effects propagation: This phase summarizes the use information 
+after remap­ping statements, and up to any other remapping statement. Hence it captures what may be done 
+with the considered array copy. This phase is based on proper effects that are directly ex­tracted from 
+the source code for direct references, or through intent declarations in subroutine explicit interfaces. 
+De­pending on the intent attribute associated to a subroutine argument the corresponding effect is described 
+in Figure 25. intent I effect in R inout v out D Figure 25: Intent effect Remapping statements but w 
+and v. have no proper ef­fects: vv G VR {vc, v.}, EFFECTSOF(tI) = @ This is a may backwards dataflow 
+problem. initialization: no effects! . EFFECTSAFTER = !i I . EFFECTSFROM = o propagation: . the effects 
+leaving a vertex are those from its successors. EFFECTSAFTER(V) = U EFFECTSFROM(V ) V esucc(v) . the 
+effects from a vertex we those leaving the vertex and proper to the vertex, but remapped arrays.  EFFECTSFROM(V) 
+= (EFFECTSAFTER(V) U EFFECTSOF(U)) REMAPPED(V) Computing ~R edges As we expect few remapping to appear 
+within a typicaf subroutine, we designed the remapping graph over the con­trol graph with direct edges 
+that will be used to propa­gate remapping information and optimizations quickly. This phase propagates 
+for once remapping statements (array and vertex couples) so that each remapping statement will know its 
+possible successors for a given array. This is a may backwards dataflow problem. initialization: . REMAPPEDAFTER 
+= fl . initial mapping vertex couples are defined for remap­ping statement vertices and arrays remapped 
+at this very vertex.  REMAPPEDFROM(V) = {(%~)} u a6REMAPPED(v) . the remapping statements after a vertex 
+are those from its successors. REMAPPEDAFTER(V) = U REMAPPEDFROM(V ) V eaucc(v) . the remapping statements 
+from a vertex are UP­dated with-th~se after the vertex, but those actually remapped at the vertex. REMAPPEDFROM(V)= 
+REMAPPEDFROM(U)U (REMAPPEDAFTER(V)-REMAPPED(V)) Generating gR From these sets we can derive the remapping 
+graph: . VjZare GR vertic= . edges and labels are deduced from REMAPPEDAFTER . S(), R() and L() from 
+REMAPPED, REACHING and LEAVING . U() from EFFECTSAFTER Dkcussion All the computations are simple standard 
+data flow prob­lems, but the reaching and leaving mapping propagation. Indeed, the IMPACTfunction may 
+create new array map­pings to be propagated from the vertex. The worst case complexity of the propagation 
+and remapping graph algo­rithm described above can be computed. Let us denote n is the number of vertices 
+in ~C, s the maximum num­ber of predecessors or successors of a vertex in Gc, m the number of remapping 
+statements (including the entry and exit points), p the number of distributed arrays. With the simplifying 
+assumption that only one mapping may leave a remapping vertex, then the maximum number of mappings to 
+propagate is rnp. Each of these may have to be prop­agated through at most n vertices with a smp worst 
+case complexity for a basic implementation of the union opera­tions. Thus we can bound the worst case 
+complexity of the propagation to CJ(nsm2p2). C Removing useless remapping Leaving copies that are not 
+live appear in ~R with the N (not used) label. It means that although some remapping on an array was 
+required by the user, this array is not refer­enced afterwards. Thus the copy update is not needed and 
+can be skipped. However, by doing so, the set of copies that may reach latter vertices is changed. Indeed, 
+the whole set of reaching mappings must be recomputed. It is required to update this set because we plan 
+a compilation of remap­ping, thus the compiler must know all possible source and tuget mapping couples 
+that may occur at run time. This recomputation is a may forward stand=d data-flow prob­lem. Remove useless 
+remapping D Dynamic live copies Done simply by deleting the leaving mapping of such arrays. Vv E V(GR), 
+VA E .9(v), uA(v) = N * ~A(rJ) ~ Recompute reaching mappings initialization: use l-step reaching mappings 
+Vv E V(gR), VA ~ S(V), R,(V) = LA(v ) u +p~]vf~pred(v)A~A( /,v),U,( ~)#N Reaching mappings at a vertex 
+are initialized as the leaving mappings of its predecessors which are actually referenced. propagation: 
+optimizing function The function propagatea reaching mappings along paths on which the array is not referenced, 
+computing the transitive closure of mappings on those paths. The iterative resolution of the optimizing 
+function is increas­ing and bounded, thus it converges. Let us assume 0(1) basic set element operations 
+(put, get and membership). Let m be the number of vertices in ~R, p the number of distributed arrays, 
+q the maximum number of different mappings for an array and r the maxi­mum number of predecessors for 
+a vertex. Then the worst case time complexity of the optimization, for a simple iter­ative implementation, 
+is 0(m2pgr). Note that m, q and r are expected to be very small. Correctness and Optimality This optimization 
+is correct and the result is optimal: Theorem 1 The computed remapping (from new reach­ing to remaining 
+leaving) are those and only those that are needed (according to the static information provided by the 
+data j?OW graph): Vv E V(GR), VA c S(V), Ui(V), Va . RA(v), 3v and a path from v to v in ~R, so that 
+a E LL(v ) and A is not used on the path. Proof sketch: construction of the path by induction on the 
+solution of the data flow problem. Note that the path in ~R reflects an underlying path in the control 
+flow graph with no use and no remapping of the array. Keeping array copies so as to avoid remapping is 
+a nice but expensive optimization, because of the required memory. Thus it would be interesting to keep 
+only copies that maybe used latter on. In the example in Figure 13, it is useless to keep copies Al or 
+Az after remapping statement 3 because the array will never be remapped to one of these distribution. 
+Determining at each vertex the set of copies that may be live and used latter on is a may backward standard 
+data flow problem: leaving copies must be propagated backward on paths where they are only read. Let 
+MA(v) be the set of copies that may be live after v. initialization: directly useful mappings Vv c V(GR), 
+VA c S(V), MI(v) = LA(v) propagation: optimizing function MA(v) = MA(v) U MA(v ) u +pt]u @ucc(v)l GA(v,tJ 
+) Maybe useful copies are propagated backwards while the array is not modified (neither h nor D). Permission 
+to make digital/hard copy of part or all this work for personal or classroom use is granted without fee 
+provided that copies are not made or distributed for profit or commercial advan­tage, the copyright notice, 
+the title of the publication and its date aPPear, and notice is given that copying is by permission Of 
+ACM, Inc. To copy otherwise, to republish, to post on servers, or to redistribute to lists, requires 
+prior specific permission and/or a fee. PPoPP 97 Las Vegas, NV @ 1997 ACM 0-89791 -906 -819710006 . . 
+..$3.50    
+			

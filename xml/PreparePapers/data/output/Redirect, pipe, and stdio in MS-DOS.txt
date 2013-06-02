@@ -1,0 +1,152 @@
+
+ Redirect, Pipe, and stdio in MS-DOS Arthur Zachai Tenley Design, Inc. ABSTRACT This paper describes 
+the results of efforts to develop MS-DOS application programs which provide acceptable I/O redirection. 
+The characteristics considered "acceptable" are defined, and compared with results obtained from some 
+ compilers. Problems related to writing character I/O routines and their solutions are described. 
+i. Introduction This paper describes the development of character input and output routines for use 
+with MS-DOS to create "filter" programs. These routines have been used to write several very simple, 
+but very versatile and useful utility programs such as "repl", "grep", and "wc". Small programs like 
+these, widely used in non- MS-DOS environments, have proven to be useful in code development, text preparation, 
+and general system Support. While MS-DOS provides redirection and pipe capability, the compilers tested 
+were not capable of generating code which resulted in acceptable behavior of filter programs. 2. The 
+Copy Filter "cp" as a Test Program A filter to copy characters from stdin to stdout, "cp", was used 
+to explore the characteristics of the MS-DOS stdin and Permission to copy without fee all or part of 
+this material is granted provided that the copies are not made or disl ributed for direct commercial 
+advantage, t he ACM copyright noliee and Ihc lille of Ihe publlcalion and its date appear, and notice 
+is given Ihal copying is by permission of Ihe Association for Compming Machinery. To copy otherwise, 
+or Io republish, requires a fee and/or specific permission. &#38;#169; 1986 ACM 0-89791-211-4 / 86 / 
+1200-0249 75¢ stdout. The body of the "C" version of "cp" is: while ((c=getchar() != EOF) putchar(c); 
+ The behavior of this program, when compiled by four "C" compilers or MS-DOS, was considered unacceptable 
+for several reasons. A few examples of the resulting characteristics are listed below. -getchar echoes 
+the character, putting double characters on the screen and (in some cases) to the redirected output file, 
+ -getchar will not return until the "return" key is pressed, -getchar continues to read the last character 
+of a redirected file, never returning EOF, -putchar buffers characters passed until a newline character 
+is passed, -putchar('\t') places a funny character on the screen, -etc. Two of the compilers used 
+provided two different header files for use with programs performing I/O to "stdio". The compiler documentation 
+explains that one should be used for redirected I/O, and the other for console I/O. While this allows 
+redirection, it also requires recompilation. Redirected or console I/O, of course, should involve only 
+one version of a program. Similar disfunction was experienced with three Pascal compilers and a BASIC 
+compiler. The problems encountered with "cp" are related to the implementations of functions putchar 
+and getchar, and they will also cause similar problems with any other filters. These problems perpetrated 
+the investigation presented in this paper, which resulted in the development of replacements for these 
+routines. 3. flow We Would Like "cp" to Perform The first step in implementing getchar and putchar 
+is to list the desired performance of the routines. The getchar properties are summarized in the "desirable" 
+column of Table i. The properties can be grouped into two categories: Input from the console; and input 
+from a file when stdin is redirected. When reading from the console, getchar should always wait for 
+a keystroke, and return after one keystroke. If the key was a control-C, the calling process should be 
+terminated. The end-of-file condition that returns a value of -i must be supported, and is assigned to 
+the control-Z key. The key should not be echoed. When reading from a file, getchar may buffer the file, 
+but still return one character each time it is called. The end-of-file value of -i should be returned 
+if, and only if, the physical end of the file has been reached. Subsequent calls following an end-of-file 
+condition should return the end-of-file value without side effects. A control-C keyboard entry should 
+terminate the calling process to allow the user to exit from error conditions such as endless loops, 
+incorrect file specifications, or other interactive reactions. No character found in a file should terminate 
+the calling process. Characters read from the file should not be echoed. When writing to a file, putchar 
+should output the passed character without regard to its meaning. When writing to the screen, putchar 
+should expand the tab character to spaces to the next tab stop, and move the cursor one column to.Ithe 
+left for the backspace character. The putchar function should also respond to the keyboard entry of 
+control-C by terminating the calling process. This requirement may seem out of place in putchar, but 
+MS-DOS provides no keyboard support to a process environment other than that coded within the process 
+ itself. For example, in a "clean" MS-DOS environment, the "C" program fragment: while(l); can be 
+terminated by the user only by a power-down of the machine. Thus, taking advantage of any call to DOS 
+to check for a user requested termination is considered prudent. 4. DOS Functions Available for use 
+as "getchar" The DOS function calls which return a character from stdin were evaluated with respect 
+to the criterion discussed above. The desired result is shown in the first column of Table i, along with 
+the results of each DOS function call. (In MS-DOS, a system call is made by placing the DOS function 
+number in the AH register, parameters in various other registers, and executing an INT 21H instruction.) 
+There is no match between the desired performance and any of the DOS functions, although if 3F is used 
+for reading files, and 08 is used for reading the keyboard, the desirable performance will be achieved. 
+ 5. Using IOCTL to Determine the Redirect Condition Since getchar must use different DOS calls depending 
+on whether or not stdin has been redirected, getchar must determine if stdin has been redirected prior 
+to actually getting the next character. This is accomplished using the DOS function 44H, the IOCTL call. 
+The IOCTL function can return information about a "channel", including whether it is a file or a device. 
+Since stdin is defined as channel zero, a call to IOCTL for channel zero will indicate that it is a file 
+if stdin has been redirected, and a device otherwise. A global file/device flag is used, initialized 
+by the application load, such that getchar normally calls IOCTL only once in the life of an application. 
+After the first call to getchar made by an application, getchar will only check the file/device flag 
+to determine which DOS function to use. (If the application modifies the redirect condition, it must 
+also clear the getchar file/device flag.) 6. Adding a Buffer for Speed If getchar determines that stdin 
+has been redirected, the next character returned will be the next character in the file, and should not 
+depend on the last character passed to stdout as in an interactive session. (This assumption may not 
+be totally valid, as one may choose to write an application which creates it's own input stream.) Although 
+DOS provides a buffer for files, adding a local buffer to getchar results in a significant increase in 
+speed when reading from files, just from the reduced overhead of the DOS call for each character. 7. 
+Returning "Function" Keys The PC keyboard, as well as the DOS functions in Table i, are capable of returning 
+all of the 256 possible "characters" codes. Most of the keys are mapped to their ASCII codes, but a few 
+are mapped to a two-byte sequence. Examples of single keys that return two bytes are the ten function 
+keys and the cursor keys. The keys and key sequences which are not assigned an 8-bit code, return a byte 
+value of zero, indicating that the second byte of the two byte sequence must be read. The second byte 
+is a "scan code", which is also an 8-bit code. The DOS application program is responsible for performing 
+a second call to the DOS function to obtain the 8-bit scan code if the first call returned a zero. To 
+allow getchar to obtain a single value for a single keystroke or key chord, we may take advantage of 
+the definition of getchar being an integer returning function. The most common use of the integer definition 
+is to allow the end- of-file condition to be a unique code, having the integer value of -i. This implementation 
+of getchar returns integers greater than 255 for "keys" which have no 8-bit code assigned. The value 
+returned by getchar is the scan code as the eight most significant bits, with the low eight bits set 
+to zero. The getchar function makes the second DOS call if necessary, transparent to the caller. programmer 
+must be aware of is that characters accepted by the "C" code fragment: while((c=getchar()) != '\n') 
+; will include the first character of the 0xD, 0xA pair. This has not proven to be a problem, although 
+there is a hidden danger: The characters accepted above may be printed, followed by printing the single 
+'\n' character, and appear to operate as though the '\n' convention were being used. The 0DH would have 
+been included in the string of accepted characters, with the 0AH added by printing '\n' Pseudo Code 
+for getchar: static file or device = 0; buffer[n]; getchar() IF NOT file or device THEN file or device 
+= ioctl() ENDIF IF file or device = file THEN IF buffer empty read into buffer using 3F ENDIF IF buffer 
+empty THEN return -i ELSE return next character in buffer ELSE wait for keyboard character using 08 
+IF character = 0xlA THEN return -i ELSE IF character NOT zero THEN return (int)character ELSE wait 
+for keyboard character using 08 return character * 255 ENDIF 8. The '\n' Problem, and a Compromise 
+Solution In the PC/MS-DOS environment, a new line is represented as the 0xD, 0xA character pair (carriage 
+return, line feed). If getchar and putchar are to be replaced, it would be convenient to adopt the convention 
+of the single character 0xA as the new!ine. The convenience is significant in the case of "C" statements 
+ such as: printf("\nHello"); but would result in text file incompatibility with most other MS-DOS 
+products. By accepting the two character convention, the only problem the 9. DOS Functions Available 
+for use as putchar There are only three MS-DOS functions for character output to stdout: 02, 06, and 
+ 40H. In terms of the desirable characteristics of putchar, they are much better behaved than the input 
+functions, and function 40}{ meets all the criterion. i0. Add a Buffer and Flush it on "spawn()" or 
+"exit()" Since function 40H is used for both file and console output by putchar, it would seem that 
+putchar need not determine the redirect condition as getchar did. To increase the speed of putchar, however, 
+ 251 adding a buffer requires the redirect check. The buffer can be used only if the output has been 
+redirected, when the user need not (or cannot) see the result of each call to putchar. A flush() routine 
+must be provided to support the use of a buffered putchar, since a program may terminate while there 
+are still characters in the buffer. In order to maintain application code compatibility with non-MS-DOS 
+systems, the call to flush() should be added to the compiler supplied exit() and spawn() routines. Since 
+the exit() routine is easier to implement than spawn(), and very simple filter programs can be implemented 
+without spawn(), only the exit() has been implemented. The details are not presented here. Pseudo-code 
+for putchar: static file or device = 0; buffer[n] ; putchar(char) IF NOT file or device THEN file 
+or device = ioctl() ENDIF IF file or device = file THEN store char in buffer IF buffer NOT full THEN 
+ return ELSE output buffer contents using 40H ENDIF ELSE output char using 40H ENDIF return. 
+flush() output buffer contents using 40H return II. Attempts to Add the New Functions to DOS The getchar 
+and putchar routines are often used in very small programs. The cp program executable file, for example, 
+is 600 bytes in length, of which 350 bytes is putchar and getchar. If these routines could be added to 
+DOS, each application program could be reduced in size by 350 bytes. Three methods of providing these 
+routines as system functions have been considered: -Writing a DOS Device Driver, -Replacing interrupt 
+vectors, and -Adding a new interrupt. The first method provides a DOS compatible mechanism for adding 
+code to the system. Unfortunately, the entry point to any DOS Device Driver which operates on single 
+characters is by device name. Since writing the "C" statement: c = getchar("stdin"); is considered 
+unacceptable for compatibility reasons, this method has been rejected. The second method involves adding 
+code to the system to replace the intenrupts which would have been called by compiler generated code 
+for getchar() and putchar(). The Device Driver technique can be used to install the code, but would not 
+support any "named" device. The danger involved in this method is that the implementation provided by 
+the compiler may not be known, hence replacing interrupts cannot guarantee compatibility with the compiler. 
+ The third method would install the code as in the second method and assign new interrupt vectors as 
+the entry points to getchar and putchar. Each compiler would then need a getchar and putchar library 
+routine to invoke the resident getchar and putchar. The calling routines must be coded in assembly language, 
+but are quite simple. For example: TEXT SEGMENT BYTE PUBLIC 'CODE' ~UBLIC GETCHAR GETCHAR PROC NEAR 
+ INT 55H ;NEW GETCHAR ENTRY RET GETCHAR ENDP --TEXT ENDS END is all that is required for one popular 
+MS-DOS "C" compiler. The danger with this method lies in the "open architecture" of the MS-DOS environment. 
+It is so open that there is no convention for assigning or choosing interrupt vectors. This flexibility 
+feature of the Intel processor has been largely ignored by third party vendors since the potential for 
+conflict is considered too great. 12. Conclusion The following list of filters have been implemented 
+using the new getchar and putehar routines described. repl hex field grep b2ihex ihex2b entab detab 
+tee wc send Although a DOS compatible method of 252 providing getchar and putchar as system calls 
+remains illusive, the programs are small enough so that the overhead of including the routines in each 
+program is not a significant problem. The addition of a few small tools to the MS-DOS environment has, 
+for the author, resulted in an acceptable alternative to an operating system costing nearly ten times 
+more than MS-DOS. Table i. Character Input Function Characteristics DOS Function Number Desired 01 
+06 07 08 3F Return when one character Y Y Y Y Y Y is struck on KBD Waits for CR on KBD n n n n n y 
+ Program abort on CTRL-Z (\xlA) from KBD n(5) n n n n n(4) from file n n n n n n(4) Program abort on 
+CTRL-C (\0x3) from KBD y y n n y y from file n y n n y n Program abort on CTRL-C from KBD when redirected 
+y y n n y y Echo the character from KBD n y n n n y from file n y n n n n Flag indicates past EOF when 
+redirected y(5) n(1) y(2) n(1) n(1) y(3) No te s : I. Waits for character forever. 2. Returns character 
+not ready flag.  3. Returns count and error flag.  4. Can be YES if IOCTL used to set ASCII mode. 
+ 5. Returns (integer) -I if past EOF or CTRL-Z from KBD.  
+			

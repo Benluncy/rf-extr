@@ -1,0 +1,498 @@
+
+ Fine-Grain Multithreading with the EM-X Multiprocessor Andrew Sohn 1, Yuetsu Kodama2, Jui Kul, Mitsuhisa 
+Sato3, Hirofumi Sakane2 Hayato Yamana2, Shuichi Sakai2, Yoshinori Yamaguchi2 Abstract -Multithreading 
+aims to tolerate latency by overlapping communication with computation. This report explicates the multi­threading 
+capabilities of the EM-X distributed-memory multiprocessor through empirical studies. The EM-X provides 
+hard­ware supports for fine-grain multithreading, including a by-passing mechanism for direct remote 
+reads and writes, hardware FIFO thread scheduling, and dedicated instructions for generating fixed­sized 
+communication packets. Bitonic sorting and Fast Fourier Transform are selected for experiments. Parameters 
+that character­ize the performance of multi threading are investigated, including the number of threads, 
+the number of thread switches, the run length, and the number of remote reads. Experimental results indicate 
+that the best communication performance occurs when the number of threads is two to four. FIW yielded 
+over 95% overlapping due to a large amount of computation and communication parallelism across threads. 
+Even in the absence of thread computation parallelism, mul­tithreading helps overlap over 3570 of the 
+communication time for bitonic sorting. 1 Introduction In a distributed-memory machine, data needs to 
+be distributed so there is no overlapping or copying of major data. Typical distribut­ed-memory machines 
+incur much latency, ranging approximately from a few to tens of micro seconds for a single remote read 
+opera­tion {2,20]. The gap between processor cycle and remote memory access time becomes wider, as the 
+processor technology improves and rigorously exploits instruction level parallelism. IBM SP-2 in­curs 
+approximately 40 ysec to read data allocated to remote processors [2,24]. Considering that the microprocessors 
+are running at over 66.5 MHz (15 nano sec cycle time) for the SP-2 590 model, the loss due to a remote 
+read operation is enormous; A single remote read operation would cost 40 ~sec/15 nsec, or 2667 cycles. 
+Various approaches have been developed to reduce/hideAolerate communication time, as well as to study 
+communication behavior for general purpose parallel computing [8]. Data partitioning in HPF is a typical 
+method to reduce communication overhead [10]. While data distribution can be carefully designed to minimize 
+the number of remote reads for the given problem, this approach is effective for specific applications 
+where data partitioning can be well tuned. Ap­plications such as computational fluid dynamics change 
+their I Computer and Information Science Dept., New Jersey Institute of Technology, Newark, NJ 07102; 
+sohn@cis.njit.edu 2 Computer Architecture Section, Electrotechnical Laboratory, Tsukuba-shi, Ibaraki 
+305, Japan; kodama@etl.go.jp 3 Real World Computing Tsukuba Research Center, Tsukuba, Ibar­aki 305, Japan; 
+msato t@trc.rwcp.or.jp }kmission to make dig,ilalihard copies 01 ;III or pwl ol lhis makl-iai Ihr personal 
+or clmsroom uw is gmIlltd l!ilhou[ Ibc provided II1;II lilt cL)pIcs are 1101made or dis[rihukd Ibr prolit 
+of cwnmcrci; ll adv:u]l:Igt. lhc copy­right nolict, the title ol lhe ptll~l!c:llion ;IIxi IIS date ;Ippmr. 
+d DOIICC IS giveu Iha[ copyright is by pcnllissmll ol llw l~hl. inc. 1 0 copy olhcrlvisd. 10 republish, 
+10posl 00 servers or 10 rcdislrilmle 10 lists. rcquirts specilit permission andk k SPAA 97 NewpoI1. Khode 
+Isku]cl( ISA Copyright 1997 ACM [J-8979I-890-8~97t{J6..$3.50 computational behavior at runtime. The initial 
+data distribution is of­ten found invalid and inefficient after some computations. Multithreading aims 
+at tolerating memosy latency using context switch. Through a split-phase read transaction, a processor 
+switches to another thread instead of waiting for the requested data to arrive, thereby masking the detrimental 
+effect of latency [14]. The Hetero­geneous Element Processor (HEP) designed by Burton Smith provides 
+up to 128 threads [21], A thread switch occurs in every in­struction with 100 nsec switching cost. Threads 
+are usually ended by remote read instructions since those may incur long latencies if the requested data 
+is located in a remote processor [14]. The Monsoon data-flow machine developed at MIT switches context 
+every in­struction, where a thread consists of a single instruction [15], The EM-4 multiprocessor, the 
+predecessor of EM-X, provides hardware support for multithreading [17,18,19]. Thread switch takes place 
+whenever a remote read is encountered. Threads can also be suspended with explicit thread scheduling. 
+The Alewife multi­processor provides a hardware support for multithreading [1]. Together with prefetching, 
+block multithreading with four hardware contexts has been shown to be effective in tolerating the latency 
+caused on cache misses for shared-memory applications such as MP3D, The Tera multithreaded architecture 
+(MTA) provides hard­ware support for multi threading [3]. The maximum of 128 threads are provided per 
+processor. Context switch takes place whenever a remote load or synchronizing load is encountered. An 
+anafytic model for multithreading is studied in [16]. The study indicated that the performance of multithreading 
+can be classified into three regions: linear, transition, and saturation. The perfor­mance of multi threading 
+is proportional to the number of threads in the linear region while it depends only on the remote reference 
+rate and switch cost in the saturation region. The Threaded Abstract Ma­chine studied by Culler et al. 
+exploits parallelism across multiple threads [7]. Fine-grain threads share registers to exploit fine-grain 
+parallelism using implicit switching. Simulation results on the effectiveness of multiple hardware con­texts 
+indicated that multithreading is effective for programs which are optimized for data locality by programmers 
+or compilers [25]. Some experimental results on EM-4, however, indicated that sim­ple-minded data distribution 
+can give performance comparable to that of the best performing algorithms with hand-crafted data distri­bution 
+but no threading [23]. The Cilk Project builds a software­basexl distributed shared memory programming 
+environment using a multithreaded runtime system [5]. Threads specified in the high­level language Cilk 
+are automatically scheduled by the runtime sys­tem and execute in a machine-independent multithreaded 
+fashion. This paper investigates the performance of multithreading with the EM-X multiprocessor. Critical 
+parameters in multithreading are investigated, including the number of threads, the run length, the number 
+of remote reads, and the number of switches. The interplay between the parameters is explained with experimental 
+results. Bi­tonic sorting and Fast Fourier Transform are selected and their multithreaded algorithms 
+are developed. Data and workload distri­bution strategies are developed to explicate their performance, 
+The ultimate goal of multithreading is to tolerate communication time, In this respect, the experiments 
+are carried out to identify how multi­threading helps overlap communication with computation. 2 Multithreading 
+Principles and Its Realization 2.1 The principle A thread is a set of instructions which are executed 
+in sequence. A multithreaded execution model exploits parallelism across threads to improve the performance 
+of multiprocessors [9,11]. Threads are usually deIimited by remote reads which may incur long latency 
+if the requested data is located in a remote processor. Through a split­phase read mechanism, a processor 
+switches to another thread in­stead of waiting for the requested data to arrive, thereby masking the 
+detrimental effect of latency. Figure 1 illustrates the basic principle. Processor O, Po, has three threads, 
+TO, T1 ,and T2, ready to exe­cute in the queue. F . indicates that TO is currently being executed which 
+is indicated by a thick dark line. P. starts executing the first thread, TO. As TO is executed, a remote 
+read operation is reached, denoted by a dotted line. The processor switches to T1 while the re­mote memory 
+read request RRO is pending. The processor again switches to T2 when artother remote memory read occurs 
+in T1. Af­ter T2 completes, TO can resume its execution assuming the requested data has arrived. The 
+parameters which characterize the performance of multi­threading include: (1) the number of threads per 
+processor, (2) the number of remote reads per thread, and (3) the number of instruc­tions in a thread, 
+or thread granularity, (4) context switch cost, (5) remote read latency, and (6) remote read servicing 
+mechanism. The number of active threads determines the amount of parallelism and is often bound by hardware. 
+The number of remote read operations determine the frequency of thread switching. Thread granularity 
+is determined by the number of instructions per thread. While there is no clear agreement on thread granularity, 
+fine-grain threading typi­cally refers to a thread of a few to tens of instructions while coarse­grain 
+threading refers to thousands of instructions per thread. Two types of context switch are possible: explicit 
+switching and implicit switching. Explicit switching uses a thread per activation frame whiIe implicit 
+switching uses multiple threads per activation frame. Explicit switching does not require register sharing 
+while im­plicit switching does since multiple threads may simultaneously exist in an activation frame. 
+EM-X supports explicit switching. Are­mote read operation causes the suspension of a thread and in turn 
+context switches if there is any. This thread switching requires sav­ing registers to memory as no register 
+sharing across threads is allowed. The remote read servicing mechanism can be an important factor. While 
+some machines such as SP-2 and AP1 000+ service re­mote read requests concurrently with program execution, 
+the EM-4 P* P, Pp.l which is the predecessor of EM-X, treats a remote read as another 1­instruction 
+thread which consumes processor cycles. This consump­tion adversely affects the performance, Details 
+are presented in [18], 2.2 The EM-X multithreaded multiprocessor The EM-X is a multithreaded distributed 
+memory multiprocessor, built and operational at the Electrotechnical Laboratory since De­cember 1995 
+[12, 13]. Two types of computational principles are employed in designing the multiprocessor. The upper 
+level uses the data-flow principles of execution for executing multiple threads si­mtdtaneously. The 
+low level employs the conventional RISC-style execution to exploit program locality. The current prototype 
+of EM-X has 80 EMC-Y processors, connected through a circular Omega network. Figure 2 shows an overview 
+of the prototype EM-X multi­processor. The network is the same as Omega network, except that each processor 
+is attached to a switch box, Communication in the EM-X is done with 2-word fixed-sized packets. A processing 
+element is a single chip pipelined RISC-style pro­cessor, called EMC-Y, designed for fine-grain parallel 
+computing. Each processor runs at 20 MHz with 4 MB of one-level static mem­ory. The EMC-Y pipeline is 
+designed to combine register-based RISC execution with packet-based dataflow execution for synchro­nization 
+and message handling support. The processor consists of Switching Unit (SU), Input Buffer Unit (IBU), 
+Matching Unit (MU), Execution Unit (EXU), Output Buffer Unit (OBU) and Memory Control Unit (MCU). The 
+Switch Unit sendslreceives packets to/from the network. It consists of three types of components: two 
+input ports, two output ports and a three-by-three cross-bar switch. Each port can transfer a packet, 
+which consists of a word of address part and a word of data part, at every second cycle. A packet can 
+be transferred ink+ 1 cycles to the processor k hops beyond by a virtual-cut-through routing, The message 
+non-overtaking rule is enforced by this unit. o0 1 1 22 33 44 ro T1 T2 $ 13 30 3 31   -t;;-,--,55 
+RR1 Q: . DO* + 1 wordlclock tCs / -----. E I 2 words/clock ~ active ~ inactive Figure 1: Multithreading 
+on P processors. tc, = context switch time, [m= remote read time, RR= remote read. Figure 2: The 80-processor 
+EM-X multiprocessor The Input Buffer Unit receives packets from the switch unit. It has two levels of 
+priority packet buffers for flexible thread scheduling. Each buffer is an on-chip FIFO, which can holdup 
+to 8 packets. If the buffer becomes full, the packets are stored to on-memory buffer, and if not, they 
+are automatically restored back to on-chip FIFO. The IBU operates independent of the EXU and the memory 
+unit. Packets coming in from the network are immediately processed without in­terrupting the main processor. 
+The path between IBU and MCU, called by-passing direct memory access, is one of the key features of EM-X. 
+This by-passing DMA together with the path which connects IBU to OBU is the key to servicing remote readwrite 
+requests with­out consuming the cycles of Execution Unit. The Matching Unit (MU) fetches the first packet 
+in the IBU FIFO. If the packet requires matching, a sequence of actions will take place to prepare for 
+thread invocation by direct matching. Actions include (1) obtaining the base address of the activation 
+frame for the thread to be invoked, (2) loading mate data from matching memory, (3) fetching the top 
+address of the template segment, (4) fetching the first instruction of the enabled thread, and (5) signafing 
+the execu­tion unit to execute the first instruction. Packets are sent out through the OBU which separates 
+the EXU from the network. The MCU controls the access to the local memory off the EMC-Y chip. The Execution 
+Unit is a register-based RISC pipefine which exe­cutes a thread of sequential instructions. It has 32 
+registers, including five speciaf purpose registers. All integer instructions take one clock cycle, with 
+the exception of an instruction which exchang­es the content of a register with the content of memory. 
+Single precision floating point instructions are. also executed in one clock, except floating point division. 
+Packet generation is afso performed by this unit, which takes one clock. Four types of send instructions 
+are implemented, including remote read request for one data and for a block of data. The Output Buffer 
+Unit receives packets generated by the EXU or IBU. Again, the buffer can holdup to 8 packets. As we have 
+briefly described above, the key feature of the OBU is to process packets generated by IBU. Remote read 
+requests received by other proces­sors are processed by the IBU which uses the by-pass DMA to read data 
+from the memory. When the data fetched by the IBU is given to OBU, it will be immediately sent out to 
+the destination address spec­ified in the read request packet. This internal working of IBU and OBU is 
+the key feature of EM-X for fast remote read/writes without consuming the main processor cycles. 2.3 
+Architectural support for fine-grain mukithreading The EM-X distributed-memory multiprocessor supports 
+multi­threading both in hardware and software. Hardware supports include thread invocation through packets, 
+FIFO hardware scheduling of threads, and by-passing one-sided remote read/write. Software sup­ports for 
+multithreading include explicit context switch, globrd­address space, and register saving. Thread invocation 
+or function spawning is done through 2-word-sized packets. When a thread needs to invoke a function (t 
+bread), a packet containing the starting address of the thread is generated and sent to the destination 
+proces­sor. The thread which just issued the packet continues the computation without any interruption 
+unless it encounters a remote read or explicit thread switching. As the thread invocation packet arrives 
+at the destination proces­sor, it will be buffered in the packet queue along with other packets arrived. 
+Packets stored in the packet queue are read in the order in which they were received, hence First-br-First-Out 
+(FIFO) thread scheduling. A thread of instructions is in turn invoked by using the address pontion of 
+the packet just dequeued. The thread will run to completion unless it encounters any remote memory operations 
+or explicit thread switching. If the thread encounters a remote memory operation, it will be suspended 
+after the remote read request is sent out. Should this suspension occur, any register values currently 
+be­ing used for the thread will be saved in the activation frame associated with the thread for resumption 
+upon the return of the out­standing remote memory operation. The completion or suspension of a thread 
+causes the next packet to be automatically dequeued from the packet queue using FIFO scheduling. Whenever 
+a thread encounters a remote read, a packet consisting of two 32-bit words is generated. The first 32-bit 
+word contains the destination address whereas the second 32-bit contains the return ad­dress which is 
+often called continuation. The read packet will be appropriately routed to tbe destination processor, 
+where it will be stored in the input buffer unit for processing. The remote processor does not intervene 
+to process the packet. The remote read packet will be processed through the by-passing mechanism which 
+was ex­plained earlier. When the read packet returns to the originating processor, it will be inserted 
+in the hardware FIFO queue for pro­cessing, i.e., thread resumption. Remote writes do not suspend the 
+issuing threads. For each remote write, a packet is generated which consists of two 32-bit words. The 
+first word is the destination mem­ory address and the second the data to be written. The write instruction 
+is treated the same as other normal instructions, After sending out the write packet, the thread continues. 
+Software supports for multithreading include explicit context switch, globaf address space, and register 
+saving. The current com­piler supports C with thread library. Programs written in C with the thread library 
+are compiled into explicit-switch threads. Two storage resources are used in EM-X: template segments 
+and operand seg­ments. The compiled functions are stored in template segments. Invoking a function involves 
+allocating an operand segment as an activation frame. l%e caller allocates the activation frame, deposits 
+the argument value(s) into the frame, and sends its continuation as a packet to invoke the caller s thread. 
+The first instruction of a thread operates on input tokens, which are loaded into two operand regis­ters. 
+The registers can hold values for one thread at a time. The current version does not share registers 
+across threads. The cafler saves any live registers to the current activation frame before a con­text-switch. 
+The continuation packet sent from the caller is used to return results as in a conventional call. The 
+result from the called function resumes the caller s thread by this continuation. The level of thread 
+activation and suspension can be nested and arbitrary. Activation frames (threads) form a tree rather 
+than a stack, reflecting a dynamic calling structure. This tree of activation frames aflow threads to 
+spawn one to many threads on processors including itself. The level of thread activation/suspension is 
+limited only by the amount of system memory. The EM-X compiler supports a glo­bal address space. Remote 
+reads/writes are implemented through packets. A remote memory access packet uses a global address which 
+consists of the processor number and the local memory ad­dress of the selected processor. A typical remote 
+read takes approximately 1 vs.  3 Designing Multithreaded Algorithms 3.1 Multitbreaded bitonic sorting 
+Bitonic sorting, introduced by Batcher [4] consists of two steps: fo­cal sort and merge. Given P processors 
+and n elements, each processor holds n/P elements. In the local sort step, each processor takes in rdP 
+elements and sorts them in an ascending or descending order depending on the second bit of the processor 
+number. The merge step consists of 0(log2P) steps. In each merge step, elements are sorted across processors 
+in a pair. As iterations progress, the dis­tance between the pair of processors widens. The last iteration 
+will sort elements on two processors with the distance of P12. Figure 3 illustrates bitonic sorting of 
+rr=32 elements on P=8 pro­cessors. Consider processors O and 1 at i=O, j=o, PO has L=(5, 13,24,32) and 
+P1 has L=(6, 14,23,31), resulted from the local sorting step. PO and P1 will sort 8 elements in an ascending 
+order as indicated by shaded circles. Hollow circles indicate that processors sort elements in a descending 
+order. The line between PO and P 1 in­dicates that the processors communicate. PO sends L to its mate 
+processor P1 while PI sends L to its mate PO. When PO receives four elements from P1, it merges them 
+with L, so does P1. Since PO takes a lower position than PI, it takes the low half (5,6,13,14) while 
+PI takes tbe high haff (23,24,31,32). This type of sending, receiving, and merging operations continues 
+until the 32 elements are sorted across the eight processors. A multitbreaded version of bitonic sorting 
+divides the inner j loop into h threads [22]. Each thread is responsible for merging n/hP ele­ments. 
+The main idea of the multithreaded algorithm is to first issue remote reads by h threads, called thread 
+cmnmunicarion parallelism, followed by tbe computation whenever any nlM elements are read, called thread 
+computation parallelism. Read requests for nlP ele­ments are issued before any merge. Whenever n/hP elements 
+are read, i.e., whenever each thread finishes reading dhP elements from the mate processor, it will merge 
+them with its own list L. This read­ing (communication) and merging (computation) will take place simultaneously, 
+to overlap computation with communication. Figure 4 illustrates how two processors Px and Py sort 8 elements 
+in an ascending order. For the illustration purpose we use two threads in each processor. Four elements 
+are divided into two parts, each of which is assigned to a thread. Processors X and Y initially hold 
+(2,5,6,7) and (1,3,4,8), respectively. Thread O of Px is respon­sible for reading and merging the first 
+half (1,3) of Py while thread 1 does for the second half (4,8). Sorting of the eight elements on the 
+two processors proceeds as follows: in Elm 1. At r,, ThdO sends out the read request RRO to Py, and suspends 
+itself. 2. Between taand rb, the switch to Thd 1 takes place, spending sev­eral clocks. 3. At tb, Thdl 
+sends out the read request RR2 to Py, and in turn is suspended, 4. Between tb and /c, there are no threads 
+running. Both threads are dormant. 5. At tC,RROreturns with value 1 which will be saved in a buffer 
+for merge. The value resumes TbdO. 6. At td, RR2 returns with the value 4 but no further activities 
+will take place since TbdO is currently running. 7. At te, TbdO sends out the read request, RR 1, to 
+Py, and then sus­pends itself. Switching to Tbdl takes place. 8. At tf, Thd 1 sends out the read request 
+RR3 to Py, and in turn suspends itself. 9. Between tf and tg, there are no running threads. Both threads 
+are in a suspended status, and therefore no computation takes place. Even though Thdl has received the 
+value 4, it cannot perform the merge operation since TbdO is not complete. Merg­ing 4 with the list will 
+result in a wrong order. Tbdl can proceed only after ThdO completes. This is exactly where sort­ing lacks 
+computation parallelism across threads. As we shafl  see shortly, FFT has large computation parallelism 
+across all threads. 10. At tg,RR 1 returns with value 3. Thdl is still in the su.rpen&#38;d status. ThdO 
+has now read all the necessary elements, and im- Out i 3 4 u 5 6 7 8-u [1 12a 13 14 15 16u 17 18 $:u 
+21 22 23 24u 25 26 27 28U 29 30 31 u 32 Figure 3: Bitonic sorting of 32 elements on 8 processors. Shaded 
+circles indicate those processors performing ascending order merge while the hollow circles indicate 
+processors performing descending order merge. Curves connecting two processors indicate that each processor 
+reads four elements from the mate processor. mediately merges the two elements with its own list. 11. 
+At Ch,RR3 returns with value 8 but no actions will take place since ThdO is currently running. 12. At 
+ti, ThdO completes the merge, resulting in the output of (1,2,3). Switching to Thdl now takes place. 
+Since Thdl also  has two elements read from Px, it will immediately proceed to merging, which will give 
+(1,2,3 ,4). The above example assumes that each thread merges only after it reads n/lrP consecutive elements 
+from the mate processor. Bitonic sorting presents fittle computation parallelism across threads. Al­though 
+communication can be done in parallel, computation must proceed in an orderly fashion so that the output 
+buffer will contain elements sorted in a proper order. It should also be noted that the amount of computation 
+for each processor is not the same. Thread O performed merge operations with 1 and 3. However, Threadl 
+per­formed merge operations with only one vafue, 4. When Threadl reached ti, the processor has four elements 
+properly sorted. Thread 1 is therefore not required to read the fourth element 8 from the mate processor, 
+This irregularity in computation occurs because not all the elements residing in the mate processor need 
+to be read.  3.2 Multithreaded FFT l%e second problem used in this study is Fast Fourier Transform (FIT) 
+[6]. Consider a 16-point FIT on four processors. Using blocked data and workload distribution methods, 
+the 16 elements are divided into four groups, each of which is assigned to a processor. PO has elements 
+O to 3, PI 4 to 7, etc. An FFT with n elements re­quires log n iterations. The 16-point FIW requires 
+4 iterations. In Proeesaor X Processor Y a c ,--- b e d ~ 9 -- f hi i 1I . i thd O thdl 1 01.NIXMat 
+I output at i _ running m  ImIzcl 111111switchina ~ suspend;d output at j output at j . remote read 
+ . returned value   IIEEIzl EEEEI Figure 4 A multithreaded version of bitonic sorting. Proces­ sors 
+x and y sort 8 elements in an ascending order. Characters a..j indicate the time sequence. Each processor 
+has two threads, each of which handles two elements. Communication for Px is in solid lines and for Py 
+in dotted lines. iteration O, each processor obtains a copy of four elements by find­ing its mate processor. 
+PO remote reads four elements 8..,11 while PI does 12...15 from P3. P2 and P3 afso obtain necessary data 
+allo­cated to PO and P 1, respective y. Iteration 1 is essentially the same as iteration O, except the 
+logical communication distance reduces to half the first iterati&#38;. Itera~ons 2 and 3 do not requite 
+communica­tion since the required data are locally stored. In generaf, an FFT with blocked data distribution 
+of n elements on P processors re­quires communication for the first log P iterations. The (log n) -(log 
+P) iterations are local computations. In this report, only the first log P iterations are used. Converting 
+a single-threaded ITT to a multithreaded version is straightforward. Like bitonic sorting, the data assigned 
+to each pro­cessor is grouped into h threads to control the thread granularity. Figure 5 explains the 
+internal working of the multithreaded FFT with P=4, rr=l 6, and h=2. Those four elements assigned to 
+a proces­sor are split into two groups. Each processor has two threads, each of which handles two elements. 
+Unlike Bitonic sorting, however, FFT possesses no data depen­dence between elements within an iteration. 
+This observation leads to computation whenever any data is remote-read from the mate pro­cessor. In the 
+above example, the threads compute and communicate independent of other threads. When ThdO issues the 
+remote read RRO, it is suspended. Processor Onow switches to Thdl, which sub­sequently issues the remote 
+read RR2. As RRO returns vafue 8, ThdO now proceeds to computation while RR2 is outstanding. As ThdO 
+completes the computation with the vahte 8, it sends out RR 1, fol­lowed by its suspension. Thd 1 immediately 
+proceeds to computation with the value 10, which has returned sometime ago. Since the value 10 is the 
+only one returned, the FIFO thread scheduling allows Thdl to immediately proceed to computation with 
+the vafue 10, Unlike bi- Processor O Processor 2 Y ---­ 0 7 4 ---­ ) I -0+ ­6) :* --­ -­---­--- I I 
+I -L ____ I s $ c al thd O thd 1 s) Iti d eLLLIJ - .nnirq ImIle zgm_%f%%!d =9$ g i m z ~~~~~~ue = i 
+z j ml 8I9]1OI11 j Figure 5: A multithreaded FIT, showing iteration 0, The figure is not drawn to scale. 
+Each processor has two threads, each of which computes two points. No thread synchronization is re­quired 
+for FIT. tonic sorting, no threads are synchronized for an orderly computation in ITT. No time is, therefore, 
+IOSt for thread schedul­ing. This computation parallelism across threads will be evidenced by experimental 
+results which will be shown later.  4 Overlapping Analysis The multithreaded version of fine-grain 
+bitonic sorting and ITT has been implemented on the EM-X. They are written in C with a thread library. 
+To measure the effectiveness of overlapping capability we forced loops to execute synchronously by inserting 
+a barrier at the end of each iteration. The terms elements and integers are used in­terchangeably in 
+this paper. The unit for sorting is integers while that for FFT is points. An integer is 32 bits. A point 
+consists of real and imaginary parts, each of which is 32 bits. Communication times are pIotted in Figure 
+6. The x-axis shows the number of threads while the y-axis shows the absolute commun­ication time. The 
+most important observation of the figure is that the communication time becomes minimal when the number 
+of threads is three to~our. The reason is clear. In bitonic sorting, each threadreads m elements from 
+the mate processor before merging. Theloop below showsanactualcode takenfromtheprogram. for (k=Ok<m;k++) 
+/ m = n/hP = # of elementsithread *I buffer[k] = mem_read(mem_address++); In each iteration, an element 
+is read from the mate processor, as­suming mem_address is properly initialized. After each read request, 
+the thread is suspended and another thread is reactivated un­til each firead reads m elements. The loop 
+body has 12 instructions, i.e., an iteration takes 12 clocks to execute, resulting in the run length 
+of 12. The average remote memory latency, when the net­work is normally loaded, is approximately 1 to 
+2 ~sec, or 20-40 ,~1 ,00 ,.-1 -4-n.z M -A--n.1 M &#38; n.sl 2K ,0-2 -6-n.256K -e-n.128K (a) B-sorting 
+P=16 103, 2 4 6 8 10121416 , ~1 ,00 \ , ~1 + n.8M -A-n.4M &#38; n.2M -s-n.l M ,0-2 -e-n.512K (b) B-sorting 
+P=64  103, 2 4 6 8 10121416 Number of threads clocks, Thus, each remote read needs two to four threads 
+to mask off the 20-40 clock latency. This is precisely why the communication times become minimum when 
+the number of threads is two to four. The number of threads higher than four does not give a notable 
+ad­vantage in masking off the latency. The effect of multithreading is higher for FIT, as evidenced by 
+the deep valleys. The run length for FIT is much higher than sorting. As we have explained earlier, bitonic 
+sorting requires thread syn­chronization to ensure proper merge. However, FIT is free from thread synchronization. 
+Therefore, the run length for FIW is very large, The following code shows how mrdtithreading is actually 
+implemented. for(i=O;izm;i++) { / m = n/hP = the #of points/thread / compute real_address and img_address; 
+mate_real = remote_read(real_address++); mate_img = remote_read(img_address++); a lot of instructions 
+with two reals and two imaginaries; } Unlike sorting, FIT proceeds to computation for the elements read 
+from the mate processor. There is a very large number of in­structions immediately after the second remote 
+read. This large amount of computations can effectively mask off the latency. This is precisely why two 
+or three threads simply outperform all other threads in FIT. When the two problems are cross-compared, 
+we note that sorting has much higher communication time than FIT, There are several reasons for the high 
+communication. Among the reasons is the num­ber of switches. Sorting requires thread synchronization 
+whereas FFT does not. This thread synchronization presents a severe bottle­neck as it limits the amount 
+of computation parallelism across ,~1 , ~o ,0-1 I ~ I ,0-2 (C) FFT P=16  ,0-3 2 4 6 8101214 3 ,01 
+ ,00 ,0-1 ,0-2 (d) FH P=64 10-3, 2 4 6 8 101214 Number of threads Figure 6: Communication time in seconds. 
+threads. Second, the sorting presents irregular computation and communication behavior due to the fact 
+that not all the elements of the mate processor are needed to complete the merge operation. FFT, on the 
+other hand, requires all the elements to be read for computation. When the two problems are compared 
+across different numbers of processors, the communication pattern is relatively consistent for both sorting 
+and FFT. For bitonic sorting, increasing the number of processors to 64 rarely changes the communication 
+pattern. As we can see, there is little difference in Figure 6(a) and (b) for sorting, or (c) and (d) 
+for FIT. This consistency in communication pattern in­dicates that varying the number of processors is 
+not the main factor for contributing to communication patterns. It should be noted that the data size 
+for each processor is the same regardless of the total number of processors. The effects of data size 
+on communication pattern are inconsistent for both problems. For bitonic sorting with P=64, we find that 
+vary­ing data size rarely affects the communication performance, except for one thread. However, it becomes 
+apparent for ~. Note from Figure 6(d) with P=64 that the smafl data sizeof512K gives a steep­er curve 
+than that of 8M, except one thread. In other words, the curve for 5 12K has a vafley deeper than the 
+one for 8M. The reason is that the data size of 8K for each processor is just too smafl compared to 128K. 
+This relatively smafl data size is not significant enough to provide computations which can help mask 
+off the communication latency. To put the communication times into the multithreading perspec­tive, we 
+identify the efficiency of overlapping. Let TCOmm,hbe the communication time for h threads. We define 
+the efficiency of over­lapping as E = (TCOmm,~ TCOmm,h)i TCOm,~. The communication time with one thread 
+is used as the basis for overlapping analysis. 90 + n.2 M -A--n.1 M80 I + n.512K 70 --a-n.2!j6K . . -e--n=12EfK 
+- 60 ­ .­ . 50 -.­ .­ 30 ­ > 20 ­ 10 6 100I 1 90 ­+ n=8M &#38; n.4M .­ 80 ­ + n.2M . . 70 ---ss--n.l 
+M . .­+ n.512K 60-.­ . 50-.­ . . 40-. 30 ­ 20 10 - Number of threads Figure 7: Efficiency When only 
+one thread is used, there is no possibility that computa­tion will overlap with communication since there 
+is no other thread to switch to. Figure 7 shows the EM-X o%-erlapping capabilities for the two problems. 
+Bitonic sorting has given roughly 357. overlapping of communi­cation with computation. However, FIT has 
+given over 9570 of overlapping for two to four threads. This rather significant differ­ence is attributed 
+by two factors: First, bitonic sorting is sequential, presenting little parallelism among threads within 
+an iteration while FIV is highly parallel. As we have explained in Section 3,1, commu­nication for sorting 
+can take place in any order but computation must be done in an ascending order of threads to ensure proper 
+merge. Thread j cannot proceed to computation before Thread i, where j > i. Synchronization between threads 
+is required to properly sort num­bers. Therefore, bitonic sorting provides parallelism in remote reading 
+onfy, not in computation. Threads in ITT, on the other hand, can proceed in any order, i.e., computation 
+and communication can proceed in any order. Since there is no dependence between ele­ments within an 
+iteration, thread synchronization is not necessary, resulting in high parallelism among threads. This 
+parallelism is clearly revealed in Figure 7(c)-(d). The second reason FIT shows high overlapping efficiency 
+is due to the fact that the amount of computation is much higher than that of communication. The total 
+amount of computations for sorting is very small, consisting of several comparison and merging instrttc­tions. 
+The computations for each element are not more than 10 instructions excluding loop control instructions. 
+On the other hand, the computations involved in each element of FIW are large, which include some trigonometric 
+function computations and a loop to find complex roots. There is a rather large difference between the 
+two programs in terms of the computation associated with each element, inn, 70 60 ­-4-n.2 M 50 ­-4--n.1 
+M + rt=512K40 ­ -E-n.256K 30 u n.128K 20 ­ 10-(C) FFT P=16 0-2 4 6 8 101214 loot I 90 >X. . 80 70 ­ 
+60 + rl.8M 50 --ii-rl.4M + n.2M 40 ­ -a-n.lM 30 -s-n.512K 20 (d) F17 with P=64 A 0 -24681012 1416 
+Number of threads 10 ­ of overlapping.  5 Analysis of Switches Context switches are one of the key 
+parameters which determine the performance of multithreading. In this section, we shall look further 
+in to the behavior of multithreading in terms of switches. Figure 8 shows the individual execution time 
+of the two problems. The plots have four timing components: computation, overhead, communica­tion, and 
+switching, listed from the bottom. There is no apparent anomafy for the distribution of times, except 
+for one thread. The rea­son that the relative execution time for one thread is different from others 
+is because one thread involves no overlapping, which makes the relative communication time look larger. 
+This relatively large communication time in turn makes the computation time look smafler. Computation 
+times for bitonic sorting are less than communica­tion times. Figure 8(a)-(c) shows that computation 
+times change as the number of threads changes. In fact, the total amount of compu­tation must not change. 
+The little change is attributed by the fact that the timing measurement is done through a global clock. 
+When the problem size is large, no fluctuation occurs since the time to measure the global clock is negligible 
+compared to the overall computation time. The reason bitonic sorting gives a little higher change in 
+com­putation than FIT is attributed by another factor. Sorting is implemented in such a way that a processor 
+may or may not have to read all the elements from the mate processor. As long as each pro­cessor produces 
+n/P elements, it is done with the computation and will go into synchronization. Overhead refers to the 
+time taken to generate packets. It is essen­tially fixed not only for different numbers of processors 
+but also for different problems since the total number of elements allocated to each processor is the 
+same. We measured the overhead by using a 100 80 60 40 20 0 100 80 60 40 20 0 100 90 80 70 (a) B-sorting 
+P=64, n=512K It II II II II II II II II II II II 246 81012 I 60 50 1oo­ 90 80 - 70 - 60 null loop body, 
+i.e., the loop body has no computation but instru­ctionsto generate packets, We find this was effective 
+to measure the overhead cost for generating packets, Switches are classified into three types: remote 
+read switch, iter­ation synchronization switch, and thread synchronization switch. Figure 9 shows the 
+three types of switches. The x-axis indicates the number of threads and the y-axis shows the absolute 
+number of switches. The plots are drawn to the same scale. The figure reveals the intemaJ working of 
+multithreading. The remote read switching cost is in general the dominant factor contributing to the 
+main switching cost. This is obvious because every remote read causes a thread switch. The remote read 
+switching cost is fixed regardless of the number of threads because the number of elements to be read 
+is indeed fixed, In fact, this switching can be readily derived from the given n, h, and P. It is clear 
+that thread synchronization switching cost is not the main factor for the two problems regardless of 
+the numbers of pro­cessors. The behavior of thread synchronization switching is different for the two 
+problems. The thread switching cost for bitonic sorting is rather high and is close to the iteration 
+synchronization switching cost. On the other hand, FFT shows that there is a wide gap between thread 
+and iteration synchronization switching costs. This gap shows that sorting spends a lot more time synchronizing 
+threads within a processor. This was expected because threads in sorting are executed in sequence while 
+FFf threads can execute in any order. The effects of the presence and absence of computation parallelism 
+across threads are clearly manifested in the plots. Iteration synchronization switching can be as high 
+as remote read switching for the smafl problem size of 5 12K, as shown in Figure 9(a) and (c). As the 
+number of threads reaches 16, the synchroniza- II Switch time L (c) FIT P=64,n=512K Jllllll 11111111 
+lllllllllll J+ 2 4 6 8 101214 Overhead Computation time II (b) B-sorting P=64, n=8M Ii II (d) F17 P=64, 
+n=8M I 111111111111111111111111111411111 5oj 2 4 6  8 y {; \; ~; -1 O 2 4 6 8 10121416 Number 
+of threads Number of threads F@re 8: Distribution of execution time on 64 processors: Listed from the 
+bottom are computation time, overhead, communication time, and switching time. tion switch cost is in 
+fact higher than the remote read switching cost. The reason is because the amount of computation is relatively 
+small. After such small computations, 16 threads check if other threads are done for the current iteration. 
+In fact, the iteration switching cost in­creases logarithrnicafly as the number of threads increases 
+linearly. There is approximately an order of magnitude difference in the num­ber of iteration synchronization 
+switches. For large problems shown in Figure 9(b) and (d), the amount of computation is now 16 times 
+higher, which effectively eliminates the impact of iteration synchro­nization switching cost. When the 
+two problems are compared across different numbers of processors, switching pattern changes. Remote read 
+switch and iter­ation synchronization switch do not meet. Each processor now finds more computations 
+which separate the two curves. In fact, the switching cost no longer increases rapidly for P=64. The 
+fluctuation for sorting with P=64 again shows that sorting possesses an irregular computation and communication 
+pattern compared to FFT. 6 Conclusions Reducing communication time is key to obtaining high performance 
+on distributed-memory multiprocessors. Multithreading aims to re­duce communication time by overlapping 
+communication with computation. This paper has presented the internal working of mul­tithreading through 
+empirical studies. Specifically, we have used the 80-processor EM-X multithreaded distributed-memory 
+machine to demonstrate how multithreading can help overlap communication with computation. Bitonic sorting 
+and Fast Fourier Transform have beerr selected to test the multithreading capabilities of EM-X. The criteria 
+for the problem selection have been the computation-to-communication ra­tio and the amount of thread 
+parallelism. Bitonic sorting has been , ~7 ~ Remote read switch a, ~6 --s-Iter sync switch al --e-Thread 
+sync switch I  ~ 04 \ e-~ 103 r ? a) ~ ,02 , ? a) 2 ,.l (a) Sorting P=64 n=512K 1 ~ 1000 16 (b) Sorting 
+P=64 n=8M 2 4 6 8 10121416 Number of threads selected for its nearly l-to-1 computation-to-communication 
+ratio and the small amount of thread computation parallelism. FIT has been selected because of its high 
+computation-to-communication ra­tio and the large amount of thread computation parallelism. Both problems 
+have been implemented on EM-X with blocked data and workload distribution strategies. The data size of 
+up to 8M integers for sorting and 8M points for FFT have been used. Experimental results have presented 
+two key observations, First, the maximum overlapping has occurred when the number of threads is two to 
+four for both problems. Sorting has the run length of 12 clocks per thread, and therefore four threads 
+have been found ade­quate to mask off the latency of 20 to 40 clocks, or 1 to 2 psec. Larger numbers 
+of threads have adversely affected the amount of overlapping due to an excessive number of switches. 
+In particular, iteration synchronization switch has been found the main cause for excessive synchronization 
+costs among switches and a loop, The run-length of FFT is very large with hundreds of clocks due to trig­onometric 
+function computations. llris rather high run-length has been found sufficient to effectively tolerate 
+the latency of 20 to 40 clocks. Second, the ratio of computation to communication plays a criti­cal role 
+in tolerating latency. Bitonic sorting results have shown that the maximum overlap has reached approximately 
+35%. The reason for the low overlapping was because bitonic sorting has small abso­lute computation time 
+and lacks thread computation parallelism, requiring thread synchronization. FFT, on the other hand, has 
+shown over 95 YOof communication overlapping due to its high computa­tion-to-communication ratio and 
+the large amount of both thread computation and communication parallelism. FIT threads can com­pute and 
+communicate in any order witbin an iteration, requiring no thread synchronization. ,07 - $-Remote read 
+switch 106 ~ Iter sync switch -6-Thread sync switch I ,05 ,04 t ­ , J ,.l , d (c) FFT P=64, n=512K 
+~ 1000 2 4 6 8 10121416 ,07 106 ,05 ,04 ,03 ,02 ,01 d (d) Ft7 P=64, n=8M i 1000, 16 Number of threads 
+ Figure 9: Average number of switches for each processor. 197 The study has indicated that fine-grain 
+multithreading can hold a key to obtaining high performance on distributed-memory ma­chines. The fact 
+that multithreading can tolerate over 35% of the total communication time for sorting in the absence 
+of computation parallelism clearly demonstrates such a premise. Problems which possess irregular computation 
+behavior and moderate parallelism can be a logical target for obtaining high performance through mul­tithreading. 
+We believe it is a reafistic goal to achieve high overlapping for such irregular problems if the thread 
+scheduling and synchronization mechanisms are tine tuned to thread computation and communication parallelism. 
+It is our next goal to fine-tune mechanisms for hardware thread scheduling and synchronization.  Acknowledgments 
+A. Sohn and J. Ku are supported in part by the NASA University Joint Venture in Research Program NAGS 
+1114-2. A. Sohn is sup­ported in part by the Foreign Researcher Program of the Agency of Industrial Science 
+and Technology of the Ministry of International Trade and Industry, Japan. References 1. A. Agarwrd, 
+R. Bianchini, D. Chaiken, K. L. Johnson, D. Kranz, J. Kubiatowicz, B-H. Lim, K. Mackenzie, and D. Ye­ung, 
+The MIT Alewife Machine: Architecture and Perfor­mances, in Proc. ACM Int 1 Symposium on Computer Archi­rec~ure, 
+Santa Margherita Ligure, Italy, June 1995, pp.2-13 2. T. Agerwala, J. L. Mattin, J. H. Mirza, D. C. 
+Sadler, D. M. Dias, and M. Snir, SP-2 System Architecture , in IBM Sys­tems Journal Vol. 34, No. 2, 1995 
+ 3. R. Alverson, D, Callahan, D. Cummings, B. Koblenz, A. Por­terfield, and B. Smith, The Tera computer 
+system, In Pro­ceedings of ACM hrternational Conference on Supercomput­ing, Amsterdam, Netherlands, June 
+1990, ACM, pp. 1-6  4. K, Batcher, Sorting Networks and Their Applications, in Proc. the AFIPS Spring 
+Joint Computer Conference 32, Re­ston, VA, 1968, pp,307-3 14. 5. R. D. Blumofe, M. Frigo, C. F. Joerg, 
+C. E. Leiserson, and K. H, Randafl, Dag-Consistent Distributed Shared Memory, in  Proc. of IEEE Int 
+1 Parallel Processing Symposium, Honolulu, Hawaii, April 1996, pp. 132-141. 6. J. M. Cooley and J. W. 
+Tukey, An algorithm for the machine calculation of complex Fourier series , Math. Comp., 19:297­301, 
+1965. 7. D. Culler, S. Goldstein, K. Schauser, and T. von Eicken, TAM -A Compiler Controlled Threaded 
+Abstract Machine, Journal of Parallel and Distributed Computing 18, pp.347-370, 1993. 8. D. Culler, 
+R.M. Karp, D.A. Patterson, A. Sahay, E.E. Schauser, E. Santos, R. Subramonian, and T. von Eicken, LogP 
+To­wards a Realistic Model of Parallel Computation, in Proc. of the 4th ACM Symposium on Principles and 
+Practice of Parallel Programming, San Diego, CA, May 1993.  9. G. Gao, L. Bic and J-L. Gaudiot (Eds.) 
+Advanced Topic in Dataflow Computing and Multithreading, IEEE Computer so­ciety press, 1995  10 High 
+Performance Fortran Forum, High Performance Fortran Language Specification version 2.0, Center for Research 
+on Parallel Computation, Rice University, Houston, TX, Novem­ber 1996. 11 R. Iannucci, G. Gao, R. Halstead, 
+and B. Smith (Eds.), Multi­threaded Computer Architecture, Kluwer Publishers, Norwell, MA 1994 12. Y. 
+Kodama, Y, Koumura, M, Sate, H. Sakane, S. Sakai, and Y. Yamaguchi, EMC-Y: Parallel Processing Element 
+Optimiz­ing Communication and Computation, in Proceedings of ACM International Conference on Supercomputing, 
+Tokyo, Ja­pan, July 1993, pp. 167-174. 13. Y. Kodama, H. Sakane, M. Sate, H. Yamana, S. Sakai, and Y. 
+Yamaguchi, The EM-X Paraflel Computer: Architecture and Basic Performance, in Proceedings of ACM international 
+Symposium on Computer Architecture, Santa Margherita Lig­ure, Italy, June 1995, pp. 14-23. 14. R. Nikhil, 
+G. Papadopolous, and Arvind, *T: A Multithreaded Massively Paraflel Architecture, in Proceedings of ACM 
+Int 1 Symposium on Computer Architecture, Gold Coast, Australia, May 1992, pp.1 56-167. 15. G. Papadopolous, 
+An Implementation of General Purpose Dataflow Multiprocessor, MIT Press, Cambridge, MA, 1991. 16. R. 
+Saavedra-Barrera, D. Culler, and T. von Eicken, Anafysis of Multithreaded Architectures for Parallel 
+Computing, in  Proc. of ACM Symposium on Parallel Algorithms and Archi­tectures, pages 169-178, July 
+1990. 17. S. Sakai, Y. Yamaguchi, K. Hiraki, and T. Yuba, An Architec­ture of a Data-flow Single Chip 
+Processor, in Proc. of ACM International Symposium on Computer Architecture, Jerusa­lem, Israel, May 
+1989, pp,46-53, 18. M. Sate, Y. Kodama, S. Sakai, Y. Yamaguchi, and Y. Koumu­ra, Thread-based programming 
+for the EM-4 Hybrid Data­flow Machine, in Proceedings of ACM International Sympo­sium on Computer Architecture, 
+Gold Coast, Australia, May 1992, pp.146-155. 19. M. Sate, Y. Kodama, S. Sakai, and Y, Yamaguchi, Experience 
+with Executing Shared-Memory Programs using Fine-grain Communication and Multithreading in EM-4, in Proceedings 
+of the 8th IEEE international Parallel Processing Symposium,  Cancun, Mexico, April 1994, pp.630-636. 
+ 20. S. Scott, Synchronization and Communication in the T3E Multiprocessor, in Proc. of ACM Conference 
+on Architectural Support for Programming Languages and Operating Systems, Boston, MA, October 1996. 21. 
+B. J. Smith, A Pipelined, Shared Resource MIMD Computer, in Proceedings of International Conference on 
+Parallel Pro­cessing, 1978, pp.6-8. 22. A. Sohn, Communication Efficient Low Overhead Bitonic Sorting, 
+Technical Report, NJIT CIS Dept. 1996. 23. A. Sohn, M. Sate, N. Yoo, and J-L Gaudiot, Data and Work­load 
+Distribution in a Multithreaded Architecture, Journal of Parallel and Distributed Computing 40, February 
+1997, pp,256-264.  24. C, B. Stunkel, D. G. Shea, B. Abafi, M. Atkins, C. A, Bender, D. G. Grice, P. 
+H. Hochschild, D. J. Joseph, B. J. Nathanson, R. A. Swetz, R. F, Stucke, M. Tsao, and P. R. Varker, The 
+SP-2 Communication Subsystem; Technical Report, IBM T. J. Watson Research Center, August 1994, 25. R. 
+Thekkath and S. Eggers, The Effectiveness of Multiple Hardware Contexts, in Proceedings of ACM International 
+Conference on Architectural Support for Programming Lan­guages and Operating Systems, San Jose, California, 
+October 1994, pp.328-337. 26. M,R. Thistle and B.J. Smith, A Processor Architecture for Ho­rizon, in 
+Proceedings of Supercomputing 88, Fforida, October 1988, pp.35-40.  
+			

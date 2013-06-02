@@ -1,0 +1,410 @@
+
+ Columnsort Lives! An Ef.cient Out-of-Core Sorting Program Geeta Chaudhry * Thomas H. Cormen Dartmouth 
+College Dartmouth College Department of Computer Science Department of Computer Science geetac@cs.dartmouth.edu 
+thc@cs.dartmouth.edu Leonard F. Wisniewski Sun Microsystems lenbo@east.sun.com Abstract We present the 
+design and implementation of a parallel out-of-core sorting algorithm, which is based on Leighton s columnsort 
+algorithm. We show how to relax some of the steps of the original columnsort algorithm to permit a faster 
+out-of-core implementation. Our algorithm requires only 4 passes over the data, and a 3-pass implementation 
+is pos­sible. Although there is a limit on the number of records that can be sorted as a function of 
+the memory used per processor this upper limit need not be a severe restriction, and it increases superlinearly 
+with the per-processor mem­ory. To the best of our knowledge, our implementation is the .rst out-of-core 
+multiprocessor sorting algorithm whose out­put is in the order assumed by the Parallel Disk Model. We 
+de.ne several measures of sorting e.ciency and demonstrate that our implementation s sorting e.ciency 
+is competitive with that of NOW-Sort, a sorting algorithm developed to sort large amounts of data quickly 
+on a cluster of worksta­tions. 1. Introduction Sorting is universally acknowledged to be an important 
+and fundamental problem in computing. Sorting very large data sets is a key subroutine in many applications. 
+For some applications, the amount of data exceeds the capacity of main memory (we call these out-of-core 
+problems), and the data then typically reside on one or more disks. This paper explores the implementation 
+and performance of an *Supported in part by a donation from Sun Microsystems. Contact author. Postal 
+address: Dartmouth College Depart­ment of Computer Science, 6211 Sudiko. Laboratory, Hanover, NH 03755, 
+USA. Supported in part by a donation from Sun Mi­crosystems. This reseach was supported in part by NSF 
+Grant EIA-98-02068. SPAA 01 Crete, Greece Copyright 2001 ACM and SunMicrosystems, Inc. 1-58113-409-6/01/07 
+$5.00 out-of-core algorithm for sorting data on multiple processors andwithmultiple disks. The speci.c 
+algorithm is based on Leighton s columnsort al­gorithm [6]. The implementation for an out-of-core, parallel-I/O 
+setting is novel. Our performance goal is to sort large volumes of data while consuming as few resources 
+as possible. We de.ne the sort­ing e.ciency to be the ratio of the volume of data sorted, in gigabytes, 
+to resources used during the sorting. We use four di.erent resource measures: processor time, disk time, 
+pro­cessor time plus disk time, and used-memory time. Thus, if V is the volume of data, there are P processors 
+and D disks, G gigabytes of memory are actually used across all processors, and sorting takes T minutes, 
+then we will be measuring sorting e.ciencies given by the formulas V/PT, V/DT, V/((P + D)T), and V/GT. 
+Arpaci-Dusseau et al. [2] used an alternative measure of large-scale sorting: the volume of data that 
+can be sorted in one minute. This measure does not account for resource us­age. Nevertheless, their achievement 
+of sorting 6 gigabytes in just under one minute in 1997 is impressive. Their NOW-Sort algorithm did so 
+on a network of 64 workstations with 128 disks and a Myrinet network. On a network of just 8 workstations 
+with 32 disks, NOW-Sort sorted 1.4 gigabytes in one minute. Our out-of-core columnsort measurements are 
+on 4-and 8-processor systems. Table 1 shows that in many instances, the sorting e.ciencies of our algorithm 
+are close to those of NOW-Sort, and in some cases, they are even higher than NOW-Sort s. At .rst glance, 
+it may appear inherently unfair to compare sorting e.ciencies of two algorithms that were implemented 
+and measured four years apart; one would expect the more recent implementation to be faster due to hardware 
+improve­ments. Further examination reveals that each implementa­tion has certain characteristics that 
+give it a head start over the other. Comparing the sorting e.ciencies of the two al­gorithms on various 
+hardware con.gurations yields some in­sight into how these di.erences in characteristics can trans­late 
+into di.erences in performance. The characteristics fall into three classes: restrictions due to the 
+underlying algo­Table 1: Parameters, results, and sorting e.ciencies for our out-of-core columnsort algorithm 
+on three systems and for NOW-Sort on four systems. The top section shows number of processors (P), number 
+of disks (D), gigabytes of memory used (G), gigabytes sorted (V), and time to sort (T) for each algorithm 
+and system. The middle section shows various sorting e.ciencies. The bottom section shows ratios of the 
+sorting e.ciency of columnsort on a 4-processor Sun cluster (the most sorting-e.cient of the columnsort 
+results) to sorting e.ciencies of the four NOW-Sort results. Algorithm Columnsort Columnsort Columnsort 
+NOW-Sort NOW-Sort NOW-Sort NOW-Sort System SunTM Sun Origin 2000 Sun Sun Sun Sun P D G (GB) V (GB) T 
+(minutes) 4 4 0.15625 1 3.875 8 4 0.3125 2 6.1 4 8 16 32 64 4 3 2 3 2 64 128 0.15625 0.72656 0.65625 
+1.3125 2.625 1 1.4 1.6 3.0 6.0 5.2 1 1 1 1 V/PT V/DT V/((P + D)T) V/GT 0.06451 0.06451 0.03226 1.65154 
+0.04098 0.08197 0.02732 1.04918 0.04808 0.17500 0.1 0.09375 0.09375 0.04808 0.04375 0.05 0.04688 0.04688 
+0.02404 0.035 0.03333 0.03125 0.03125 1.23077 1.92688 2.43810 2.28571 2.28571 V/PT V/DT V/((P + D)T) 
+V/GT Ratio of Columnsort on Sun with P =4 to NOW-Sort 36.86% 64.51% 68.81% 68.81% 147.46% 129.03% 137.63% 
+137.63% 92.16% 96.77% 103.22% 103.22% 85.71% 67.74% 72.25% 72.25% C0 C1 C2 C3 C4 C5 C6 C7 parameters, 
+not on the key values. D0 D1 D2 D3 0 1 16 17 32 33 48 49 64 65 80 81 96 97 112 113 2 3 18 19 34 35 50 
+51 66 67 82 83 98 99 114 115 4 5 20 21 36 37 52 53 68 69 84 85 100 101 116 117 6 7 22 23 38 39 54 55 
+70 71 86 87 102 103 118 119 D0 D1 D2 D3 8 9 24 25 40 41 56 57 72 73 88 89 104 105 120 121 10 11 26 27 
+42 43 58 59 74 75 90 91 106 107 122 123 12 13 28 29 44 45 60 61 76 77 92 93 108 109 124 125 14 15 30 
+31 46 47 62 63 78 79 94 95 110 111 126 127 Figure 1: The striped layout produced by out-of-core columnsort. 
+The data are sorted in column-major order. Each box represents one striping unit, and numbers rep­resent 
+record indices. Each stripe runs vertically within a column. This example has 128 records, 4 disks, striping 
+unit 2, and the columnsort matrix has r =16 rows, and s =8 columns. Each column Cj consists of 2 consecutive 
+stripes. rithm, hardware and software di.erences, and experimental di.erences. The di.erences due to 
+the underlying algorithm are the following: Our out-of-core columnsort requires all parameters to be 
+integerpowersof2;NOW-Sort doesnot.  NOW-Sort assumes that the sort keys are uniformly distributed; our 
+algorithm makes no assumptions about the keys. In fact, our algorithm s I/O and com­munication patterns 
+are oblivious to the keys. That is, the exact sequence of I/O and communication opera­tions depend only 
+on the problem size and the system  NOW-Sort does not place the sorted data into a striped order across 
+the disks, nor does it assure the best pos­sible load balance.1 Our algorithm produces sorted records 
+in the standard striped ordering used by the Parallel Disk Model (PDM), as Figure 1 shows. PDM ordering 
+balances the load for any consecutive set of records across processors and disks as evenly as possi­ble. 
+A further advantage to producing sorted output in PDM ordering is that our algorithm can be used as a 
+subroutine in other PDM algorithms. The di.erences in hardware and software are the following: The processors 
+on which we have measured our al­gorithm are faster (296 MHz) than the 1997 proces­sors used by NOW-Sort 
+(170 MHz), and the individ­ual disks we used are faster than those used by NOW­Sort.2 The NOW-Sort cluster, 
+however, has a 160 megabyte/second Myrinet network, compared to the 155 megabit/second ATM OC-3network 
+used in our measurements.  The NOW-Sort implementation measures the relative speeds of all disks in 
+the system and uses this informa­tion to optimize I/O performance by altering the strip­ingunitoneachdisk. 
+Moreover,NOW-Sortperforms I/O via mmap and madvise calls in order to prevent dou­ble bu.ering by the 
+operating system. Furthermore,  1Arpaci-Dusseau et al. write, At the end, the data is sorted across 
+the disks of the processors, with the lowest-valued keys on processor 0 and the highest-valued keys on 
+processor P - 1. Note that thenumberofrecords pernodewillonlybeapproximately equal, and currently depends 
+on the distribution of key values. 2We are unable to obtain exact speci.cations for the NOW-Sort disks. 
+NOW-Sort performs interprocessor communication by active messages. Our algorithm, on the other hand, 
+uses only MPI and MPI-2 calls [5, 11] for communication and I/O. All striping units are the same on all 
+disks. There is one experimental di.erence. Due to the power­of-2 requirement, the measurements for our 
+algorithm are on 64-byte records. The NOW-Sort measurements are on the Datamation-standard 100-byte records. 
+Therefore, for a given volume of data, our measurements are for over 50% more records. The following 
+list summarizes the contributions of this pa­per: 1. We present an out-of-core sorting algorithm, based 
+on a 16-year-old algorithm, columnsort, which was de­signed for a rectangular mesh of processors. Each 
+pro­cessor in the original columnsort corresponds to one record in our algorithm, and each column in 
+the orig­inal columnsort corresponds to one memoryload the amount of data that can be held in one processor 
+s memory in our algorithm. 2. To the best of our knowledge, our implementation is the .rst multiprocessor 
+sorting algorithm whose out­put is in PDM order. We know of three previous uniprocessor implementations 
+for the PDM, one for out-of-core radix sort [4], one by Pearson [8] for Ra­jasekaran s LMM-sort method 
+[9] (of which columnsort is a special case), and one by Barve and Vitter [3] for randomized merge sort. 
+Adapting these algorithms for multiprocessors is not straightforward. 3. We have relaxed some of the 
+steps of the original columnsort algorithm to permit a faster out-of-core implementation. 4. Our out-of-core 
+columnsort requires only 4 passes over the data, and we shall also discuss a future implemen­tation that 
+works in only 3passes. Curiously, our up­per bound is better than the .(1)-pass lower bound for the multiheaded, 
+single-disk model proven by Aggar­wal and Vitter [1], which is at least as strong a model as the PDM. 
+Our upper bound is achieved at a cost of an upper limit on the number of records that can be sorted, 
+expressed as a function of the memoryload size. In practice, however, this upper limit need not be a 
+severe restriction. Although our algorithm is not de­signed to be a PDM algorithm, it can in fact be 
+viewed as a 4-pass PDM algorithm. Thus, our algorithm beats the lower bound because of its record limit 
+rather than because it was designed outside the PDM. 5. Our implementation s sorting e.ciency is competitive 
+with that of NOW-Sort.  The remainder of this paper is organized as follows. Sec­tion 2 reviews Leighton 
+s original columnsort algorithm, whichwe adapt in Section3for anout-of-core setting. Sec­tion 4 details 
+the performance of our implementation, as summarized in Table 1. Finally, Section 5 o.ers some .­nal 
+thoughts on our columnsort implementation relative to NOW-Sort, and it outlines future work.  2. The 
+basic columnsort algorithm In this section, we review Leighton s columnsort algorithm from [6]. Along 
+the way, we make some observations that will improve the out-of-core implementation. Columnsort sorts 
+N numbers, which are treated as an r × s matrix, where N = rs, s is a divisor of r,and r = 2(s - 1)2 
+. When columnsort completes, the matrix is sorted in column­major order. That is, each column is sorted, 
+and the keys in each column are no larger than the keys in columns to the right. Columnsort proceeds 
+in eight steps. Steps 1, 3, 5, and 7 are all the same: sort each column individually. Each of steps 2, 
+4, 6, and 8 permutes the matrix entries. Step 2: Transpose and reshape As Figure 2(a) shows, we .rst 
+transpose the r × s matrix into an s × r matrix. Then we reshape it back into an r × s matrix by taking 
+each row of r entries and rewriting it as an r/s × s submatrix. In Figure 2(a), for example, the column 
+with r =6 en­tries abcdef is transposed into a 6-entry row with entries abcdef andthenreshapedinto the 
+2 × 3 abc submatrix . def Step 4: Reshape and transpose As Figure 2(a) shows, we .rst reshape each set 
+of r/s rows intoasingle r-element row and then transpose the matrix. In other words, step 4 is the inverse 
+of the permutation performed in step 2. Step 6: Shift down by r/2 As Figure 2(b) shows, we shift each 
+column down by r/2 positions, wrapping around into the next column as necessary. This shift operation 
+vacates the .rst r/2 entries of the leftmost column, which are .lled with keys of -8, and it creates 
+a new column on the right, the bottommost r/2 entries of which are .lled with keys of 8. Looked at another 
+way, we shift the top half of each column into the bottom half of that column, and we shift the bottom 
+half of each column into the tophalfofthe next column. Step 8: Shift up by r/2 As Figure 2(b) shows, 
+we shift each column up by r/2 positions, wrapping around into the previous column as necessary. In other 
+words, we perform the inverse permutationof step6. We omit the proof of correctness and refer the reader 
+to [6]. Simplifying observations Three observations will improve our out-of-core implemen­tation later 
+on: . agm . . a b c . . ag m . . -8 d j p . . . . bh c i n o . . . Step 2-. . . . d g e h f i . . . 
+. . . bh c i n o . . . Step 6-. . . . -8 -8 e f k l q r . . . . . . dj ek p q . . . Step 4.- . . . j 
+k mn l o . . . . . . dj ek p q . . . Step 8.- . . . a b g h m n 8 8 . . . f l r p q r f l r c i o 8 (a) 
+(b) Figure 2: The operations of even-numbered steps of columnsort. This .gure is taken from [6]. For 
+simplicity, this small 6 × 3matrix is chosen to illustrate the steps, even though its dimensions fail 
+to obey the columnsort restrictions on r and s. (a) The operations of steps 2 and 4. (b) The operations 
+of steps 6 and 8. Placement: Immediately following each of steps 2, 4, and 6, we sort each column. Therefore, 
+we only need to permute each element into the correct column in steps 2,4,and 6. Its placement within 
+the column (i.e., its exact row) is immaterial. Run: The sorts in steps 3, 5, and 7 can be implemented 
+as multiway merge operations. That is, the entries to be sorted are arranged as several sorted runs, 
+which need only be merged. In Leighton s basic algorithm, sorting each columninstep3is amerge of s runs 
+of length r/s each, and sortingeachcolumninstep7 is a merge of 2 runs of length r/2 each. Our implementa­tion 
+takes advantage in steps 3and 7 of the formation of these runs in the previous steps, and it also uses 
+the placement observation in step 4 to form s sorted runs of length r/s each so that step 5 is also a 
+multiway merge. Pairing: We can combine steps 6 8 by pairing adjacent columns. We sort the bottom r/2 
+entries of each col­umn along with the top r/2 entries of the next column, placing the sorted r entries 
+into the same positions. The top r/2 entries of the leftmost column were al­ready sorted by step 5 and 
+can therefore be left alone, and similarly for the bottom r/2entries of theright­most column. These observations 
+are known within the mesh-sorting com­munity. Rajasekaran [9] uses the run and pairing observa­tions 
+at various points in his LMM-sort algorithm.  3. Out-of-core columnsort In this section, we describe 
+how we adapt Leighton s original columnsort algorithm for an out-of-core setting on a multi­processor 
+with a parallel disk system.3 After describing our machine model, we present the common structure of 
+each pass of the out-of-core algorithm, followed by a discussion of how each pass is implemented within 
+the common frame­work. 3The Greed Sort algorithm by Nodine and Vitter [7] for the PDM uses columnsort 
+as a .nishing-up step. Nodine and Vitter show that columnsort makes a constant number of passes for su.ciently 
+small problem sizes. Their paper also notes a property that is similar to our pairing observation. Machine 
+model We assume that our machine has P processors P 0,P 1,...,P P -1 and D disks D 0,D 1,...,D D-1. The 
+processors may be on separate nodes of a cluster, they may be processors within a shared-memory node, 
+or they may be a combination of the above. For example, one con.guration that we used had a cluster of 
+4 nodes, with each node having 2 processors, for a total of 8 processors; in this con.guration, each 
+node had 1 disk, which was shared by the 2 processors on that node. More generally, we assume that each 
+processor can access at least one disk directly. When D = P, each processor accesses exactly one disk 
+over theentirecourse of the algorithm. When D<P,we re­quire that there be P/D processors per node and 
+that they share the node s disk; in this case, each processor accesses a distinct portion of the disk. 
+In fact, in our implementation, we treat this distinct portion as a separate virtual disk, allowing us 
+to assume that D = P.When D>P,each processor has exclusive access to D/P disks, and it stripes its data 
+across these disks in local stripes of BD/P records each. We shall say that a processor owns the D/P 
+disks that it accesses. The striping unit, also known in the PDM as the block size,is the maximum number 
+of consecutive records that are stored on a single disk. A record is a contiguous sequence of bytes containing 
+a numeric key embedded at a .xed o.set within the record. For good performance, the striping unit should 
+be at least one physical block on the disk. In practice, the striping unit is at least the system s physical 
+page size. We parameterize the striping unit by the PDM parameter B. Any disk access transfers an entire 
+block of records between the disk and the memory of some processor. The memory of the entire system holds 
+M records. Memory is partitioned among the P processors so that each proces­sor can hold M/P records. 
+In practice, a processor that holds M/P records has a physical memory that is larger than M/P records 
+worth. That is because physical mem­ory holds more than just records software and the run­time stack, 
+for example. Moreover, our algorithm requires multiple data bu.ers for merging (which is not in-place), 
+communication, and overlapping I/O with other operations. For convenience, our current implementation 
+assumes that all parameters are powers of 2. Given the machine parameters, we set the columnsort ma­trix 
+dimensions r and s as follows. We require a column s worthofdatato.t within one processor s memory. Thus, 
+we set r = M/P.Since N = rs,weset s = N/r = NP/M. These choices of r and s induce an upper limit on the 
+number of records N in the .le to be sorted. Recall the columnsort requirement that r = 2(s - 1)2 , which 
+we simplifybyre­quiring r = 2s 2 . Using our parameter settings, we have the restriction that M/P = 2(NP/M)2, 
+which is equivalent to N = (M/P)3/2 . (1) Although the restriction (1) may appear to be overly con­straining 
+on the largest problem size that will be correctly sorted, in practice we can still sort some fairly 
+large .les. For example, suppose we are sorting 32-byte records on a machine with 32 megabytes of memory 
+per processor avail­able for holding data (after reducing the available memory for software, stack, and 
+bu.ers). Then M/P =220,since the memory size M is in terms of 32-byte records. By the restriction (1), 
+the largest .le we can sort has 229 records, or 234 bytes. In other words, even with a moderate mem­ory 
+size, we can sort up to 16 gigabytes of data. Moreover, by restriction (1), the maximum problem size 
+increases with (M/P)3/2, i.e., it increases superlinearly with the amount of memory per processor. Common 
+structure among passes Our columnsort implementation proceeds in four passes over the data. Each pass 
+reads records from one part of each disk and writes records to a di.erent part of each disk. We alternate 
+the portions read and written from pass to pass so that, apart from the input and output portions, we 
+need just oneother portion, whosesizeis thatofthe data. Each pass performs two consecutive steps of columnsort. 
+That is, pass 1 performs columnsort steps 1 and 2, pass 2 performs steps 3and 4, pass 3performs steps 
+5 and 6, and pass 4 performs steps 7 and 8. (We shall discuss in Section 5 an optimization that uses 
+the pairing observation to combine steps 5 8 into a single pass.) Figure 3shows how the data are organized 
+on the disks at the start of each pass. The data are placed so that each column is stored in contiguous 
+locations on the disks owned by a single processor. Speci.cally, processor j owns columns j, j + P, j 
++2P,and so on. Each pass is decomposed into s/P rounds. Each round pro­cesses the next set of P consecutive 
+columns, one column per processor, in four phases: 1. Each processor reads a column of r records from 
+the disks thatitowns. 2. Each processor locally sorts, in memory, the r records it has just read. 3. 
+Each record is destined for a speci.c column, depend­ingonwhich even-numberedcolumnsortstepthis pass 
+ C0 C1 C2 C3 C4 C5 C6 C7 0 1 16 17 32 33 48 49 64 65 80 81 96 97 112 113 2 3 18 19 34 35 50 51 66 67 
+82 83 98 99 114 115 4 5 20 21 36 37 52 53 68 69 84 85 100 101 116 117 6 7 22 23 38 39 54 55 70 71 86 
+87 102 103 118 119 8 9 24 25 40 41 56 57 72 73 88 89 104 105 120 121 10 11 26 27 42 43 58 59 74 75 90 
+91 106 107 122 123 12 13 28 29 44 45 60 61 76 77 92 93 108 109 124 125 14 15 30 31 46 47 62 63 78 79 
+94 95 110 111 126 127 D0 D1 D2 D3 D0 D1 D2 D3 Figure 3: The layout usedinternallywithinout-of-core columnsort. 
+Eachcolumnis storedcontiguouslyonthe set of disks owned by a single processor. Column Ci is stored on 
+the disks owned by processor Pi mod P .In this example, P = D =4 and s =8. is performing. In order to 
+get each record to the pro­cessor that owns this destination column, processors exchange records. 4. 
+Having received records from other processors, each processor writes a set of records onto the disks 
+that it owns. These records are not necessarily all written consecutively onto the disks, though they 
+are written as a small number of sorted runs. We shall see shortly how each phase di.ers in each pass. 
+An early implementation of ours performed rounds strictly in order. That is, processor j performed all 
+four phases on column j, then it performed all four phases on column j+P, then all four phases on column 
+j +2P,and so on. This im­plementation did not overlap local sorting, communication, or I/O. We improved 
+the implementation by adding asyn­chronous I/O and communication to allow overlap. At any particular 
+time, processor j might be communicating records belonging to column j + kP, locally sorting records 
+in col­umn j +(k +1)P, reading column j +(k +2)P,and writing column j +(k - 1)P. However, our current 
+implementation does not overlap reading with either local sorting or writ­ing. A future implementation 
+will use threads to allow the system to decide how to overlap phases for full .exibility. How each pass 
+works The exact operation of three of the four phases within a round di.ers from pass to pass. The phase 
+that remains the same is reading. That is, each processor in each round, regardless of the pass, reads 
+a column of r records by sim­ply reading r/B consecutive blocks from the disks that it owns. This style 
+of reading yields the best possible I/O performance. Now we examine how the four passes perform each 
+of the other three phases. Pass 1. This pass reads in each column, locally sorts it assuming nothing 
+about the sortedness of the data within the column and then writes it out according to the transpose­and-reshape 
+permutation. Local sorting: Because we make no assumptions about the sortedness of each column or about 
+the key distribu­tion, we locally sort using the system qsort call. (On average, qsort was the fastest 
+of the various sorting methods that we tried.) Assuming that qsort per­forms T(r lg r) comparisons on 
+average to sort each column, pass 1 s in-core local sorting complexity is T(sr lg r)=T(N lg r)altogether, 
+or T(N/P lg r)per processor. Communication: After locally sorting, each processor has asortedcolumnof 
+r records. As in step 2 of column­sort, r/s records out of the r are destined for each of the s columns. 
+Each processor locally permutes its r records to form s sorted runs of r/s records each. Ev­ery processor 
+owns s/P columns, and so every proces­sor sends s/P sorted runs to each of the other proces­sors. Each 
+processor makes P -1 calls to the MPI func­tions MPI_Isend and MPI_Irecv to perform this com­munication 
+asynchronously. (Processors don t need to send to themselves.) Each processor, therefore, re­ceives P 
+- 1 messages, each message consisting of s/P sorted runs. As each processor receives these runs, it assembles 
+them into a bu.er such that the runs that are destined for the same column within this pass are contiguous. 
+Writing: Every processor now has P sorted runs for each of the s/P columns thatitowns. Each processorper­forms 
+s/P writes of the P runs, i.e., Pr/s records. In thecasein which D>P and Pr/s < BD/P so that the amount 
+of data being written to each column is less than the size of a local stripe the writes are not distributed 
+evenly across the D/P disks owned by the processor. For example, Figure 4 shows a situation with s =8, 
+P =4, D =16 (so that D/P =4), and r =4B. Here, D>P and Pr/s =2B< 4B = BD/P. The .gure shows the write 
+patterns in the .rst round for processor P0. This processor owns columns 0 and 4. It needs to write 2B 
+records, or 2 blocks, to each of these columns. As Figure 4(a) shows, if both columns start on disk D0,we 
+write to only half the disks. Figure 4(b) demonstrates how we use the placement observation to write 
+to di.erent lo­cations within the columns in order to distribute the load evenly among the disks. Pass 
+2. This pass reads in each column, locally sorts it knowing that every column consists of s sorted runs 
+of r/s records each and then writes it out according to the reshape-and­transpose permutation. Local 
+sorting: We usemerge sort, but becausewehave s sorted runs to start, we need to recurse only lg s levels 
+C0 C4 C0 C4 D0 D0 D1 D1 D2 D2 D3 D3 (a) (b) Figure 4: Write patterns in the .rst round of pass 1 for 
+processor P0 when the amount of data being written to each column is less than the size of a local stripe. 
+Shaded blocks are the ones written to if we (a) do not use and (b) do use the placement observation to 
+distribute the load evenly. rather than lg r.It takes T(r lg s) time to locally sort each column, sothat 
+the totallocal sortingtimeis T(rs lg s)=T(N lg s), or T(N/P lg s) per processor. Communication: Communication 
+in pass 2 is exactly the same as in pass 1, except that immediately after lo­cal sorting, the records 
+destined for each column are already formed into a sorted run of r/s records. There­fore, the local permutation 
+prior to sending is skipped. As in pass 1, however, records are locally permuted af­ter they have been 
+received. Writing: Pass 2 writes in exactly the same way as pass 1. It can do so even though the runs 
+received within a given round are not destined for consecutive locations within a column according to 
+the reshape-and-transpose per­mutation. These runs arrived in contiguous locations of a communication 
+bu.er, and we can write them to­gether because, by the placement observation, it does not matter where 
+in the column we write them. More­over, writing these runs as we receive them makes the input to the 
+next pass consist of sorted runs. Pass 3. Like pass 2, this pass reads in each column and locally sorts 
+it, knowing that every column consists of s sorted runs of r/s records each. It then writes out the records 
+according to the shift down by r/2 permutation. Local sorting: We use merge sort, just as in pass 2. 
+Communication: The last r/2 records in each column are goingto gotothe next column. Therefore, ineach 
+round, processor Pj sends its last r/2 records to pro­cessor P(j+1) mod P . In each round, each processor 
+makes just one call to MPI_Isend and MPI_Irecv to perform this communication asynchronously. Writing: 
+In each round, each processor writes a column of r records by simply writing r/B consecutive blocks to 
+the disks that it owns. Just like how we read, this style of writing yields the best possible I/O performance. 
+Pass 4. This last pass reads in each column and locally sorts it knowing that every column consists of 
+2 sorted runs of r/2 records each and then writes it out according to the shift up by r/2permutation,but 
+in PDMorder. Local sorting: We merge the 2 sorted runs, which takes only T(r) time per processor in each 
+round. Over all rounds, local sorting takes T(N)time, or T(N/P )time per processor. Communication: In 
+each round, each processor has r records that need to go to r consecutive locations in PDM order. That 
+is, they are striped across all D disks in the system. In the PDM order, each stripe has BD records, 
+and so the r records form r/BD consecutive stripes. In other words, the r records will go to r/B blocks 
+in all, or r/BD blocks per disk. Since every processor owns D/P disks, (r/BD)(D/P )= r/BP blocks go to 
+each processor. Every processor sends r/P records to each other processor by making asyn­chronous MPI 
+calls similar to those of passes 1 and 2. Each processor, therefore, receives P - 1 messages, each message 
+consisting of r/BP blocks. As each pro­cessor receives these blocks, it assembles them into a bu.er such 
+that the blocks that are destined for the same disk are contiguous. Writing: Each processor has D/P disks, 
+and the records destined for each disk are already contiguous. A set of D/P asynchronous write calls 
+.nishes the job.  4. Performance results In this section, we present experimental results for our al­gorithm 
+running on Sun Microsystems and Silicon Graphics systems. For each system, we break down the time spent 
+in I/O, local sorting, communication, and local permuting in each pass and in all four passes together. 
+Seeing where the algorithm spends its time gives us a good indication of what parts of the implementation 
+should be tuned in the future. Ourrunsare on twoclustersofSunTM SMP nodes and on one Silicon Graphics 
+Origin 2000. Although the columnsort code itself is exactly the same for each of these systems, it is 
+linked with di.erent MPI implementations. On each system, we sorted 256 megabytes per processor. The 
+times reported herein are the average of .ve runs on each system. Table 1 summarizes the results. The 
+total times appearing in Table 1 are slightly lower than the total times given in this section due to 
+the overhead introduced by calls to .ner-grained timers. The .rst system is a cluster of 4 Sun EnterpriseTM 
+450 SMPs. We used only one processor on each node. Each processor is an UltraSPARCTM-II, running at 296 
+MHz and with 128MBofRAM,ofwhich we used 40 MB for hold­ing data. The nodes are connected by an ATM OC-3net­work, 
+with a peak speed of 155 megabits per second. This system has one disk per node. Two of these disks are 
+Sea­gate ST39103LC spinning at 10,016 RPM and with an av­erage latency of 2.99 msec, and the other two 
+are IBM DNES309170 spinning at 7200 RPM and with an average latency of 4.17 msec. All disks are on Ultra2 
+SCSI buses. The MPI and MPI-2 implementations are part of Sun HPC ClusterToolsTM . Figure 5 shows the 
+time spent waiting for disk reads, disk writes, communication, local sorting, and local permuting in 
+all four passes and in total for a sort of 1 gigabyte. Because operations are heavily overlapped, measurements 
+are for the time spent waiting for operations to complete. For exam­ple, because local sorting and communication 
+overlap ex­tensively, the local sorting time is also communication time. Thelocal sortingtimeshown is 
+theactualtimespent sorting locally, and the actual communication time includes both the local sorting 
+time and the communication time shown as well as some I/O time. Examination of Figure 5 reveals that 
+columnsort is clearly not I/O bound. Although local sorting takes a signi.cant percentage of the total 
+time, because local sorting is over­lapped with communcation, we see that the algorithm is communication-bound. 
+We believe that a faster network, such as the Myrinet used in NOW-Sort, would yield signi.­cantly faster 
+times overall. The second system is also a cluster of 4 Sun Enterprise 450 SMPs. Here, we used two processors 
+on each node. All other speci.cations are the same as the 4-processor Sun cluster, including the 4 disks. 
+The two processors on each node share asingledisk. Figure 6 shows the wait times for the 8-processor 
+Sun cluster for a sort of 2 gigabytes. The total time is approximately 57% higher than the 1-gigabyte 
+sort on 4 processors. One should bear in mind that the network and disk bandwidths are the same on this 
+system as on the 4-processor system, and so it is not surprising that the time increased. Because only 
+processing power is greater than on the 4-processor system, the percentage of time spent in local sorting 
+is less. Percentage of time spent waiting for I/O is roughly the same for the two systems, and the communication 
+wait time is signi.cantly higher on the 8-processor system. The .nal system is a Silicon Graphics Origin 
+2000. This system has 8 processors, of which we used 4. Each proces­sor is an IP27 running at 180 MHz. 
+The entire system has 4 GB of RAM, of which we used 160 MB in all for hold­ing data. The Origin 2000 
+has distributed shared memory. We used 4disks on acommonI/O bus. Each disk is a Seagate ST34501W spinning 
+at 10,033 RPM and with an average latency of 2.99 msec. The MPI and MPI-2 imple­mentations are MPICH 
+from Argonne National Laborato­ries (http://www.mcs.anl.gov/mpi/mpich/). Although Sili­con Graphics o.ers 
+a native implementation of MPI for the Origin 2000, we could not use it because, to the best of our knowledge, 
+it does not contain I/O functions. From Figure 7, wait times for a 1-gigabyte sort, we see a rather di.erent 
+breakdown than we saw for the Sun systems. Communication is signi.cantly faster because there is no external 
+network, but I/O is much slower due to the shared I/O bus. Sorting is slower on the Origin 2000 as well, 
+due to the slower processors. In all three .gures, we see the bene.t of the run observation. Passes 2 
+and 3use lg s levels of merging, and pass 4 uses just one level of merging. From Figures 5 7, we see 
+that passes 2 and 3spend much less time locally sorting than pass 1, Figure 5: Wait times for disk reads, 
+disk writes, communication, local sorting, and local permuting in all four passes and in total on the 
+4-processor Sun cluster for a 1-gigabyte sort.  Figure 6: Wait times on the 8-processor Sun cluster 
+for a 2-gigabyte sort. Figure 7: Wait times on the 4-processor Origin 2000 for a 1-gigabyte sort. and 
+pass 4 spends very little time locally sorting.  5. Conclusion As Table 1 shows, by one measure, our 
+out-of-core column­sort implementation is more sorting-e.cient than NOW-Sort, but in other measures, 
+NOW-Sort is more sorting­e.cient. Our columnsort is more e.cient in V/DT (giga­bytes sorted per disk-minute), 
+NOW-Sort is more e.cient in V/PT (gigabytes sorted per processor-minute) and V/GT (gigabytes sorted per 
+used-memory-minute). The measure V/((P + D)T) combines elements of one measure in which columnsort is 
+more sorting-e.cient and one in which NOW-Sort is more sorting-e.cient, and so the two algorithms turn 
+out to be very close in this measure. Each of the two implementations exploits certain advantages over 
+the other. NOW-Sort has the following advantages: System: A faster network, active messages, and I/O 
+via mmap and madvise, whereas our columnsort implemen­tation uses only MPI and MPI-2 calls for communca­tion 
+and I/O. Assumptions: Processor-major output ordering and uni­formly distributed keys. Experimental: 
+Larger record size, hence fewer records per gigabyte. Our columnsort implementation has the following 
+advan­tages: System: Faster processors and faster disks. Assumptions: All parameters are powers of 2, 
+and the problem size is restricted by the amount of memory per processor. Experimental: None. One might 
+wonder why we go through the e.ort of imple­menting a columnsort-based approach when a distribution­sorting 
+approach like NOW-Sort s makes fewer passes over the data. To perform out-of-core distribution sorting 
+in the absence of uniformly distributed keys, there are typically at least three passes: one to distribute 
+the data, one to sort on each processor (possibly out-of-core), and one for load balancing. In fact, 
+an out-of-core distribution sort usually requires even more passes: sorting on each processor may require 
+multiple passes over the data owned by that pro­cessor, and we need to read some subset of keys prior 
+to distribution in order to select a set of splitters. Although our columnsort-based algorithm makes 
+four passes over the data, we shall describe below how to reduce the number of passes to only three. 
+Consequently, in terms of number of passes over the data, a columnsort-based algorithm can be as good 
+as a distribution sort. Furthermore, when the output must be striped in PDM or­der, a distribution-sorting 
+algorithm has problems. Produc­ing the output naturally in PDM order is infeasible. That is because the 
+natural way to distribute records is into buckets whose size is the striping unit B. Unfortunately, there 
+are so many striping units of data altogether that the number of buckets becomes unmanageable. During 
+distribution, each processor must maintain one bu.er for each of its B-record buckets. If we could keep 
+each such bu.er in memory at the same time, then we would have N/B blocks in memory, and so the problem 
+would .t in memory! Instead of producing the output naturally in PDM order, a distribution sorting algorithm 
+can produce its output in processor-major order and then permute the data into PDM order. This reordering 
+is a permutation of blocks, which requires one additional pass. Columnsort, unlike distribution sorting, 
+is oblivious. That is, the exact I/O and communication patterns depend only on the system parameters 
+and the problem size. In distri­bution sorting, both I/O and communication are data de­pendent. Future 
+work At this time, we envision three directions in which to pro­ceed. First, as mentioned above, we can 
+combine the last two passes of out-of-core columnsort into a single pass. The key idea is the pairing 
+observation. The last pass would work as follows. Each processor reads a column, sorts it locally, sends 
+the bottom half to the next processor (receiving half a column from the previous processor), sorts locally 
+again, communicates in a similar way to our current pass 4 com­munication, and writes to disk. The .rst 
+and last processors work a little di.erently. We omit the details here. Second, we plan to revise our 
+implementation to use threads in order to overlap local computation, communication, and I/O. Our current 
+implementation uses asynchronous I/O and communication calls, and sorting and communication are tied 
+together. In a threaded implementation, all calls can be synchronous, with asynchrony provided by the 
+thread mechanism. It will be interesting to see how a fully threaded implementation performs relative 
+to our current code. Third, we would like to improve on the restriction (1). Currently, the maximum problem 
+size is proportional to (M/P)3/2 . We conjecture that we can incorporate some ideas of the Revsort mesh-sorting 
+algorithm [10]. Our hope is that the resulting algorithm would allow the maximum problem size to be proportional 
+to (M/P)5/3 yet be imple­mentable. Acknowledgments We thank David Kotz, Wayne Cripps, and Arne Grim­strup 
+for their cooperation in helping us set up experimental testbeds.  References [1] Alok Aggarwal and 
+Je.rey Scott Vitter. The in­put/output complexity of sorting and related prob­lems. Communications of 
+the ACM, 31(9):1116 1127, September 1988. [2] Andrea C. Arpaci-Dusseau, Remzi H. Arpaci-Dusseau, David 
+E. Culler, Joseph M. Hellerstein, and David A. Patterson. High-performance sorting on networks of workstations. 
+In SIGMOD, 1997. [3]RakeshD.Barve and Je.reyScott Vitter.Asimple and e.cient parallel disk mergesort. 
+In Proceedings of the Eleventh Annual ACM Symposium on Parallel Al­gorithms and Architectures, pages 
+232 241, June 1999. [4] Thomas H. Cormen and Melissa Hirschl. Early ex­periences in evaluating the Parallel 
+Disk Model with the ViC* implementation. Parallel Computing,23(4 5):571 600, June 1997. [5] William Gropp, 
+Steven Huss-Lederman, Andrew Lums­daine, Ewing Lusk, Bill Nitzberg, William Saphir, and Marc Snir. MPI 
+The Complete Reference, Volume 2, The MPI Extensions. The MIT Press, 1998. [6] Tom Leighton. Tight bounds 
+on the complexity of parallel sorting. IEEE Transactions on Computers,C­34(4):344 354, April 1985. [7] 
+Mark H. Nodine and Je.rey Scott Vitter. Greed sort: Optimal deterministic sorting on parallel disks. 
+Journal of the ACM, 42(4):919 933, July 1995. [8] Matthew D. Pearson. Fast out-of-core sorting on parallel 
+disk systems. Technical Report PCS-TR99­351, Dept. of Computer Science, Dartmouth College, Hanover, NH, 
+June 1999. [9] Sanguthevar Rajasekaran. A framework for simple sort­ing algorithms on parallel disk systems. 
+In Proceedings of the Tenth Annual ACM Symposium on Parallel Al­gorithms and Architectures, pages 88 
+97, 1998. [10] C. P. Schnorr and A. Shamir. An optimal sorting algo­rithm for mesh connected computers. 
+In Proceedings of the Eighteenth Annual ACM Symposium on Theory of Computing, pages 255 263, May 1986. 
+[11] Marc Snir, Steve W. Otto, Steven Huss-Lederman, David W. Walker, and Jack Dongarra. MPI The Com­plete 
+Reference, Volume 1, The MPI Core.The MIT Press, 1998. Sun, Sun Microsystems, the Sun Logo, Sun Enterprise 
+and Sun HPC ClusterTools are trademarks or registered trademarks of Sun Microsystems, Inc. in the United 
+States and other countries. All SPARC trademarks are used un­der license and are trademarks or registered 
+trademarks of SPARC International, Inc. in the United States and other countries. Products bearing SPARC 
+trademarks are based upon an architecture developed by Sun Microsystems, Inc. 
+			

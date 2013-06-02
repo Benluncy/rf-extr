@@ -1,0 +1,808 @@
+
+ Making Time-stepped Applications Tick in the Cloud Tao Zou , Guozhang Wang , Marcos Vaz Salles * , David 
+Bindel , Alan Demers , Johannes Gehrke , Walker White Cornell University University of Copenhagen Ithaca, 
+NY Copenhagen, Denmark {taozou, guoz}@cs.cornell.edu, vmarcos@diku.dk, {bindel, ademers, johannes, wmwhite}@cs.cornell.edu 
+ABSTRACT Scientists are currently evaluating the cloud as a new platform. Many important scienti.c applications, 
+however, perform poorly in the cloud. These applications proceed in highly parallel discrete time-steps 
+or ticks, using logical synchronization barriers at tick boundaries. We observe that network jitter in 
+the cloud can severely increase the time required for communication in these applications, signi.cantly 
+increasing overall running time. In this paper, we propose a general parallel framework to process time-stepped 
+applications in the cloud. Our framework exposes a high-level, data-centric programming model which represents 
+ap­plication state as tables and dependencies between states as queries over these tables. We design 
+a jitter-tolerant runtime that uses these data dependencies to absorb latency spikes by (1) carefully 
+scheduling computation and (2) replicating data and computation. Our data-driven approach is transparent 
+to the scientist and requires little additional code. Our experiments show that our methods im­prove 
+performance up to a factor of three for several typical time­stepped applications. Categories and Subject 
+Descriptors H.2.4 [Information Systems]: Database Management Systems  General Terms Algorithms, Languages, 
+Performance  Keywords Parallel frameworks, database optimizations, cloud computing 1. INTRODUCTION Many 
+important scienti.c applications are organized into logical time steps called ticks. Examples of such 
+time-stepped applications include behavioral simulations, graph processing, belief propaga­tion, random 
+walks, and neighborhood propagation [3, 8, 12, 14, 32]. They also include classic iterative methods for 
+solving linear *Work performed while author was at Cornell University. Permission to make digital or 
+hard copies of all or part of this work for personal or classroom use is granted without fee provided 
+that copies are not made or distributed for pro.t or commercial advantage and that copies bear this notice 
+and the full citation on the .rst page. To copy otherwise, to republish, to post on servers or to redistribute 
+to lists, requires prior speci.c permission and/or a fee. SOCC 11, October 27 28, 2011, Cascais, Portugal. 
+Copyright 2011 ACM 978-1-4503-0976-9/11/10 ...$10.00. (a) Weblab Instances (b) EC2 Small Instances 
+(c) EC2 Cluster Instances (d) EC2 Large Instances  Figure 1: Latency in Our Weblab Cluster and in EC2 
+systems and eigenvalue problems [4]. These applications are typ­ ically highly data parallel within ticks; 
+however, the end of every tick is a logical barrier. Today these applications are usually im­plemented 
+in the bulk synchronous model, which advocates global synchronization as a primitive to implement tick 
+barriers [44]. The bulk synchronous model has allowed scientists to easily de­sign and execute their 
+parallel applications in modern HPC centers and large private clusters. However, the use of frequent 
+barriers makes these codes very sensitive to .uctuations in performance. As a consequence, most modern 
+HPC centers allocate whole por­tions of a cluster exclusively for execution of an application. This model 
+works well for heavy science users, but is not ideal for mid­range applications that only need to use 
+a few hundred compute nodes [39]. In particular, these mid-range users have to wait on execution queues 
+for long periods, sometimes hours or even days, to get to run their jobs. This signi.cantly lengthens 
+the time-to­solution for a number of scienti.c research groups worldwide. This paper examines what happens 
+when we take these scienti.c applications off those private, well-behaved, expensive computing platforms 
+and run them in the cloud. As the next generation com­puting platform, the cloud holds both promise and 
+challenges for large-scale scienti.c applications [19, 39]. On the one hand, the cloud offers scientists 
+instant availability of large computational power at an affordable price. This is achieved via low-overhead 
+vir­tualization of hardware resources [47, 48, 49]. On the other hand, the common practice of using commodity 
+interconnects and shared resources in the cloud alters fundamental assumptions that scien­ti.c applications 
+were based on in the past. One critical assumption which does not hold in the cloud is that there is 
+a stable, low-latency interconnect among compute nodes. Recent experimental studies have demonstrated 
+that the cloud suf­fers from high latency jitter [42, 45]. We have con.rmed this obser­ vation by measuring 
+the TCP round-trip times for 16 KB messages in several environments, as shown in Figure 1. These environments 
+include the Cornell Weblab, which is a modest dedicated cluster of machines interconnected by Gigabit 
+Ethernet, and Amazon EC2 cloud instances in the 32-bit Small , 64-bit Large and 64-bit Cluster Compute 
+categories. Note that the scales of the y-axes differ signi.cantly. Communication in the Weblab is well-behaved, 
+with latencies tightly distributed around the mean. The 32-bit EC2 instances have poor performance, with 
+high average latency and high variance. The 64-bit EC2 instance categories show acceptable average latency, 
+but suffer frequent latency spikes more than an order of magnitude above the mean. Even the cluster compute 
+in­stances, advertised for HPC applications, show the same effect. Time-stepped applications that are 
+programmed in the bulk syn­chronous model suffer dramatically from this latency jitter. Sup­pose a message 
+from process Pi to process Pj is delayed by a la­tency spike during global synchronization. Pj then blocks 
+and can­not start its tick until it gets unblocked by the arriving message. If computational load is 
+balanced, Pj will be late sending its own messages for the next tick. This in turn will create a latency 
+wave across the cluster, which is hard to compensate for in parallel ap­plications. The HPC community 
+has invested signi.cant work in optimiz­ing communication for time-stepped applications [1, 6, 29]. How­ 
+ever, these optimization techniques were developed using a model of .xed, unavoidable latency for sending 
+a message across a dedi­cated network, and not for the unstable, unpredictable latency that characterizes 
+the cloud. Furthermore, many of these previous tech­niques can only be applied to applications whose 
+computational logic can be formulated as a sparse linear algebra problem. [18] This specialization signi.cantly 
+impairs the productivity of sci­entists who want to develop new applications without regard for which 
+optimizations to use for communication. A general pro­gramming model for time-stepped applications that 
+can abstract the messy latency characteristics of the cloud is currently missing. Contributions of this 
+Paper. In this paper we describe a general, jitter-tolerant parallel framework for time-stepped scienti.c 
+appli­cations. By taking a data-centric approach, we shield developers from having to implement communication 
+logic for their appli­cations. Our data-driven runtime automatically provides multiple generic optimizations 
+that compensate for network jitter. In sum­mary, this work makes the following contributions: 1. We observe 
+that logical barriers in time-stepped applications usually encode data dependencies between subsets of 
+the applica­tion state. Our programming model allows developers to abstract application state as tables, 
+and express the data dependencies as functions over queries (Section 4). 2. We present an ef.cient jitter-tolerant 
+runtime, by which time­stepped applications speci.ed in our programming model are exe­cuted in parallel. 
+Our implementation uses two primary techniques: scheduling based on data dependencies and replication 
+of data and computation (Section 5). A formal description of our model and correctness proofs of our 
+algorithms appear in Appendix A. 3. In an experimental evaluation, we show that our runtime sig­ni.cantly 
+improves the performance of a wide range of scienti.c applications in Amazon EC2. We observe gains of 
+up to a factor of three in throughput for several time-stepped applications coded in our programming 
+model (Section 6).  We start our presentation by de.ning time-stepped applications (Section 2) and summarizing 
+our approach (Section 3). 2. TIME-STEPPED APPLICATIONS A time-stepped application is a parallel scienti.c 
+application or­ganized into logical ticks. Processes in these applications proceed completely in parallel 
+within a tick and exchange messages only at tick boundaries. Today, most of these applications are imple­mented 
+in the bulk synchronous model, which introduces logical global barriers at the end of a tick [44]. The 
+conceptual simplicity of this model has led to its widespread adoption by a large number of scienti.c 
+applications [3, 4, 8, 12, 14, 32]. Time-stepped application developers typically follow proven de­sign 
+patterns to improve parallel ef.ciency. First, developers usu­ally choose to exploit data parallelism 
+within a tick, since it pro­vides for very .ne-grained parallel computations. Second, develop­ers strive 
+to architect their applications for high locality of access so that they can minimize the amount of information 
+exchanged among processes at logical barriers. We illustrate these design pat­terns in the following 
+example, which we use throughout this paper. Running Example: Behavioral Simulations. Behavioral simula­tions 
+model complex systems of individual, intelligent agents, such as transportation networks and animal swarms 
+[12, 14]. In these simulations, time is discretized into ticks; within a tick, the agents concur­rently 
+gather data about the world, rea­son on this data, and update their states for the next tick [46]. For 
+instance, Couzin et al. used this type of simu­lation to study information transfer in schools of .sh 
+[14]. An illustration of this simulation is shown on the right. Within a tick, each .sh agent inspects 
+the current velocities of other visible .sh to determine its new velocity for the next tick. In addition, 
+informed individuals balance these social interactions with a pre­ferred direction (e.g., a food source) 
+to determine movement. Two application parameters determine how far a .sh can see or move within a tick. 
+The former is termed visibility, denoted V, while the latter is termed reachability, denoted R. Given 
+visibility and reachability constraints, we can partition the simulated space and assign each spatial 
+partition to a different pro­cess (dotted lines in the .gure). The processing of a tick is data­parallel: 
+each process executes the tick logic for each .sh agent in its partition independently, calculating its 
+new state. When all the .sh agents in some partition have been updated, we say this partition has been 
+stepped to the next tick. Notice, however, that processing of a .sh requires access to the state of all 
+neighbor .sh within distance V as its context. Therefore, processing of a parti­tion requires not only 
+computing the new state for all .sh within the partition, but also knowledge of which .sh move between 
+par­titions. Such dependencies for a partition in space can be found by expanding the partition rectangle 
+by both the visibility and reacha­bility parameters. As these parameters typically represent a small 
+fraction of the simulated space, it is clear that the .sh simulation exhibits strong locality. Many other 
+important applications, such as graph processing platforms [37] and iterative solvers [4], are time-stepped 
+and there­ fore designed to exploit data parallelism and locality. We develop two additional examples 
+of such applications in Appendixes B.1 and B.2. They correspond to an iterative method, Jacobi itera­tion 
+[4], and a graph processing application, PageRank [8]. 3. OUR APPROACH As we have mentioned before, 
+due to their use of logical bar­riers bulk synchronous implementations of time-stepped applica­tions 
+are extremely vulnerable to latency. There has been signi.­cant work in the past to compensate for .xed 
+latency in these ap­plications [1, 6, 29]. However, applying these techniques to a new time-stepped application 
+requires non-trivial redesign of the appli­cation s computational logic as well as its underlying communica­tion 
+logic. In addition, making these techniques work in the pres­ence of large latency variance in the cloud 
+remains a challenging task. We tackle both of these challenges simultaneously by provid­ing a general 
+parallel framework for scientists which exploits prop­erties of time-stepped applications to hide all 
+details of handling latency jitter. Our framework abstracts time-stepped applications into an intuitive 
+data-driven programming model so that scientists only need to focus on the computational logic of their 
+applications. The framework then executes the program in an associated jitter­tolerant runtime for ef.cient 
+processing. By carefully modeling data dependencies and locality of the application in our program­ming 
+model, our jitter-tolerant runtime is able to schedule useful computation automatically and ef.ciently 
+during latency spikes. More speci.cally, our programming model abstracts the appli­cation state as a 
+set of relational tables. Conceptually, each tick of the computation takes these tables from one version 
+to the next. In order to capture data parallelism and locality, we let the application developers specify 
+a partitioning function over these tables, as well as model the data dependencies necessary for correct 
+computation. Modeling data dependencies ef.ciently is not trivial. The naive approach would be to specify 
+dependencies directly on the data, creating a large data dependency graph among individual tuples. Unfortunately, 
+the overhead of tracking dependencies at such a .ne granularity would be very large. Our programming 
+model takes a different approach: We compactly represent sets of tuples by encoding them as queries. 
+Data dependencies are then mod­eled by functions that de.ne relationships between queries. This approach 
+introduces the complexity of ensuring that dependency speci.cations on queries are equivalent to those 
+on the underlying data. Once we formally prove the correctness of these relationships, however, we obtain 
+a programming model that can naturally ex­press locality and dependencies at very low overhead. All the 
+com­plexity of managing dependency relationships on queries is hidden inside our runtime implementation. 
+As an example, consider the .sh simulation above. The appli­cation state is a table containing each .sh 
+as a separate tuple. We model the partition assigned to each process as a query encoded by a rectangle 
+in the simulation space. As computation proceeds over several ticks, we automatically ensure that data 
+items are cor­rectly updated and respect the partition query. To achieve this, we can apply a function 
+to the partition query that returns another query corresponding to the partition s rectangle enlarged 
+by how far .sh can see. This query thus encodes the read dependencies of the partition. Similarly, we 
+can apply another function to the lat­ter query to obtain a rectangle further enlarged by how far .sh 
+can move. This third query encodes both the read and write dependen­cies of the partition. We describe 
+our programming model in detail in Section 4. This programming model is not language-speci.c and we anticipate 
+implementations in different languages will emerge. Based on the dependencies abstracted as queries, 
+the jitter­tolerant runtime controls all aspects of the data communication be­tween processes on behalf 
+of the application. The runtime ensures that the right data is available at the right time to unblock 
+compu­tation and overcome jitter. As we show in Section 5.1, the run­ time takes advantage of the structure 
+of dependency relationships Table 1: Programming Model St stands for any possible global state S in execution 
+at time step t. List<Query> PART(int n) Partitions the global state so that it can be distributed to 
+n processes. The partitioning is represented by a list of n queries that select subsets of the global 
+state which should be given to each process. State NEW(Query q) Initializes the local state according 
+to q. Typical implementations of this function read the local state selected by q from a distributed 
+.le system. State STEP(State toStep, State context) Steps the application logic for every tuple in the 
+toStep state by one tick and returns new values. The STEP function is only allowed to inspect tuples 
+in the state given as context . Query RD (Query q) Calculates the read dependencies of q. It returns 
+a query that captures all tuples needed in context to correctly step q(St ). Query RX (Query q) Calculates 
+the read exclusiveness of q. It returns a query that captures all tuples in q(St ) that can be correctly 
+stepped by only using q(St ) as context . Query WD (Query q) Calculates the write dependencies of q. 
+It returns a query p such that correctly stepping p(St ) returns a state that contains all tuples in 
+q(St+1). Query WX (Query q) Calculates the write exclusiveness of q. It returns a query p such that correctly 
+stepping q(St ) returns a state that contains all tuples in p(St+1). boolean DISJOINT(Query q0, Query 
+q1) Tests whether the queries q0 and q1 can have a nonempty intersection. It returns false if it is possible 
+for q0 and q1 to ever select a tuple in common. to synchronize ef.ciently. First, our runtime restricts 
+communica­tion to only those processes that are dependency neighbors. This technique reduces the communication 
+cost by replacing global syn­chronization by local synchronization. However, it neither removes nor relaxes 
+synchronization points. To deal with variance in mes­sage latency during synchronization, our runtime 
+further optimizes communication using two techniques: dependency scheduling and computational replication. 
+The goal of dependency scheduling (Section 5.2) is to continue computation on subsets of the applica­ 
+tion state whose dependencies are locally satis.ed when a latency spike occurs. In that case, we can 
+advance computations to future steps on subsets of the state instead of getting blocked. Computa­tional 
+replication (Section 5.3) uses redundant data and its respec­ tive computation both to communicate less 
+often and to unblock even more computation internal to a process. Hence, this technique can be used to 
+complement dependency scheduling by providing additional .exibility at synchronization points. 4. PROGRAMMING 
+MODEL In this section, we describe the programming model offered by our jitter-tolerant runtime. Table 
+1 summarizes the functions we require application developers to instantiate. We explain them in detail 
+in the following subsections. 4.1 Modeling State and Computation Global State. A time-stepped program 
+logically has a global state that is updated as part of some iterative computation. We model this global 
+state as a set of relational tables. Each tuple in a ta­ble is uniquely identi.ed, and may contain a 
+number of attributes. For example, the global state of the .sh simulation introduced in Section 1 can 
+be represented by the table: Fish(id, x, y, vx, vy). Here, id is a unique identi.er for a .sh. The attributes 
+(x,y) and (vx,vy) represent a .sh s position and velocity, respectively. For simplicity of presentation, 
+we assume that the global state con­sists of a single table in .rst normal form, i.e., cells are single­valued 
+[36]. Our techniques can be extended to multiple tables and structured attributes. We remark that this 
+table abstraction of state is purely logical. The physical representation of state could include additional 
+data structures, such as a spatial index, to speed up processing. This sep­aration allows us to model 
+the state of a wide range of applications with tables, while not forfeiting the use of optimized representa­tions 
+in an actual implementation. In our programming model, we simply abstract state by an opaque State interface. 
+We denote the initial global state of the application by S0, and the global state at the end of tick 
+i by Si . S0 is typically gener­ated dynamically or read from a .le system. In the .sh simulation, for 
+example, the initial state of the .sh school gets loaded from a checkpoint .le. At each tick, updates 
+to the state depend only on the state at the end of the previous tick, and not the history of past states. 
+Thus, conceptually the time-stepped application logic encodes an update function GSTEP, s.t.: St+1 = 
+GSTEP(St ) Partitioned Data Parallelism. Many time-stepped programs em­ploy partitioned data parallelism, 
+as observed in Section 2. Within a tick, we operate on partitions of the global state in parallel. At 
+the end of the tick, we exchange data among processes to allow compu­tation to advance again for the 
+next tick. One has to make sure that such data parallel executions are equivalent to iterated applications 
+of GSTEP to the global state. To abstract data parallel execution in our programming model, the programmer 
+.rstly informs our framework of a partitioning method by implementing a partitioning function PART (Table 
+1). PART takes the number of processes n, optionally reads a global state, and outputs a list of n selection 
+queries. A selection query Q (or query, for short) is a monotonic operation for selecting a subset of 
+tuples from the global state of the application.1 It takes a global state S and obtains a subset Q(S) 
+. S. The queries output by PART must form a partition of the global state. That is, at any tick, apply­ing 
+the queries to the global state S results in n disjoint subsets that completely cover S. For example, 
+the .sh simulation implements the following PART function: List<Query> PART(int n) { File globalState 
+= getGlobalStateFromCkpt(); QuadTree qt = QuadTree(globalState,n); List<Query> queries = getLeafRectangles(qt); 
+return queries; } As shown above, the .sh simulation builds a quadtree structure containing exactly n 
+leaves over the individual .sh, while trying 1Monotonic queries maintain the containment relationship 
+between input states [36]. So adding tuples to a state cannot make a selection query over this state 
+return less tuples. to balance the number of agents per leaf as much as possible [23, 40]. The result 
+is a list of rectangles that partition the space. For this example, these rectangles are the implementation 
+of our selec­tion queries, which are distributed to n distinct processes. Periodic repartitioning may 
+be required for load rebalancing, which can be implemented as reinvocations of function PART. Now suppose 
+we break up the global state S into n disjoint n partitions Qi(S), s.t. i=1 Qi(S)= S. Unless the application 
+is embarrasingly parallel, we cannot guarantee that GSTEP(St )= n i=1 GSTEP(Qi(St )). This is because 
+the correct computation of partition Qi(S) may require GSTEP to inspect data from other par­titions as 
+context. To address this problem, we introduce two more functions: a local initialization function NEW(Q) 
+and a local update function STEP(A,B). The local initialization function NEW(Q) takes a query Q calculated 
+by the partition function PART. It creates the local state of a process Pi, denoted Si, by applying Q 
+to the global state. Details on how Q is calculated are presented in Section 5. The local update function 
+STEP(A,B) takes as input two states: a state A to compute on and a context state B. Note that tuples 
+in both A and B are read-only, while the output state contains updated tuples in A and any other newly 
+generated tuples from the result of the computation. This function agrees with the standard update in 
+that: STEP(S,S)= GSTEP(S), .global states S In addition, we require STEP to be both partitionable and 
+dis­tributive for correct execution: Property 1 (Partitionable). Let pidS) denote the set of unique 
+identi.ers in S. Then for any states Sa,Sb . S such that Sa nSb = 0/, pidSTEP(Sa, S)n pidSTEP(Sb,S)= 
+0/ (1) Property 2 (Distributive). For any states Sa,Sb . S such that Sa n Sb = 0/, STEP(Sa,S) . STEP(Sb, 
+S)= STEP(Sa . Sb,S) (2) Property 1 guarantees that the outputs of computations on parti­ tions still 
+forms a partition of the global state. Property 2 ensures that independent computations on the subsets 
+of the global state can be recombined simply. These two properties are the key to par­allelizing the 
+computation. In practice, many of our time-stepped applications perform updates on individual tuples 
+while preserving their key values, which respects the above two properties. Returning to the .sh simulation 
+example, a single tick consists of each .sh inspecting other .sh that it can see to decide its own velocity 
+for the next tick. This logic is coded in the following STEP function: State STEP(State toStep, State 
+context) { State result = getCleanState(); for (Fish f in toStep) { for (Fish g in context, g visible 
+to f) { ... // compute influence of g in f } if (isInformed(f)) { ...// balance with preferred direction 
+} result.addFish(f, influence, balance); } return result; } The function STEP is applied to subsets of 
+the .sh relation, which are composed of tuples representing individual .sh. It is easy to see that this 
+STEP function is both partitionable and dis­tributive. Figure 2: RD, RX, WD and WX Functions 4.2 Modeling 
+Data Dependencies Everything we have speci.ed so far would be required for any data parallelization of 
+a time-stepped application, and is not unique to our programming model. However, we still need to model 
+a key aspect of time-stepped applications: data dependencies. For applications that exhibit locality, 
+stepping partition Qi(S) of a process Pi may not require the entire global state as context. Yet, the 
+context has to be large enough to contain all data which the computation over Qi(S) needs to read. As 
+long as all such data is included in the context state at every tick, STEP will generate the same result 
+as having the entire global state given as context. In this case, we say that Qi(S) is correctly stepped. 
+Some of the context data required by STEP may not be in the local partition, and thus needs to be gathered 
+and replicated from other processes. Therefore, the local state Si generated by NEW(Qi) must at a minimum 
+include this replicated data, in addi­tion to the corresponding partition data Qi(S). In a classic data 
+parallel implementation, the developer would need to hand-code this communication pattern for replication. 
+However, in our programming model, developers are only asked to specify simple and intuitive dependency 
+relationships between queries, which are declared in the functions RD, RX, WD, and WX (Table 1). Figure 
+2(a) illustrates the implementation of the data dependency functions for the .sh simulation. Formal de.nitions 
+of the proper­ties these functions must respect can be found in Appendix A. As mentioned in Section 2, 
+a .sh can only see as far as its visibility range V. In this case, RD(Q) returns a query that contains 
+all .sh visible to some .sh in Q(S), for any global state S. In other words, RD(Q) comprises the read 
+dependencies for computations of .sh contained in Q(S), and thus can be used as the context to step Q(S). 
+Similarly, RX(Q) returns a query that contains all the .sh that can­not see (and thus do not depend on 
+reads of) .sh outside Q(S): Query RD(Query q) { Rect qr = (Rect) q; return new Rect(qr.lowLeftX -V, qr.lowLeftY 
+-V, qr.upperRightX + V, qr.upperRightY + V); } Query RX(Query q) { Rect qr = (Rect) q; return new Rect(qr.lowLeftX 
++ V, qr.lowLeftY + V, qr.upperRightX -V, qr.upperRightY -V); } In our experience, these functions are 
+easy to specify; indeed, de­velopers typically think in these terms when developing parallel applications. 
+As .sh in our example are partitioned by their spatial locations, movement of a .sh over the course of 
+the simulation can change its responsible process. Therefore, computations over the local parti­tion 
+may need to write new data to other partitions within a tick. Such write dependencies can be captured 
+through functions WD and WX. For example, suppose that the maximum distance a .sh can move within a tick 
+is given by a reachability parameter R. In this case, WD(Q) can return a query that extends Q by the 
+reacha­bility R. In other words, WD(Q) selects the set of tuples such that correctly stepping this set 
+produces all tuples that satisfy Q in the next tick. Similarly, WX(Q) returns a query that shrinks Q 
+by the reachability R. Correctly stepping Q(S) produces all tuples that sat­isfy WX(Q) in the next tick: 
+Query WD(Query q) { Rect qr = (Rect) q; return new Rect(qr.lowLeftX -R, qr.lowLeftY -R, qr.upperRightX 
++ R, qr.upperRightY + R); } Query WX(Query q) { Rect qr = (Rect) q; return new Rect(qr.lowLeftX + R, 
+qr.lowLeftY + R, qr.upperRightX -R, qr.upperRightY -R); } Not all time-stepped applications require the 
+speci.cation of all four functions above. For example, consider a standard PageRank computation. We can 
+represent vertices in the graph as database tuples, and implement PART with a graph partitioning algorithm, 
+such as METIS [28]. Figure 2(b) illustrates RD and RX in this problem. RD(Q) includes Q plus any vertex 
+with an edge outgoing to a vertex contained in Q; RX(Q) includes only those elements of Q whose incoming 
+edges all come from vertices of Q. However, since the graph structure is static and vertices only need 
+to read from their incoming neighbors, WD and WX are simply identity functions. We include the full speci.cation 
+of PageRank using our programming model in Appendix B.2. Finally, our framework may need to operate on 
+selection queries in order to automatically set up the communication pattern for the application. So 
+we require programmers to specify one additional function, DISJOINT, to test for query disjointness. 
+In the case of the .sh simulation, the operation DISJOINT is easy to implement: It is just rectangle 
+disjointness.  5. JITTER-TOLERANT RUNTIME We now describe how our jitter-tolerant runtime automatically 
+implements communication and schedules computation given the primitives of our programming model. We 
+assume that messages are reliably delivered (i.e., packets are never lost), and that mes­sages between 
+any pair of processes are not reordered. However, as we have discussed previously, messages may be delayed 
+by latency spikes. For simplicity, whenever it is clear from the context, in this section we slightly 
+abuse notation and use Qi to denote the subset Qi(St ) of a global state S at tick t. 5.1 Local Synchronization 
+Traditional bulk synchronous implementations of time-stepped applications introduce global barriers between 
+ticks: At the end of each tick, processors need to block while synchronizing their up­dated data with 
+each other. The cost of these barriers is determined by the arrival time of the last message in the tick. 
+If we can reduce the number of processes that need to synchronize at a barrier, we can reduce their cost. 
+We observe that the groups of processes that need to synchronize with each other can be determined automati­cally 
+by leveraging the data dependencies among states encoded in our programming model. If we can assert that 
+a process will never read from or write to another process during the computation, no message exchanges 
+are necessary between them. The general condition under which two processes Pi and Pj must synchronize 
+falls naturally from this observation. Suppose that af­ter applying the partitioning function PART, we 
+associate its i-th  Figure 3: Dependency Scheduling. Algorithm 1 Local Synchronization at Process Pi 
+Input: User-de.ned RD, WD, DISJOINT Input: Qi and S0 = NEW(RD(Qi)) i Input: Number of timesteps T , Number 
+of processors N 1: for t = 1 to T do 2: St = STEP(Qi(St-1),St-1); i ii 3: for j = 1 to N do 4: if ¬DISJOINT 
+Qi, WD . RD(Qj) then ) 5: SENDWD . RD(Qj)(Sit ), j 6: end if 7: end for 8: for j = 1 to N do 9: if ¬DISJOINT 
+Qj, WD . RD(Qi) then 10: Sf = RECEIVE( j) 11: St = Sti . Sf i 12: end if 13: end for 14: end for and 
+j-th output queries Qi and Qj with Pi and Pj, respectively. Then, to determine if Pi should send messages 
+to Pj, we invoke the following test:2 ¬DISJOINT Qi, WD . RD(Qj) The idea is that RD(Qj) is complete upon 
+having all tuples gener­ated by correctly stepping WD . RD(Qj). So we can safely assert that process 
+Pi will never need to communicate with Pj unless Qi may ever include tuples in WD . RD(Qj). If the above 
+test suc­ceeds, we call Pi a neighbor of Pj. Algorithm 1 shows how to replace global barriers with local 
+syn­ chronization using user-instantiated RD and WD. The data is par­titioned among processes according 
+to PART, and we initialize the local state Si of a process Pi to its partition data along with the corresponding 
+read dependency. The STEP function is applied in parallel for each tick (Line 2). At tick boundaries, 
+each process only exchanges messages with other processes that satisfy the con­ 2The operator . is the 
+classic function composition operator, ap­plied from right to left. dition above (Lines 3 to 13). To 
+ensure correct execution, processes synchronize their appropriate read and write dependencies. Correctness 
+and Ef.ciency. Theorem 1 in Appendix A.2 states the correctness of Algorithm 1 by demonstrating that 
+it is equiva­ lent to iteratively applying GSTEP to the global state. We expect Algorithm 1 to suffer 
+performance degradation in the presence of network jitter. We explore how to address this de.ciency in 
+the next sections.  5.2 Dependency Scheduling Note that although the communication pattern we derive 
+above may avoid global barriers, processes with dependencies still need to synchronize at the end of 
+every tick. As a result, network jitter in the cloud may still lead to long waits for incoming messages 
+at these synchronization points. To deal with this problem, we intro­duce dependency scheduling, which 
+advances partial computations over subsets of the tuples that do not depend on those incoming messages. 
+We can .nd these subsets by making use of functions WX and RX: if a process is responsible for a partition 
+Q, then the set returned by WX(Q) cannot be affected by data generated from other processes within a 
+tick. RX .WX(Q) further re.nes this set to tuples that only depend on data inside of WX(Q) for their 
+computa­tion. Therefore, it is safe to advance computation on RX . WX(Q) before receiving messages from 
+any processes. For concreteness, suppose process P at tick t computes the par­tition speci.ed by query 
+Q, as illustrated in Figure 3(a). We can safely advance Q to the next tick t + 1 (Figure 3(b)). At the 
+end of this computation, we can check if messages have been received. If not, we can apply the above 
+construction recursively, leading to the series: RX . WX(Q), (RX . WX)2(Q),...,(RX . WX)d (Q) where parameter 
+d, provided by the application developer, is the maximum depth allowed for scheduling. This idea is illustrated 
+in Figures 3(c) and (d). Note that it is possible that for some df < d, (RX . WX)df (Q) is already an 
+empty set. If this is the case, we can stop further applying RX . WX. When the messages from neighbors 
+.nally arrive, we can use them to update the tuples in RD(Q) to the next tick t + 1 (Fig­ure 3(e)). Now, 
+we can .nish the remaining computation in Q for t + 2 (Figure 3(f)). Intuitively, .nishing computation 
+for earlier Algorithm 2 Dependency Scheduling at Process Pi Input: User-de.ned WX, RX, DISJOINT Input: 
+Qi and S0 = NEW(RD(Qi)) i Input: Number of timesteps T , Scheduling depth d 1: Initialize tc = tw = 1, 
+DEPTH[1]= 0, DEPTH[2..T ]= -1 2: while tw = T do 3: if tc = T then 4: /* schedule next computation to 
+execute */ i =(RX . WX)DEPTH[tc](Qi) 5: Q1 6: if DEPTH[tc + 1]= -1 then /* not initialized */ 7: Stc 
+= STEP(Q1 i (Stc-1), Stc-1) i ii 8: else Q2 i =(RX . WX)DEPTH[tc+1]-1(Qi) 9: 10: Stc = Stic . STEP (Q1 
+i \ Qi 2)(Stc-1), Stc-1 i ii 11: end if 12: /* send data if tc s computation .nished */ 13: if DEPTH[tc]= 
+0 then 14: SEND(Stic ) 15: end if 16: DEPTH[tc + 1]= DEPTH[tc]+ 1; tc = tc + 1 17: end if 18: repeat 
+/* wait if nothing is schedulable */ 19: if TRYRECEIVE(tw) then 20: Update Stw from messages received. 
+i 21: tw = tw + 1; tc = tw; DEPTH[tc]= 0 22: end if 23: until -1 < DEPTH[tc] = d 24: end while ticks 
+has higher priority over advancing computation even further to future ticks. This is because we want 
+to send messages to our neighbors to unblock their computations as early as possible. In order to advance 
+the remainder Q - RX . WX(Q) to t + 2, however, we may need to inspect data in RX . WX(Q) at t + 1 as 
+context. The maintenance of these multiple versions is illustrated in Figure 3 by the multiple horizontal 
+bars. Suppose at this point the next messages from our neighbors are again delayed. We can then continue 
+the computation by stepping RX . WX(Q) - (RX . WX)2(Q), advancing the contained tuples to tick t + 3 
+(Figure 3(g)). Algorithm 2 shows the detailed description of the distributed de­ pendency scheduling 
+algorithm for each process Pi. As with Algo­rithm 1, we assume a total number of ticks T for the computation. 
+The maximum scheduling depth is speci.ed by d. The algorithm maintains a book-keeping array DEPTH, which 
+holds the depth of the computation for each tick t, as well as a window of tick num­bers [tw,tc] (Line 
+1). tw is the tick still waiting for messages from neighbors, while tc is the tick to advance next. At 
+each iteration, Pi schedules computation whenever possible by calling the STEP function (Lines 3 to 17). 
+To decide what to schedule next, Pi .rst obtains the subset at the current depth of tc (Line 5). If the 
+next tick tc +1 has not been scheduled yet, the whole subset at tc can be advanced (Lines 6 to 8). Otherwise, 
+Pi needs to update the difference between this subset and the one currently at tc + 1 (Lines 9 to 11). 
+In either case, the computation of STEP requires the state as of time tc - 1 as its context. Whenever 
+the depth of a tick reaches zero, its computation is complete. This implies Pi can send the corresponding 
+update messages out to its neighbors and start working on the next tick (Lines 13 to 16). Finally, Pi 
+waits for messages from neighbors until some computation can be scheduled (Lines 18 to 23). When all 
+incoming messages for tick tw have arrived, we update Stw and set tc such that the whole of Qi(Stw+1) 
+becomes ready for compu­ i tation. Note that the user-instantiated DISJOINT function is called implicitly 
+in the TRYRECEIVE and SEND operations. Therefore, Pi only blocks if nothing can be scheduled (i.e., the 
+computation at tc has already reached the maximum allowable depth). The latter condition could easily 
+be replaced by a check of whether the subset at the depth of tc contains any data. Correctness and Ef.ciency. 
+Theorem 2 in Appendix A states the correctness of Algorithm 2. With ef.cient query implementa­ tion and 
+proper precomputation of dependency functions (Lines 5 and 9), the overhead of Algorithm 2 itself is 
+negligible, since the body of the outer loop always schedules one STEP invocation, ex­cept when the process 
+is blocked by communication.  5.3 Computational Replication With dependency scheduling, we can overlap 
+part of the future computation of a process with communication in the presence of a latency spike. However, 
+since the data that depends on incom­ing messages cannot be updated, dependency scheduling does not allow 
+the process to .nish all the computations of the current tick and send out messages to its neighbors 
+for the current tick. Conse­quently, latency waves still get propagated to other processes. To tackle 
+this problem, we explore the idea of computational repli­cation, which pays some extra computation to 
+allow processes to complete the current tick in the absence of incoming messages. With computational 
+replication, we redundantly perform the com­putation of neighbors locally, i.e., we emulate message receipts 
+from them. This of course assumes that the computation of a tick can be made deterministic. Gladly, the 
+STEP function already re­spects Properties 1 and 2. So in all time-stepped applications we studied, achieving 
+determinism only required us to additionally en­sure that the state of pseudorandom number generators 
+were in­cluded in the state of the application. Recall that at tick t, a process Pi steps Qi and waits 
+for mes­sages from its neighbors to update RD(Qi). In order to emulate the receipt of these messages, 
+the process needs to locally store RD .WD .RD(Qi). The outermost layer of read dependency allows us to 
+correctly step WD . RD(Qi). This computation produces all the writes necessary to obtain the state for 
+the next tick of RD(Qi). We can apply this idea recursively with more replicated data: By having m layers 
+of replicas (i.e., RD . (WD . RD)m(Q)), we can proceed to tick t + m without receiving any messages. 
+Since layers of replicas allow a process to step multiple ticks without receiving any messages, we can 
+use them to reduce the fre­quency of message rounds from every tick to only every k ticks. Of course, 
+if we have m layers of replicas, processes must exchange messages at least every k = m + 1 ticks. When 
+k is exactly m + 1, computational replication corresponds to a generalization of the ghost cells technique 
+from the HPC community (see Section 7). However, we observe that sometimes it may be more pro.table to 
+have k = m in the cloud, since this allows for a second use of em­ulating message receipts: to unblock 
+computation local to our pro­cess during a latency spike. Again, we .rst illustrate this idea through 
+an example, in which k = 2 and m = 3. Figure 4(a) shows three layers of replicas, up to RD . (WD . RD)3(Q) 
+for a process with partition query Q at tick t. As we only send messages every two ticks, we need to 
+emulate message receipts for tick t + 1. This implies stepping WD . RD(Q) so that RD(Q) reaches t + 1. 
+After that, we can step Q to t +2 (Fig­ures 4(b) and (c)). At this point, we send messages to our neigh­ 
+bors. Suppose now the incoming messages from our neighbors are  Figure 4: Computational Replication. 
+delayed by a latency spike. We can then use the additional layers of replicas to run useful computation 
+over Q. The .rst step is to com­pute over (WD . RD)3(Q) - WD . RD(Q) at tick t and then over (WD . RD)2(Q) 
+- Q at tick t + 1 (Figures 4(d) and (e)). Note that here we compute over two layers of replicas at a 
+time because we need to ensure that write dependencies are resolved for the inner­most layer. Now we 
+are again ready to compute over WD . RD(Q), advancing RD(Q) to t + 3 (Figure 4(f)). Suppose at this moment 
+the messages from our neighbors .nally arrive. We can append the data in those messages for tick t + 
+2 to the corresponding tuples (Figure 4(g)). As we had RD(Q) at t + 3, we can proceed and step Q to t 
++ 4, sending messages out again to our neighbors (Figure 4(h)). The above procedure can be repeated if 
+another latency spike again delays incoming messages (Figure 4(i)). Algorithm 3 describes the distributed 
+computational replication algorithm for each process Pi. The input to this algorithm is the same as for 
+Algorithm 2, except that we have the two parameters k and m instead of parameter d. Given these parameters, 
+process Pi will only communicate with its neighbors every k steps, but keep m replica layers. Similarly 
+to Algorithm 2, we keep a WIDTH book-keeping array. This time it indicates the amount of replica­tion 
+at each tick. Tick number tw represents the tick we are waiting on data from our neighbors (Line 1). 
+Finally, as in Algorithm 2, TRYRECEIVE and SEND operate over all appropriate neighbors, and implicitly 
+make use of DISJOINT. At each tick in the computation, Pi .rst processes the data in Qi and sends messages 
+to its neighbors if the current tick is a multiple of k (Lines 3 to 6). Then Pi tries to receive incoming 
+messages. If the messages from its neighbors have arrived, Pi can set the width of tw to the full replication 
+width m, as all replicas are updated with the data in the messages. After that, Pi advances tw by k, 
+since the next message will only come k steps later. If the messages are not available, Pi needs to emulate 
+their receipts by .rst .nding the innermost replica layer that can be advanced (Lines 11 to 15). The 
+difference in width between this replica layer and the subsequent layer must be at least two, as otherwise 
+processing the replica layer will not unblock the subsequent layer. When Pi .nds such a replica layer, 
+it can process the tuples in this layer and increase its width (Lines 16 to 20). After enough replica 
+layers are processed and the width of tick t drops to zero, Pi can then advance Qi to the next tick without 
+blocking on communication. For ease of exposition, Algorithm 3 presents pure replication without combining 
+it with dependency scheduling; however, these Algorithm 3 Computational Replication at Process Pi Input: 
+User-de.ned RD, WD, DISJOINT, k, m Input: Qi and S0 = NEW(RD . (WD . RD)m(Qi)) i Input: Number of timesteps 
+T 1: Init tw = 1, WIDTH[1..T ]= -1, WIDTH[0]= m 2: for t = 1 to T do 3: St = STEP(Qi(St-1), St-1) i ii 
+4: if t mod k = 0 then 5: SEND(Sti ) 6: end if 7: while WIDTH[t]= -1 do 8: if TRYRECEIVE(tw) then 9: 
+Update Stw from messages received. i 10: WIDTH[tw]= m; tw = tw + k 11: else /* try to calculate incoming 
+updates */ 12: p = t - 1 13: while WIDTH[p] = WIDTH[p + 1]+ 1 and p = t - m do 14: p = p - 1 15: end 
+while 16: if WIDTH[p] > WIDTH[p + 1]+ 1 then i =(WD . RD)WIDTH[p+1]+2 17: Q1 Q2 i =(WD . RD)WIDTH[p+1]+1 
+18: Sp+1 = Sp+1 19: . STEP (Qi 1 \ Q2 i )(Sip),Sp ii i 20: WIDTH[p + 1]= WIDTH[p + 1]+ 1 21: end if 22: 
+end if 23: end while 24: end for two techniques can work together and we show their combined ef­ fect 
+in our experiments (Section 6). Correctness and Ef.ciency. Theorem 3 in Section A states the correctness 
+of Algorithm 3. Similarly to Algorithm 2, the over­ head of Algorithm 3 can be reduced by ef.cient query 
+implementa­ tion and proper precomputation of dependency functions (Lines 17 to 19). In addition, the 
+redundant computations performed by the algorithm are designed to be executed only during the time that 
+the process would be idle waiting on messages. Thus, as we expect the value of m to be a small constant, 
+we anticipate that the remaining overhead of this algorithm be negligible.  6. EXPERIMENTS In this 
+section, we present experimental results for three differ­ent time-stepped applications using our jitter 
+tolerant runtime. The goals of our experiments are two-fold: (i) We want to validate the effectiveness 
+of the various optimization techniques introduced in Section 5 in a real cloud environment; (ii) We want 
+to evaluate how the optimizations introduced by our runtime can improve the paral­lel scalability of 
+these applications. 6.1 Setup Implementation. We have built a prototype of our jitter-tolerant runtime 
+in C++. The runtime exposes the programming model de­scribed in Section 4 as its API. All the communication 
+is done using MPI. In order to focus on the effects of network communication, all our application code 
+is single-threaded and we ran one runtime process per virtual machine. Application Workloads. We have 
+implemented three realistic time-stepped applications: a .sh school behavioral simulation [14], a linear 
+solver using the Jacobi method [4], and a message-passing algorithm that computes PageRank [8]. The .sh 
+simulation has already been explained throughout the paper. Regarding parallel processing, we use two-dimensional 
+grid partitioning to distribute the .sh agents across processes. The implementation of this simu­lation 
+follows closely the example pseudocode shown in Section 4. The Jacobi solver is a common building block 
+used to accelerate Krylov subspace methods such as conjugate gradients and to derive smoothers for multigrid 
+methods. It follows a communication pat­tern among cells of the matrix with high spatial locality: At 
+each step, each cell needs to communicate its values to its spatial neigh­bors. In our experiments, we 
+implemented a 2D head diffusion solver, in which each process is allocated a .xed-size 1,000 x 1,000 
+block of the matrix. Pseudocode for our implementation of this method can be found in Appendix B.1. For 
+the PageRank algorithm, we used the U.S. Patent Citation Network graph with 3,774,768 vertices and 16,518,948 
+edges in our experiments [31]. In addition, we used the popular METIS graph partitioning toolkit in PART 
+to compute a per-vertex parti­tioning of the input graph [28]. Pseudocode for PageRank is given in Appendix 
+B.2. Our techniques target compensating for network jitter, and not delays caused by systematic load 
+imbalance. The reader is referred to Hendrickson and Devine for a description of techniques for the latter 
+problem [23]. Nevertheless, our techniques may still be help­ ful when latency spikes exceed the delays 
+caused by imbalanced load. To fairly measure the contribution of our techniques to per­formance, we have 
+tuned the applications above so that load would be as well balanced as possible among the executing processes. 
+We could achieve nearly perfect load balance for both the .sh simula­tion and the Jacobi solver. For 
+PageRank, however, we were lim­ited to the quality of the partitioning generated by METIS. In ad­dition, 
+as the .sh simulation and Jacobi solver applications follow a spatial communication pattern, by analyzing 
+data dependencies we can bound the number of neighbors for each process by a con­stant. However, the 
+same is not true of PageRank: the small-world property of the graph structure of our dataset results 
+in a nearly all-to-all communication pattern. As a consequence, we expect the effectiveness of our optimizations 
+on this application to be reduced. We tuned state sizes by partitioning the state up until we started 
+to observe diminishing returns on parallel ef.ciency. All of the applications above operate over a modest-sized 
+state smaller than a few tens of megabytes per process. Even though our algorithms may need to keep multiple 
+versions of the updated parts of the state, these additional copies .t comfortably in main memory. In 
+all the experiments, our metric is the overall tick throughput, in agent (.sh simulation) or cell (Jacobi 
+solver) or edge (PageRank) ticks per second. Hardware Setup. We ran experiments in the Amazon Elastic 
+Compute Cloud (Amazon EC2). In order to conduct large scale experiments within our limited budget, we 
+chose to use large in­stances (m1.large) in all experiments. Each large instance has two 2.26GHz Xeon 
+cores with 6MB cache and 7.5GB main memory. We also forced all instances to reside in the same availability 
+zone. Given the similar distribution of message latencies between these instances and cluster instances 
+(Figure 1), we believe our results will be qualitatively similar to runs in these other instances as 
+well. Unless otherwise stated, all our experiments are run with 50 large instances. We have packaged 
+our experimental setup as a public Amazon Linux AMI; documentation and source code are available at [13]. 
+ 6.2 Methodology Clearly, our measurements are affected by the network condi­tions at Amazon EC2. Given 
+that this is a cloud environment, we cannot guarantee identical network conditions across multiple ex­periments. 
+As a result, absolute measurements are not repeatable. So we must devise a scheme to obtain repeatable 
+relative rankings of the techniques we evaluate. We exercised care in a number of aspects of the experiment 
+setup. First, as we mentioned previously, we only allocated in­stances within the same availability zone. 
+In addition, we made sure to use the same set of instances for all of our measurements of all methods. 
+The rationale is that we wish to get a network setup that is as invariant as possible across measurements. 
+Unfortunately, this is not enough. Even with the same set of in­stances in the same availability zone, 
+we have observed that the Amazon EC2 network is not only unstable with a high rate of ab­normal message 
+delays, but also exhibits high median latency vari­ation over time. In order to conduct meaningful comparisons 
+be­tween different techniques, we must account for this temporal vari­ation in network performance. As 
+a result, the following proce­dure is carried out to obtain the performance measurements. First, we execute 
+all techniques in rounds of .xed order. A performance measurement consists of at least 20 consecutive 
+executions of these rounds. We report standard deviation with error bars. This method­ology seeks to 
+ensure that each round sees roughly comparable dis­tributions of message latencies. We had to tune manually 
+the max­imum running time of each round so that it was smaller than the time it took for the network 
+to exhibit large changes in message delay distributions. Nevertheless, we were still able to ensure the 
+execution of each technique in each round to be of at least 500 ticks. Figure 5 illustrates this temporal 
+variation effect. We compare the different techniques from Section 5 on the Jacobi solver ap­ plication. 
+As explained above, we alternate the execution of these techniques in each round. The x-axis plots 20 
+executions of such rounds, while the y-axis shows the raw elapsed time for each tech­nique at each round. 
+We can observe that the results of different techniques exhibit the same temporal trends due to variance 
+in net­work performance; at the same time, the measurements still clearly demonstrate which techniques 
+are superior. While relative rankings among techniques are made compara­ble by the above methodology, 
+we stress that the absolute values of results shown in the .gures in this section are not directly compara­ble 
+with each other. This is the case even if they are from the same application and use the same technique 
+with the same parameters, given that we cannot control variations in network load over longer time scales. 
+ Figure 5: Variance Over Time: Jacobi Figure 6: Scheduling: Fish Sim Figure 7: Scheduling: PageRank 
+ Figure 8: Replication, k = 1: Fish Sim Figure 9: Replication, k = 2: Fish Sim Figure 10: Replication, 
+k = 5: Fish Sim  6.3 Results Effect of Individual Optimizations. Figure 6 shows the perfor­ mance of 
+the .sh simulation with dependency scheduling. When the depth of scheduling is allowed to reach only 
+a single tick for­ward in time, tick throughput already increases by roughly 30% when compared to local 
+synchronization (i.e., Algorithm 1; we are not comparing with the naive bulk synchronous implementation) 
+since the .rst layer of scheduling enables computation to overlap with communication. Allowing even larger 
+depth of scheduling does not signi.cantly improve throughput. That is because after the messages are 
+received from our neighbors, only a small amount of computation is left to let us send messages for the 
+next tick. However, as we synchronize every tick, the bene.t of computing the second layer earlier, rather 
+than over the communication time of the next tick, is minimal. As shown in Figure 7, we observe sim­ 
+ilar behavior for PageRank. The results for the Jacobi solver are omitted due to lack of space: They 
+are also similar to the results of .sh simulation. Given the above effect, we need to communicate less 
+often than every tick in order to realize the potential bene.ts of scheduling. This can be achieved by 
+computational replication, which we .rst evaluate independently. Figures 8 to 10 display the results 
+for the .sh simulation. Each .gure shows a different setting for the com­munication avoidance parameter 
+k. Given the value of k, we vary the number of layers of replication m. In Figure 8, throughput reaches 
+its peak at m = 2, dropping signi.cantly after that point. The reason is that as we communicate every 
+tick, the message sizes are small and communication cost is dominated by latency. Thus, it is bene.cial 
+to send more than one layer of replicas together to better compensate for jitter. However, as we increase 
+the degree of replication, the overhead in message sizes overshadows the bene.ts in tolerance to jitter. 
+Figures 9 and 10 exhibit similar patterns. However, in Figure 10, throughput increases from m = 8 to 
+m = 9. In this situation, we in­crease the size of replication information by only one eighth; how­ever, 
+now we are able to redundantly compute enough to send mes­sages for the next communication round. This 
+unblocks other pro­cesses earlier, increasing performance. We have also tested many other parameter settings 
+for both the .sh simulation and the Jacobi solver. The best setting we could devise for the former was 
+of k = 2 and m = 3; for the latter, k = 3 and m = 5. For all of our experiments, we also measured separately 
+the breakdown of execution time into time spent in calls to the STEP function, communication wait time, 
+and time spent in all other parts of the runtime. We observed that the latter time always corre­sponded 
+to at most 0.02% of execution time. This con.rms our expectations with respect to the ef.ciency of Algorithms 
+2 and 3 (Sections 5.2 and 5.3). Finally, for the PageRank application, the small-world structure of the 
+graph we use implies a nearly all-to-all communication pat­tern. In addition, even a one-hop dependency 
+of a graph partition can lead to a signi.cant fraction of the whole graph. As replication is obviously 
+counterproductive in this situation, we do not show experimental results with replication for this application. 
+Effect of Combined Optimizations. Figures 11 and 12 show the effect of combinations of multiple optimizations. 
+As we have seen before, increasing the scheduling depth does not hurt throughput, so in order to take 
+maximum advantage of scheduling we set its depth to 10. For replication, we use the best setting from 
+the previ­ous experiment. While replication brings the largest bene.t as an individual tech­nique to 
+both applications, replication combined with scheduling shows even better performance. The improvement 
+in throughput using this combined technique is over a factor of 3 for the Jacobi solver and around a 
+factor of 2.5 for the .sh simulation. This comes from the fact that scheduling can absorb part of a latency 
+spike without increasing the size of messages exchanged among pro­cesses. Therefore, it can help replication 
+achieve higher throughput without introducing any extra communication overhead. Impact on Parallel Scalability. 
+We measure the parallel scaleup performance of our runtime by varying the number of instances from 4 
+to 100 while keeping the average workload of each instance constant. Figure 13 shows scalability results 
+for the .sh simula­ tion; the Jacobi solver shows similar trends. One can see that our best combination 
+of techniques can further improve the near-linear scalability compared with local synchronization.  
+7. RELATED WORK Previous literature has studied programming abstractions for sci­enti.c applications 
+as well as techniques to deal with latency in ex­ecution environments. But this work has neither taken 
+a general, data-centric view of programming for these applications nor dealt with the speci.c challenges 
+posed by cloud environments. There has been signi.cant work on parallel frameworks for writ­ing discrete 
+event simulations. These systems are based on task parallelism, and handle con.icts by either conservative 
+or opti­mistic protocols. Conservative protocols limit the amount of par­allelism, as potentially con.icting 
+events are serialized [10, 20]. Optimistic protocols, on the other hand, use rollbacks to resolve con.icts 
+[24]. Time-stepped applications typically eschew these approaches, because the high frequency of local 
+interactions causes numerous con.icts and rollbacks, limiting scalability. Since the mid-1990s, the Message 
+Passing Interface (MPI) Stan­dard has dominated distributed-memory high-performance com­puting due to 
+its portability, performance, and simplicity [21]. Even in its early days MPI was criticized as inelegant 
+and verbose, and in domains where parallel applications evolve rapidly the relatively low level of MPI 
+programming is perceived as a signi.cant draw­back [22, 35]. Thus, there have been efforts to move away 
+from MPI. The DARPA High-Productivity Computing Systems (HPCS) initiative [15] has funded several systems 
+intended to provide at­ tractive alternatives to MPI, mostly based on new parallel lan­guages. In some 
+domains, it has been possible to shield application developers from MPI with high-level application frameworks 
+de­signed by experts. For example, a recent .urry of work has focused on graph processing without MPI 
+[11, 26, 34, 37]. Unfortunately, this work does not generalize to the wide class of bulk synchronous 
+applications. MPI remains the dominant programming paradigm for this class of applications. MPI s low-level 
+programming abstraction creates several dif.­culties for developers wishing to port bulk synchronous 
+applica­tions to the cloud. In particular, dealing with jitter requires a sig­ni.cant rewrite of the 
+communication layer of most of these ap­plications. Unfortunately, there is not yet consensus on the 
+best techniques to use. The scienti.c computing literature includes many established techniques for dealing 
+with uniform communication latency. For example, asynchronous communication primitives facilitate com­munication 
+hiding, and many bulk synchronous applications use these primitives to overlap computation and communication. 
+These optimizations work best when communication latency is uniform and predictable, and it can be dif.cult 
+in practice to characterize their effectiveness [41]. Grid-based MPI systems such as MPICH-G2 give application 
+developers mechanisms to adapt their applications for environ­ments in which communication latencies 
+are nonuniform due to network heterogeneity [27]. Unfortunately, these systems do not address dynamic 
+latency variance within a single point-to-point communication channel, which is common in the cloud. 
+The most scalable parallel algorithms do not just hide commu­nication overhead; they also avoid communication 
+at the expense of performing some redundant computation. This idea has been used for years in large-scale 
+PDE solvers, where each process is responsible for a part of a mesh surrounded by a layer of ghost cells 
+used to receive data from neighboring processes. By using multiple layers of ghost cells, processes can 
+effectively communi­cate not at every tick, but once every several ticks. These ideas have been extended 
+to the more general setting of sparse linear al­gebra [18]. While communicating less often certainly 
+helps, this technique alone cannot deal with latency spikes. Even if multi­ple layers of ghost cells 
+are used, when a message is scheduled to be delivered the receiving process must block waiting for it. 
+Intu­itively, in order to tolerate a latency spike, whenever possible, the receiving process should run 
+some useful work that it can perform until the delayed message arrives. Other techniques from the HPC 
+community target bulk syn­chronous applications, such as balancing the computation and com­munication 
+load among processes [38], forming subgroups of pro­ cesses for global synchronization [6], and replacing 
+the global syn­ chronization barriers with local synchronization by dynamically exploiting locality during 
+each time step [1, 29]. In contrast to our approach, all of these methods block at synchronization points 
+if messages are not available. In order to deal with jitter, new tech­niques need the .exibility to either 
+take incoming messages at syn­chronization points or proceed with useful work in case these mes­sages 
+are not available. Our scheduling and replication techniques achieve this goal, generalizing and extending 
+the special case of ghost cells described above to enable both reduced communication and jitter-tolerance. 
+Speci.c algorithms have been developed to accelerate conver­gence of iterative methods, effectively reducing 
+the total commu­nication requirements. Examples include methods for graph algo­rithms, such as fast convergence 
+of PageRank [25, 30], as well as for computation of large-scale linear systems and eigenvalue prob­lems, 
+such as Krylov subspace methods [4, 18]. While many of these techniques change the communication pattern 
+of applications to accelerate execution, they do not generalize across different ap­plications domains. 
+Data parallel programming languages provide automatic paral­lelism over regular data structures such 
+as sets and arrays [5, 7, 43, 16]. However, these approaches only support restricted data structures, 
+making it both unnatural and inef.cient to express cer­tain time-stepped applications, such as behavior 
+simulations. In addition, there is little support in these programming models for declaring dependencies 
+among subsets of data. Emerging programming models for the cloud, such as MapRe­duce [17] or DryadLINQ 
+[50], have limited support for iterative applications; a number of recent proposals target exactly this 
+is­sue [9, 33, 51]. Most of these optimizations add support to resident or cached state to a MapReduce 
+programming model. The basic as­sumption is that the dominant factor in computation time is stream­ing 
+large amounts of data at every iteration. In contrast, this paper looks at scienti.c applications with 
+fast iterations where compu­tation time typically exceeds data access time. In these scenarios, network 
+jitter is a fundamental optimization aspect. In previous work, we have shown how database techniques 
+can bring both ease of programming and scalability to behavioral sim­ulations [46], but we did not address 
+how to tolerate network jitter. Related is also Bloom, a declarative, database-style programming environment 
+for the development of distributed applications in the cloud [2]; our work is not as ambitious as it 
+only targets BSP sci­ enti.c applications and focusses on network jitter. A con.uence of BLOOM and CALM 
+and our techniques is an interesting direction for future work. 8. CONCLUSIONS We have shown how time-stepped 
+applications can deal with large variance in message delivery times, a key characteristic of today s 
+cloud environments. Our novel data-driven programming model abstracts the state of these applications 
+as tables and ex­presses data dependencies among sets of tuples as queries. Based on our programming 
+model, our runtime achieves jitter-tolerance transparently to the programmer while improving throughput 
+of several typical applications by up to a factor of three. As future work, we plan to investigate how 
+to apply our framework to legacy code automatically or with little human input. Another interesting direction 
+is quantifying the energy impact of our redundant compu­tation techniques and analyzing the resulting 
+trade-off with time-to­solution. Finally, we will investigate jitter-tolerance techniques for a much 
+wider class of applications, e.g., transactional systems and replicated state machines. 9. REFERENCES 
+[1] R. D. Alpert and J. F. Philbin. cBSP: Zero-cost synchronization in a modi.ed BSP model. Technical 
+report, NEC Research Institute, 1997. [2] P. Alvaro, N. Conway, J. M. Hellerstein, and W. R. Marczak. 
+Consistency Analysis in Bloom: a CALM and Collected Approach. In CIDR, 2011. [3] U. ang, C. Tsourakakis, 
+A. P. Appel, C. Faloutsos, and J. Leskovec. HADI: Mining radii of large graphs. TKDD, 2010. [4] R. Barrett, 
+M. Berry, T. F. Chan, J. Demmel, J. Donato, J. Dongarra, V. Eijkhout, R. Pozo, C. Romine, and H. V. der 
+Vorst. Templates for the Solution of Linear Systems: Building Blocks for Iterative Methods, 2nd Edition. 
+SIAM, Philadelphia, PA, 1994. [5] G. Blelloch. Programming parallel algorithms. Commun. ACM, 39:85 97, 
+1996. [6] O. Bonorden, B. Juurlink, I. von Otte, and I. Rieping. The paderborn university BSP (PUB) 
+library. Parallel Computing, 29(2):187 207, 2003. [7] T. Brandes. Evaluation of high-performance fortran 
+on some real applications. In Proc. HPCN, 1994. [8] S. Brin and L. Page. The anatomy of a large-scale 
+hypertextual web search engine. Computer Networks, 30(1-7):107 117, 1998. [9] Y. Bu, B. Howe, M. Balazinska, 
+and M. Ernst. HaLoop: Ef.cient iterative data processing on large clusters. PVLDB, 3(1-2):285 296, 2010. 
+[10] K. M. Chandy and J. Misra. Asynchronous distributed simulation via a sequence of parallel computations. 
+Commun. ACM, 24:198 206, 1981. [11] R. Chen, X. Weng, B. He, and M. Yang. Large graph processing in the 
+cloud. In SIGMOD, 2010. [12] C. Choudhury, T. Toledo, and M. Ben-Akiva. NGSIM freeway lane selection 
+model. Technical report, Federal Highway Administration, 2004. FHWA-HOP-06-103. [13] Cornell Database 
+Group Website. http://www.cs.cornell.edu/bigreddata/games. [14] I. Couzin, J. Krause, N. Franks, and 
+S. Levin. Effective leadership and decision-making in animal groups on the move. Nature, 433(7025):513 
+516, 2005. [15] DARPA high productivity computing systems project. http://www.highproductivity.org/. 
+[16] R. Das, Y. shin Hwang, M. Uysal, J. Saltz, and A. Sussman. Applying the CHAOS/PARTI library to irregular 
+problems in computational chemistry and computational aerodynamics. In Proceedings of the 1993 Scalable 
+Parallel Libraries Conference, pages 45 56, 1993. [17] J. Dean and S. Ghemawat. Mapreduce: Simpli.ed 
+data processing on large clusters. In OSDI, 2004. [18] J. Demmel, M. Hoemmen, M. Mohiyuddin, and K. A. 
+Yelick. Avoiding communication in sparse matrix computations. In IPDPS, pages 1 12. IEEE, 2008. [19] 
+C. Evangelinos and C. N. Hill. Cloud computing for parallel scienti.c hpc applications. In CCA, 2008. 
+[20] M. J. Feeley and H. M. Levy. Distributed shared memory with versioned objects. In OOPSLA, 1992. 
+[21] W. Gropp. Learning from the success of mpi. In HiPC, 2001. [22] P. B. Hansen. An evaluation of the 
+message-passing interface. SIGPLAN Not., 33:65 72, March 1998. [23] B. Hendrickson and K. Devine. Dynamic 
+load balancing in computational mechanics. Computer Methods in Applied Mechanics and Engineering, 184(2-4):485 
+500, 2000. [24] D. R. Jefferson, B. Beckman, F. Wieland, L. Blume, M. D. Loreto, P. Hontalas, P. Laroche, 
+K. Sturdevant, J. Tupman, L. V. Warren, J. J. Wedel, H. Younger, and S. Bellenot. Distributed simulation 
+and the time warp operating system. In SOSP, 1987. [25] S. D. Kamvar, T. H. Haveliwala, C. D. Manning, 
+and G. H. Golub. Extrapolation methods for accelerating the computation of pagerank. In WWW, 2003. [26] 
+U. Kang, C. E. Tsourakakis, and C. Faloutsos. PEGASUS: A peta-scale graph mining system. In ICDM, 2009. 
+[27] N. T. Karonis, B. R. Toonen, and I. T. Foster. MPICH-G2: A grid-enabled implementation of the message 
+passing interface. J. Parallel Distrib. Comput., 63(5):551 563, 2003. [28] G. Karypis and V. Kumar. Multilevel 
+k-way partitioning scheme for irregular graphs. J. Parallel Distrib. Comput., 48(1):96 129, 1998. [29] 
+J.-S. Kim, S. Ha, and C. S. Jhon. Ef.cient barrier synchronization mechanism for the BSP model on message-passing 
+architectures. In IPPS/SPDP, 1998. [30] C. P. Lee, G. H. Golub, and S. A. Zenios. A two-stage algorithm 
+for computing pagerank and multistage generalizations. Internet Mathematics, 4(4):299 327, 2007. [31] 
+J. Leskovec, J. M. Kleinberg, and C. Faloutsos. Graphs over time: densi.cation laws, shrinking diameters 
+and possible explanations. In KDD, pages 177 187, 2005. [32] F. Lin and W. W. Cohen. Semi-supervised 
+classi.cation of network data using very few labels. In ASONAM, 2010. [33] D. Logothetis, C. Olston, 
+B. Reed, K. C. Webb, and K. Yocum. Stateful bulk processing for incremental analytics. In SoCC, pages 
+51 62, 2010. [34] Y. Low, J. Gonzalez, A. Kyrola, D. Bickson, C. Guestrin, and J. M. Hellerstein. GraphLab: 
+A new parallel framework for machine learning. In UAI, 2010. [35] E. L. Lusk and K. A. Yelick. Languages 
+for high-productivity computing: the DARPA HPCS language project. Parallel Processing Letters, 17(1):89 
+102, 2007. [36] D. Maier. The Theory of Relational Databases. Computer Science Press, 1983. [37] G. Malewicz, 
+M. H. Austern, A. J. Bik, J. C. Dehnert, I. Horn, N. Leiser, and G. Czajkowski. Pregel: A system for 
+large-scale graph processing. In SIGMOD, 2010. [38] L. S. Nyland, J. Prins, R. H. Yun, J. Hermans, H.-C. 
+Kum, and L. Wang. Modeling dynamic load balancing in molecular dynamics to achieve scalable parallel 
+execution. In IRREGULAR, pages 356 365, 1998. [39] L. Ramakrishnan, K. R. Jackson, S. Canon, S. Cholia, 
+and J. Shalf. De.ning future platform requirements for e-Science clouds. In SoCC, pages 101 106, 2010. 
+[40] H. Samet. The quadtree and related hierarchical data structures. ACM Comp. Surv., 16(2):187 260, 
+1984. [41] J. C. Sancho, K. J. Barker, D. J. Kerbyson, and K. Davis. Quantifying the potential bene.t 
+of overlapping communication and computation in large-scale scienti.c applications. In SC, 2006. [42] 
+J. Schad, J. Dittrich, and J.-A. Quiané-Ruiz. Runtime measurements in the cloud: Observing, analyzing, 
+and reducing variance. PVLDB, 3(1):460 471, 2010. [43] J. T. Schwartz, R. B. Dewar, E. Schonberg, and 
+E. Dubinsky. Programming with sets; an introduction to SETL. Springer-Verlag New York, Inc., 1986. [44] 
+L. G. Valiant. A bridging model for parallel computation. Commun. ACM, 33(8):103 111, 1990. [45] G. Wang 
+and T. S. E. Ng. The impact of virtualization on network performance of Amazon EC2 data center. In INFOCOM, 
+pages 1163 1171, 2010. [46] G. Wang, M. A. V. Salles, B. Sowell, X. Wang, T. Cao, A. J. Demers, J. Gehrke, 
+and W. M. White. Behavioral simulations in mapreduce. PVLDB, 3(1):952 963, 2010. [47] L. Youseff, K. 
+Seymour, H. You, J. Dongarra, and R. Wolski. The impact of paravirtualized memory hierarchy on linear 
+algebra computational kernels and software. In HPDC, pages 141 152, 2008. [48] L. Youseff, R. Wolski, 
+B. Gorda, and C. Krintz. Evaluating the performance impact of Xen on MPI and process execution for HPC 
+systems. In VTDC, 2006. [49] L. Youseff, R. Wolski, B. Gorda, and C. Krintz. Paravirtualization for HPC 
+systems. In ISPA Workshops, pages 474 486, 2006. [50] Y. Yu, M. Isard, D. Fetterly, M. Budiu, Ú. Erlingsson, 
+P. K. Gunda, and J. Currey. DryadLINQ: A system for general-purpose distributed data-parallel computing 
+using a high-level language. In OSDI, 2008. [51] M. Zaharia, M. Chowdhury, M. Franklin, S. Shenker, and 
+I. Stoica. Spark: Cluster computing withworking sets. In HotCloud, 2010. APPENDIX A. FORMAL MODEL OF 
+COMPUTATION In this section, we provide a formal presentation of the time­stepped model introduced in 
+Section 4. A.1 Data Dependencies We refer the reader to Section 4 for the de.nitions of global state 
+and time-stepped application logic. Section 4 also introduced function STEP. We now formalize the constraints 
+we need to place on the relationship between the two in­put parameters of STEP. Properties 1 and 2 require 
+that the stepping state be a subset of the context state. In order to express data par­allelism and adjust 
+the layers of computation, we want a stronger relationship. De.nition 1 (Read Data Dependency). For a 
+given STEP and query Q, we say Q -RQf if and only if, for any state S, Q(S) . Qf(S) and )) STEP Q(S), 
+Sf= STEP Q(S), Sfor all Qf(S) . Sf. S (3) The intuition of De.nition 1 is that using Qf(S) as context 
+is suf.cient to give us the correct results for Q(S), and adding more tuples does not change this result. 
+The functions RD and RX in Section 4 are declared according to this de.nition, such that .Q, RX(Q) -RQ 
+and Q -R RD(Q). In the algorithms presented in this paper, we often break our de­pendency sets up into 
+several layers. The following proposition is useful for combining these layers back together. Proposition 
+1. For any queries Qa -RQf and Qb -RQf b, we have a Qa . Qb -RQf. Qbf . a Proof Sketch. This result follows 
+immediately from Property 2 and De.nition 1. D Another challenge is the representation of write dependencies. 
+In the .sh simulation example, the partitions are geometric regions, and a .sh may swim from one region 
+to another. Fortunately, time­stepped computation ensures that we need only look at the current state, 
+and not the history of migrations. So we only need to identify the write dependencies at each time step, 
+and use that to guide our interprocess communication. This is the motivation for the follow­ing de.nition. 
+De.nition 2 (Write Data Dependency). For a given STEP and query Q, we say Q -WQf if and only if, for 
+any state S, Q(S) . Qf(S) and )) Q GSTEP(S)= Q STEP(Sf , S)for all Qf(S) . Sf. S (4) Intuitively, if 
+Q -WQf, we are guaranteed that no tuple outside the state speci.ed by Qf will create tuples into the 
+local state Q(St ) during any time step t. Therefore, by computing STEP(Qf(St ),St ), we can obtain the 
+complete Q(St+1) which already contains all pos­sibly written data. In fact, the functions WD and WX 
+in Section 4 are declared according to this de.nition, such that .Q, WX(Q) -W Q and Q -W WD(Q). A.2 
+Correctness of Algorithms We now illustrate how we use this formal model to establish the correctness 
+of the algorithms presented in this paper. Theorem 1 (Correctness of Algorithm 1). Let Sti be the value 
+for process Pi at line 13. Then i Qi(Sti )= St. Proof. We know from Property 2 and De.nition 1 that 
+n St+1 = STEP(Qi(St ), RD(Qi)(St )) (5) i=1 As each query Qi is monotonic, by Property 1 we only need 
+to prove Qi(St ) . Sti and RD(Qi)(St ) . Sti . As Q is properly contained in RD(Q), De.nition 2 ensures 
+that Q -W WD(RD(Q)). Hence DISJOINT guarantees that we communicate the right information to ensure RD(Qi)(St 
+) . Sti by line 13. D Theorem 2 (Correctness of Algorithm 2). Let Stw be the value for i process Pi 
+at line 20. Then i Qi(Stiw )= Stw. Proof Sketch. Because of the nested loop in lines 18 to 23, we need 
+to show that the algorithm halts. In particular, we must guarantee that TRYRECEIVE(tw) at line 19 eventually 
+succeeds for all tw. This argument proceeds by induction; assuming that TRYRECEIVE(t) has succeeded for 
+all processes for t < tw, then DEPTH[tw]= 0 for all these processes and we execute line 14. The rest 
+of the proof is similar to the one for Algorithm 1, noting that RX and WX work as the inverses of RD 
+and WD, respectively. The only major difference is handling the difference operations in line 10. This 
+follows from Proposition 1. D Theorem 3 (Correctness of Algorithm 3). Let Stw be the value for i process 
+Pi at line 9. Then i Qi(Stiw )= Stw. Proof Sketch. The proof uses many of the techniques from the cor­rectness 
+of Algorithms 1 and 2. Again, we can show that the algo­ rithm halts by proving that TRYRECEIVE(tw) at 
+line 8 will eventu­ ally be successful if tw mod k = 0 using induction. Assuming that TRYRECEIVE(t) has 
+succeeded for all processes for t < tw such that t mod k = 0, then all m layers of replicated are updated 
+to tw - k. Since m = k - 1, Q is able to proceed to tw without receiv­ing any messages in between. So 
+line 5 is guaranteed to execute. The rest of the proof is also similar to the one for Algorithm 1. In 
+particular, we again make use of Proposition 1 to combine the replicated layers. D  B. APPLICATION 
+PSEUDOCODE B.1 Jacobi Pseudocode As mentioned previously in Section 6.1, we consider the pro­ totypical 
+problem of solving a steady-state heat diffusion problem using a regular 2D mesh. To solve this problem 
+by Jacobi iteration, each grid point needs to communicate its heat values to its four spatial neighbors 
+at each step. It is easy to abstract this style of computation in our program­ming model. Function PART 
+creates a block partitioning of the original matrix: List<Query> PART(int n) { File globalState = getGlobalStateFromCkpt(); 
+List<BlockBoundary> bbs = blockPartitionMatrix(globalState,n); List<BlockQuery> queries = getBlockQuery(bbs); 
+return queries; } Each block query only needs to represent the ranges of indexes that de.ne the block. 
+Applying proper dependencies of such block query to the NEW function yields a submatrix for the corresponding 
+block, which is stored locally to a process. The computation of a STEP is straightforward and is therefore 
+omitted. We iterate over the cells of the matrix block given as input and execute the standard heat diffusion. 
+Again, the runtime can only generate correct calls to STEP if it can calculate an appropriate context. 
+So the developer must specify dependency functions. As the structure of the matrix does not change during 
+computation, WD and WX are just identity. Functions RD and RX return queries that obtain the cells in 
+the neighborhood of the query given as input. Query RD(Query q) { MatrixRange m = (MatrixRange) q; return 
+new MatrixRange(m.lowLeftX() -1, m.lowLeftY() -1, m.upperRightX() + 1, m.upperRightY() + 1); } Query 
+RX(Query q) { MatrixRange m = (MatrixRange) q; return new MatrixRange(m.lowLeftX() + 1, m.lowLeftY() 
++ 1, m.upperRightX() -1, m.upperRightY() -1); } These queries either enlarge or shrink the matrix range 
+by one in each direction.  B.2 PageRank Pseudocode As observed previously in Google s Pregel framework, 
+many graph computations are easily expressible as time-stepped appli­cations [37]. In the following, 
+we show how to express PageRank in our programming model. We .rst observe that the graph structure itself 
+does not change during the computation of PageRank. So we can compute a parti­tioning of the graph at 
+the start, e.g., reusing a well-known graph partitioning toolkit such as METIS [28], and use this partition­ 
+ing throughout computation. The corresponding PART function is shown as follows: List<Query> PART(int 
+n) { File globalState = readGlobalStateFromCkpt(); PartitionMap pm = callMETIS(globalState,n); List<PartitionQuery> 
+queries = getPartitionQueries(pm); for (PartitionQuery pq in queries) { // precompute labels pq.labelPartition(globalState); 
+} return queries; } When we call METIS, we also label each vertex in the state with a special attribute, 
+its partition number. A partition query returns all vertices with a given partition number. PART not 
+only invokes METIS, but also performs some precomputation on the vertices for performance. In particular, 
+we label the boundary vertices of a par­tition with value 0. Every other vertex inside the partition 
+gets label i if it only has incoming edges from vertices labeled j = i - 1, and every vertex outside 
+the partition gets label i if it has outgoing edges to vertices labeled j = i + 1. This precomputation 
+allows us to determine dependency rela­tionships more ef.ciently at runtime by encoding queries on labels 
+and on partition numbers. The STEP function is the familiar PageRank computation, with context containing 
+all neighbors of vertices in the input set: State STEP(State toStep, State context) { State result = 
+getGraph(); for (Vertex v in toStep) { Vertex v = result.getVertex(v); v .rank = 0.0; for (Vertex u in 
+context, u directed to v) { // compute contribution of u to v v .rank += u.rank / u.outDegree }} return 
+result; } Our runtime needs to ensure only correct applications of function STEP. For this, the developer 
+only needs to provide speci.cations of the data dependency functions. As in the Jacobi example, the graph 
+structure remains unchanged during computation, and thus functions WD and WX are again identity. Queries 
+obtain vertex sets inside and across partitions according to the partition number and the labels inside 
+partitions. Given that these labels are assigned in the precomputation done by function PART, we can 
+express func­tions RD and RX as queries on these labels: Query RD(Query q) { // get incoming neighbors 
+in same partition Query rdQuery = new LabelQuery(q.label() -1); return rdQuery; } Query RX(Query q) { 
+Query rxQuery = new LabelQuery(q.label() + 1); return rxQuery; } Function RD expands the current vertex 
+set by obtaining all ver­tices with labels smaller by one. As with the Jacobi example, these queries 
+expand or contract the corresponding vertex sets by one hop. Function RX operates only on partition local 
+data, selecting vertices with label greater by one.   
+			

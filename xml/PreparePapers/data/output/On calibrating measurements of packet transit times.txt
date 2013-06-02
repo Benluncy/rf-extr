@@ -1,0 +1,647 @@
+
+ On Calibrating Measurements of Packet Transit Times Vern Paxson Network Research Group Lawrence Berkeley 
+National Laboratory* University of California, Berkeley vern@ee.Ibl.gov Abstract We discuss the problem 
+of detecting errors in measurements of the total delay expcri- enced by packets transmitted through :I 
+wide-ara network. We :ISUII~ that we lbwc measurements of the transmission times of :I group of packets 
+sent from an or&#38;mating host, A, and a correspondlog set of measurements of their aniwl times at their 
+drstiw- tion host, B, recorded by two separate clock.\. We aLo awmc that we have :L \imil:u sries of 
+mensurements of packets sent from B to A (as might occur when recording :L TCP connection), hut we do 
+not i~ssume that the clock at A is synchronized with tbc. clock at R, nor that they run at the same frequency. 
+We develop robust algoritbm~ for detrcling abrupt adjustments to either clock, and for estimating the 
+relative shcw between rhc clocka. By analyzing I large set of measurements of Internet TCP connc c- tionh, 
+we tind that both clock adjustments and rclatlve \kew are sufliciently common that failing to detect 
+them can lead to potenttally large errors wlwl analyzing pnckct transit times. We further tind that synchronizing 
+clocks using a network time protocol such as NTP does not free them from such errors. introduction In 
+this paper we tackle the problem of how to calibrate transit times measured for packets traveling through 
+a network. We assume that WC have a series of pairs of timings. recording each packet s dc- parture time 
+from its sender and arrival time at its receiver, but that the clocks used at the sender and receiver 
+to generate these time- stamps are not necessarily accurate: they may not keep true time, they may be 
+subject to abrupt adjustments, and they tnay run at different rates. Calibrating transit times might 
+at first blush appear to be a fairly minor measurement problem, but in fact it is potentially central 
+to the accuracy of a number of wide-area network measurement techniques. The timing structure of packets 
+transmitted through a network is very rich: by carefully analyzing this structure one can infer fundamental 
+network properties such as delay, bottleneck link speed, available bandwidth, queueing levels, and even 
+hop-by- hop link speed [Ke9l, Bo93, Mu94, CC96, Pa97a. Ja97]. These measurements are usually made using 
+echo techniques, in which packets sent to a given target result in the target returning replies *A longer 
+version of this paper is awlable IPaYXI I% work wa\ ~upportcd by the Director, Oftice of Energy Reacarcb, 
+Oflice of Computation;d and Tecbnolo~y Research. M;lthemotical. Information, and Computational Science\ 
+Division ot tbc United Statea Department of Energy under No Contract DE-ACO3-76Si3XJIYX Permission to 
+make digital or hard copier of all or pan of this work for personal 01 classroom we is pranted without 
+fee provided that copies we not made or dirtributad for profit or commercisl sdvan- We and that copies 
+bear this notice and the full citation on the first page To copy otherwise, to republish. to post on 
+sawers or to radiatribute to lists. requires prior rpecific permission and/or a fee. SIGMETRICS 96 Madison. 
+WI USA Q 1996 ACM 0-69791~962~3/96/0006...55.00 back to the sender. The analysis is then made on the 
+timing struc-ture of the replies. Echo-based techniques, however, suffer from a fundamental problem: 
+they unavoidably conflate properties of the network path in the lhrward direction with the propertics 
+of the reverse direc- tion. Consequently, these measurements are subject to consider- able inaccuracy. 
+Furthermore, a large-scale study of lnternet rout- ing found that paths through the Internet are often 
+asymmetric, meaning that the series of routers visited in the two directions of- ten differ [Pa96]. Subsequent 
+work discusses other asymmetries (such as link speeds and queueing levels), and argues strongly for receiver-based 
+measurement, in which packet receivers cooper- ate with packet senders in order to accurately measure 
+network traf- tic 1 Pa97a]. Accurate receiver-based measurement, however, depends on ac- curate comparisons 
+of timestamps produced by a clock at the packet sender with those produced at the receiver. 11 is easy 
+to assume that to ensure accuracy we merely require synchronization between these clocks; but, while 
+a considerable body of work has addressed the problem of synchronizing clocks to true time (see especially 
+the work of Mills [Mi92a, Mi92b, Mi95]), these algorithms main-tain good time over time scales of hours 
+to days. They do not as-sure synchronization on the small time scales of individual network connections 
+(a point we develop in ii 7). Consequently, the problem of calibrating the timestamps produced by pairs 
+of network clocks remains interesting and important. If undetected, clock adjustments and rate mismatches 
+can intro- duce significant measurement errors. For example, if the sender s clock runs slower than the 
+receiver s clock, then the series of one- way transit times (OTTs) that WC compute from their timestamps 
+will show a systematic increase across the measurement interval. It is easy to mistake this increase 
+for a genuine increase in network- ing delays due to a gradual buildup of queues. Similarly, a clock 
+adjustment, if undetected. can lead to completely erroneous con- clusions that the network suffered from 
+sustained periods of high delay. To develop our algorithms we used the data WC gathered for the Internet 
+packet dynamics study mentioned above [Pa97a]. We recorded two datasets, each consisting of traces of 
+TCP transfers conducted at random bctwecn a number sites around the Internet. For each transfer, packet 
+arrivals and departures were recorded at both the sender and the receiver using the tcpdump utility [JLM89]. 
+The clocks used at the different sites were not necessarily synchro- nizcd. We term the sender and receiver 
+traces collectively as a trace pair. Transfers entailed the sender transmitting IO0 KB of data to the 
+receiver. Because of the USC of TCP, this results in a stream of large data packets flowing from the 
+sender to the receiver, and a smaller stream of acknowledgement ( a&#38; ) packets Rowing in the other 
+direction, all of which were recorded. The first dataset, n/l, recorded at the end of 1994, consists 
+of 2,335 tract pairs between 2.5 sites. The second, J%~J, recorded at the end of 1995, consists of 15,492 
+trace pairs between 3 1 sites. (For brevity, we do not list the sites here, but will use the same names 
+and font as in [Pa97a]-e.g., austr .) We wrote a program, tcpanaly, for automating much of the analysis 
+of the trace pairs, and [Pa97b] discusses a number of packet filter measurement errors detected by it. 
+Part of the development of tcpanaly included devising and implementing the clock calihra- tion algorithms 
+we discuss in this paper. Limitations of the study. There are a number of important lim- itations of 
+our study that must be kept in mind. The first is that lk data we had available for analysis had been 
+previously recorded. and did not include any clock information (such as whcthcr the clocks were synchronized 
+using N TP, nor any logs of clock ad.just-ments by the operating systems). Because we were confined to 
+post-facto analysis, we were unable to evalute the accuracy of our algorithms in any absolute sense. 
+Until the algorithms can bc eval- uated in a controlled fashion, they can at best only be regarded as 
+promising but unproven. The post-facto analysis also means that we could not design our measurement traffic 
+to best support the problem of calibrating the packet timings. Instead, we had to deal with TCP bulk 
+transfcl traffic, which often introduces its own timing distortions along the data transfer path by contributing 
+to queueing. Consequently, we must deal with noise issues that we could otherwise avoid. Another limitation 
+is that we found we needed to introduce a number of heuristics into the algorithms. We believe for the 
+most part that doing so is unavoidable, because the goal of the heuristics is to deal with noise induced 
+on the packet transit timings by net- work conditions, and there is no known method for removing such 
+noise. Finally, one might argue that inexpensive, high precision tim- ing synchronization devices, such 
+as GPS units, obviate the need for calibration techniques such as those we develop. However. even though 
+these units are now relatively cheap, it is not cleat that we can yet presume their ubiquity, because: 
+their cost remains non-negligible; they cannot always be deployed due constraints on antenna placement; 
+and many sites might instead use NTP to syn- chronize most of their machines to a few GPS-endowed machines. 
+We also argue in our summary that, even given a directly-attached GPS unit, checking the clock readings 
+ultimately derived from it remains prudent. We begin our discussion by defining in 5 2 basic terminology 
+for describing different clock attributes. In 6 3 we introduce rcla- live counterparts of these terms, 
+for discussing potential disagree- ments between two network clocks. We next conduct an assessment of 
+relative clock accuracy (5 4), before turning to the development of methods for detecting clock adjustments 
+(9 5) and relative clock skew (5 6). We finish in 5 7 with a look at how well a clock s synchronizn- 
+lion correlates with stable clock behavior (lack of adjustments and of skew). We find that, unfortunately, 
+a high degree of synchroniLa- tion between two clocks does not necessarily mean that the clocks are free 
+of relative errors. 2 Basic clock terminology In this section WC detine basic terminology for discussing 
+the char- acteristics of the clocks used in our study. The Network Time Pro- tocol (NTP; [Mi92aJ) defines 
+a nomenclature for discussing clock characteristics, which we will use as appropriate. It is important 
+to note, however, that the main goal of NTP is to provide accurate timekeeping over fairly long time 
+scales, such as minutes to days. while for our purposes we are concerned with much shorter-lcrm accuracy, 
+namely between the beginning of a network transfer and its end. This difference in goals sometimes leads 
+to different defi-nitions of terminology, as discussed below. Resolution. A clock s vesolutiorz is the 
+smallest unit by which the clock s time is updated (a tick ). It gives a lower bound on the clock s uncertainty. 
+Note that we define resolution relative to the clock s reported time and not to true time, so. for example. 
+a resolution of IO msec only means that the clock updates its notion of time in 0.01 second increments. 
+not that this is the true amount of time hetwecn updates. Due to limited space, we defer discussion of 
+how we estimate a clock s resolution to [Pa98]. Offset. We define a clock s o&#38;t at a particular moment 
+as the dill&#38;encc between the time reported by the clock and the true time as defined by national 
+standards. If the clock reports a time T, and the true time is Tt, then the clock s offset is T, -Tt. 
+Accuracy. We will refer to a clock as nccurata at a particular moment if the clock s offset is zero, 
+and more generally a clock s accuracy is how close the absolute value of the offset is to zero. For NTP, 
+accuracy also includes a notion of the frequency of the clock; for our purposes, we split out this notion 
+into that of skew, because we dcline accuracy in terms of a single moment in time rather than over an 
+inlcrval of time. Skew. A clock s s&#38;w at a particular moment is the frequency difference (first derivative 
+of its offset with respect to true time) between the clock and national standards 3 Terminology for comparing 
+clocks In this section we develop terminology for discussing differences hetwcen two clocks producing 
+timestamps. The definitions are, for the most part, analogous to those in 5 2, except that, instead of 
+comparing a single clock against true time, we are comparing one clock against another. We tirst introduce 
+the meta-notation of a subscript s denoting time measured at the packet sender, and T denoting time al 
+the packet rewi\vr. Let C,5 and Cr refer to the clocks at the sender and rcccivcr. with IZ, and R,, their 
+respective resolutions. We detine C,. s offset relative to C, at a particular true time T as Yr -T,3, 
+that is, the instantaneous difference between the readings of CT and C, at time T. For convenience we 
+will sometimes refer to this as Cp s relative offset at time T, with C, implicitly being the clock to 
+which C,. is compared. WC discuss assessing the relative offset of one clock to another in 5 4. Similarly, 
+C? s relative skew is the first derivative of G s rel-ative offset with respect to true time. Since we 
+do not assume an independent means of measuring true time, we can only estimate C,, s relative skew in 
+terms of time as measured by either C, or C,. See {i 6 for further discussion. lf C,. is accurate relative 
+to C,q (their relative offset is zero), then we will rcl er to the pair of clocks as synchronized. For 
+rc~solutiorz, what we cart about is not relative resolution hutjoi/zl resolution, which we detinc as 
+R,,, E R, + R,. This definition rctlects the fact that, when comparing timestamps from C, with those 
+from C,., the corresponding uncertainties must be LILA&#38;/ to properly propagate the resulting total 
+uncertainty. 4 Analysis of relative clock ofFset In [PaOX] we discuss a simple method for estimating 
+the relative ollbct hetwecn two network clocks. The method is only accurate to within one round-trip 
+time (RTT). However, an important point is that I or analyzing network dynamics, estimating relative 
+offset ac- curatcly generally is /nor crucial. bccausc the dynamics mostly con- cern tl(//i,rmccs in 
+transit times rather than absolute transit times. 5 10 15 0 DEIYS Figure 1: Evolution ofaus tr s relative 
+clock offset over the course ofN, For our purposes, we only need to do estimate relative offsets in or- 
+der to construct legible plots of the two-way flow of packets, and to qualitatively investigate the relationship 
+between large relative off- set and other clock problems such as relative skew. Accordingly, we are satisfied 
+with the method developed in ]Pa9X] even though it is not especially accurate. We evaluated the relative 
+clock offsets in Nl and JV~ to see what sort of variation they exhibited. Our goal is to identify groups 
+of closely-synchronized clocks, as we want to determine the dcgrce to which these clocks are less plagued 
+by inaccuracies than less well-synchronized clocks (3 7). A single computation of AC,.,,, does not tell 
+anything about the absolute accuracy of either C,. or C,, but we would expect that many computations 
+of different ACT,+ s will reveal clusterings among the truly accurate clocks. and a large spread among 
+the inaccurate clocks. Note that in the presence of relative skew, the relative clock offset is not well-defined. 
+However, if we tind a pair of clocks that frequently enjoy a low relative offset, then it is plausible 
+that they do not generally suffer significant relative skew, as otherwise their readings would tend to 
+drift apart and they would not be able to preserve their low relative offset. We proceed by clustering 
+host clocks based on the median 01 the magnitude of their relative clock offset, over all the transfers 
+in which they participated. We use the median offset in order to isolate hosts that consistently had 
+large relative offsets, instead of those that only occasionally had large offsets, since the latter could 
+bc skewed by unfortunately-frequent pairing of a host with an accurate clock together with a host with 
+a poor clock. We use the median 01 the absolute value of the offset rather than the median of the offset 
+itself as a way of detecting clocks that often swing from being too slow to too fast. We tirst inspect 
+the median magnitudes of each host s rclativc clock offset. For both datasets, the same clock emerges 
+as a clear outlier, being typically S-15 minutes different from the other clock. We next remove the connections 
+involving this outlicr and rccom- pute the medians. repeating this process until WC converge on a set 
+of clocks that have small median offsets relative to one nnothcr. For Nl, this process removes 8 clocks 
+as outliers. After eliminating these clocks, the remainder all have median offsets < 1.25 SK. We consider 
+this group of I7 clocks as close/~ .sy&#38;r~~rzi,-~(1. We can continue the process to find a core group 
+of 5 hig/rL~ .s~nchrorri:rt/ clocks,. all with median offsets < 10 msec between one another. For tiz, 
+removing 7 outliers leaves a group of 24 closely syn- chronized clocks, all with median offsets below 
+250 msec. Elim- nating six more of these leaves a group of I8 clocks with median offsets below 50 msec. 
+We can further winnow the group down to a tinal set of IO highly synchronized hosts. all of which have 
+mc- dian offsets between each other of less than IO msec. This gro~~p includes hosts on both coasts of 
+North America as well as two in Europe, indicating synchronization well helow that of the propa- Figure 
+2: Evolution of lbli s relative clock offset over the course Figure 3: Evolution of umont s relative 
+clock offset over the course OfJvz gation time between the hosts-very good, and around the accuracy limit 
+for NTP reported in [Mi92b]. We will make use of these different groups of closely-synchro- nized and 
+highly-synchronized hosts in 5 7 when we test whether close synchronization tends to correlate with low 
+relative clock skew. WC finish with a look at how a host s relative offset evolves over the course of 
+an experimental run. The evolution is interesting be- cause it provides a largc-scale look at how clock 
+accuracy changes. Our interest here is phenomenological-to develop an appreciation for clock inaccuracies 
+and an awareness of how they occur. To assess offset evolution, for each host we constructed a plot with 
+the relative offsets (in seconds) computed for those connec- tions for which it served as the data source 
+on the y-axis, versus the time of the connection (days since the beginning of the experiment) on the 
+z-axis. Positive values indicate the host s clock was running hchind the receiver s clock, negative that 
+is was running ahead. Figure I shows such a plot for the austr tracing host s clock over the course of 
+the Nl experimental run. Up until the 14th day, it kept good time, hut after that point its clock came 
+unglued and ran very slowly, such that the clocks of the other hosts to which it transferred data ran 
+further and further ahead of it (hence, higher and higher offsets). Surprisingly, this is one of the 
+clocks identi- fied above as Irighl~ s~&#38;rronized! That assessment, however, was based on /r&#38;inn 
+relative offset, which filters out the aberrant be- havior. We look at this phenomenon further in fj 
+6.6. Figure 2 shows the evolution of lbli's clock during n/2. While overall the clock has a clear persistent 
+skew, the skew is reversed around day 8, perhaps in an effort to correct the clock s inaccu-racy (or 
+perhaps just due to a temperature fluctuation). But the ef- fort ends a few days later and the original 
+skew returns. However, around day 27 the clock s relative offset jumps by over a minute, rellecting a 
+different sort of correction. (This host synchronizes its clock upon rchoot.) 0.0 0.5 1.0 1.5 2.0 Time 
+(SW) Figure 4: OTT-pair plot illustrating a clock adjustment (sender packets are tilled, receiver packets 
+are hollow) Figure 3 presents our last example of intcrcsting clock offset evolution, for another $2 
+clock. What is striking here are the pres- ence of offset towers that, over the course of hours, slowly 
+ele-vate the relative offset from nearly zero to several hundred millisec- onds. Apparently what is happening 
+is that the clock has a fairly hefty intrinsic skew, but NTP synchronization is detecting this and periodically 
+resetting the clock as it strays too far. 5 Detecting clock adjustments As shown quite strikingly in 
+Figure 2, computer clocks arc somc- times subject to abrupt adjustments in which the clock s notion 01 
+the current time is changed, either gradually or instantaneously. Gradual change is produced by artihcially 
+altering the clock s skew, so that it slowly shifts its offset towards the target. Instantaneous change 
+is produced by simply loading a new value into the clock register. Backward clock adjustments, in which 
+a clock is set to a value it already registered in the past, can sometimes be easily detected if the 
+adjustment is large, by observing non-monotone timestamps. In this section we tackle the harder problem 
+of clock adjustments (both forward and backward) that are not apparent by trivial inspec-tion of the 
+timestamp sequences. 5.1 Detecting adjustments graphically Suppose we have a tract pair between s and 
+r. One simple way to detect whether a clock adjustment occurred during the tract is to plot both the 
+OTTs for the packets from Y to T and those in the reverse direction. (Packets that are dropped by the 
+network have no OTT associated with them and are omitted from the plot.) Figure 4 shows such a plot made 
+for a connection from sdsc to USC in n/l. The solid black squares indicate the OTT for data packets sent 
+from the sender to the receiver, and the hollow squares reflect the OTTs of the acknowledgement packets 
+sent from the receiver to the sender. The figure shows a striking level-shift occurring for the scndcr 
+s OTTs around time T = 0.7 seconds, a fall of about 10 mscc. Fur- thermore, the OTTs in the opposite 
+direction show an equal and opposife change. This equal and opposite change is a crucial as-pect of the 
+plot, as it is the signature of a clock adjustment. If the shift were due to a change in network path 
+properties (for exam- ple, a route change), then in general we would expect that either (1) it would 
+occur in only one direction, or (2) if it occurred in both directions due to a coupled effect, it would 
+have the same sign. For a networking change to result in an equal-but-opposite level shift, some resource 
+needs to have been shifted between the two directions of the network path, and furthermore the rcsourcc 
+needs to affect the transit times of the small acks equally with those of the large data packets. It 
+is difticult to see what sort of networking lomriu... I. I. . 0.0 0.5 1.0 1.5 2.0 Time (sex) Figure 5: 
+Same measurements after de-noising pair-plot change could do this. The change, however, makes perfect 
+sense if, at around time T = 0.7 seconds, sdsc s clock was set ahead IO msec, or USC S clock was set 
+back IO msec. In either of these cases, the difference in the timestamps for packets sent from sdsc to 
+USC will decrease by 10 msec, and similarly those in the opposite direction will increase by 10 msec. 
+This is exactly the behavior shown in the plot.  5.2 Removing noise from OTT measurements Two other 
+points concerning Figure 4 merit attention. The first is the presence of a few unusually small sender 
+packet O lTs, one of about 7 msec around T = 0, and the other of around -3 msec around T = 2.3. Both 
+of these reflect sender packets that did not carry any data (the SYN and FIN connection management packets). 
+These travel through the network more quickly than full-sized data packets, Hence our techniques need 
+to be careful to not weigh their OTT values the same as those for full-sized packets. The second important 
+point shown in the plot is the large varia-tion in OTTs, both for the full-sized sender packets and the 
+smaller receiver packets, For example, note that the O lTs of both some of the acks before the adjustment, 
+and some the data packets af- ter the adjustment, are larger than many of the O lTs on the other side 
+of the adjustment. This variation is the first suggestion that we will require robust algorithms in order 
+to not be fooled by noise when analyzing OTT data. The eye quite readily picks out the twin level shifts 
+in this plot, but doing so algorithmically requires care to screen out noise such as these large OTT 
+values. OTTs often exhibit considerable network-induced noise in terms of deviation of a given OTT from 
+the value expected if the network were unloaded. The noise, however, has one crucial property that often 
+makes it tractable: barring a significant change in the net- work path (such as a route change), the 
+noise always takes the form of an additive, positive increase. This means that, given a set of OTT measurements, 
+we can often hope to find those with very lit- tle network-induced noise by looking at the smallest values. 
+WC will use this property of OTT noise below when develop- ing methods to detect clock adjustments and 
+skew. For these latter, what is interesting are trerzcls in how the OTT values (with noise re- moved) 
+change over the course of the connection. Thus, we cannot simply de-noise the OTT values by selecting 
+the global minimum, or we will obliterate the trend. Instead we divide the series of OTT values up into 
+intervals and de-noise each interval by selecting the minimum value observed during the interval. In 
+[Pa981 we discuss details of how WC choose which intervals to use. We will refer to a measured series 
+of OTT values as xt, and denote the dc-noised series derived from xt as Zt. For each ?t, the index t 
+corresponds to the same index as where in the interval we found the (first) minimal value of zf. Figure 
+5 shows the results of applying this de-noising method to the measurements plotted in Figure 4.  5.3 
+An algorithm for detecting adjustments We now turn to attempting to detect adjustments algorithmically 
+(though we will be forced to also introduce heuristics, for reasons discussed below). The central notion 
+we will use is that of the .vig- ~znturt of the OTTs in the two directions showing equal but opposite 
+level shifts. Identifying pivots. The foundation of our approach lies in identifying pivots: points in 
+time before which the OTTs all lie predominantly above or below all the O ITs after the given point in 
+time. In Figure 4, the pivot we aim to identify occurs around T = 0.7 sec. We now develop a heuristic 
+for identifying pivots in the series of O lTs for packets sent in a single direction (from s Lo T or 
+vice versa). We then will analyze the pivots identified in both directions to test for a clock adjustment. 
+Let Pt be a series ofde-noised OTT values occurring at times t, ordered by the time index t. Let fti 
+be the same series numbered from i = 1 1~. where t, is the ith measurement time. We define a pivot partitio/z 
+of it as a partition of Lt into two disjoint sets, II;{ and Zy, for which the maximum of one set is less 
+than the minimum of the other. Without loss of generality, let 5; be the larger of the two sets, i.e., 
+its minimum is larger than the maximum of :i: . We further require that the time intervals spanned by 
+li:; and 2; are disjoint, namely either the largest i in 5:; is less than the smallest j in *:I, or vice 
+versa. We term the pivot partition positive if the measurements Z , oc- curred u&#38;r those in ?: , 
+and negative otherwise. Geometrically, this definition corresponds to being able to draw horizontal and 
+vertical lines on a plot like that in Figure 5 such that either all of the points lie in the first and 
+third quadrants formed by the lines (if positive), or in the second and fourth quadrants (nega- tive). 
+It is important to note that a given series 2t may have more than one pivot partition, For example, if 
+Zt is strictly decreasing, then every value oft gives rise to a pivot partition. WC proceed as follows. 
+First, we determine whcthcr to search for a positive or negative pivot by inspecting whether ?tl is less 
+than or greater than 2,,, From here on, we assume without loss 01 generality that we wish to detect a 
+positive pivot, such as the one exhibited by the receiver packets (hollow squares) in Figure 4. We search 
+through the measurements to find the point Ic where rnin(&#38;,+, , Pt,+, ) -max(it,-, , St,) is largest. 
+Conceptually. we are looking for the intervals that have the greatest difference between them in the 
+same direction as the pivot; we spread the differencing over the additional intervals on either side 
+to combat the problem of the intervals right at the pivot misleading us due to noise. Ic is now the candidate 
+pivot (actually, the potential pivot occurs at a point in time between measurement k: and measurement 
+k: + 1). We then inspect the points < k to tind xk, the largest point before the candidate pivot, and 
+likewise those > k to find xk+t. the smallest after the candidate. If XI, is less than ~k+t. then WC 
+conclude that [k, k + l] does indeed straddle a pivot; otherwise, we conclude they do not. If we tind 
+a pivot partition, then we define its magnitude A/r as the absolute value of the difference between the 
+median of the points after the pivot with the median of those before. We also associate a pivot width, 
+W = tk+l -tk. Identifying adjustment signatures. We now turn to identify- ing the signature of a clock 
+adjustment for the clocks of two hosts, s and r. The method we developed is not entirely satisfying. 
+as it uses some heuristics in order to accommodate residual noise in the OTT measurements, while attempting 
+to not mistake genuine net- working effects for a clock adjustment. However. the method ap- pears to 
+work well in practice (see 0 5.4). WC note, though, that the method assumes that clock adjustments are 
+relatively rare cvcnts: rare enough that our traces are likely to exhibit at most one adjust- ment, and 
+that the likelihood of both of the clocks we are compar- ing exhibiting an adjustment during the trace 
+is negligible. This also appears to generally hold (again, see 5 5.4). Suppose we have two sets of de-noised 
+OTT measurements, St and ft. If either of ,ql or ?, does nor exhibit a pivot, or if the pivots are both 
+positive or negative. then we conclude there was not any clock adjustment, We next must check whether 
+the pivots over&#38;. Due to limited space, we defer discussion of doing so to [Pa98]. If the pivots 
+do not overlap, then we conclude there was no adjustment. If they do, we then next look at the magnitudes 
+of the pivots, If either magnitude is less than the larger of twice the joint clock resolution R,,,. 
+(5 3), or 2 msec (an arbitrary value to weed out fairly insignificant adjustments), then we declare the 
+pivot insigniticant and ignore it. Finally, we check whether I%&#38; and n/r,., the magnitudes of the 
+two pivots. are within a factor of two of each other. If not, then WC term the pivot a disparity pivot, 
+meaning that it may be due to unusual networking dynamics (5 5.6). If the two agree within a factor of 
+two (which cxpcricnce has shown is a good cut-off point), then we conclude that the trace pair exhibits 
+a clock adjustment with a magnitude of about w. 5.4 Checking the algorithm s accuracy We now turn to 
+the important question of How do we know the nlgorithm uctuully works. 7 Since WC arc restricted to post-facto 
+analysis, we need to develop other means for detecting likely clock adjustments, and use them to gauge 
+the algorithm s accuracy. We can divide our accuracy concerns into two types: false pos- itives, in which 
+the algorithm claims a clock adjustment occurred when in fact one did not, and false negatives, in which 
+it fails to detect that an adjustment actually did occur. Since the algorithm only flags adjustments 
+in a relatively small number of traces (5 5.5) WC can deal with the possiblity of false positives by 
+manually inspecting each of these using a plot like in Figure 4 to determine whether we find compelling 
+evidence that an adjustment really did occur. The process of doing so led to some of the liner points 
+of the algorithm, such as rejecting disparity pivots. After these additions, we lind virtually no apparent 
+false positives (though who knows how many we are missing because their presence is not visually compelling). 
+The possiblity of false negatives is more difficult to address. Since we have too many traces to inspect 
+by hand (though we did apply random sampling to hand-inspect a large number of traces), we developed 
+two other heuristics for identifying clock adjustments. The first is to compute the minimum round-trip 
+time (RTT) that could be derived from differences between the timestamps for any pair of packets between 
+the two hosts, If this was significantly Iowcr than the minimum observed round-trip time (using a single 
+clock), and especially if it was ever non-positive, then tcpanaly nags the trace as requiring manual 
+inspection. The second is to compute the cross-correlation between the denoised OTT times in the two 
+directions, and then to flag traces with strong negative cor- relations. The use of these heuristics 
+also Icd to refinements in the dctcction algorilhm, such as spreading out the pivot differencing over 
+multiple intervals when searching for candidate pivots, and al- lowing slop (see [Pa981 for details). 
+After these additions, we find very few false negatives (see 5 5.6 for examples). 5.5 Results of checking 
+for adjustments tcpanaly uses the method given in 5 5.3 to check each trace pair it analyzes for clock 
+adjustments. Doing so, we found 36 trace pairs in Nt out of 2,335 (I .50/o) that exhibited apparent clock 
+ad- justments, and I28 out of 15,492 in hi1 (0.8%). While these pro- . : . . . . . . . . . .= - I . . 
+. . . -ri: . 1-1 . *&#38; d n-b &#38;&#38;ma xi b 10 20 30 40 50 60 Time (xc) Figure 6: Clock adjustment 
+via temporary skew portions are fairly low, they are high enough to argue that a largc- scale measurement 
+study for which accurate timestamps are impor- tant needs to take into account the possibility of clock 
+adjustments. Furthermore, the adjustments are only detectable due to the USC o/ a pair of clocks. If 
+a study uses timestamps from only one measure- ment endpoint, then checking the timestamps for clock 
+adjustments becomes much more difficult. The median adjustments were on the order of IO-20 msec, the 
+mean around 100 msec, and the maxima close to 1 see. These magnitudes are unfortunately small enough 
+to sometimes not be glaringly obvious, but large enough to be comparable to wide-area packet transit 
+times, so they can introduce quite large analysis cr- rors if undetected. While clock adjustments are 
+usually abrupt, this is not always the case. The adjustment-detection method found some clock ad- justments 
+that occurred due to a short period of altered clock fre- quency (i.e., temporary skew). Figure 6 shows 
+a striking example. Here, around time 2 = 40 set the sender s clock began running more quickly than the 
+receiver s, leading to lower sender OTTs and higher receiver OTTs. Less than 20 seconds later, the frequencies 
+were again equal, but the relative offsets between the clocks shifted by nearly 1 set in the process. 
+ 5.6 Problems with detection method The method given in $ 5.3 appears to work well in practice, at least 
+in terms of the checkmg discussed above. However, it dots somc- times fail to detect clock adjustments. 
+In this section we look at some cases where we identilied this happening. Failure to detect adjustment 
+via skew. In Figure 6 we illus- trated how sometimes a clock adjustment can occur due to tempo- rary 
+skew. However, in such cases there arc multiple pivots in each direction (any location along the skew 
+line is a pivot), and somc- times, due to noise, the two pivots located by the method do not overlap, 
+and the possibility of an adjustment is rejected. In general. this sort of failure will only occur with 
+adjustments using tempo- rary skew; abrupt adjustments have sharply defined pivots. (This example was 
+detected due to a non-positive minimum RTT, as dis- cussed in 5 5.4.) Excessive network-induced delay. 
+Figure 7 shows a case where the reverse path exhibits a clear level shift around T = 70 xc, with a magnitude 
+of about 250 msec, but the corresponding shift on the forward path is less clear because it is accompanied 
+by an increase in networking delays, too. In that direction, tcpanaly assesses the magnitude of the shift 
+as about 730 msec. Since this is more than twice the magnitude in the other direction, tcpanaly rcjccts 
+the possibility of a clock adjustment. tcpanaly flags a trace pair like this as having a disparity pivot, 
+namely common pivots that have too great a difference in their magnitudes to be considered a clock adjustment. 
+Disparity . . e3 &#38;a L&#38;3 al  -r-- 0 50 100 150 200 250 Time (xc) Figure 7: Likely clock adjustment 
+masked by network delays it % i q . 0 I CtBldb -- 0 20 40 60 80 100 120 Time (SW) Figure 8: Double 
+clock adjustment via temporary skew pivots are quite rare (only 61 in A$). We inspected each one and 
+found that only the one shown above was a plausible clock adjust- ment, The rest appear simply due to 
+unfortuitous patterns of noise. Multiple adjustments. The development of the clock adjust- ment detection 
+algorithm presumes that there is a single clock ad- justment to be detected. Sometimes a trace pair suffers 
+from more than one adjustment, and the algorithm either only detects one of them. or fails to detect 
+any of them. The latter is particularly likely if there are two adjustments in opposite directions. Figure 
+8 shows a striking example of a trace pair with two adjustments, both ef- fected using temporary skew. 
+(This example was likewise detected due to a non-positive minimum RTT, the strong negative correla- tion 
+test also detects it.) Clock hiccups. Related to the multiple adjustments dis- cussed above are clock 
+hiccups, in which one of the clocks in a WICC pair momentarily either ceases to advance or advances 
+very quickly. Figure 9 shows an example, occurring at time T = 6 sec. It is possible that this example 
+is actually due to surprising network . 0 2 4 6 8 Time (SC) Figure 9: Clock adjustment hiccup L1----.-., 
+_-~_~~ ~, --.-I... , 1 0 20 40 60 60 100 120 Time (sex) Figure 10: An O M pair plot showing relative 
+clock skew dynamics. as the 4 acks with lowered OTTs come right after the only packet reordering event 
+in the trace. (While a clock glitch can change the value of OTTs, it ~~777~07 reorder packets on the 
+wire! But XC [Pa97h] for mcasurcment errors that can indeed rcorclct packets.) It is difficult to see 
+what networking mechanism could lead to the data packets in the opposite direction simultaneously experiencing 
+increased delay. 6 Assessing relative clock skew Errors in relative clock skew, which often introduce 
+inaccuracies on the order of perhaps a few seconds a day, might seem trivial and perhaps not worth the 
+effort of characterizing. For purposes of keeping fairly good absolute time, this is true, but for purposes 
+ol assessing network dynamics, it is not. To illustrate why skew is a crucial concern, consider evaluating 
+OTTs between two hosts s and T, for which ,r. s clock runs O.Oi% faster than s s, If we are computing 
+OTTs between s and 7 . then over the course of only 10 minutes T s clock will gain 60 msec over s s clock. 
+If WC ussu~nc that variations in OTT rcfiect yuewiug delays in the network, then this minor clock driJt 
+could lead to CL lurge fhlse interpretation of growing congrstion. For example, if s sends 512 byte packets 
+to T and the bandwidth of the path bc- tween them is Ti (1.544 Mbps), then a true 60 msec increase in 
+delay reflects the equivalent of an additional 23 packets worth of queueing. Thus, quite minor skew differences 
+between the two endpoint clocks can lead to quite large, erroneous assessments 01 queueing delay. The 
+first issue for detecting skew is to identify a skew sig- nature similar to that for clock adjustments 
+shown in Figure 4. Figure IO shows an OTT pair plot that exhibits a clear skew sip- nature: the OTTs 
+in one direction show a btcady overall incrcasc, while those in the opposite direction show a steady 
+decrease. Both changes have a magnitude of about I20 msec over the 2 minute course of the connection, 
+consistent with the receiver s clock ad- vancing about 0.1% faster than the sender s clock. It is difficult 
+to see what sort of network dynamics could introduce such a true combined inflation and deflation of 
+07Ts over a two-minute pc-riod. so we conclude that the OTT pair plot shows strong cvidcncc of relative 
+clock skew. We now turn to developing robust algorithms for dctccting and removing relative clock skew. 
+6.1 Defining canonical sender/receiver skew We begin by defining exactly what quantity it is that we 
+wish to estimate. First, we assume that the skew trends we identify will be linear. While we might possibly 
+encounter non-linear skew, we did not find any clear examples of such in JVI or n/,. For linear skew. 
+we can summarize the skew using a single value that reflects the excess rate at which one clock advances 
+compared to the other. To avoid ambiguity (in terms of which clock we are comparing to which). we will 
+always quantify how C,., the receiver s clock, advances with respect to C,. Suppose Cr runs a factor 
+r] faster than C,?. by which we mean that, if C,T reports that an interval AT has clapsed, then C,. will 
+have reported the same interval as having length rlAT. The algorithms we develop arc based on how OTT 
+measure-ments expand or shrink with respect to time. It is important to rec- ogniLe that the phrase with 
+respect to time does IZO~ mean with respect to true time. since we have no way of measuring true time. 
+Instead, it means with respect to the clock at the packet origina- tor. When discussing ;I linear trend 
+in the measured OTTs of the packets sent by host Y. we will quantify the trend in terms of G,$, the growth 
+in the 01-I s of the packets sent by s. Suppose packet 1,1 is sent at time T,:. according to C,. and 
+arrives at time T,!, according to C,.. Likewise, suppose packet 1~ is sent at T,: and arrives at T,?. 
+Suppose further that the transit times of the packets arc identical (no network-induced noise), so the 
+only variations in their O ITs arc due to clock skew. The measured 07Ts for the two packets are: 4, =T,i 
+- T:,, (jz = T,? -Tj. As G,Y quantilics the linear growth in measured OTTs over time: In the absence 
+of relative skew, G, = G,. = 0.0, where G, quan- tilies the growth in OTTs of packets sent by T. If C,. 
+runs faster than C,,, then the packets sent by s will exhibit increasing Chits and those sent by 7 will 
+exhibit dwxxsbzg OTTs, so we will have G,5 > 0 and G,. < 0. Naturally. the reverse holds if C, runs slower 
+than C,-, It can he shown that: G,q = ,r-1 (1) G,. = 1-1 (2) I 1 --1. (3) = G,,+I For 71 = 1 + F, whcrc 
+ICI < 1, WC have: G, =F, G,.=-F=--E l+f Because clock skews are often only a few parts per thousand 
+or ten thousand, we are usually in this regime (but see 5 6.6 below). Consequently, an easy inaccuracy 
+to introduce is to assume that: G,s = -G,, (i.e.. the slopes are equal but opposite), since this often 
+appears to he the case when inspecting OTT pair plots. To ensure full xcu-racy. we instead take cart 
+to always use Eqns 1 and 2 to express relative clock skew in terms of 11, or Eqn 3 to translate G,. to 
+G,. We will refer to values of G,Y and G, that are consistent with re-spcct to Eqn 3 as equivalent but 
+opposite trends. 6.2 DifFiculties with noise One particular problem with testing for clock skew is that, 
+due to qucucing Iluctuations, one direction of a path can have such highly variable OTTs that these completely 
+mask the smaller-scale trend or O IT increase or decrease due to skew, even after de-noising. Figure 
+I I shows an cxamplc, in which congestion on the forward Figure I I : Clock skew obscured by network 
+delays mm- -- ..-I-- 0 10 20 30 Time (SW) 0 10 20 30 Time (xc) Figure 12: Enlargement of reverse path 
+ path completely obscures the relative clock skew, which is apparent from the enlargement of the return 
+path shown in Figure 12. Such noise most often obscures the forward path (presumably due to ex- tra queueing 
+induced by the data packets), but it can also obscure the reverse path. Thus, we cannot always rely on 
+the signature ol clual equivalent-but-opposite OTT trends; sometimes we must sct- tie instead for simply 
+a compelling trend in one direction. Furthermore. network-induced noise also scuttles what might seem 
+the most straightforward approach to detecting skew, namely fitting a line to the de-noised OTT measurements, 
+9t and *?t (ii 5.2). Even using de-noised measurements, least-squares fitting fails to provide solid 
+skew detection, because residual noise in 6f and ft makes it too difficult to reliably distinguish between 
+a skewing trend and coincidental opposite queueing trends. All it takes is one period of elevated queueing 
+at either end of a connection to throw off the tit. Unfortunately, the same also occurs using robust 
+titting tech-niques, such as estimating the line s slope as the median of all of the pairwise slopes 
+between the individual de-noised measurcmcnts [HMT83]. The difficulty lies in both false positives and 
+false neg- atives generated due to queueing Huctuations. Clearly, we need an even more robust technique. 
+ 6.3 A test based on cumulative minima Eventually we recognized that the most salient feature of relative 
+clock skew is not simply the overall trend (slope) of the OTT mea-surements, but the fact that the smallest 
+such measurements contin- ually increase or decrease. This observation suggests the following statistical 
+test, the strength of which is that it is nearly immune to transient increases in OTT measurements due 
+to queueing buildups. Suppose we have IL observations Xt,, 1 < i 5 n, where t, is the time of the observation 
+and Xt, is the value of the observation. We assume that the t, s are monotone increasing, and that the 
+Xt, arc distinct. Further, we assume without loss of generality that we wish to test for a negative trend 
+in XtL. We discuss applying the 8 4.- 0 5 10 15 k Figure 13: Distribution of R(n, k) for n. = 15 same 
+test for a positive trend in 3 6.4 below. Consider the indicator: 1, if Xt, < nun,<, Xt,, or if j = 1, 
+and I/, = 0 otherwise. That is, It, is I if Xtl represents a new cumulative minimum if we inspect Xt, 
+from I up to j (but not all the way up to n), and 0 if there is an earlier XL, that is less than Xi,. 
+If the XI* are independent, then we immediately have: Consider now the function: MI = c,!=I It,, which 
+is the number of cumulative minima seen as we Inspect Xti from the first value up to the jth value. The 
+key observation we make is that, in the absence of a negative trend. the distribution of Mj will tend 
+to be close to that for independent Xt, ; that is, we will find a few cumulative minima but not a great 
+number: while, in the presence of a negative trend, we should tind many cumulative minima, since the 
+Xtt tend to get smaller and smaller. Suppose we lind A&#38; = k, that is, the Xt, exhibit k cumulative 
+minima. We wish to compute the probability that we would have observed this many or more minima, given 
+the independence as-sumption If we find the probability sufficiently low, we will reject the null hypothesis 
+that the Xt, are independent. In its place we will accept the tentative hypothesis (which we will further 
+test in 3 6.5) that the X,, exhibit a negative trend. Let n(n, k) = P[Mr, 2 k]. Given 0 < k < 71, we 
+can compute R(~L, k) recursively, as follows: 1, if k = 0, Iqn, I;) = 1 /?L!, if k = 7~ and (4) f1(11-l,k-l)+(n-l)K(71-l,k) 
+ifk < n. 1 1L The first case is the degenerate one that grounds the recursive defi- nition: the probability 
+that there are at least 0 cumulative minima is always I. The second case corresponds to every single 
+Xii being a cumulative minimum. This only occurs if the Xt, s are sorted in descending order, which, 
+if they are independent, has probability l/n!. The last case corresponds to conditioning on whether Xt, 
+is a cumulative minimum or not. For independent Xt;, it will be a CU-mulative minimum with probability 
+l/n, and not with probability (71 -1)/71. Figure I3 shows the distribution of R(n, k) for R. = 15. The 
+key feature of the distribution that makes it a powerful test for a negative trend is the rapid fall-off 
+in probability above a certain point, in this case around k = 8. Because if the Xt, s do indeed have 
+a negative trend we should tind k quite close to 71, this means we can readily distinguish between the 
+case of a negative trend and that of no trend. without requiring that all of the Xi, be increas- ingly 
+negative. Thus, WC can accommodate considerable noise. 6.4 Applying the test to a positive trend The 
+test developed in 3 6.3 for detecting a negative trend can also be applied to detecting a positive trend. 
+with one subt~cly. At lirst blush one might think that, to do so, one simply LISCS maxima in lieu of 
+minima. This works in principle, but fails when applied to OTT sequences, because of the positive additive 
+nature of OTT noise (3 5.2). That is, the maxima will be often dominated by the noisiest OTT values, 
+rather than by OTT values that slowly rise due to skew. so the noise will obscure any positive trend 
+due to clock skew. This remains a problem even after de-noising, since all it takes is a single period 
+of elevated OTT values, long enough to span an cntirc dc- noising interval, to pollute the de-noised 
+values with what will in some cases be a global maximum. When searching for a negative trend. such an 
+interval will, on the other hand, simply not include a cumulative minimum; but it will not prevent the 
+test fr-om tinding other minima due to clock skew. There is a simple tix for this problem, though: we 
+apply the cumulative minima test to E;, = X r,,-,+r, which is simply XI? viewed in reverse. The reversal 
+converts a positive trend in XI, to a negative trend in Yr, , which the cumulalivc minima algorithm then 
+readily detects. 6.5 Identifying skew trends With the cumulative minima test we finally have a robust 
+algorithm for detecting trends. These trends, however, might not bc due to clock skew but to networking 
+effects, so we need to develop furthet hruristic checks to correctly detect linear skew. Suppose we have 
+two sequences of de-noised OTT measurc-ments, BL and Ft. corresponding as usual to the full-sized data 
+pack- ets sent from the connection sender to the receiver. and the acks sent back from the receiver to 
+the data sender. For each sequence. we first determine whether it is a skc>w carzdidutc~as follows. Let 
+ut denote the given sequence. Let R,(~L, I;) bc the proba- bility that the sequence ut matches the null 
+hypothesis of no trend (independence) given by Eqn 4. We consider ut a skew candidatc if either: 1. &#38;(7~, 
+k) < lo- and 2~t is either it, or ?I,, is Bt and its trend is negative. This latter test is because queueing 
+buildup due to the data packets sent along the forward path can often produce a strong positive trend; 
+or 2. I&#38;,(11, Ic) < lo- and it is tightly clustmd around the trend line, which is computed using 
+a robust linear lit (pet the algorithm discussed above) to just the (denoised) timings corresponding 
+to the cumulative minima or maxima.  The goal here is to allow for a skew candidate if the 1~ points 
+lit quite closely lo a (linear) trend, even though their cumula- tive minima probability is not so small. 
+This can happen, fog example, if we do not have a large number of points in it. Note that the limit of 
+IO-: precludes assuming a skew cnndi- date if there are fewer than 7 points, since l/t?! % 1.4 lo-, (but 
+see below). It remains to define tightly clustered. To do so, WC corn- pute the inter-quartile range 
+(75th percentile minus 25th per- centile) of the distance between the 2~~ and the trend lint. Ifit is 
+less than or equal to the larger of the joint clock resolution, R.,,,., or 1 mscc, then a large number 
+of the de-noised OTTs lie very closely to a pure linear trend. We next determine whether either .?r 
+or ? t is compelling enough by itself to accept as evidence of a skew trend: or if the pair form a j&#38;t 
+skew candidate, to be investigated further; or if there is insul- ficient evidence for a skew trend. 
+To do so, WC first consider which of them is individually a skew candidate. as follows: If neither is 
+a candidate, then we check to see whether mas(R,(~r, k:), &#38;(u, k)) 5 lo- . If so, then the joint 
+probability that both have no trend (or, more precisely, are fully indcpcndent) is < 10V4. which we consider 
+sufficiently low to consider them as joint skew candidates and proceed as discussed below. If either 
+probability exceeds lo- , then we reject the tract pair as a candidate for exhibiting a skew trend. If 
+?b is a skew candidate but L?t is not, then we accept ?t as reflecting clock skew quantified using the 
+corresponding G,. We do so because sometimes WC have no hope of detecting a skew trend in .$ due to queueing 
+buildup, as illustrated in Figure I I and Fipurc 12. If ,<, is a skew candidate but pt is not, then we 
+check the direction of .S:r s trend. If it is negative, then this goes against the networking tendency 
+for a positive trend induced by the qucueing of the data packets along the forward path, and we accept 
+Bc as reflecting clock skew quantified using G,. If the trend is positive, we must proceed carefully 
+to screen out a false skew trend due to queueing. See [Pa981 for details. If both 6t and ft are skew 
+candidates, then we consider them together a joint skew candidate. If the above proccdurc yields a joint 
+skew candidate, we then evaluate the candidate as follows: I. If both candidates have the same trend 
+direction, then we reject the possibility of a skew trend. 2. If not, then WC translate the lirst candidate 
+s skew quantifica- tion into terms of the second candidate using Eqn 3. Let GI and Ga bc the corresponding 
+skew quantifications. If that is. the difference between the two exceeds their average, then WC reject 
+the pair as having too much variation in their slopes for them to be trustworthy indicators of skew. 
+Other- wise, we accept the pair as indicative of a skew quantified as c = Gl+G : , 2  6.6 Results of 
+checking for skew tcpanaly uses the method given in 5 6.5 to cheek each trace pair it analyzes for clock 
+skew. As WC did for detecting clock adjustments, we gauged its accuracy by visually inspecting many of 
+the skews it found (to detect false positives), and also (for false negatives) hy hand-inspecting randomly 
+chosen traces, as well as those with strong, negative cross-correlations in their OTTs or excessively 
+low minimum RTTs (per 5 5.4). These last, as for clock adjustments, often occur in the prcscnce of signiticant 
+clock skew. Making these cheeks led to a number of the heuristics outlined above, and WC now lind the 
+algorithm appears reliable, at least in terms of plausible skew trends we can dctcct visually. The method 
+indicates that 295 trace pairs in Nr out of 2,335 (I 3%) exhibited clock skews, and 487 out of 15,492 
+did so in Afz (3%). These proportions are high enough to argue for considerable caution when comparing 
+timestamps from two different clocks. In both J$ and tin, about threc-yuarters of the skews were de- 
+&#38;ted on the basis of it alone not particularly surprising since often a skew trend in .i;~ will he 
+lost in the OTT variations due to qucueing induced by the data pack&#38;s. (We could avoid this prob- 
+lem if WC could choose the particulars of our measurement traffic, rather than analyzing TCP bulk transfer 
+traftic.) The largest skew in .IV~ was a whopping 71 = 5.5, meaning that one clock ran snore 4 -2 0 2 
+4 6 Time (set) Figure 14: Example of extreme clock skew than five times faster than the other! Figure 
+14 shows how skew like this appears in an OIT pair plot. In the forward direction, the connection s elapsed 
+time was only 2 set, but in the reverse direc- tion it took 10 set! This example is more than just an 
+amusing curiosity. It oc- curred not once but 43 times in n/l (see Figure I). We note, how- ever, that 
+this clock (which corresponds to the austr site) was one of the ones identified in fj 4 as being highly 
+synchronized with a number of the other sites, indicating care was being taken Lo keep accurate time 
+with it (presumably using NTP). Thus. this clock s behavior is a compelling argument that just becmsc~ 
+~1 clock is bc- limcti to be well-synchronized does not rmrkr it immune ,from CI trmc) error! Aside from 
+austr s clock, the next largest skew we observed in n/l was 7 = 0.991, a frequency difference of about 
+0.9% This led to an OTT change of about 70 msec during an 8 set connec- tion. All in all, after removing 
+connections involving austr, in NI the median skew had a magnitude of about 0.0230/o, and the mean 0.035%~. 
+These are small, but not negligible. In nip. the prevalence of trace pairs exhibiting skew was sig- nificantly 
+lower (3% versus 13%). perhaps due to the USC among the participating sites of newer hardware with more 
+reliable clocks. After removing one site that either had a very broken clock or very unusual network 
+dynamics (we were unable to determine which: perhaps it was both), the largest skews we observed were 
+on the order of 6%. Figure I5 shows an example. The pattern is quite striking, and clearly could lead 
+to grossly inaccurate conclusions about network dynamics if undetected. Note that both sites in volved 
+in this connection were among those identiticd as closely synchronized in Afz (5 4), again emphasizing 
+that clocks that are i/z gencd well-synchronized can still exhibit very large errors. After removing 
+these connections, the median skew magnitude of the remainder in tin is about 0.01 I%, and the mean around 
+0.016%. These are a factor of two smaller than those in .&#38; I, but still not completely negligible 
+for assessing queueing in longcr- lived connections.  6.7 Removing relative skew As discussed in the 
+previous section, a non-negligible proportion of the trace pairs in our study suffer from relative clock 
+skew. WC would like to remove this skew so WC can then reliably include those traces in subsequent analysis 
+of network dynamics. Fortu-nately, the skew almost always appears well-described as linear, which means 
+it is straight-forward to remove it. To remove skew of magnitude 11, we simply modify all the time- stamps 
+t: generated by C,. using: t: = t; + G,.(t; -t;;), (5) where G,. is given by Eqn 2 and t;; is the first 
+timcstamp generated by C,. 0 2 4 6 8 10 Time (SW) Figure 15: Strong relative clock skew of 6% Applying 
+Eqn 5 does not necessarily rectify C, s skew with respect to true time. However, we can still make the 
+two sets of timcstamps consistent, and eliminate artificial trends in the network delays we compute, 
+even if some absolute skew remains. After tcpanaly removes relative skew, it re-analyzes the clock. If 
+it still detects relative skew, then either its initial assessment that the trace pair had relative skew 
+was wrong, or the skew was not lin- ear. It flags this case separately, and also then refrains from any 
+fur- ther timing analysis. Thus, re-analysis provides a self-consistency test for the soundness of our 
+skew detection, This test failed less than 2% of the time. 7 Clock synchronization vs. stability We finish 
+our study with an investigation into the question of whether highly-synchronized clocks tend to be free 
+of problems such as ad- justments and skew (which we will term stable ). WC might hope that highly-synchronized 
+clocks would also be stable because freedom from such problems would tend to greatly aid a clock in maintaining 
+synchronization. On the other hand, if good synchronization is maintained by frequently adjusting an 
+errant clock to match an external notion of accurate time, then such clocks might be I?ZOY~ likely to 
+exhibit adjustments or skew, and hcncc be less stable than other clocks. The issue is an important one 
+because it is quite cheap to de- termine whether a remote clock s offset is close to that of a local 
+clock (by piggybacking timestamps when exchanging packets). It relative accuracy is a good indicator 
+that the remote clock is stable, then we can quickly determine that we can rely on the soundness of the 
+timestamps generated by the remote clock, without having to go through all the effort of the methods 
+developed in this paper for detecting adjustments and skew. Such a quick determination could prove invaluable 
+for a transport protocol that needs to decide whether it can trust the timing feedback information being 
+returned t rom ;I remote peer. Table 1 shows the relationship between relative clock accuracy and the 
+likelihood of observing a clock adjustment. We see that closely synchronized clocks, i.e., those with 
+a relative offset under I sec. are only slightly less likely to exhibit a clock adjustment than less 
+closely synchronized clocks. Thus, relative clock accuracy is not a good predictor of the absence of 
+clock adjustments. Table 2 shows the relationship between relative clock accuracy and the likelihood 
+of observing relative clock skew. For Mr. clock synchronization only provides an advantage if the clocks 
+are highly synchronized, with a relative offset under 100 msec and preferably under IO msec. For ,hf~, 
+however, synchronization of under I set provides a delinitc advantage in predicting a lower likelihood 
+of skew. though much better synchronization provides little additional predictive power. For both Nr 
+and tin, not even very close syn- chronization reduces the likelihood of encountering clock skew to / 
+Relative offset 1 Likelihood of adjustment 1 Nl < 1 set I I .4 %I  PasetI Table 1: Relationship bctwcen 
+rclativc clock accuracy and clock adjustments Dataset Relative offset Likelihood of skcw N < 0.01 xc 
+0.05% N: < 0.1 see 5.6% 2 < 1 xc 13 I/r) 2 see 12 i/ N2 < 0.001 xc 1.3 % < 0.01 set 0.8X 7 $2 < 0.1 set 
+I .3 3 Ml < 1 xc 1.x % N2 > 1 set 5.3 % Table 2: Relationship between relative clock accuracy and clock 
+skew a negligible level (i.e., appreciably lower than I %I). We conclude that relative clock accuracy 
+provides no benclil in assuring that clock adjustments will be unlikely, and some benefit in assuring 
+that clock skew is leas likely, but not to such :I degree that we can ignore the possibility of clock 
+skew when analyzing more than a handful of measurements. In addition, we conjecture that the closely-synchronizer1 
+1~0x1s in our study are most likely synchronized using NTP. If so, then the use of NTP does nor reduce 
+the likelihood of clock adjustments introducing systematic errors when measuring packet transit times, 
+and reduces hut does not eliminate the likelihood of clock skew introducing systematic errors. This finding 
+does not mean that NTP fails to keep good time. Rather. the timescales on which it dots so significantly 
+exceed those of our connections. NTP keeps good time on large time scales precisely by altering clock 
+behavior on small time scales. Summary The problem of comparing timcstamps between unsynchronized clocks 
+might at first appear relatively minor. But. as WCdevcl-oped in the introduction, it actually has significant 
+impact on the accuracy of wide-area network measurement. If we can compare such timestamps reliably, 
+then we can USC receiver-hased mca-surement in order to directly measure the propcrtics along one di-rection 
+of s network path, rather than unavoidably conflating thcsc properties with those along the rcversc path, 
+as happens with ccho-based measurement. Unsynchronized clocks arc subject to at lcast two types of er-rors: 
+clock adjustments, in which one of the clocks rapidly changes its current setting. and relative clock 
+skew. in which one clock runs faster than the other. If undetected, hoth of these can intro&#38;cc measurement 
+artifacts that can masquerade as changes in delay due to genuine networking effects. In this paper we 
+have undcrtakcn to develop robust algorithms for detecting both adjustments and rel-ative skew, even 
+in the prcsencc of significant noise in the timilrg measurements. While our algorithms require some heuristic 
+tuning to minimize inaccuracies in terms 01.lalsc positives and fnlse ncg+ tives, with this tuning in 
+place we tind that they appear reliable, as best as we can judge without a source of independent calibration. 
+In summa,-y. prudent large-scale mcasurcment and analysis of packet timings should include algorithms 
+such as these as self-consistency cheeks to dctcct possible systematic errors. even in the presence of 
+synchronir.ation via algorithms such as NTP, which WC find doca not render clocks immune from errors 
+(!i 7). We further argue that even pairs ol.clocks using a more direct external synchro-ni/ation source 
+such as GPS should bc subjected to such checks, as ;I means 01 assuring that no timing errors have crept 
+in between the original. highly accurate time source, and the packet timestamps ultimately produced hy 
+the inevitably imperfect computer clocks. 9 Acknowledgements This work greatly hcncfitcd from discussions 
+with Domcnico Fer-rari. Sally Floyd. Van Jacobson, Mike Luby. Greg Minshall, John Rice, and the comments 
+of the anonymous referees. My heartfelt thanks. References ]Ho%] J-C. I3olot. End-(o-EndPnckc~ I>elnyand 
+Loss Behavior in the Internet. / ,,o<..SlCCOMM '93, pp. 289-298, Sep. 1993. (CC )G] I<.CanerandM. Crovelfa, 
+Messuring Hottleneck Link Speedin Packet-SwitchedNetworks, ~ ~,/jorr~u~rc~e Evulllutio/~,Vol. 27-8, pp. 
+297-3 18, (ICI. 1996. ICt H931 K. Clnffy, G. t olyz:osandH-W. Hraun. Measurement Consider- ations for 
+AsseGng Unidirectional Lalcncic, /rrrerrrehvorkin,y: Kcsrrrdl m/l/ f~,l/ v io/c~e. 4 (3), pp. I2 I 132, 
+Sep. 1991. [ HMT81] D Ho;~glin. F. Mostcllcr, and J. Tukey, Ed., Understanding bust and Exploratory Data 
+Analysis. John Wiley KL Sons, Ro-1983. V. Jacobson. C Lercs, and S. McCannr, tcpdump. anonymou\ lip to 
+ftp.ec.lhl.gov, Jun. 1989. ovuiluble via [Ja97] V. Jacobson. p:\thchar ----;I tool to infer characteristics 
+ol IntclmY paths, Ilp://ftp.ce.lhl.gov/pnthch~r/msri-t~lk.ps.g~, Apr. 1997. [KC )l] S. Keshnv, A Control-Theoretic 
+Approach I'KK SlCCOMM '(II. pp. 3. IS. Sep. 1991. to Flow Control, LMi%?n] D. Mills, Network Time PI-orocol 
+(Version 3): Specification, Implementation and Analysis, RFC 1305, Network Information Center, SRI International, 
+Menlo Park, CA, Mar. 1992. 1Mi92b] D. Mills, Motlelling and Analysis of Clocks, Technical Report 92-S-2, 
+Electrical ment. [Jnivcrsity of Delaware. May 1992. Computer Engineering Network Depnr- L) Mill\. lmpl-ovcd 
+Algorithms for Synchronizing Computer Network Clocks. /E/X/AC M 7 ,.01,1.~ccc./iorr.ron N~m~~rki/~fi. 
+X(3). pp. 245-254, Jun 1995. 1Mu941 A. Mukherjcc, On the Dynamics and Significance of Low cpcncy Components 
+of Intemct Load, /a/ernefwor-king: scwdr trd Lqwricwe, Vol. 5, pp. 163-20.5, Dec. 1994. Free-Re- [ Pa96 
+1 V. P:~xson. End-to-End Routing SIGCOMM '96. pp. 25-38, Aug. Behavior 1996. in the Internet, Pro<,. 
+V Pnxson, En&#38;to-End ( OMM '97 3.';cp 1997. Internet Packet Dynamics, Proc.. SIG- V Paxson, Automated 
+Packet Tmce tations, I ~x SIGCOMM '97. Sep. Analysis 1997. of TCP Implemen- v. PaxsoII, 011 Calibratmg 
+Mcclsurrmcnts of Packet sit Tomes. LHNL-41.535. ftp://ftp.ee.Ibl.gov/papers/vp-clocks-~igmctrics9X.ps.g~, 
+Mar. 199X. Tron-  
+			

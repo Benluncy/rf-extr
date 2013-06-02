@@ -1,0 +1,453 @@
+
+ A Logic-Based Approach to System Modelling Anthony Rich and Marvin Solomon University of Wisconsin-Madison 
+ABSTRACT Modelling a complex software system requires a description of how its components are related 
+to one another. We propose a new approach to this problem based on logic programming g. A declarative 
+system model is developed in which objects are expressed as terms that describe their form, functionality, 
+composition, and origin. For example, the form of a Pascal compiler written in C is C ; its functionality 
+is to translate an object whose form is Pascal into an object of form object code while preserving functionality. 
+Terms are patterna that can be matched against those of other object descriptions and tool signatures 
+using unitlcation. Derived objects are requested by specifying a goal object having the desired form 
+and functionality. A planning algorithm finds derivation patha in the system model from source objects 
+to the goal. The planner produces a build plan a logic program that, when executed, can produce the goal 
+using the software development tools in the environment. All aspects of a software configuration are 
+specified in a single language. Large software specifications can be described in discrete, manageable 
+pieces. We present our approach in detail by working through an extended example. We discuss its advantages 
+and limitations and outline our plans for further research on its applicability to a variety of problems 
+in system specification and building. 1. Introduction An important part of configuration management is 
+the process of building a complex derived software object from its sources. To build a large software 
+product correctly, the proper software components must be sele~ted, the proper derivation tools must 
+be applied to those components, and derivations must be done in the correct order, Historically, tools 
+such as make [Feldrnan79] have been used to help automate this task. This work supportedirr part by the 
+Defense Advmced Raaearch Projecrs Agency, monitored by the Office of Navat Rewarch mrdcr contract NOO014-88-K-0590. 
+AuthoN address: ComputcT Sciences Dcpartrmnt, 1210 W. Daytnrr St., Madison, WI 53706, tonyrich@ks.wise.edu, 
+sotomorr@cs.wise.edu, (608) 262-1204. Permission to copy without fee all or part of this material is 
+granted provided that the copies are not made or distributed for direct commercial advantage, the ACM 
+copyright notice and the title of the pubhcatlon and its date appear, and notice is given that copying 
+is by permission of the Association for Computing MachineW. To copy other­wise, or to republish, requires 
+a fee snd/or specific permission. Our approach is to design a logic-baaed expert system that can automatically 
+satisfy build requests without complex and error­ prone procedural build specifications. A build request 
+states only whar is to be buil~ a logic-baaed planner infers how to build it. We assume the reader is 
+familiar with Prolog [Clocksin84]; the examples in this paper are written in art extension to Prolog 
+called LOGIN (LOGic and Inheritance) [Ait-Kaci86]. In this section we describe the objectbase and how 
+objects are represented as terms. Section 2 walks through a detailed example of how a complex build is 
+planned automatically. The planning algorithm is presented in section 3. In section 4 we discuss the 
+advantages of our approach and relate it to previous work in this area. Finally, section describes the 
+current status of our implementation and indicates directions for further research. 1.1 The System Model 
+Some SCM systems attempt to model a continuously evolving software system by focusing on some aspect 
+of the system that is assumed invariant or at least changing slowly. For example, a system model might 
+describe the system s sh-ucrure, based on the assumption that overall structure is revised infrequently. 
+Unfortunately, software systems seem to have the proper~ that nothing is invarian~ all aspects of a system 
+are open to rapid change, especially during early development. Other SCM systems deal with this inherent 
+unruliness by creating rule-based or law-based models [Kaiser87, Minsky 88] that attempt to impose one 
+or more desired invariant on a system, such as interfaces must always match, or a release cart never 
+include an untested component. A system model is both descriptive (it documents the existing software 
+system), and prescriptive (it guides the process of deriving new objects). Maintenance of the model should 
+be automated as much as possible. Our approach to system modelling is to attach extensive descriptive 
+information about each software object to the object itself-objects are self-describing [Bentley87]. 
+The system is then modelled as the sum of its parts; the model evolves as each of its components does. 
+There is no separate system description to maintain. For this approach to be effective, the modelling 
+language must allow objects to be described and matched precisely so that the prescriptive aspect of 
+the model (derivation) can be inferred rather than specified. We show how a system can be effectively 
+modelled using a logic-based language, 01991 ACM 089791-429-5/91/0005/0084 $1.50  1.2 Objects as Terms 
+We employ an objectbaae of persistent, immutable LOGIN terms. The objectbsse is treated as a Prolog-style 
+database so that logic programs can search for existing objects and assert new objects in the objectbase 
+directly. LOGIN terms differ from Prolog terms in several ways. 1. Subterrns can be matched by keyword 
+labels as well as by position. Subtertns lacking explicit labels are assigned the labels 1 =>, 2 =>, 
+etc. in order of appearance. Unreferenced subterrns maybe omitted. 2. Prolog s variables are split into 
+two syntactic parts: An optional coreference tag (a capitalized identifier) mtd a value. A colon separates 
+the two (e.g., Father : john). Within a term, two items with the same tag refer to the same value. Identical 
+tags in different terms are unrelated. 3. Prolog s anonymous variable, written as an underscore, is 
+denoted by the vahte @ (pronounced any) in LOGIN.  We represent each software object as an obj term 
+with five primary attributes: oid, form, functionrdity, composition, and provenance 1. An object term 
+has the following general form, simplified somewhat for the purposes of presentation. obj (oid => integer, 
+form => ( structure, type, constr => constraint), func => (name => term, in => obj, out => obj), comp 
+=> contents, prov => (tool => oicf, arg => oid) ) oid. An OID (object identifier) is a unique integer 
+specifying a particular instance. OIDS are useful for describing permanent bindings among objects, especially 
+in an object s provenance (see below). form. The form attribute describes the interesting physical characteristics 
+of an object. The structure subattribute indicates whether the object is atomic (atom) or aggregate (dag). 
+(In the most general case, an aggregate object may contain other aggregates that share subobjects to 
+form a directed acyclic graph, or dug.) The syntactic type of an object can be summarized by any user-defiied 
+term; simple nullary terms such as c, p ascal, text, etc. are often sufficient. However, it is sometimes 
+necessary to describe the 1 This term was suggested to us by an article by Jon Bentley: The provenance 
+of a museum piece lists the origin or source of rhe object. Antiques are worth more when they have a 
+provenance (this chair was built in such-and-such, then purchased by so-and-so, etc.). You might think 
+of a provenance as a pedigree for a nonliving object. [Bentley87]. composition of a complex object (such 
+as an aggregate) using a constraint subattribute instead of or in conjunction with the static type term 
+For example, one might wish to specify that the input to a linker is an aggregation of any number of 
+objects, but each atomic object witi that aggregate must be of type o. An arbitrarily complex constraint 
+can be expressed by the constraint subattribute, which consists of a stream of goals. Constraints will 
+be discussed in more detail later. functionalist y (func). The functionality attribute is specified only 
+for objects that are functions (i.e., those that csn map objects to objects). A tool s functionality 
+summarizes its object-level mapping semantics (signature) as an input object pattern (in) and an output 
+object pattern (out), The i n and out objects may be aggregates and are normally partially specified, 
+describing only their essential characteristics. The in pattern acts as a precondition or input filter; 
+only an object that tiles with the in pattern will be accepted as an argument to the tool. The out pattern 
+acts as a weak postcondition, describing the output object that the tool can produce. It is sometimes 
+convenient to refer to a tool s functionality by using a name term as a shorthand for its signature. 
+composition (comp). The composition of an atomic object simply consists of its contents. The composition 
+of an aggregate object is a list of its subobjects. provenance (prov). A provenance is a record of how 
+a derived object was created, including references to the tool that created it (tool) and the argument 
+to that tool (arg). The provenance is useful for history tracking and for consistency checking; for example, 
+we may be interested in a version of a derived object that was built from a particular source or using 
+a particular compiler, Provenances cart also help maintain a derived-object cache. Before invoking a 
+tool, we can compute the provenance of its output. If an object having that provenance already exists, 
+the tool need not be invoked, thus saving a potentially expensive derivation step. This approach is used 
+in Apollo s DSEE system [Lebhirtg85] and is more reliable and more flexible than make s technique of 
+using timestarnps and post hoc reaaoningz. The latter four attributes (form, functionality, composition, 
+and provenance) have previously been suggested as descriptive attributes for objects in a more-general 
+context mtder tbe names formal cause, final cause, material cause, and efficient cause, respectively 
+[Aristotle357 B.C.]. 1.3 Special objects Instances and virtual objects. In our view, an objectbase contains 
+two kinds of objects: instances and virtual objects. An instance is any existing object art object that 
+2 post hoc, n. post- hak NL post hoc, ergo propter hoc after this, therefore because of this] : the fatlacy 
+of arguing from temporal sequence to a causat relation. has been built. A virtual object is an object 
+pattern defining a class of potential objects that can be built. Virtual objects appear in the out specifications 
+of tool descriptions. Tool descriptions (virtual provenances). A tool description is an object describing 
+the requirements and capabilities of a tool: the input to the tool, the tool object itself, and the virtual 
+object(s) that the tool produces. A tool description is also called a virtual provenance (vp ro v ) because, 
+from the viewpoint of our backward-chaining planner, it is a template for the provenance of the virtual 
+objects a tool derives. At build-time, a fully instantiated virtual provenance becomes the actual provenance 
+of each of the objects that the tool produces. When the planner looks for a tool that can derive a goal 
+object, it searches the set of tool descriptions, not the set of tool instances. If it finds a description 
+of a suitable tool for which an instance exists, the existing tool is used in tie plm, but if no instance 
+of the described tool exists, the planner will fiist plan to build the tool, then use it to derive the 
+goal. Object references and definitions, Object terms often contain subterms referring to other objects; 
+we call such subterms object references. If a reference contains an OID or a fully specified provenance, 
+then it is an absolute reference to a specific instance; otherwise it is an associative reference a pattern 
+that cart match any of several instances. In general, an object reference is a partially instantiated 
+object term, so before it is used it must be dereferenced to fdl in any additional information that the 
+referenced object may contain. An object reference is therefore a lazy function that, when accessed, 
+evaluates to an equivalent or more­ specific object pattern. To allow the definition of hierarchical 
+and shared object structures, we provide a mechanism by which a reference can resolve to a definition 
+object (defn) a shared object pattern that can itself contain additional references. A definition object 
+is an atomic object whose form is defn and whose contents is an object pattern. The planner evaluates 
+an associative reference by unifying it with a matching de f n object. If the definition itself contains 
+object references, they are resolved only when they are accessed. If no matching d ef n exists, an associative 
+reference evaluates to itself, An absolute reference resolves to an existing instance, of course. Since 
+definitions are independent objects in their own right, they may be referenced from several places within 
+an object or from within several different objects. Definitions are useful for factoring out comon subterrns 
+or for defining structured objects hierarchically. 2. An Example of Logic-Based Build Planning We present 
+a detailed example to show how a declarative system model guides tool inferencing during a build. The 
+goal in this example is to build an executable version of a quicksort program. We assume that two equivalent 
+versions of the quicksort program have been written one in C, the other in Pascal. The development environment 
+contains an executable C compiler and a linker, but the Pascal compiler, written in C, exists only in 
+source code form We show how our logic-based planner discovers and handles the fact that there are two 
+ways to create the desired goal, and how it will plan to compile the Pascal compiler and then use it 
+to compile the Pascal version of the quicksort program as part of the build process. 2.1 A Sample Objectbase 
+In this example, the objectbase contains the following eleven ob j terms that comprise the system model. 
+The first two constitute the software under developmen~ the remaining objects constitute the development 
+environment. Source code: OID 1. An instance of quicksort written in C. OID 2. An instance of quicksort 
+written in Pascal. OID 3. An instance of a Pascal compiler written in C. Relocatable code: OID 4. An 
+instance of the library used by the linker. Executable code: OID 5. An instance of an executable C compiler. 
+OID 6. An instance of an executable linker. Tool descriptions (vprovs) for: OID 7. A C compiler. OID 
+8. A Pascal compiler (no executable exists yet), OID 9. A linker. Definitions (defns) for: OID 10. An 
+abstract translator (factored out of the C and Pascal compiler tool descriptions). OID 11. The aggregate 
+input to the linker. The objectbase terms are shown in Figure 1. Provenances and some composition details 
+have been elided for brevity. 2.2 Planning a Derived Object An executable version of the quicksort program 
+is requested by the query ? build (ob j (func=> (name => quicksort ) , form => (atom, exe)) ) . Our backward-chaining 
+planner derives a plan for building the requested object as follows. 1. The planner searches for an instance 
+of the goal. None exists, so planning continues. 2. The planner finds a virtual object (tool output) 
+matching the goal; it unifies with the out pattern of the linker description (in object 11), since the 
+linker is the only tool capable of producing an object of type exe. The unification specializes the out 
+subterm to have functionality quick sort; the i n functionality is instantiated to quicksort simultaneously 
+due to the coreference F. Tests are performed  86 obj (oid form comp => => => 1, % (atom, c), main(argv, 
+Quicksozt func => argc) source (name => {...} ) . code quicksort) written , in c. obj(oid form comp => 
+=> => 2, (atom, program % Quicksort Pas), func > qui.cksort(input, source coda written (name > quicksort), 
+output); ... end. ) , in PaSCal. obj (oid form comp => => => 3, (atom, nmain(argV, % c), Pascal func 
+ar9C) => compiler (name {.-) ) => source translator(pas, code written o) ), In c. obj(oid form comp 
+=> => => 4, (atom, <.,,library % o), Link library of relocatable of code relocatable here...>) . code. 
+obj(oid form func comp => => => => 5, % Executable (atom, exe), (name => translator(c, <...executable 
+code C 0) here...>) compiler. ) , . obj (oid form func comp => => => => 6, % Executable linker. (atom, 
+exe), (name => odag_plus_llb_to_exe), <,..executable code here...>) . obj(oid form comp => => => 7, % 
+Tool descri.pt~on (atom, vprov), obj(form => (atom, exe) , func => (name => translator(c, for a C 0)))). 
+CO!itpiler. obj(oid form comp => => => 8, % Tool description for (atom, vprov), obj(form => (atom, exe) 
+, func => (name => translator(pas, a Pascal o)))) . Coutpi.ler. obj (oid form comp => => => 9, % Tool 
+descri.pt~on for (atom, vprov), obj(form => (atom, exe), func => (name => odag_plus_lib_to_exe) a linker. 
+) obj(oid form comp > => => 10, (atom, obj(func % Separate defn), => (name in out => => => definition 
+translator obj(form obj(form of (Source, => (atom, => (atom, the Tar, functionality et), Source), func 
+Target), func => > F), F)))) translator . . obj(oid form comp => => => 11, (atom, obj(func % Separate 
+defn), => (name in out => => => defl.nit~on of a linker s functionality. odag_plus_lib to_exe, obj(form 
+=> (dag), comp => [obj(oid => 4), % link library obj(form => (constr =>[dag_of(o) obj (form -> (atom, 
+exe) , Eune => F) ))) . I@I), func > F)l), Figure 1. An objectbase of instances, tool descriptions, 
+and definitions. 87 at this time (described in sections 3.4 and 3.5) to insure that the choice of this 
+tool does not lead to a circular or diverging plan. It does not, so the linker s tool description is 
+selected as a provenance template for the goal. 3. The planner plans an executable linker tool. An instance 
+of it exists, so the subgoal succeeds. 4. The linker input is planned. It is an aggregation of two subobjects: 
+the link library object (oid => 4), and a dag constrained to be all objects of type o (relocatable) with 
+functionality q ttic ksort. The planner looks for a tool description that outputs such a dag as a whole. 
+None does, so a secondary attempt is made to plan each of the subobjects independently. Since the link 
+library exists, the first subplsn succeeds. The second subphut succeeds in two ways; the dag_of constraint 
+(not shown) is written in such a way that it succeeds for an atomic object (a degenerate dag) as well 
+as a multi-object dag. So the dag of(o) pattern unifies with the out patterns of the tool descr~ptions 
+of both the C compiler and the Pascal compiler. 5. The planner fiist pursues the path based on using 
+the C compiler. An executable instance of the C compiler exists, so the in object of the C compiler (now 
+specialized to have functionality quicksort) is planned. That subplan succeeds, since the input pattern 
+unifies with the existing quicksort C source code object. This is the first time in the planning process 
+that both a tool and its input have been completely planned. The planner generates a LOGIN build rule 
+as part of the build program it produces. The rule says that an attempt to build the relocatable object 
+output by the C compiler succeeds if the C compiler is bui14 the C quicksort source is built, the compiler 
+is applied to the source to produce the relocatable output object, and after the derivation step is complete, 
+the relocatable code was actually produced.  build (Target : obj (form => (atom, o) , func => (name 
+=> quicksort) ) ) :­built (Tool : obj (<C complier>) ) , built (Source : obj (form => (atom, c) , func 
+(name => quicksort) ) ) , apply (Tool, Source, Target), built (Target) .  6. Now the derivation path 
+using the Pascal compiler is pursued. An executable Pascal compiler does not exist, so the planner attempts 
+to plan it, searching for a tool that can derive it, The linker tool description matches. A subgoal to 
+plan an executable linker is invoked, and the planner discovers that the linker has already been successfully 
+planned. Likewise, the link library needs no replanning. But the planner must plan a relocatable dag 
+whose functionality is translator(pas, o), As before, a plan for a relocatable dag has two solutions, 
+since it matches the out pattern of both the C and Pascal compiler. The C compiler is already planned, 
+and the C source code for the Pascal compiler exists, so the C compilation path succeeds: build (Out 
+: obj (form => (atom, o) , func => (name => translator (pas, o) ) :­built (Tool : obj (<C compiler>) 
+) , built (In : obj (form => (atom, c) , func => (name => translator (pas, o) ~), apply (Tool, Source, 
+Target) , built (Target) . 7. Now the planner considers using a Pascal compiler to produce the Pascal 
+compiler relocatable. But no executable Pascal compiler exists, and the plan to produce one is alreudy 
+in progress. The planner detects the circularity and rejects that derivation path, 8. Since the plan 
+to use the C compiler to compile the Pascal compiler succeeded (in step 6 above), the planner generates 
+a build rule to link the resulting relocatable object to produce an executable Pascal compiler tooh 
+ build (Target : obj (form => (atom, exe) , func => (name => translator (pas, 0) ) ) ) :­built (Tool 
+: ob j (<Linker> ) ) , built (Source : obj (form => (dag) , func => odagfllus_lib_to_exe, comp => [obj 
+(oid => 4) , obj (form => (atom, o, constr => [dag_of (o) I@]), func => translator (pas, o) ) ] ) ) , 
+aPPIY (Too1, Source, Target) , built (Target) .  9. Now that the plan for art executable Pascal compiler 
+succeeded, the planner looks for a Pascal quicksort source object for it to compile. One exists, so the 
+planner generates a Pascal compilation step: build (Target : obj (form => (atom, o) , func => (name => 
+quicksort) ) ) :­built (Tool : obj (<Pascal compiler>) ) , built (Source : obj (form => (atom, pas) , 
+func => (name => quicksort) ) ) , apply (Tool, Source, Target) , built (Target) . 10. Finally, the planner 
+outputs a rule to link the quicksort executable: build (Target : obj (form => (atom, exe) , func => (name 
+=> quicksort) ) ) :­built (Tool : obj (<Linker> ) ), built (Source : obj (form => (dag) , func => odag>lus_lib_to_exe, 
+comp => [obj (oid => 4) , obj (form => (constr => [dag_Of (o) I@]), func => quicksort) ] ) ) , aPPIY 
+(Too1, Source, Target) , built (Target ) . The collection of generated build rules forms a build plan 
+a logic program capable of deriving the goal object. It is a portion of the derivation graph specialized 
+to derive the requested object. The build proceeds by invoking the original build request against this 
+build plan. Like any logic program, arty of its rules may fail, causing backtracking to occur and alternatives 
+to be explored. For example, if the C version of the quicksort program contains a syntax error, the C 
+compilation step will fail; upon backtrackhg, the Pascal compilation wilI be attempted, so the build 
+may still succeed, The successful production of a build plan does not guarantee that the corresponding 
+build will succeed. What is guaranteed is that if a build plan is produced, it contains every complete, 
+noncircular path from the required sources to the goaL If any derivation fails, it will not be due to 
+a defective or missing derivation path in the plan. 3. The Planner The planner is implemented as a set 
+of LGGIN definitions. The top-level query that plans a particular instance is plan(Goal, Code). When 
+given an object pattern Goal to be planned, the planner finds all the derivation patha that cart produce 
+i~ if successful, the result is a build plan bound to the tag Code. 3.1 The Planning Algorithm The planner 
+implements the top-level algorithm in Figure 2. The algorithm avoids circular plans and replanning previously 
+planned or existing instances. Unify Goal with matching definition objects; if God is already in the 
+process of being planned then fail circular plan detected else if an instance of Goal has previously 
+been planned then if that previous plan succeeded then succeed as before eise fail as before else if 
+an instance of Goal already exists then succeed no need to plan it eise case object structure of atom: 
+if no matching virtual objects exist thenfail no known way to plan it e i se plan it from virtual provenances 
+(Sec. 3.2) dag: ifno matching virtual objects exist then plan it from its components (See 3.3) else plan 
+it from virtual provenances and also from its components any Plan it as if it were an atom (as above), 
+then plan has if h were a dag (as above) endcase Figure 2. The top-level planning algorithm. In the atom 
+and dag cases, the planner matches the Goal pattern against every virtual object (i.e., every object 
+or subobject in the out specitlcation of each virtual provenance). The planner then collects all plannable 
+virtual provenances of the matching virtual objects. A virtual provenance is considered plarmable if 
+it does not lead to a circular or diverging plan, as discussed in section 3.4. For an atomic goal, the 
+list of plarmable virtual provenances represents all possible ways to plan that atom. For dag objects, 
+however, it may be that even though no tool outputs the dag as a whole, the components of the dag may 
+be derivable individually via separate tools. So the planner can often plan a dag by planning its components 
+separately, then plan to create an instance of an aggregate that groups them. 3.2 Planning a Goal from 
+a Virtual Provenance If virtual provenances exist that can output a goal, each is used in turn to plan 
+it. A build rule is output for each planning attempt that succeeds. The algorithm for planning a goal 
+from a matching virtual provenance is: 1. Plan the derivation tool used in the virtual provenance. 2. 
+Unify Goal with the matching virtual object in the virtual provenance s output. Coreferences between 
+the outputs and input objects become bound so that the generic virtual provenance becomes instantiated 
+to derive this particular Goal from a specialized input. 3. Plan the specialized input object. 4. Generate 
+a build role of the form  build (Goal) :-% build (Goal) succeeds if: built (Tool) , % a tool instance 
+is built, built (Input ) , % an input instance is built, apply (Tool, Input) , % the tool succeeds, built 
+(Goal) . % and the Goal is derived. The apply predicate applies the given tool to its input to produce 
+its output (which includes Goal). Provenances in the tool output object are bound when the application 
+succeeds.  3.3 Planning a Dag from its Components If no virtual provenances can output a dag goal, art 
+attempt is made to plan its subobjects separately. If they can all be planned, a build rule is output 
+that creates an instance of a dag that aggregates them. The tool that derives the dag in this case is 
+a create-inst subgoal invoked at build time. build (Dag) :­ % build (Dag) succeeds if: built (Component 
+1) , % each component is built.. built (Component2 ) , ... built (Component) , create_inst (Dag) . % 
+...and they are aggregated.  3.4 Detecting Circular and Diverging Plans The planner constructs the 
+requested portion of the derivation graph using backward chaining. It unifies the spec~lcation of the 
+goal with the output specifications of tools; a successful unification of the goal with the output of 
+a tool tentatively selects the tool as a candidate for deriving the object. The selection is only tentative 
+because, in the context of the plan produced at arty given point, the choice of a particular tool must 
+not lead to a circular plan nor to a diverging plan. A circular plan can occur when backward chaining 
+results in a second need to build a goal that is still in the process of being planned. For example, 
+suppose we have a data compression tool, compress, and its inverse, expand. The application of compress 
+to an object whose form is X produces an encapsulated object whose form is, say, z(X). Expand can be 
+applied to an encapsulated object having form z(X) to recover the original object having form X. To derive 
+a goal object of form g, the planner might tentatively select the expand tool, under the assumption that 
+the corresponding compressed object of form z(g) either exists or can be derived by further planning. 
+Suppose no such object exists. One way to plan an object of form z(g) is by applying compress to encapsulate 
+an object whose form is g. But g is the form of the original goal object, which definitely does not exist 
+the planner is currently trying to plan it! In the current context of the plan for this goal, the tentative 
+choice of compress as a derivation tool must be rejected or the planner will be trapped in a circular 
+derivation path. The planner can detect circular derivation paths by the usual technique of making a 
+memo of each object in the current derivation path; if a tentative tool requires any of these in­process 
+goals as an input, that tool is rejected. Pltms can also diverge. Suppose again that the planner chooses 
+expand to derive a goal object of form g, under the assumption that z(g) exists or is derivable. Another 
+way to plan z(g) is to tentatively select the expand tool a second time, under the assumption that the 
+doubly compressed object whose form is z(z(g)) exists or can be derived. To plan that object, the planner 
+may again choose expand, generating an input goal whose form is z(z(z(g))), etc. If no compressed version 
+of form g exists or can be successfully planned by some other means, this line of reasoning will lead 
+the planner down a diverging derivation path. Each planned use of the expand tool generates a new goal 
+that is a deeper encapsulation of the original form g. The derivation path is not circular, but nevertheless 
+the planner may not be making progress toward arty phmnable object. Fortunately, since the planner is 
+working with a fixed set of tools and source objects, it can detect a diverging path before it begins 
+to follow it. Such a path can occur only under very limited conditions: 1) a chain of one or more derivation 
+tools must exist such that art input object Y to the first tool in the chain is unifiable with an output 
+object Z of the chain, and 2) an attribute A that the planner examines in Y is reduced in size in Z by 
+an application of the chain. (That is, attribute A can expand during backward chaining, and hence can 
+cause a backward-chaining planner to diverge). In our current design, the only attribute of art object 
+that the planner examines that can change in size and still unify with its original value is the value 
+subattribute of the form attribute of an atomic object. We use a special package subterm to express a 
+form-encapsulation of an objec~ analysis of the input and output forms of a chain of tools cart determine 
+whether a package subterm is present, and if so, whether the above two divergence conditions hold. A 
+potentially diverging tool or tool chain may still be used by the planner if it cart be determined that 
+all the input goals to the chain are feasible. An input goal to a diverging chain is feasible if it can 
+be proved that an instance or virtual object exists whose form unifies with or encapsulates the form 
+of the potentially diverging input object. 3.5 Unifying Constrained Objects As previously noted, it 
+is sometimes necessary to constrain the composition of an object, usually a partially instantiated aggregate. 
+The language of static LOGIN term patterns is not sufficiently powerful to express dynamic, open-ended 
+constraints, such as This input aggregate consists of a single master file object of type m and one or 
+more transaction file objects of type t. LOGIN supports Prolog-style lists, but there is no way to write 
+a static list specifying an unknown number of partially instantiated elements. Since neither terms nor 
+lists include a notion of repetition, even large, static aggregates cannot be expressed directly and 
+concisely. Our solution to this modelling problem is to allow an object term to carry a constraint attribute 
+that can act as a dynamic pattern at object-unification time. An atom or dag may carry a constrain it 
+is sometimes the case that a constraint over an object is lmown before its structure (atom or dag) is 
+known. We implement a constraint as a stream of LOGIN goals to be proven about an object. The stream 
+of goals implements a single Boolean condition; multiple goals in the stream are implicitly ANDed together. 
+Example. Suppose we wish to describe the aggregate described above that consists of one master file of 
+type m and one or more transaction files of type t. We may write the following dag term and constraint 
+definition: obj (form => (dag) , comp => [Master : obj (form => (atom, m) ) , Trans : obj (form => (dag, 
+constr => [all_t I @l ) 1). all_t (obj (form => (atom, t) ) ) . all_t (obj (form => (dag, constr => [all_t 
+I @]) ) The planner must extend the process of unifying two objects to include proving the constraint, 
+as follows. When a constrained object is unified with another object, attributes other than the constraint 
+attribute are unified normally, but each object s constraint goals are appended to the other s stream 
+(i.e., their constraints are ANDed in place). This semantics is consistent with LOGIN S concept of allowing 
+a value to be narrowed in place via unification. Since the two objects are then identical, it is only 
+necessary to prove that one of them meets its constraint. To do so, each of the rule names in the merged 
+constraint stream is converted to a call of the form rule name (O b,j) and is then invoked; the constrained 
+object itself is passed as the Obj argument. Only if all such rules succeed are the two objects considered 
+successfully unified. 3.6 Unifying Aggregate Objects LOGIN s unification mechanism works well for unifying 
+atomic objects but is problematic for unifying aggregates. Suppose, for example, that the planner is 
+trying to plan an aggregate consisting of two dissimilar subobjects x and y. The subobject patterns of 
+an aggregate object are represented as a LOGIN list of terms, so the aggregate consisting of the list 
+of subobjects [x, y] will fail to unify with a virtual provenance that derives the same two objects listed 
+in the reverse order, [y, x], In system modelling such mismatches are often Undesirable% for many tools, 
+the ordering or structure of the inputs is not critical to the success of the plan. In such cases the 
+planner should not reject derivation paths due to variations in the order or structure of subobjects 
+between object producers and consumers. However, LOGIN does not feature either sets or dags as a built-in 
+datatype, and in any case it is unclear what the semantics of general set or dag unification should be. 
+Our solution to this dilemma is to define and implement a specific desired semantics for aggregate object 
+(dag) unification on top of LOGIN. We require that for two object dags to unify, they must have the same 
+number of subobjects at each level, and a one-to-one unification correspondence must exist between those 
+subobjects. In other words, at any level of the dag, subobject arity is important but order is not. The 
+planner s rule for unifying objects is modified to relax the ordering requirement on subobject lists. 
+In cases where ordering matters, a constraint can be placed on the aggregate to enforce a specific ordering. 
+Our definition of dag unification is not altogether satisfying. It says nothiig about which correspondence 
+is used if multiple one-to-one mappings exist. Of course, our implementation uses the first such correspondence 
+it finds. 4. Advantages of a Logic-Based Approach A logic-based approach to system modelling and building 
+has many benefits. Our logic-based planner can find multiple equivalent derivation paths. It produces 
+a build plan that is itself a logic program capable of backtracking. Since a build plan can explore alternatives, 
+a build can succeed even if some derivations fail. A logic-based approach allows us to employ a single 
+language for representing objects, describing tool signatures, expressing coreference relationships and 
+constraints, defining inference rules, matching objects, and building derived objects. The system specification 
+is declarative. Programmers specify the properties of tools and other objects; strategies for satisfying 
+requests are inferred. A system model can be conveniently decomposed so that each piece of information 
+may be supplied by the person best able to provide it. The author of a primitive object (source module) 
+declares its intended functionality; the designer of a system describes how the functionalities of its 
+components combine; the developer of a tool specifies its capabilities; and the implementor of the SCM 
+environment provides the strategies for deriving objects. The use of a single language throughout an 
+object management system reduces overall complexity, but at some risk of compromising its expressiveness 
+for a particular purpose. Fortunately, a logic-based language provides important capabilities that actually 
+make it convenient for each particular use. For example, using unification as a means of associative 
+access to objects provides a powerful yet declarative method of object retrieval; it adapts the concept 
+of query-by-example [Zloof77] to the task of system modelling. Since object types can be expressed as 
+partially specified objects [Wiebe88], types can be incrementally refined to more-specific subtypes in 
+subsequent definitions. This capability provides one of the often-touted advantages of object-oriented 
+progr amming: the ability to reuse and build on existing definitions. Finally, the use of a logic-based 
+language is particularly convenient for creating what is essentially an expert system for the construction 
+of complex software objects. 4,1 Relationship to Other Work Our work has been heavily influenced by the 
+Odin system [Clemm84, Clemm86, Clemm88, Clemm90] from which we borrow the concept of viewing tools as 
+type-conversion functions in a derivation graph. In Odin, a derived object is requested by specifying 
+a source object and the type of the desired derived objec~ Odin fiids the resulting derivation path if 
+one exists. We have extended Odin s approach by distinguishing between an object s form and functionality. 
+We allow a user to request the desired functionality in the result rather than Iiy specifying a given 
+source object assumed to have that ftmctionrdity. That extension allows the automatic discovery of multiple 
+derivation paths. Unlike Odin, we use unification to match tools end sources dynamically; when a derived 
+object is requested, only the parts of the derivation graph necessary for a given build are created. 
+Our characterization of tools in terms of patterns acting as prerequisites and postconditions is somewhat 
+similar to the approach used by Marvel [Kaiser86a, Kaiser86b, Kaiser87]. Our planner uses the goal-satisfaction 
+strategy expressed by Marvel s backward chaining metarule. In Marvel, however, pre­ and postconditions 
+are Boolean predicates based on events. Since Marvel models the software process, tool-to­object matching 
+is achieved via dynamic state changes recorded in the environment during development, such as whether 
+a module has been reserved, analyzed, compiled, etc. Our unification-based matching is based on static 
+properties of each object, since we model the software products, not the process. Our environment currently 
+employs no notion of opportunistic processing. As noted earlier, we have adapted DSEE S bound configuration 
+threads as object provenances to track derivation histories and to help manage a derived object cache 
+[APo11o84, Apollo86; Leblang84, Leblartg85]. 5. Current Status Development of these ideas is underway 
+as part of the CAPITL3 project [Solomon91]. We have implemented a dialect of LOGIN called Congress. (LOGIN 
+was first written in Prolog at MCC, but that implementation is not publicly available; we used C++ [Stroustrup86] 
+as our implementation language.) Congress also incorporates some ideas from a more recent extension of 
+LOGIN called LIFE [Ait-Kaci88a, AYt-Kaci88b]. We have built and tested a planner prototype that implements 
+the techniques presented in this paper. The example in this paper and other, more-complex examples have 
+been modelled and tested. At the time of this writing (March 1990), our implementation is supported by 
+the normal LOGIN objectbase as an object repository. We are planning to implement a persistent objectbase 
+using the Exodus extensible database toolkit [Carey90]. The ntntime support for Congress will present 
+existing database objects as terms. 5,1 Directions for Further Research Our initial work with a logic-based 
+language for SCM has been encouraging. However, more research is needed to verify the practicality and 
+scalability of this approach. Version Management. We are working concurrently on a version management 
+strategy that complements our logic­based approach to system modelling. We will soon be integrating our 
+configuration management with version management, and we anticipate that the two will work well together. 
+We view version selection as a further instantiation of object terms. It is likely that such specialization 
+can be done at whatever time is appropriate or convenience during 3 computer Assisted Prograrnming-In- 
+I he-Large planning, between planning and building, or during the building process. Our research in this 
+area is ongoing. Multiple Provenances. As the example in this paper suggests, it may be possible to derive 
+an object in more than one way, A derived object may therefore have several different but semantically 
+equivalent provenances. Mtdtiple derivation paths commonly occur whenever a reversible operation such 
+as data compression is applied to a derived object. Also, Reps has shown that the same object may be 
+derived in different ways by integrating several objects in different orders [Reps 90]. In general, the 
+different derivations that can produce a given object will have different processing costs. When a requested 
+derived object has been removed from the derived object cache and must be redenved, the provenance selected 
+to rebuild the object should be the one whose total rederiv ation cost is lowest. REFERENCES [Alt-Kaci 
+86] Ait-Kaci, Hassan, and Roger Near, LOGN A Logic Programming Language with Built-in Inheritance, Journal 
+of Logic Programming, pp. 185-215 (March 1986). [Alt-Kaci 88a] Aft-Kaci, Hassan, and Patrick Lincoln, 
+LIFE: A Natural Language for Natural Lartguage: MCC Tech. Reprt ACA­ST-074-88, MCC, ACA Program, Systems 
+Technology Laboratory, 3500 West Balcones Center Drive, Austin, TX 78759 (February 1988). [Mt-Kaci 88b] 
+kit-Kaci, Hassan, and Patrick Lmcolrt, LIFEs Rich Tapestry A User Manual and Reference Guide to the LIFE 
+Progr ammirtg Language, MCC Tech. Report ACA-ST­408-88, MCC, ACA Program, Systems Technology Laboratory, 
+3500 West B alcones Center Drive, Austin, TX 78759 (February 1988). [Apollo 84] DOMAIN Softwme Engineering 
+Environment (DSEE) Reference, Apollo Computer Inc., 330 Billerica Road, Chehnsford, MA 01824 (1984). 
+[Apollo 86] Engineering in the DSEE Environment, Apollo Computer Inc., 330 Billerica Road, Chelrnsford, 
+MA 01824 (1986). [Aristotle 357 B.C.] Aristotle, Metaphysics, ca. 357 B.C. [Bentley 87] Jon Bentley, 
+Programming Pearls: Self-describing Data, Communications of the ACM 30(6), pp. 479-483 (June 1987). 
+[Carey 90] M, Carey, et, al., The EXODUS Extensible DBMS Projeck An Overview, in Readings in Object-Oriented 
+Databases, S. Zdonik and D. Maier, eds., Morgan-Kaufman (1990). [Clemm 84] Clemrn, Geoffrey M., ODIN 
+-An Extensible Software Environment: Report and User s Reference Manual , Tech. Report CU-CS-262-84, 
+Department of Computer Science, University of Colorado, Boulder, CO 80309 (March 1984, rev. December 
+1984), [Clemm 86] Clernm, Geoffrey, and Leon Osterweil, A Mechanism for Environment Integration , Tech. 
+Report CU-CS-323-86, Department of Computer Science, University of Colorado, Boulder, CO 80309 (April 
+1986) .[Clemtn 88] Clemm, Geoffrey M, The Odin Specification Language , Proceedings of the International 
+Workshop on Software Version and Configuration Control, (Grassau, W. Germany, January 27-29, 1988), B,G. 
+Teubner, Stuttgar&#38; W. Germany, pp. 144-158 (1988). [Clernm 90] Geoffrey M. Clemrn and Leon J. Osterweil, 
+A Mechanism for Environment Integration, A C M Transactions on Programming Languages and Systems 12(1), 
+pp. 1-25 (JtUUltWy 1990). [Clocksin 84] W. F. Clocksin and C. S. Mellish, Programming in Prolog, Springer-Verlag, 
+Berlin Heidelberg New York Tokyo (1984). [Feldman 79] Feldman, S. I., Make A Program for Maintaining 
+Computer Programs, Software-Practice and Experience, 9(4), pp. 255-265 (April 1979). [Kaiser 86a] Kaiser, 
+Gail, and Peter H. Feiler, SMILE/MARVEL. Two Approaches to Knowledge-Based Programming Environments, 
+ Tech. Report CU-CS-227-86, Department of Computer Science, Columbia University, New York, NY 10027 (October 
+1986). [Kaiser 86b] Kaiser, Gail, and Peter H. Feiler, Granularity Jssues in a Knowledge-Based Programming 
+Environment, 2nd Kansas Conference on Knowledge-Based Software Development, Manhattan, KA (October 1986), 
+[Kaiser 87] Kaiser, Gail, and Peter H, Feiler, An Architecture for Intelligent Assistance in Software 
+Development, Proceedings of the Ninth International Conference on Software Engineering, IEEE, Monterey, 
+CA, pp. 80-88 (March 1987). [Leblang 84] Leblang, David B,, and Robert P. Chase, Jr., Computer-Aided 
+Software Engineering in a Distributed Workstation Environment, SIGPLAN Notices 19(5), pp. 104-112 (April 
+1984). [Leblang 85] Leblartg, David B., and Gordon D. McLean, Jr,, Configuration Management for Large-Scale 
+Software Development Efforts, Proceedings of the Workshop on Sojlware Engineering Environments for Programming-in­the-Large, 
+GTE Laboratories, Harwichport, MA, pp. 122­127 (June 1985). [Minsky 88] Naftaly H. Minsky and David Rozenshtein, 
+A Software Development Environment for Law-Governed Systems, ACM SIGSOPT Soflware Engineering Notes 13(5), 
+pp. 65-75 (November 1988). [Reps 90] Reps, Thomas, Algbraic Properties of Program Integration, Proceedings 
+of the Third European Symposium on Programming, (Copenhagen, Denmark, May 15-18, 1990), Lecture Notes 
+in Computer Science, Vol. 432, N. Jones, cd., Springer-Verlag, New York, NY, pp. 326-340 (1990). [Solomon91] 
+Marvin Solomon, An Overview of the CAPITL Programming Environment, in preparation (1991). [stroustrup86] 
+Bjarne Stroustrup, The C++ Programming Language, Addison-Wesley, Reading, MA (1986). [Wiebe 88] Wiebe, 
+Douglas, Partial Instantiation: A Data Model for Versioning Software Databases, Tech. Report 88-04­04, 
+Department of Computer Science, University of Washington, Seattle, WA 98195 (April 1988). [Zloof 77] 
+M. M. ZIoof, Query-by-Example: A Data Base Ltmguage, IBM Systems Journal 16(4), pp. 324-343 (1977). 
+  
+			

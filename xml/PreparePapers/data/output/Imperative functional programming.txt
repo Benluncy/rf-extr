@@ -1,0 +1,532 @@
+
+ Imperative functional programming Simon L Peyton Jones Dept of Computing Science, Email: -(simonpj, 
+wadler}(ldcs Abstract We present a new model, based on monads, for perform­ing input/output in a non-strict, 
+purely func~,ional lan­guage. It is composable, extensible, efficient, requires no extensions to the 
+type system, and extends smoothly to incorporate mixed-language working and in-place array updates. 1 
+Introduction Input/output has always appeared to be one of the less satisfactory features of purely functional 
+languages: fit­ting action into the functional paradigm feels like fitting a square block into a round 
+hole. Closely related difficul­ties are associated with performing in-place update oper­ations on arrays, 
+and calling arbitrary procedures written in some other (possibly side-effecting) language. Some mostly-functional 
+limguages, such as Lisp or SML, deal successfully with input/output by using side effects. We focus on 
+purely-functional solutions, which rule out side effects, for two reasons, Firstly, the absence of side 
+effects permits unrestricted use of equational reasoning and program transformat ~on. Secondly, we are 
+interested in non-strict languages, in which the order of evaluation (and hence the order of any side 
+effects) is deliberately unspecified; laziness and Eide effect are fundam ent ally in­imical. There is 
+no shortage of pr,)posals for input/output in lazy functional languages, some of which we survey later, 
+but no one solution has become accepted as the consensus. This paper outlines a new approach based on 
+monads (Moggi [1989]; Wadler [1992]; Wadler [1990]), with a num­ber of noteworthy features. It is composable. 
+Large programs which engage in 1/0 are constructed by gluing together smaller pro- Permission to copy 
+without fee all or part of this material is granted provided that the copies are not made or distributed 
+for direct commercial advantage, the ACM copyright notice and the title of the publication and its date 
+appear, and notice is given that copying is by permission of the Association for Computing Machinery. 
+To copy otherwise, or to republish, requires a fee and/or specific permission. ACM-20th PoPL-I /93-S. 
+C., USA @ 1993 ACM 0-89791-561-5/93/0001/0071 . ..$l .50 Philip Wadler University of Glasgow .glagsow. 
+ac. uk grams that do so (Section 2). Combined with higher. order functions and lazy evaluation, this 
+gives a highly expressive medium in which to express 1/0. performing computations (Sectior, 2.2) ---quite 
+the reverse of the sentiment with which we begim this section. We compare the monadic approach to 1/0 
+with other stand:u d approaches: dialogues and continuations (Section 3), and effect systems ancl linear 
+types (Sec­tion 7). It is easily extensible. The key to our implementation is to extend Haskell with 
+a single form that allc~ws one to call an any procedure written in the programming language C (Kernighan 
+&#38; Ritchie [1978]), without losing referential transparency (S,sction 2.3). Using it programmers can 
+readily extend the power of t hc 1/0 system, by writing Haskell functions which call operating system 
+procedures.  It is eficient. Our Haskell compiler has C as its target code. Given a Haskell prog:am 
+pe rforming arl 1/0 loop, the compiler can produce C code which is very similar to that which one would 
+write by hand (Section 4).  Its ejjiciency is achieved by applying simple pro­gram t ransformata ons. 
+We use unboxecl data type:~ (Peyton Jones &#38; Launchbury [1!3!11]) to expose rep­resentation and order-of-evaluation 
+detail t,c, code­improving transformations, rather than relying on ad hoc optimisations in the code generator 
+(Sectiml 4.1),  It extmads uniformly to-provtde interlea~ed I/O and reference types (Section 5).  It 
+extends uniformly to support ~ncremental array~ with m-place update (Section 6). Our implement a­tion 
+is eflicient enough that we can define monolithic Haskell array operations in terms of incremental ar­rays. 
+Hudak have proposed a similar method based on cent inuations. Our method is more general than his in 
+the following sense: monads can implement continuations, but not the converse.  It is based (only,) 
+on the Ilimiley-Milner type system. Some other proposals require linear types or existen. tial tj pes; 
+ours does not.  We have implemented all that we describe in the con­ how can we write a program to 
+print two exclamation text of a compiler for Haskell (Hudak et al. [1992]), with marks? To do so, we 
+introduce two glue combinators: the exception of the extension to arrays and reference types. The entire 
+1/0 system provided by our compiler doneIO :: IO () is written in Haskell, using the non-standard extensions 
+seqIO :: IOa->IOb->IOb we describe below. The language s standard Dialogue interface for 1/0 is supported 
+by providing a function to convert a Dialogue into our IO monad. The system is freely available by FTP. 
+We do not claim any fundamental expressiveness or effi­ciency which is not obtainable through existing 
+systems, except where arrays are concerned. Nevertheless we feel that the entire system works particularly 
+smoothly as a whole, from the standpoint of both programmer and im­plementor. ! 2 Overview We need a 
+way to reconcile being with dotng: an expres­sion in a functional language denotes a value, while an 
+1/0 command should perform an, action. We integrate these worlds by providing a type IO a denoting actions 
+that, when performed, may do some 1/0 and then return a value of type a. The following provide simple 
+Unix­flavoured 1/0 operations. getcIO :: IO Char putcIO :: Char -> IO () Here get cIO is an action which, 
+when performed, reads a character from the standard input, and returns that char­acter; and put cIO a 
+is an action which, when performed, writes the character a to the standard output. Actions which have 
+nothing interesting to return, such as putcIO, return the empty tuple (), whose type is also written 
+(). Notice the distinction between an action and its perfor­mance. Think of an action as a script , which 
+is per­formed by executing it. Actions themselves are first-class citizens. Howj then, are actions performed? 
+In our sys­tem, the value of the entire program is a single (perhaps large) action, called mainIO, and 
+the program is executed by performing this action. For example, the following is a legal Haskell program. 
+mainIO :: 100 mainIO = putcIO ! This is the point at whi<h being is converted to doing: when executed, 
+the put c] O action will be performed, and write an exclamation mark to the standard output. 2.1 Composing 
+1/0 operations The functions defined above allow one to define a single action, but how can acticms be 
+combined? Fo uexample, The compound action m seqIO n is performed, by first performing m and then performing 
+n, returning whatever n returns as the result of the compound action. (Back­quotes are Haskell s syntax 
+for an infix operator. ) The action doneIO does no 1/0 and returns the unit value, (). To illustrate, 
+here is an action puts IO, which puts a string to the standard output: putsIO :: [Char] -> 10 () putsIO 
+[1 = doneIO putsIO (a:as) = putcIO a seqIO{ putsIO as We can now use puts 10 to define a prcgram which 
+prints hello twice: mainIO = hello seqIO ( hello where hello = putsIO hello This example illustrates 
+the distinction between an iictiori and its performance: hello is an action which happens tc) be performed 
+twice. The program is precisely equivalent to one in which puts IO hello is substituted for either or 
+both of the occurrences of hello. In short, programs remain referentially transparent. In general, an 
+action may also return a value. Again, there are two combinators. The first is again trivial: unit IO 
+:: a->IOa If x is of type a, then unit IO x denotes the action that, when performed, does nothing save 
+ret urn x. The second combines two act ions. bindIO :: IOa->(a->IOb)->IOb If m:: IOaand k:: a -> IO b 
+then m bindIO k denotes the action that, when performed, behaves as fol ­ lows: first perform action 
+m, yielding a value x of type a, then perform action k x, yielding a value y of type b, and then return 
+value y. To illustrate, here is an ,action that echoes the standard input to the standard output, (In 
+Haskell, \x -> e stands for a lambda abstraction; the body of the abstraction extends as far as possible.) 
+echo :: 10 () echo = getcIO bindIO \a -> if (a == eof) then doneIO else putc IO a seqIO echo seqsIO 
+(a:as) = a seqIO seqsIO as The combinators bindIO and unit IO are generalisations of seqIO and done IO. 
+Here are definitions for the latter in terms of the former: doneIO = unitIO () m seqIO n = n bindIO 
+\a -> n The combinators have a useful algebra: doneIO and seqIO form a monoid, while bindIO and unit 
+IO form a monad (Moggi [1989]; Wadler [1992]; Wadler [1990]).  2.2 Imperative programming It will not 
+have escaped the reader s notice that programs written in the monadic style look rather similar to imper­ative 
+programs. For example, the echo program in C might look something like this: echoo { loop: a = getchar(a) 
+; if (a == eof) return; else { putchar(a); goto loop; 1 3 (Indeed, as we discuss later, our compiler 
+translates the echo function into essentially this C code. ) Does the monadic style force one, in effect, 
+to write a functional facsimile of an imperative program, thereby losing any advantages of writing in 
+x functional language? We be­lieve not. Firstly, the style in which one writes the functional pro­gram 
+s internal computation is unaffected. For instance, the argument to put sIO can be computed using the 
+usual list-processing operations provided by a functional lan­guage (list comprehensions, map, append, 
+and the like). Secondly, the power of higher-order functions and non­strict semantics can be used to 
+make 1/0 programming easier, by defining new action-manipulating combinators. For example, the definition 
+of put sIO given above uses explicit recursion. Here is an alternative way to write putsIO which does 
+not do so: putsIO as = seqs IO (map putcIO as) The map applies putcIO to each character in the list as 
+to produce a list of actions. The combinator seqs IO takes a list of actions and perfclrms them in sequence; 
+that is, it encapsulates the recursion. It is easy to define seqs IO thus: seqsIO :: [IO al -> IO () 
+seqsIO [] = doneIO or even, using the standard list-processing function foldr, thus: seqsIO = foldr seqIO 
+doneIO To take another example, here is a function which writes a given number of spaces to the standard 
+output: spaceIO :: Int -> IO () spaceIO n = seqs IO (take n (repeat (putc IO  ) ) ) The functions 
+take and repeat are standard list­processing functions (with nothing to do with 1/0) from Haskell s standard 
+prelude. The function repeat takes a value and returns an infinite list each of whose elements is the 
+given value. The function take takes a prefix of given length from a list. These necessarily small examples 
+could easily be pro­grammed with explicit recursion without significant loss of clarity (or even a gain!). 
+The poinl we are making is that it is easy for the programmer to define new glue tc] combine actions 
+in just the way which is suitable for the program being written. It s a bit like being able to define 
+your own control structures in an imperative language. 2,3 Calling C directly Since the primitive functions 
+put cIO, get cIO, and SC, on must ultimately be implemented b:y a call to the un derlying operating system, 
+it is natural to provide the ability to call any operating system function directly. To achieve this, 
+we provide a new form of expressicm, the ccall, whose general form is: ccall proc el . . . e,, Here, 
+proc is the name of a C procedure, and ef , . . . . e. are the parameters to be passed to i!. This expression 
+is an action, with type IO Int; when performed, it calls the named procedure, and delivers its result 
+iis the value of the action. Here, for example, are the definitions of getcIO and putcIO: putcIO a = 
+ccall putchar a getcIO = ccall getchar These ccalls directly invoke the system-provided func­tions; no 
+further runtime support is necessary. ~Jsing this single primitive allows us to implement our entire 
+1/0 system in Haskell. We define ccall to be a language construct rather than simply a function because: 
+The first argument must, be the literal name of the C procedures to be called, and not (say) an expres­sion 
+which evaluates to a string which is the name of the function. Type information alone cannot express 
+this. e Different C procedures take different numbers of ar­guments, and some take a variable number 
+of ar­guments. (It would be possible to check the type­correctness of the C call by reading the signature 
+of the C procedure, but we dlo not at present do so.) o Different C procedures take arguments of different 
+types and sizes. (At present, ~e only permit the arguments to be of base types, such as Char, Int, Float, 
+Double and so on, though we are working on extensions which allow structured arguments to be built.) 
+Treating ccall as a construct allows these variations to be accommodated without difficulty. 3 Comparison 
+with other 1/0 styles In this section we briefly t:ompare our approach with two other popular ones, dialogues 
+and continuations. 3.1 13ialogues The 1/0 system specified for the Haskell language (Hudak et al, [1992]) 
+is based on dzalogues, also called iazy streams (Dwelly [1989]; O Donnell [1985]; Thompson [1989]). In 
+Haskell, the value of the program has type Dialogue, a synonym for a function between. a list of 1/0 
+responses to a list of 1/0 requests: type Dialogue = [Response] -> [Request] main :: Dialogue Request. 
+and Response are algebraic data types which embody all the possible 1/0 operations and their results, 
+respectively: data Request = Put c Char I Get c data Response = OK I OKCh char (For the purposes of exposition 
+we have grossly simpli­fied these data types compared with those in standard Haskell.) A system wrapper 
+program repeatedly gets the next request from the list of requests returned by main, interprets and performs 
+it, and attaches the re­sponse to the end of the response list to which main is applied. Here, for example, 
+is the echo program written using a Dialogue. (In Haskell xs ! ! n extracts the n th element from the 
+list xs.) echo :: Dialogue echo resps = Getc : if (a == eof) then [] else Putt a : echo (drop 2 resps 
+) where OKCh a = resps ! ! 1 The difficulties with this programming style are all too obvious, and have 
+been well rehearsed elsewhere (Perry [1991]): e It is easy to extract the wrong element of the re­sponses, 
+a synchronasation en-or. This may show up in a variety of ways. If the 2 in dle above prograi-rl was 
+erroneously written as <I the program woulci fail with a pattern-mathing error in getCharIO; if it were 
+written 3 it would deadlock. e The Response data type has to contain a constructor for every possible 
+response to every request. Even though Put c may only ever return a response OKChar, the pattern-matching 
+performed hy get has to take account of all these other responses. e Even more seriously, the style is 
+not composable: there is no direct way to take two va(ues of typ<, Dialogue and combine them to make 
+a [arger value of type Dialogue (try it!). Dialogues and the IO monad have equal expressive power, as 
+Figure 1 demonstrates, by using Dialogues to emu-. late the IO monad, and vice versa. The function dToIO, 
+which emulates Dialogues in terms c,f IO is rather cu­rious, because it involves applying the single 
+ddogu{> d to both bottom (1) and (later) to the real list of responses (Hudak &#38; Sundaresh [1~89]; 
+Pcyton Jone~{ [1988]). This causes both duplicated work and a space leak, but no more efficient purely-func-fiional 
+emulation is known. The reverse function, ioToD does not suffer from these problems, and this asymmetry 
+is the main reason that Dialogues are specified as primitive in Haskell. We return to this this matter 
+in Section 5 3. 3.2 Continuations The continuation-style 1/0 model (Gordon [1989]; Hudak &#38; Sundaresh 
+[1989]; Karlsson [1982]; Perry [1991]) pro­vides primitive 1/0 operations which take as one of their 
+arguments a continuation which says what to do after the 1/0 operation k performed: main :: Result putcc 
+:: Char -> Result > Result getcC :: (Char -> Result) -> Result doneC :: Result Dialogue to ID dToIO 
+:: Dialogue -> IO () dToIO d = case (d bottom) of c1 -> doneIO (q:qs) -> doReqq bindIO \r -> dToIO (\rs 
+-> tail (d (Y:rs))) bottorrr :: a bottom = error Should never be evaluated doReq :: Request -> IO Response 
+doReq (GetChar f) = getCharIO f bindIO (\c -> unitIO (OKChar c)) doReq (PutChar f c) = putCharIO f c 
+seqIO unitIO OK I IO to Dialogue I type 10 a = [Response] -> (a, [Request], [Responsel) ioToD :: IO 
+() -> Dialogue ioToD action = \rs -> case (io rs) of (-, qs, -) ->qs unitIO v = \rs -> (v, [1, rs) blndIO 
+op fop = \rs -> let (vi, qsl, rsl) = op rs (v2, qs2, rs2) = fop VI rsl in (v2, qsl++qs2, rs2) Figurel: 
+Converting between Dialogue and IO Using these primitives, the echo program can rewritten as follows: 
+echo :: Result -> Result echo c =getcC (\a-> if (a == eof) then then c else putcC a (echo c)) Since 
+we might want to do some more 1/0 after the echo­ing is completed, we musl, provide echo with a continuii­tion, 
+c, to express what todowhen echo is finished. This extra argument is required for every I/O-performing 
+function if it is to be composable, a pervasive and tire­some feature. The above presentation of continuation-style 
+1~0 is a lit­ tle different from those cited above. In allthosedescrip­tions, Resultis an algebraic data 
+type, with aconstruc­torforeachprimitiveI/Ooperation. As with Dialogues, I Continuations to IO I type 
+Result = IO () cToIO :: Result -> IO () cToIO r = r putCharC :: File -> Char -> Result -> Result putCharC 
+f c k = putCharIO f c seqIO k getCharC :: File -> Char -> (Char -> Result) -> Result getCharC f k = 
+getCharIO f thenIO k lIOtocontinuationsl type IO a = (a -> Result) -> Result ioToC :: IO () -> Result 
+ioToC action = action (\ () -> nopC) unitIO v =\k->kv bindIO op fop =\k -> op (\a -> fop ak) putCharIO 
+f c = \k -> putCharC f c (k ()) getCharIO f =\k -> getCharCf (\c -> k c) Figure2: Converting between 
+continuation a~dIO execution is drivenby a wrapper program, which eval­uates main, performs the operation 
+inc~icated by the con­structor, and applies the continuat,ion inside theconstruc­tor to the result. This 
+approach has the disadvantage that it requires existential types if polymorphic opera­tions, such as 
+those we introduce later in Section .5.3, are to be supported. An obvious improvement, which wehavenotseen 
+previ­ously suggested, is to implement the primitive continu­ation operations (such as putcC, getcC and 
+doneC) di­rectly, making the Result type an abstract data type with no operations defined on it other 
+than the primi­tives themselves. This solves theproblern. Fur Continuations are easily emulatedby theIOmonad,ancl 
+vice versa, as Figure 2 shows. The comparison between the monadic and continuation approach is further 
+ex­ploredin Section 6. 4 ImplementingmonadicI/O So farwe have shown that an entirel/Osystemcanbe expressed 
+i.rlterms ofccall, bindIO, a,ndunitIO, andof course the IO type itself. How are these combinators tc~ 
+be implemented? One possibility is to build them in as primitives, butit turns out tobe both simple randmore 
+efficient to implement all except ccall in Haskell. The idea is that an action of type IO a is implemented 
+as a function, which takes as its input a value representing the entire current state of the world, and 
+returns a pair, consisting of (a value representing) the new state of the world, and the result of type 
+a: type IO a = World -> IORes a data IORes a = MkIORes a World The type declaration introduces a type 
+synomym for IO, and the auxiliary algebraic dat at yp,e I ORes simply pairs the result with the new world. 
+Recall that the value of the entire program is of type IO (). The type World is abstract, with only one 
+operation defined on it, namely ccall. Conceptually, the program is executed by apply­ing main to a value 
+of type World representing current state of the world, extracting the resulting World value from the 
+MkIORes constructor, and applying any changes embodied therein to the real world. If implemented literally, 
+such a system would be unwork­ably expensive. The key to making it cheap is to ensure that the world 
+state is used in a single-threaded way, so that 1/0 operations can bt applied immediately to the real 
+world. One way to ensure this would be to do a global analysis of the program. A much simpler way LSto 
+make IO into an abstract data type which encapsulates the data types IO and IORes, and the combinators 
+bmdIO and unit IO. Here are suit able definitions for the latter: uni.tIOaw =MkIORes aw bindIO mk w= 
+case (mw) of MkIORes a w ,-> k a w Notice that blndIO and unitIO carefully avoid duplicat­ing the world. 
+Provided that the primitive ccall ac­tions are combined only with these combinators, we can guarantee 
+that the ccalls will be linked tn a single, lm­ear chain, connect ed by data dependencies in which each 
+ccall consumes the world state produced by the previous one. In turn this means that the ccall operations 
+can update the real world in place . 4.1 Implementing ccall So much for the combinators. All: that remains 
+is the implement at ion of c call. The only complication here is that we must arrange to evaluate the 
+arguments to the ccall before passing theln to C. This is very similar to the argument evaluation required 
+for built-in functions such as addition, for which we have earlier developed the idea of unbozed data 
+tiipes (Pey­ton Jones &#38; Launchbury [1991]). These allow represent a­tion and order-of-evaluation 
+information to be exposed t o code-improving transformations. For example, consider the expression x+x 
+where x is oft ype Int. The improve­ment we want to express is that x need only be evaluated once The 
+key idea is to define the type Int (which is usually primitive) as a structured algebraic data type with 
+a sin­gle constructor, MkInt, like this: data Int = MkInt Int# A value of type Int is represented by 
+a pointer to a heap­allocated object, which may either be an unevaluated sus­pension, or a MkInt constructor 
+cent aining the machine bit-pattern for the integer. This bit-pattern is of type Int#. Now that Int is 
+given structure, we can make explicit the evaluation performed by +, by giving the following definition, 
+which expresses + in terms of the primitive machine operation +#: a+ b=case aof MkInt a# -> case b of 
+MkInt b# -> MkInt (a# +# b#) Inlining this definition of + in the expression x+x, and performing simple, 
+routine simplifications, gives the fol-. lowing, in which x is evaluated only once: case x of MkInt x# 
+-> MkInt (x# +# x#) (Unboxed types and ccall are not part of standard Haskell. They are mainly used internally 
+in our compiler, though we do also make them available to programmers as a non-standard extension.) We 
+apply exactly the same ideas to ccall. In particular, instead of implementing ccall directly, we unfold 
+every use of c call to make the argument evaluation explicit before using the truly primitive operation 
+c call#. For example, the uses of ccall in the definitions of putcIO and get cIO given above (Section 
+2.3), are unfolded thus: putcIO a = \w -> case a of MkChar a# -> case (ccall# putchar a# w) of MkIORes# 
+n# w -> MkIORes () w getcIO = \w -> case (ccall# getchar w) of MkIORes# n# w -> MkIORes (MkChar n#) w 
+ Like Int, the type Char is implemented as an algebraic data type thus: data Char = MkChar Int# The outer 
+case expression of putcIO, therefore, evalu­ates a and extracts the bit-pattern a#, which is passed to 
+ccall#. The inner case expression evaluates the ex­pression ( ccall# put char a# w), which returns a 
+pair, constructed by MkIORes#, consisting of the value n# re­turned by the C procedure put char (which 
+is ignored), and a new world w (which is returned). In the case of getcIO, the (primitive, unboxed) value 
+n# returned by getchar is !Iot ignored as it is in putcIO; rather it is wrapped in a MkChar constructor, 
+and re­turned as part of the result. The differences between ccall and ccall# are as follows. Firstly, 
+ccall# takes only unboxed arguments, ready to call C directly. Secondly, it returns a pair built with 
+MkIORes#, contain­ing an unboxed integer result direct from the ~ call. The IORes# type is very similar 
+to I ORes: data IORes# = MkIORes# Int# World (IORes and IORes# are distinct types, because while our 
+extended type system recognises unboxed types, it does not permit polymorphic type constructors, such 
+as 10Res, to be instantiated at an unboxed type, such as Int#.) Thirdly, the ccall# primitive is recognised 
+by the code generator and expanded to an actual call to ~. SPecifi­tally, the expression: case (ccall# 
+proc a# b# c# w) of MkIORes# n# w -> . . . generates the C statement n# = proc(a#, b#, c#); ... This 
+simple translation is all that the code generator is required to do. The rest is done by generic program 
+trans­formations; that is, transformations which are riot specific to 1/0 or even to unboxing (Peyton 
+Jones &#38; Launchbury [1991]). 4.2 Where has the world gone? But what has become of the world values 
+in the final C code? The world value manipulated by the program represents the current stat e of the 
+real world, but since the real world is updated (in ~Jace the world value carries no useful information. 
+Hence we simply arrange that no code is ever generated to move values of type World. This is easy to 
+do, as type information is preserved throughout the compiler. In particular, the world is never loaded 
+into a register, stored in ZL data structure, or passed to C procedure calls. 1s it possible, then, to 
+dispense with the world in the func­tional part of the implementation as well? For example, can we define 
+the I ORes type and b indI O combinat ors like this? ~~~~1~~ ~ = kloRes a = case (m w) of MkIORes a-> 
+kaw No, we cannot! To see this, suppose that bindIO was ap plied to a function k which discarded it 
+~ argument. Then, if bind I O was unfolded, and the expression (k r w) was simplified, there would be 
+no remainmg data dependency to force the call of k to occur afler that of m. A compiler Would be free 
+to call them in either order, which destroys the 1/0 sequencing. To reiterate, the world is there to 
+fcrm a linear chain of data dependencies between successive ccalls. It is quite safe to expose the representation 
+of the IO type to code-improving transformations, because the chain of data dependencies will prevent 
+any transformations which reorder the ccalls. Once the code generator is reached, though, the work of 
+the world values is done, so it is safe to generate no code for them. 4-3 Cho eVisited The implementation 
+we have outlined ]s certainly simPle, but is it efficient? Perhaps surprisingly, the answer is an emphatic 
+yes. The reason for this is that because the combinators are written in Haskell, the compder can zm­fold 
+them at all their cali sites; that is, perform procedure inlining. Very little special-purpose code 
+is required in the cc,mpiler to achieve this effect essentially all that is required is that the Haskell 
+definitions of bindIO, unitIO, putcIfl and so on, be unfolded by the compi] er. In cent rast, if bindIO 
+were primitive, then every call to blndIO will re­quire the ( obstruction of two heap-allocated closures 
+for its two arguments. Even if bindIO itself took no time at all, this would be a heavy cost. To illustrate 
+the effectiveness of the approach we have outlined, we return to the echo program of Section 2.1. If 
+we take the code there, unfold the calls of seqIO, doneIO, eof, putcIO and getcIO, and do some simplification, 
+we get the following: echo =\w -> case (ccall# getchar w) of MkIORes# a# WI -> case (a# ==# eof#) of 
+T# -> MkIORes () WI F# -> case (ccall# putchar a# wI) of MkIORes# n# W2 -> echo W2 When this is compiled 
+using the simple code-generator described, the following ~ is produced: echoo { int a; a = getcharo; 
+if (a==eof) { retVal = unitTuple; RETURN; 1-else { put char(a) ; JUMP( echo ); }3 (JUMP and RETURN are 
+artefacts of our use of C M a target machinecode (PeytonJones [1992]). Theyexpandonly to a machine instruction 
+or two. ) This is very close to the C one would write by hand! We know ofno other implementation of 1/0 
+with better efficiency.  4.4 A continuation-passing implementation Like most abstract datatypes, there, 
+ismorethan one way toimplement IO. Inparticular, itispossible toimplernent the IO abstract type using 
+a continuation-passing style. The type IO a is represented by a function which takes a continuation expecting 
+a value of type a, and returns a value of the opaque type Result. type IO a = (a -> Result) -> Result 
+It is easy to implement bmdIO and unitIO: blndIO mk cent = m (\a -> k a cent) unit IO r cent = cent r 
+What is there to choose between these this representation of the IO type and the one we described initially 
+(Sec­tion 4)? The major tradeoff seems to be this with the continuation-passing representation, every 
+use of bindIO (even if unfolded) requires the construction of one heap­allocated continuation. In contrast, 
+the implementation we described earlier keeps the continuation implicitly on the stack, which is slightly 
+cheaper in our system. There is a cost to pay for the e,arlier representation, namely that a heavily 
+left-skewed c~mposit ion of b ind 10s can cause the stack to grow rather large. In contrast, the continuation-passing 
+implementation may use a lot of heap for such a composition, but its stack usage is con­stant. The main 
+point is that the implementor is free to choose the represent ation for IO based only on considerations 
+of efficiency and resource usage; the choice makes no differ­ence to the interface seen bv the rxosmammer. 
+5 Extensions to the IO monad 5.1 Delayed 1/0 So far all 1/0 operations have been strictly sequenced 
+along a single trunk . Sometimes, though, such strict sequencing is unwanted. For example, almost all 
+lazy functional-language 1/0 systems provide a readFile primitive, which returns the entire contents 
+of a speci­fied file aa a list of characters. It is often vital that this primitive should have lazy 
+semantics; that is, the file is opened, but only actually read when the resulting list is evaluated. 
+The relative ordering of other 1/0 operatiomi and the reading of the file is immaterial (provided the 
+file is not simultaneously written). This lazy reacl is USU. ally implemented by some ad hoc magic) in 
+the runtimc system, but within the monadic framework it is easy tc~ generalise the idea. What is required 
+is a new combinator for the IO monad, delay IO, which forks off a new branch from the main trunk : delayIO 
+:: IOa->IOa When performed, (delayIO action) immediately re­turns a suspension which when it M subsequently 
+forced will perform the 1/0 specified by act ion. The relative interleaving of the 1/0 operations on 
+the trunk and the branch is therefore dependent on the evaluation order of the program. The delayIO combinator 
+is dangerous (albeit useful), be­ cause the correctness of the program now requires tha~, arbitrary interleaving 
+of 1/0 operations on the trunk and (branch cannot affect the result. Thts conddzon cannot be guaranteed 
+by the compiler; it is a proof obli­ gation for the programmer. In practice, we expect, that, delayIO 
+will be used mainly by system programmt;rs. With the aid of delayIO (and a few new primitives suck as 
+fOpenIO), it is easy to write a lazy readFile: readFile :: [Char] -> IO [Char] readFile s = f OpenIO 
+s bindIO \f -> delayIO (lazyRd f) lazyRd :: File -> IO [Char] lazyRd f = readChar f cbindIO \a -> if 
+(a == eof) then fCloseIO f seqIO unitIO [1 else delayIO (lazyRd f) bi.ndIO \as -> unit IO (a:as) The 
+delavIO combinator movides essentially the Dower of Gordon s suspend operator (Gordon [1989]). Implementation. 
+A nice feature of the implementation technique outlined in Section 4 is that delayIO is very easy to 
+define: delayIO m = \W -> MkIORes res w where res = case (mw) of MkIORes r w -> r In contrast to bindIO, 
+notice how delayIO duplicates the world w, and then discards the final world w of the de­layed branch; 
+it is this which allows the unsynchronised interleaving of 1/0 operations on the branch with those on 
+the (trunk . 5.2 Asynchronous 1/0 An even more dangerous but still useful combinator is perf ormIO, 
+whose type is as follows: performIO :: IO a -> a It allows potentially side-effecting operations to take 
+place which are not attached t{) the main trunk at all! The proof obligation here is tl~at any such side 
+effects do not affect the behaviour of the rest of the program. An obvi­ous application is when one wishes 
+to call a C procedure which really is a pure function; procedures from a numer­ical analysis library 
+are one example. Implementation. The implementation is quite simple: performIO m = case (m newWorld) 
+of MkIORes r w -> r Here, newWorld is a value of type World conjured up out of thin air, and discarded 
+when the action m has been performed. 5.3 Assignment and reference variables Earlier, in Section 3.1, 
+we discussed the apparently in­soluble inefficiency of dTo I O, the function which emu­lates Dialogues 
+using the IO monad. We can solve this problem by providing an extra general-purpose mecha­nism, that 
+of assignable Teference types and operations over them (Ireland [1989] ): newVar ::a -> IO (Ref a) assignVar 
+:: Ref a -> a -> IO () deRefVar :: Refa->IOa The call newVar x allocates a fresh variable :ontaining 
+the value x; the call ass ignvar v x assigns value x to variable v; and the call d eRef Var v fetches 
+tl.e value in variable v. By making these side-effecting operations part dTo IO :: Dialogue -> IO () 
+dToIO dialogue = newVar (error Synch ) bi.ndIO \rsV -> delayIO (deRefVar rsV) bindIO \rs -> run (dialogue 
+rs) rsV run :: [Request] -> Ref [Response] -> IO () run [] v = doneIO run (req: reqs ) v = doReq req 
+bindIO \r -> newVar (error Synch ) bindIO \rsV -> \rs -> Figure3: Efficient conversion from Dialogue 
+to IO of the IO monad, we make sure that their order of evalu­ation, and hence semantics, is readily 
+explicable. With the aid of these primitives it is possible to write an efficent emulation of Dialogues 
+using IO (Figure 3). The idea is to mimic a system which directly implements Dialogues, which follows 
+the processing of each requesi, with a destructive update to add a new response to the end of the list 
+of responses, Notice the uses of del ayI O, which reflects the fact that there is no guarantee thal, 
+dialogue will not evaluate a response before it has emit­ted a request. If this occurs, the un-assigned 
+variable is evaluated, which elicits a suitable error message. References in languages such as ML require 
+a weakened form of polymorphism in order to maintain type safety (Tofte [1990]). For instance, in ML 
+a fresh reference to an empty list has type _a list ref, where the type variable )_a is weak, and so 
+may be instantiated only once. In contrast, here a fresh reference to an empty list has type IO (Ref 
+a), and the type variable a is normal. But no lack of safety arises, because an expression of this type 
+allocates a new reference each time it is evaluated, The only way to change a value of type IO (Ref a) 
+to one of type Ref a is via bindIO, but now the variable of type Ref a is not let-bound, and so can only 
+be instantiated once anyway. Hence the extra complication of weak type variables, required in languages 
+with side effects, seems unnecessary here. (We re indebted to Martin Odersky for this observation.) 6 
+Arrays The approach we take to 1/0 smoothly extends to ar­rays wit h in-place update. Hudak has recently 
+proposecl a similar method based on continuations. For 1/(), the monad and continuation approaches are 
+interdefinable. For arrays, it turns out that monads can implement con­tinuations, but not the converse. 
+Let Arr be the type of arrays taking indexes of type Ind and yielding values of type Val. There are three 
+opera­tions on this type. new :: Val -> Arr lookup :: Ind -> Arr -> Val update :: Ind -> Val -> Arr -> 
+Arr The call new vreturns anarray with all entries set to v; the call lookup i x returns the value at 
+index i in ar­ray x; and the call update i v x returns an array where index i has value v and the remainder 
+is identical to x. The behaviour of these operations is specified by the usual laws. lookup i (new v) 
+= v lookup i (update i v x) = v lookup i (update j v x) = lookup 1 x where i # j in the last equation. 
+In practice, these oper­ationswould bemorecomplex; one needs away to specify the array bounds, for instance. 
+But the above suffices to explicate the main points. The efficient way to implement the update operation 
+is to overwrite the specified entry of the array, but in a pure functional language this is only safe 
+if there are no other pointers to the array extant when the update operation is performed. An array satisfying 
+this property is called single threaded, following Schmidt (Schmidt [1985]). As an example, consider 
+the following problem. An oc­currence is either a dejilJitzon pairing an index with a value, or a use 
+of an index. data Occ = Def Ind Val I Use Ind For illustration take Ind = Int and Val = Char. Given a 
+list os of occurrences, t] Lecall uses os returns for each use the most recently defined value (or - 
+if there is no previous definition). If . 0s = [Def 1 a , Def 2 b , Use 1> Def 1 c , Use 2, Use I] then 
+uses os = [ a , b , c ]. Here is the code. uses :: [Occ] -> [Val] uses 0s = loop os (new - ) loop :: 
+COCCI -> Arr -> [Vail loop [1 x= [1 loop (Def iv:0s) x=loop 0s(update ivx) loop (Use i :0s) x = lookup 
+i x :loop OSX The update in this program can be performed by over­writing, but some care is required 
+wit l-. the order of eval­uation. In the last line, the lookup must occur be~oi-e the recursive call 
+which may update the array. Some work has been done on analysing when update can be pm-formed in­place, 
+but it is rather tricky (Bless [1989]; Hudak [1986]). 6.1 Monadic arrays We believe that single threading 
+is too important to leave to the vagaries of an analyser. Instead, we use monads tc, guarantee single 
+threading, in much the same way as was done with 1/0. Analogous to the type 10 a (the monad of 1/0 actions), 
+we provide an abstract type A a (the monad of array transformers). newA :: Val->Aa->a lookupA :: Ind 
+-> A Val updateA :: Ind -> Val -> A () unitA ::a-> Aa bindA :: Aa->(a->Ab)->Ab For purposes of specification, 
+we can define these in terms of the proceeding operations as followti. type Aa = Arr -> (a, Arr) newAvm 
+=fst (m(new v)) lookupA i = \x -> (lookup i x, x) updateA i v = \x -> ((), update i v x) unitA a = \x 
+-> (a,x) m bindA k = \x -> let (a, y) = m x inkay A little thought shows that these operations are 
+indeed single threaded. The only operation t,l at could duplicate the array is lookupA, but this may 
+he implemen~,ed as follows: first fetch the entry at the given index in the array, and then return the 
+pair consisting of this value and the pointer to the array. To enforce the necessary sequencing, we augment 
+the above specification with the requirement that lookupA and updat eA are strict in the index and array 
+arguments (but need not be strict in tht: value). The above is given for purposes of specification only 
+ the actual implementation is along the lines of Section 4. For convenience, define s eqA in terms of 
+b indA in the usual way, m seqA n = m bindA \a -> n Here is the definition-use problem, recoded in 
+monadi{; style. uses :: [Occl -> [Vail  uses os = neraA 2-> (1OOPA 0S) uses os = newC )-3 (loopC os 
+unitC) loopA :: COCCI -> A [Vail loopA [1 = unitA [1 loopA (Def i v : OS) = updateA i v seqA loopA OS 
+ loopA (Use i. : OS) = lookupA i bindA( \v -> loopA OS bindA \vs -> unitA (V:VS) This is somewhat lengthier 
+than the previous example, but it is guaranteed safe to implement update by over­writing. 6.2 Continuation 
+arrays An alternative method of guaranteeing single threading for arrays has been proposed byHudak [1992]. 
+Like the previous work of Swarup, Reddy &#38; Ireland [1991], it is based on continuations, but unlike 
+that work it requires no change to the type system. As with the array monad, one defines an abstract 
+type supporting various operations. The type is C z, and the operations are as follows. newC :: Val->Cz->z 
+lookupC :: Ind -> (Val -> C z) -> C z updateC :: Ind->Val->Cz->Cz unitC ::2 ->CZ Here acontinuation, 
+oftype C z,represents the remaining series of actions to be performed on the array, eventual] y returning 
+(via unit C) a value of type z. For purposes of specification, we can define these in terms of the array 
+operations as follows. type Cz = Arr ->z newCvc =c(new v) lookupC i d =\x -> d (lookup i x) x updateC 
+i vc=\x -> c(update i vx) unitC z =\x->z Again, these operations are single threaded if lookupC and 
+updat eC are strict in the index and array arguments. For convenience, define m$c=mc This lets us 
+omit some parentheses, since m ( \x -> n) becomes m $ \x -> n. Here is the definition-use problem, recoded 
+in continua­tion style. uses :: [Occ] -> [Val] loopc :: COCCI -> ([Vail -> C z) -> C z loopc [1 c =c[] 
+loopC (Def i v :OS)c=updateC i v $ loopc 0s c loopC (Use i : 0s) c = lookupC i $ \.v -:* loopc 0s $ 
+\vs -> c (V:vs) This is remarkably similar to the monadic style, where $ takes the place of bindA and 
+seqA, and the current continuation c takes the place of uni.tA. (If c plays the role of unit A, why do 
+we need unit C? Because it acts as the top level continuation. ) However, there are two things to note 
+about the ccmtin uation style, First, the types are rather more complex compare the types of loopA and 
+lc>opC. !$econd, the monadic style abstracts away from the notion of contin­uation so there are no occurrences 
+of c cluttering the defintion of loopA. 6.3 Monads vs. continuations We can formally compare the power 
+of the two approaches by attempting to implement each in terms of the other. Despite their similarities, 
+the two approaches are not, equivalent. Monads are powerful enough to implement continuations, but not 
+(quite) vice versa. To implement continuations in terms of monads is sim ­plicity itself. type Cz=Az 
+= lookupC i d = lookupA i bindA d updateC i v c = updateA i v cseqA ( c unitC = unitA newCvc newAvc It 
+is an easy exercise in equational reasoning to to prove that this implementation is correct in terms 
+c)f the speci-. fications in Sections 6.1 and 6.2. The reverse implementation is not possible. The trouble 
+is the annoying extra type variable, z, appearing m the types of lookupC and updateC. This forces the 
+introduc­tion of a spurious type variable into any attempt to define monads in terms of continuations. 
+instead of a type A a, the best one can do is to define a type B a z. Here arc the types of the new operations. 
+newB :: Val->Baa->a lookupB :: Ind -> B Val z updateB :: Ind -> Val -> B () z unitB ::a ->Baz bindB :: 
+Baz->(a->Bbz)->B bz And here are the implementations in terms of continua­tions, type Baz= (a-> cz)->cz 
+ newB v m = newC v (munit C) lookupll i = \d -> lookupC i d updateB i v = \d -> updateC i v (d ()) unitB 
+a =\d->da m binclB k = \d -> m(\a -> k ad) Again, it is easy to prove this implementation satisfies 
+the given specifications. So monads are more powerful than continuations, but only because of the types! 
+It is not clear whether this is simply an artifact of the 13indley-Milner type system, or whether the 
+types are revealing a difference of funda­mental importance. (Our own intuition is the latter but it 
+s only an intuition. ) 6,4 Conclusion The 1/0 approach outlined earlier manipulates a global state, 
+namely the entire state of the machine accessible via a (2 program. What has been shown in this section 
+is that this approach extends smoothly to manipulating local state, s~~h as a single array. Further, 
+although the monad and continuation approaches are interconvertible for 1/0, they are not for arrays: 
+monads are powerflll enough to define continuations, but not the reverse. For actual use with Haskell, 
+we require a slightly more SO­ phisticated set of operations. The type A must take extra parameters 
+corresponding to the index and value types, the operation newA should take the array bounds, an! so 
+ on. By using a variant of newA that creates an unml­ tialised array, and returns the array after all 
+updates are finished, it is possible to implement Haskell primitives for creating arrays in terms of 
+the simpler monad opera­ tions. Thus the same strategy that works for implement­ in.g 1/0 should work 
+for implementing arrays: use a small set of primitives based on monads, and depend on pro­ gram transformation 
+to n~ake this adequately efficient. One question that remains is how well this approach ex­tends to 
+situations where one wishes to manipldate more than one state at a time, as when combining 1/0 with array 
+operations, or operating on two arrays. In this re­spect effect systems or linear t:ypes may be superior; 
+see below. 7 Related work 7.1 Effect systems Gifford and Lucassen introduced effect systems which use 
+types to record the side-effects performed by a pro. gram, and to determine which components ot aprogram 
+can run in parallel without interference (Giiforcl &#38; Lu­cassen [1986]). The original notion of effect 
+was fairl~ crude, there being only four possible effects: pure (no ef, feet), allocate (may ailocate 
+storage), function (may read storage),procedure (may write storage]. New systems arc more refined, allowing 
+effects to be expressed separately for different regions of store (Jouvelot &#38; Gifford [ 1991]). A 
+theoretical precursor of the effects work is that of Reynolds, which also used types to record where 
+effects could occur anti where parallelism was allowed (l%eynolds [1981]; Fteynoldk [1989]). Our work 
+is si]milar to the above in its commitment to use types to indicate effects. But effect systems are de­signed 
+for impure, strict functional languaes, where the order of sequencing is inzplwxt. Our wmk is designed 
+for pure, lazy functional languages, and I,he purpose of the bind operation is to make sequencin$ explficit 
+where it is required. With effect systems, one may use l;he usllal laws of equational reasoning on any 
+progralm segment wi thoul a write side effect. Our work differs in that the law); of equational reasoning 
+apply even where side e~rcts arc allowed. This is essential, because the optimisation phas~: of our compiler 
+is based on equational reasoning. On the other hand, effect sYstems make it very eas~ to combine programswith 
+different effects. In our ap preach, each different effect would correspond to a differ­ ent monad type 
+(one for IO, one for each array manip-­ulated, and so on), and it is not so clear how one goes about 
+combining effects. 7.2 Linear lYPe~ The implementation of the 10 monad given in Section 4 is safe because 
+(and only because) the code that manipu-. lates the world never duplicates or destroys it. We guar­antee 
+safety by making the IO type abstract, so that user has no direct access to the world. An alternative 
+is to allow the user access to the world, but introduce a type system that guarantees that the world 
+can never be duplicated or destroyed. .4 number of type systems have been proposed along such lines. 
+Some have been Ibased on Girard s linear logic (Girard [1987]), and this remains an area of active exploration 
+(Amam. sky [1990]; Gutiman &#38; Hudak [1990]; Wadler [1990]). An. other is the type system proposed 
+by the Nijmegen Clean group, which is more ad-hoc but has been tested in prac­tical applications similar 
+to our own (Achten, Groningen &#38; Plasmeijer [1992]). For example, here is the echo program again, 
+written in the style suggested by the Clean 1/0 system: echo :: File -> File -> World -> World echo fi 
+fo w=if a==eof then WI else echo (putChar fo a wI) where (wl,a) = getChar fi w Comparedto the monad 
+approach, this suffers from a number of drawbacks: programs become more cluttered; the linear type system 
+has to be explained to the pro­grammer and implemented in the compiler; and code­improving transformations 
+need to be re-examined teen­sure they preserve linearity. The latter problem may be important; Wakeling 
+found that some standard transfor­mations could not be performed in the presence of linear­ity (Wakeling 
+[1990]). The big advantage of a linear type system is that it en­ables us to write programs which manipulate 
+more than one piece of updatable state at a time. The monadic and continuation-passing presentations 
+of arrays given above pass the array around implicitly, and hence can only eas­ily handle one at a time. 
+This is an important area for future work. On the practical side, the Clean work is impressive. They 
+have written a library of high-level routines 10 call the Macintosh window system, and demonstrated that 
+it is possible to build pure functional programs with sophisti­cated user interfaces. The same approach 
+should work for monads, and another area for future work is to confirm that this is the case. 8 Conclusions 
+and further work We have been pleasantly surprised by both the expres­siveness and the eficiency of the 
+approach we have de­scribed. For example, we have found that while it is pos­sible to write composable 
+1/0 programs in other styles, it is almost impossible not to do so in using the monadic approach. Plenty 
+remains to be done, We are working on our im­ plementation of arrays; this in turn feeds into the ability 
+to pass structured values in ccalls; we have not yet im­ plemented assignable reference types. More 
+importantly, the model we have desribed concerns only the 1/0 in~rastructure. Much more work needs to 
+be done to design libraries of functions, built on Lop of this infrastructure, which present a higher-level 
+interface to the programmer (Achten, Groningen &#38; Plasmeijer [1992]; Hammond, Wadler &#38; Brady [1991]). 
+Acknowledgements This work took place in the context of the team building the Glasgow Haskell compiler: 
+Cordy Hall, Kevin Ham­ mond and Will Part sin. David Watt, Joe Morris, John Launchbury also made very 
+helpful suggestions about our presentation. We gratefully acknowledge their help. References S Abramsky 
+[1990], Computational interpretations of linear logic, DOC 90/20, Dept of Computing, Imperial College. 
+PM Achten, JHG van Groningen &#38; MJ Plasmeijer [1992], High-level specification of 1/0 in func­tional 
+languages, in Proc Glasgow Workshop on Functional Programming, Launchbury et al, ed., Springer Verlag. 
+A Bless [Sept 1989], Update analysis and the efficient im­plementation of functional aggregates, in l?unc­tional 
+Programming Languages and Computer Architecture, London, ACM. A Dwelly [Sept 1989], (Dialogue combinators 
+and dy namic user interfaces , in Functional Program­ming Languages and Computer Architecture London, 
+ACM. DK Gifford &#38; JM Lucassen [Aug 1986], Integrating func tional and imperative programming, in 
+.4GW Conference on Lisp and Functional Proqram ­ming, MIT, ACM, 28 38. J-Y Girard [1987], Linear Logic, 
+Theoretical Computer Science 50, 1-102. A Gordon [Feb 1989], PFL+: a kernel scheme for func­tional 1/0) 
+TR 160, Computer Lab, University of Cambridge. JC Guzman &#38; P Hudak [1990], Single-threadecl poly­morphic 
+lambda idcuius , in Proc 5th Annual IEEE Symposium on Logic in Computer Science. K Hammond, PL Wadler 
+&#38; D Brady [1991], Imperate: be imperative, Department of Computer Science, Univ of Glasgow. P Huclak 
+[July 1992], Confirmation-based mut able ab-SL Peyton Jones &#38; J Larmchbury [Sept 199 1], Unboxed. 
+stract datatypes, or how to have your state and values as first class citizens, in Functional F ro­munge 
+it too, YALEU/DCS/EtR-914, Depart-gramming Languages and Computer Architec­ment of Computer Science, 
+Yale University. ture, Boston, Hughes, ed., LNCS 523, Springer Verlag. P Hudak, SL Peyton Jones, PL Wadler, 
+Arvind, B Boutel, J Fairbairn, J Fasel, IVl Guzman, K Hammond, J J Reynolds [1981], The essence of Algol, 
+in .41gorithmic Hughes, T Johnsson, R Kieburtz, RS Nikhil, W Languages, de Bakker &#38; van Vliet, eds., 
+North Partain &#38; J Peterson [May 1992], (Report on the Holland, 345-372. functional programming language 
+Haskell, Ver­sion 1.2 , SIGPLAIV Notices 27. J Reynolds [1989], Syntactic control of interference, part, 
+II, in International Colloquium on Automata, P Hudak &#38; RS Sundaresh [March 1989], On the ex-Languages, 
+and Programming. pressiveness of purely-functional 1/0 systems, YALEU/DCS/RIL-665, Department of Com- 
+DA Schmidt [Apr 1985], (Detecting global variables in de­puter Science, Yale University. not ational 
+specifications, > TOPLAS 7, 299 3 10. Paul H.rrdak [Aug 1986], A semantic model of reference V Swarrrp, 
+US Reddy &#38; E Ireland [Sept 1991], Assign-. counting and its abstract ion , ) Proc ACM Con-ments for 
+applicative languages, irl Functional ference on Lisp and Functional Programming. Programming Languages 
+and Computer Archi. tecture, Boston, Hughes, ed., LNCS 523, Springer E Ireland [March 1989], Writing 
+interactive and file-verlag, 192-214. processing functional programs, MSC thesis, Victoria University 
+of Wellington. SJ Thompson [1989], Interactive functional programs -a method and a formal semantics , 
+in Declarative P Jouvelot &#38; D Gifford [Jan 1991], Algebraic reconstruc-Programming, DA Turner, ed., 
+Addison }Vesley. tion oft ypes and effects, in 18 th ACM Sympo­sium on Principles of Programming Languages 
+M Tofte [Nov 1990], Type inference for polymorphic ref. (POP-L), Orlandc), ACM. erences, Information 
+and Computation 89. PL Wadler [1990], Linear types can change i,he world! , system, Chalmers Inst, Goteborg. 
+Kent Karlsson [1982], (Nebula, -a functional operating in Prc)gramming concepts and methods, M Bro~ 
+&#38; C Jones, eds., North Holland. B W Kernighan &#38; DM Ritchie [1978], The C programming language, 
+Prentice Hall. PL Wadler [Jan 1992], The essence of functional pro­gramming, in Proc Principles of Programming 
+E Moggi [June 1989], Computational lambda calculus Languages, ACM. and monads , in Logic in Computer 
+Sciencej Cal­ifornia, IEEE. PL Wadler [June 1990], Comprehending monads, in Proc ACM Conference on .Lisp 
+and Functional JT O Donnell [1985], Di alogu.es: a basis for construct-Progr,smming, Nice, ACM. ing programming 
+environments , in Proc ACM Symposium on Language Issues in Programming D Wakeling [Nov 1990], Linearity 
+and laziness, PhD Environments, Seattle, ACM, 19 27. thesis, Department of Computer Science, Univer­sity 
+of York. N Perry [1991], The implementation of prac:ical fun,:­tional progr~mming languages, PhD ~hesis, 
+Inl­perial College, Lcmdon. SL Peyton Jones [1992], (Implementing lazy functional languages on stock 
+hardware: the Spi~eless Tag­less G-machine, Journal of Functional Prograrr~­ming (to appear). SL Peyton 
+Jones [Ott 1988], Converting streams to corl­tinuations and vice versa, Electronic mail on Haskell mailing 
+list.    
+			

@@ -1,0 +1,407 @@
+
+ Experience In Massively Parallel Discrete Event Simulation (Preliminary Version) Albert G. Greenberg 
+Boris D. Lubachevsky Li-C. Wang AT&#38;T Bell Laboratories AT&#38;T Bell Laboratories University of 
+Texas, Austin Abstract Discrete event simulation of complex systems is one of the most important problems 
+in scientific and industrial com­ puting. It is not uncommon for a single simulation run to take hours 
+on a high speed workstation. Massively paral­ lel computers provide opportunities for simulating complex 
+systems significantly faster. At the heart of the computa­tional difficulties in parallel simulation 
+are (i) random, data­dependent events that couple subsystems, and (ii) asymme­ tries wherein some subsystems 
+receive a disproportionate number of events, leading to severe load imbalances. In this paper, we discuss 
+a parallel simulation of a com­plex system a large asymmetric circuit-switched network, with state-dependent 
+control and methods we have applied to overcome both types of difficulties just mentioned. In a worst 
+case sense, we show that the problem is hard: In particular, simulation of a network with just three 
+nodes is P-complete. However, we show that a general purpose synchronous relaxation method uncovers the 
+parallelism in­herent in practical, realistic cases. In addition, we show that special purpose (specific 
+to circuit-switched simulations) par­allel methods allow us to profitably assign more processors to subsystems 
+receiving more events, and thereby handle load imbalances. Promising performance results are reported 
+for a 16384 processor MasPar MP-1 implement ation, on a reali­stic 114 node network simulation scenario. 
+1 Introduction Discrete event simulation is the process of generating the trajectory or sample path of 
+a system as a function of time. Such simulations are crucial to the study of complex sys­ tems, and so 
+are in wide use. Simulations are notoriously computationally intensive. Can millions of events in a long 
+simulation run be efficiently distributed over thousands of processors on a massively parallel machine? 
+In this paper, we describe massively parallel simulation Permission to oopy without fee all or part of 
+this material is granted provided that the copies are not made or distributed for direct commercial advantage, 
+the ACM copyright notice and the title of the publication and its date appear, and notice is given that 
+copying is by permission of tha Association for Computing Machinery. To copy otherwise, or to rapublish, 
+requires a fee and/or spacific permission. ACM-SPAA 93-61931Velen, Germany. 01993 ACM 0-89791 -599 -2/93 
+/0006/0193 ...$1 .50 methods for large asymmetric circuit-switched networks with state-dependent control. 
+We describe the implementation and testing of the methods on a 16384 processor MasPar MP-1 [2], with 
+network parameters derived from the AT&#38;T long distance network. Simulations of this type are crucial 
+to the ongoing design and improvement of modern telecom­munication systems. Additionally, such simulations 
+provide an excellent vehicle for the study of massively parallel sim­ulation, owing to the presence of 
+the two key properties of complex systems that make parallel simulation difficult. When decomposed into 
+subsystems: [Event coupling] Events coupling the trajectories of different subsystems arise in an unpredictable, 
+ran­dom, or data-dependent manner. [Load imbalance] Owing to irregularities in the system, the frequency 
+of events per subsystem varies widely. Our simulation approach decomposes the network into indi­vidual 
+links, and applies sgrzchrorzous relaxation [4], a general purpose opti­mistic [6] parallel simulation 
+method, to handle event coupling across subsystems, and  an adaptation of the parallel algorithm of 
+Feder et al. [5] for fast parallel simulation of isolated links, to handle load imbalances by assigning 
+more processors to links likely to receive more events.  The engineering of a modern telecommunication 
+system involves extensive, routine performance evaluation, testing the system s response to a gamut of 
+stresses, including traf­ fic overloads and equipment failures such as fiber cuts. At present, the dominant 
+tool for such performance evaluation is discrete event simulation [17]. A typical simulation run for 
+the AT&#38;T network takes from one to six hours on a high speed workstation. Though workstation performance 
+has improved rapidly in recent years, run times counted in hours have remained the norm for two reasons. 
+The size and complexity of realistic networks, such as the AT&#38;T net­work, have also increased rapidly. 
+Serial simulations of large networks have little memory access locality (helpful for peak workstation 
+performance), and have a large memory require­ment (typically, 64 to 128 MB). In addition, these codes 
+run essentially no faster on vector supercomputers than on work­stations. In this paper, the standard 
+model of a circuit-switched network is used (see, e.g. [1 I]). A call arrives to a node-pair, and is 
+either: accepted and routed along a path in the network be­tween that pair, or  blocked; i.e., rejected 
+and lost.  The model assumes that negligible time is consumed in the low level protocol that establishes 
+the route. (In real sys­tems, this low level protocol completes in milliseconds, but the typicaJ call 
+lasts a few minutes.) The model assumes that the network is fully connected. A link between a node­pair 
+has call carrying capacity (possibly zero) counted in trunks. (The real network is implemented giving 
+nearly ev­ery link non-zero capacity, on top of a less richly connected optical fiber network, using 
+digital cross-connect switches. ) An accepted call requires for its exclusive use one trunk on each link 
+of its route. After holding for a random pe­riod, a call completes, simultaneously releasing the associ­ated 
+trunks. All routes are of length at most two; either a call is routed on the direct link or via a t bird, 
+int erme­diate node. This restriction is nearly universal in modern telecommunication networks and, in 
+particular, is in force in the AT&#38;T network. In pa.tk. (in parti.uhar, in the AT&#38;T network), 
+cdl routing is implemented using simple, distributed controls. A key component of nearly all practical 
+routing policies is a trunk reservation mechanism (described below), where the few remaining trunks of 
+a congested link are reserved for direct (one-link) routed calls. This simple mechanism is re­markably 
+effective (cf. [1 I]) in steering the network away from congested states where a relatively large number 
+of calls are carried on two-link routes, when a larger totaf num­ber of calls could be carried using 
+more one-link routes. To benchmark our algorithms, we have focused on a sim­ple random-routing policy, 
+which incorporates trunk reser­vation. Under random-routing, the decision to offer a call on a t we-link 
+route is state-dependent, but the random choice of two-link route is independent of the network state. 
+Our performance data (Section 6) shows that our parallel simu­lation of this policy is efficient. Recently, 
+we adapted the random-routing simulation to handle a quantized Aggregated Leas-t Busy Alternative (ALBA) 
+[15] policy, where the choice oft we-link route is state-dependent. ALBA is similar to the AT&#38;T real 
+time network routing policy [I]. Though the net­work being simulated is fully connected, it turns out 
+that the computation of state-dependent two-link routes maps sim­ply and efficiently on the MasPar s 
+two-dimensionaf mesh interconnect. The performance of this paralIel simulation is promising, though more 
+work needs to be done to improve load balance. Fujimoto [6] has published an excellent survey of parallel 
+simulation methods. Relaxation simulation algorithms [3] belong to the class of optimistic methods [6, 
+1o], mean­ing events may be computed out of temporal order. As a result, temporary errors may arise, 
+which are corrected in the course of the simulation. Our synchronous version of relaxation is especially 
+well suited to single instruction multiple data (SIMD) architectures. Application of syn­chronous relaxation 
+to circuit-switched networks was pro­posed in Eick et al. [4]. However, that discussion contains no concrete 
+algorithms for handling asymmetric networks, state-dependent routing, and parallel single link simulation 
+(Section 5), and contains no discussion of implementation. A massively parallel sweep method for circuit-switched 
+network simulation is presented in [7]. Like the methods described here, the sweep method interleaves 
+two parallel algorithms: one parallel algorithm involves isolated ~ingle link computations, and the other 
+parallel algorithm couples the results of the isolated one-link problems so as to im­ plement the routing 
+policy. However, in the sweep method these two algorithms are completely different than those pre­ sented 
+here. Additionally, the sweep method is less general than synchronous relaxation, and in circuit-switched 
+simu­Iations where both methods apply, we have found the syn­chronous relaxation method reported here 
+to be at least 25~o faster on the MasPar. Parallel circuit-switched network sim­ulation on MIMD architectures 
+with a moderate number of processors is d~cussed in [16]. Alternative, massively par­allel analytic approaches 
+to the performance evaluation of circuit-switched networks are discussed in [9]. Plan In Section 2, the 
+synchronous relaxation simulation method is described. The circuit-switched network model is pre­sented 
+in Section 3, and the routing policies we consider in our experiments are described. Section 4 describes 
+the appli­ cation of synchronous relaxation to circuit-switched network simulation, and Section 5 describes 
+fast, practical algorithms for simulating isolated circuit-switched links. In Section 4 we state our 
+results on P-Completeness of network simu­lation. Section 6, on our computational experience with MasPar 
+implementations, includes some of the performance results collected to date, for a realistic fiber-cut 
+simulation scenario with parameters derived from the AT&#38;T network. Synchronous Relaxation In the 
+synchronous relaxation method, time is partitioned into consecutive intervals, termed windows, and the 
+system to be simulated is partitioned into subsystems. The simu­lation proceeds window by window in chronological 
+order: After computing the events of the k k window, the events of the (k + l)st window are computed, 
+for all k > 1. An iterative method is applied to simulate a given window. At each iteration, for each 
+subsystem, the events within the window and local to that subsystem are computed, treat­ing the events 
+at all other subsystems as external inputs. Iterations continue until the events computed at successive 
+iterations agree. Put another way, at each iteration, a ten­tative trajectory is computed for each subsystem, 
+assuming the trajectories computed at the previous iteration at all other subsystems are correct. As 
+these assumptions may be erroneous, errors are inevitable. As the iterations pro­ceed, errors are corrected 
+at a rate governed by the inherent parallelism in the system being simulated. To understand this in simplest 
+mathematical terms, it helps to view the events within the window as divided in levels, a partial order 
+that reflects the dependencies between events. Of those events within the window, level t > 0 events 
+are those that are independent of all other events within the window, except those at some lower level 
+O s s < t. Level O events are those that are independent of all other events in the window. The first 
+iteration computes all level O events correctly, since these events depend only on events of earlier 
+windows, which have already been simulated correctly. The second iteration computes all level I correctly, 
+since these events depend only on level O events and events of earlier windows. The third iteration computes 
+dl level 2 events correctly, and so forth. These observations guarantee convergence, and show that number 
+of iterations is bounded by the maximum number of levels (or critical path) in the event order. How many 
+levels should there be in a system with in­herent parallelism? In [4], an event-coupiing model is ana­lyzed 
+where the system is decomposed into M subsystems, an event is determined by a finite number of subsystems 
+cho­sen independently and uniformly at random, and each event is assumed to depend on all earlier events 
+impinging on any of its subsystems. It was shown that convergence occurs remarkably quickly. In particular, 
+an accurate point esti­mate of the number of levels generated by M log &#38;f events is O(log M). Applying 
+synchronous relaxation, with one processor assigned to each subsystem and the window size chosen optimally, 
+the parallel simulation rate is O(M/logkf) events per unit time, using M processors [4]. A variation 
+of synchronous relaxation achieves rat e 0(M) using M pro­ cessors [4]. Of course, the rate of serial 
+simulation is O(1) events per unit time. 3 Circuit-Switched Network Model As stated in the Introduction, 
+we consider fully connected, undirected networks, with N nodes. It is convenient to use the unordered 
+tuple (i, j) to denote the pair of nodes i and j; O ~ i, j < N. The basic parameters of node-pair (i, 
+j) are C(i, j), the capacity of link (i, j), counted in trunks, and ~(i, j), the rate of arrival of the 
+stream of calls to (i, j). It is assumed that the call arrival process to each stream is Poisson, and 
+that each call s duration is independently and exponentially distributed with mean 1. A call that is 
+accepted to the network, seizes for its exclusive use one trunk on each link of its route, and releases 
+those trunks at the time of its departure. To benchmark our simulation algorithms, we consider the random-routing 
+policy, which incorporates trunk reser­vation as follows. A call arriving to stream (z, ~ ) is routed 
+on the direct one-link path, if at the time of arrival, at least one trunk on the link is idle. Otherwise, 
+the call is either routed on some two-link path (z, v) to (v, j) for some v # i, j, or blocked. The intermediate 
+node v is called the via. Under random-routing, the via is selected by independent sample from a probability 
+y distribution over the N 2 alternatives. The distribution may vary with the index (i, j). The call 
+is carried on the two link route determined by the via if nei­t her link is reserved. Specifically, link 
+(u, v) is reserved if the number of idle trunks on the link is < r(u, v), where r(u, v) is a parameter. 
+We use the term direct route for a one-link route and overflow route for a two-link route. To take better 
+advantage of spare capacity, the Aggre­gated Least l?us~ Alternative ( ALBA) [15] policy favors two­link 
+paths whose instantaneous load is light. In its simplest form, ALBA generalizes trunk reservation. A 
+link (u, v) with the number of idle trunks greater than a given param­eter T(U, v) is said to have aggregate 
+state O, and to have aggregate state 1 otherwise. Under ALBA, a call is carried on the direct link if 
+at least one trunk is idle at the time of arrival. Otherwise, an overflow path (z, v), (o, j) is chosen 
+uniformly at random from all those with both links in aggre­gate state O. If no such path exists then 
+the call is blocked. Aggregating the link occupancy into two states allows for efficient implementation, 
+and provides nearly all the per­formance benefits as the scheme that chooses the two-link path with the 
+most idle trunks end-to-end [15]. In its gen­erzd form, ALBA allows any fixed number K of aggregate states. 
+4 Fast Parallel Network Simulation To apply synchronous relaxation to network simulation we decompose 
+the network into the individual links. Time is divided into consecutive windows whose length A is a pa­rameter. 
+As stated above, the simulation proceeds window by window in chronological order. To simulate a given 
+win­dow, we need to determine which calls are offered to each link, and which of the offered calls are 
+carried. By the na­ture of the routing rule, every call of a given stream (u, v) is offered as a direct 
+call to link (u, v). Initially, we do not know which of the other calls arriving within the window are 
+offered as overflow calls to link (u, v). Arrivals and de­partures of overflow calls couple the simulation 
+trajectories of the links to one another. An iterative method is applied, which determines these trajectories. 
+At the first iteration, the events offered to a given link consist of departures of calls whose correspond­ing 
+arrivals were accepted on the link at an earlier window, arrivals of direct calls within the window and 
+correspond­ing departures within the window. At subsequent iterations, additional arrivals and corresponding 
+departures of overflow calls may be offered to the link. At each iteration, an iso­lated simulation problem 
+is solved for each link, which deter­mines which of its offered calls are feasible; a caJJ is deemed 
+feasible if there is sufficient capacity at the link to carry the call. A given call Q is offered to 
+a link (u, v) of its overflow route unless at the previous iteration: e on the direct link call a was 
+found to be feasible, or e (i) on the other link of the overflow route call a was offered and found to 
+be infeasible, and (ii) on link (u, v) call a was not offered and found to be infeasible. The iterations 
+terminate at the first iteration that leaves the offered calls and associated feasibility decisions unchanged. 
+The following example illustrates the idea. Suppose there are N = 3 nodes, and the three links have unit 
+link capac­ities and zero trunk reservation parameters (so trunk reser­vation plays no role). Assume 
+that the window contains the arrivals and/or the departures of four calls, as illustrated in the first 
+of the four blocks of Figure 1. In the Figure, calls are represented as line segments whose endpoints 
+mark the corresponding arrival and departure times. (The shaded bands separate the calls by link; e.g., 
+call 7 arrives at link (O, 1) near the middle of the window and departs just after the window. ) Assume 
+that call m is accepted at an earlier window on link (1, 2); so at the start of the current window call 
+a is in progress on this link. Similarly, assume call /3 is accepted at an earlier window on link (O, 
+2). Calls y and 8 are offered on their direct routes, (O, 1) and (1,2) respec­tively. Consider the first 
+iteration. On processing link (O, 1), we find call y feasible since no earlier offered call interferes 
+with of nodes N, the N(N -1)/2 link capacities and, for each it. On processing link (1, 2), we find call 
+6 infeasible because of the interference with call a. As a result, at the second iteration, $ is offered 
+on the overflow route (links (O, 1) and (O, 2)). This is illustrated in the second block of the Figure. 
+At the second iteration, the inputs for the isolated one­link problems consist of calls 6 and ~ at link 
+(O, 1), calls a and 6 at link (1, 2), and crdls /3 and 6 at link (O, 2). On solv­ing the isolated problem 
+for link (O, 1) we find call 8 feasible and ~ infeasible (owing to interference with $); whereas, on 
+processing link (O, 2) we find call 6 infeasible (owing to in­terference with ,8). At link (1, 2), call 
+8 is again infeasible. As a result, at the third iteration, call y is offered on its overflow path. Call 
+6 is offered on link (O, 2) of its overflow path but not link (O, 1), as depicted in the third block 
+of the Figure. A dashed segment (call 6 at link (1, 2)) at a given link represents a call offered at 
+the link at a previous but not the current iteration. At the third iteration, on solving the isolated 
+one-link problems, we find call 8 again infeasible at both links (1,2) and (O, 2). On the other hand, 
+we find call ~ feasible on dl the links. As a result, at the fourth iteration y is offered on the direct 
+route, as illustrated in the fourth block of the Fig­ ure. At this point, the offered calls and feasibility 
+decisions are stable, and the simulation of the window terminates, with call y routed direct and call 
+6 blocked. To handle ALBA routing, we must deal with the state dependent choice of overflow routes. A 
+simpler first step is to simulate quantized-A LBA, where a fixed number of check­ points are distributed 
+within the window. In selecting a via for an overflow route, the aggregate state information at the time 
+of the most recent checkpoint is used. To simu­late quantized-ALBA, we use a two level relaxation: At 
+the inner level, we take the aggregate state information at the checkpoints as given and completely solve 
+the network. At the outer level, we update the aggregate state information at the checkpoints. As evidence 
+that network simulation is hard to parallelize in the worst case, we show that it is P-complete [13], 
+regard­less of the routing policy in force. (There is no parallel solu­ 0[ ] JN time on N f 1J processors 
+unlesstion that runs in log every problem solvable sequentially in polynomial time has such a parallel 
+solution. ) Suppose we are given the number stream, a list of tuples specifying call arrival and holding 
+times. The network simulation problem is to decide which of the calls are blocked. ~ Figure 1: Example 
+depicting four iterations of synchronous relaxation. Theorem 1 Network simulation is P-complete. The 
+proof (to be included in the full paper) is a reduction to the monotone circuit-value problem [8] of 
+the network simulation problem for N = 3 nodes, with one link, say (O, 1) having capacity O, and other 
+two capacity >0. The routing policy plays no role because calls for stream (O, 1) must be routed on the 
+overflow route ((O, 2), (2, l)), and calls for the other streams must be routed on the direct route. 
+We also show that multirate (a call may require more than one trunk on each link of its route) simulation 
+is P-complete, even for N = 2 nodes. 5 Fast Parallel Simulation of a Single Link At each iteration of 
+the network simulation, an isolated sim­ulation problem is posed and solved for each link in the network. 
+This is the computationally intensive part of the overall simulation, so we wish to bring to bear the 
+full power of the parallel machine. Some links may have much higher event frequencies than others. To 
+balance the computational load, more processors should be assigned to the larger prob­lems. In this section, 
+we first consider the one-link simulation problem without trunk reservation, and describe its worst case 
+and average case complexity. To model the average case, we assume the calls are uniformly distributed 
+within the simulation window. A simple parallel algorithm, pre­sented below, has good average case performance. 
+Second, we consider the problem with trunk reservation. Under the natural assumption that the trunk reservation 
+parameter is bounded, trunk reservation does not change the worst case complexity, to within constant 
+factors. Moreover, our par­allel algorithm for the problem without trunk reservation is easily adapted 
+to handle trunk reservation. Some experi­mental data is reported describing the average case perfor­mance 
+of this algorithm with trunk reservation. The one-link simulation problem without trunk reserva­tion 
+is defined as follows. The input consists of the link capacity, a chronologically ordered list of N events 
+that oc­cur within a given time window, and the number of trunks idle on the link at the beginning of 
+the window. The pos­sible events are departures of calls in progress at the start of the window, arrivals 
+of calls within the window, and the corresponding departures. The problem is to decide which calls arriving 
+within the window are accepted and which are blocked. Figure 2 depicts an example. Assume that the link 
+capacity is three and one trunk is initially idle. Assume also that at the beginning of the window there 
+are two calls in progress, which depart at times marked by the two ar­t Time t+A call 5 call 4 I cdl 
+1 Figure 2: Example of the one-link simulation problem, with­out trunk reservation. rows. In the window, 
+six calls arrive, each represented by a line segment, whose left endpoint marks the arrival time and 
+whose right endpoint marks the departure time. Call I is accepted, since a trunk is idle at its arrival 
+time. Calls 2 and 3 are also accepted, taking trunks idled by the depar­ tures of the two calls initially 
+in progress. Call 4 is blocked because all three trunks are busy at its arrival time. Call s is accepted, 
+taking the trunk idled by the departure of call 2, and call 6 is blocked. Feder et al. [5] presented 
+a solution for the one-link sim­ulation problem without trunk reservation, which on any sequence of N 
+calls runs in time O(w log N) using N pro­cessors, or in O(@ log2 N) time using @ processors. As evidence 
+that it is hard to improve the worst case running time, Feder et al. show the problem to be CC-complete 
+[14]. In the context of the overall network simulation, the problem presentation is of course random. 
+To model the average case, we assume that the N call arrivals are uniformly distributed in a time window 
+of length A = 0(1), and the correspond­ing call durations are independently and exponentially dis­tributed 
+with mean one. It then turns out that, with high probabfity, the random problem input is very different 
+from the worst case input for the O(@log N) algorithm. Theorem 2 Consider the one-link simulation problem, 
+for-N call arrwals uniformly distributed in a window of size O(I), and corresponding call durations independently 
+and exponentially distributed with mean 1. Using P processors, the problem can be solved in expected 
+time O((log N/(log log N) (N/P + log P)). Moreover this bound holds with high proba­bility; i.e, for 
+any sufficiently large constant c and all sujji­ ciently large k, the running time exceeds k log N/(log 
+log N) (N/P + log P) with probability less than N-c. The following simple algorithm provides the result 
+of Theorem 2. Suppose the window has length A and P pro­cessors are available. To map the input onto 
+the proces­sors, divide the interval into consecutive sublntervals, each of width A/P and assign all 
+events falling within the kth subwindow to the kth processor. Associated with each event is a status, 
+defined = one of accepted, newly-accepted, or unclassified. Initially the departures of cds in progress 
+at the beginning of the window are assigned newly-accepted status, and alI other events assigned unclassified 
+status. As­sociated wit h the k h subwindow are variables surplus~ and def icitfi, for 1 ~ k < P. Initially, 
+Surplusl is set to the number of idle trunks at the beginning of the window, and surplus~ = O for all 
+k ~ 2. The algorithm is iterative. An iteration consists of the following three steps: 1. Trunks accounted 
+for in surplus~ and in the newly­accepted departures are allocated to arrivals falling within the kth 
+subwindow as follows. For each k (1 < k < P), the program for the kth processor is: Set deficit~ = O. 
+Scan the events of the k h subwin­dow in chronological order, and when scanning a given event e: (a) 
+If e is a newly-accepted departure then increment surplus~ by 1, and update the status of e to ac­cepted. 
+ (b) If e is an unclassified arrival then:  if surph.w.~ > 0 then decrement su.rplus~ by 1, and update 
+the status of e to newly­accepted.  if surplus~ = O then increment def icitk by   1. As a result, 
+Surplusk now counts trunks that cannot be used in the kth subwindow, and that can be used in later subwindows. 
+Variable def icitk now counts arrivals that remain unclassified in the kth subwindow. 2. Next, push idle 
+capacity as far to the right of the window as possible, given the surpluses and deficits of trunks in 
+the subwindows. Specifically, for each k (1 < k < ~), set Sk = surplusk_l deficit~ and, by parallel 
+prefix computation [12], compute the P terms of the recurrence: tk = max{O, tk-1} + sk; t] =O.Foreachk(1<k<P)setSurplusk 
+= min{deficitk, t~ + deficit~}. 3. Make the trunks assigned to newly-accepted calls avail­able for other 
+calls at the next iteration as follows. For each newly-accepted arrival e, update the status of the corresponding 
+departure to newly-accepted, and the status of e to accepted. The algorithm terminates at the first iteration 
+that ends wit h all surplus~ = O and no newly-accepted departures remaining. As the iterations proceed, 
+the set of accepted calls grows monotonically. On termination, all calls whose status remains unclassified 
+are deemed blocked. As stated earlier, this algorithm achieves the running time bounds of Theorem 2. 
+The algorithm assigns a given trunk to a chain of calls where the arrival time of the ith call in the 
+chain follows the departure time of the (z l) t. The key to the proof of Theorem 2 is that the number 
+of iterations needed is proportional to the maximal chain length. Assuming that the window length is 
+0(1) and that call holding times are independent and exponentially dis­tributed with mean 1, it can be 
+shown that the maximal chain length is O(log N/ log log N) with high probability. Steps 1 and 3 of each 
+iteration complete in time proportional to the maximal number of events within a subwindow, which is 
+O(N/P + log P) with high probability. The parallel pre­fix computation of step 2 requires time O(log 
+P). Thus, the total time required is O((log N/ log log N)(N/P + log P)), with high probability. In the 
+worst case the maximal cdl chain is O(N). In the O(filog N) algorithm of [5], dif­ferent parallel methods 
+are applied, which rapidly identify calls on long chains. Now, let us consider the one-link simulation 
+problem with trunk reservation. To the moblem inmt we add a trunk reservation parameter T ~ O. To connect 
+the problem to the overall network simulation, we also label a subset of the calls as direct and the 
+rest as overflow. A direct call is accepted if at the time of its arrival at least one trunk is idle, 
+whereas an overflow call is accepted if at the time of its arrival at least r + 1 trunks are idle. In 
+the example of Fig­ure 2, suppose the trunk reservation parameter r = 1, the link capacity is 3, calls 
+3, 5 and 6 are overflow calls and the other calls are direct calls. Then, calls 1 and 2 are accepted 
+(as before), but call 3 is blocked because just one trunk is idle at the time of its arrival. Calls 4 
+and 6 are accepted and call 5 blocked. We may reduce the problem with trunk reservation to the problem 
+without trunk reservation in the following way. Consider an overflow call ~ with arrival time r. Relabel 
+,B as a direct call and add new calls al, .... a,, which arrive at r-(earlier but arbitrarily close to 
+r) and depart at r+ (later but arbitrarily close to ~). Thus, the new calls can affect only call ~. Moreover, 
+call ~ is now accepted only if more than r trunks are idle at the time of its arrival, as desired. Applying 
+this transformation to each overflow call provides the reduction. In practice, the trunk reservation 
+parameter r is typically quite small (say, in the range 5 20). Assuming that r is 0(1), we note that 
+the worst case complexity of the one-link simulation problem is unaffected by trunk reservation, to within 
+constant factors. It is not difficult to adapt the iterative algorithm pre­sented above to use this reduction 
+implicitly to handle trunk reservation. Table I gives some data on the performance of the resulting algorithm. 
+Calls were generated at Poisson rate J to a single link with capacity C; with probability p a call was 
+labeled as an overflow call and with the complemen­tary probability was labeled as a direct call. One 
+thousand consecutive windows of length A = 1 were simulated, using P processors. The table shows that 
+the average number of iterations needed for convergence is fairly small. Assuming r = 0(I), a result 
+similar to Theorem 2 holds for the prob­ lem with trunk reservation, though a more sophisticated al­gorithm 
+is required to prove it: With high probability, the one-link simulation problem with trunk reservation 
+can be solved in O(log N ( N/ P + log P)) time using P processors. In the application to network simulation, 
+we used the simple algorithm (adapted to handle trunk reservation) described above. MasPar Implementation 
+In this section, we present some of the results of our imple­ment ations of the network simulation method 
+just described, on a 16384 processor M asPar MP-1. The architecture is SIMD. There are two interconnects: 
+a 128 x 128 x-net A avg. # iterations 1000 7.2 2000 0.25 1000 100 5.7 1000 0.20 1000 200 8.9 2000 0.25 
+1000 200 7.9 4000 0.20 4000 200 10.8 8000 0.25 4000 200 6.5 4000 0.20 4000 400 9.7 8000 0.25 4000 400 
+7.8 Table 1: One-link simulation with trunk reservation. In the cases where the link capacity C = 1000, 
+we took r = 10, and took r= 15for C= 4000. toroidal mesh interconnect, and a butterfly-like multistage 
+rout er interconnect. Individual processors are slow: deref­erencing a pointer to a 32-bit variable in 
+local memory (one of the most frequent operations in our codes) takes about 16 psecs. The time needed 
+to permute data randomly across the processors is equivalent to that needed to do about 25 pointer dereferences. 
+The x-net supports remarkably efi­cient, pipelined row and column communications; the time to copy a 
+32-bit quantity register to register from one pro­ cessor in a row to all processors in the same row 
+is equivalent to the time needed to do about 1.6 pointer dereferences. As a benchmark, we used a 114 
+node network simulation scenario, with parameters derived from the AT&#38;T long dis­tance network, as 
+if trunk capacities had been reduced by a fiber cut in the underlying optical fiber network. Such fiber 
+cut scenarios are typical of the stress scenarios used in rou­tine simulation studies. The total capacity 
+of the simulated network is about .75 million trunks. Capacities vary widely across the links from O 
+to 4000 with a mean of s 100. The total call arrival rate is about 530,000 erlangs (arrivals per average 
+call holding time), with wide variation across the node-pairs from 1 to 2500 with a mean of about 80. 
+As a result of the fiber cut, several hundred node-pairs have ar­ rival rate significantly greater than 
+the corresponding direct link capacities. Call blocking turns out to be highly focused on about 500 of 
+the more than 6000 links. In our main set of experiments, we simulated the random­routing policy. To 
+construct the probability distribution governing alternate routing for each stream (i, j), we took the 
+probability of overflow route (i, v), (v, j) (v # i, j) pro­portional to the minimum of the capacities 
+of links (z, v) and (v, j). On average, 7.22~0 of the calls are blocked. An 200 optimized serial simulator 
+running on an Intel i860-based computer runs at a rate of about 0.2 million calls simulated per minute. 
+Some performance results are summarized in Table 2, as functions of the window size A. We see that if 
+A is too small the rate degrades because a window contains too few events. If A is too large the rate 
+degrades because of the additional iterations needed to reach convergence within a window. A simple heuristic 
+is used to determine the number of pro­ cessors to assign to each link. From the second and third columns, 
+we see that the load is well balanced across the processors. A handful of synchronous relaxation iterations 
+suffice to compute the correct trajectories within a window. In particular, within a window of length 
+A = 0.3, an average of about 160,000 calls arrive and are simulated in an average of about 7 iterations. 
+As might be expected, the computa­tional bottleneck turned out to be the one-link simulations. Data obtained 
+from profiling the code for A = 0.3 is typi­cal: 4.84~0 of time was spent generating cd arrivals, 66.4~o 
+solving the one-link simulation problems, 22.l% on router communications needed to implement the routing 
+logic in the second pass of each iteration, and 6.66% on other tasks. I events/Proc. I avg. # iter. I 
+rate (10 ,. A max. avg. pe~ window caUs/rni.) 0.05 2.80 1.83 5.44 2.898 0.1 5.84 3.66 6.21 3.444 0.2 
+11.40 7.32 6.69 3.876 0.3 16.95 10.99 7.06 3.981 0.4 22.54 14.65 7.15 3.831 0.5 28.95 18.30 7.70 3.456 
+Table 2: Performance of the MasPar implementation on the 114 node fiber-cut scenario, as a function of 
+the simulation window size A, under the random-routing policy. To simulate quantized-ALBA, we must deal 
+with the ag­gregate state changes that influence the choices of overflow routes. The key observation 
+is that the task of updating and distributing aggregate state information maps beautifully onto the two-dimensional 
+mesh. Specifically, the aggregate state of link (z, j) is relevant only to the streams with indices in 
+the same row and column: (z, k), (k, j), for all k # z, j. An aggregate state change at link (z, J ) 
+is reported to the processor indexed (z, j) using the MasPar router, and then distributed to all processors 
+in the same row and column us­ing pipelined MasPar x-net copy. In this matrix geometry, each processor 
+(i, j) can conveniently collect and distribute to the appropriate processors the aggregate state informa­ 
+tion for overilow routes. An optimized serial (not quantized) ALBA simulation achieves a simulation rate 
+of about 0.056 million calls per minute, on a conventional sequential computer system, using the MIPS 
+R-3OOO microprocessor. (On large discrete event simulations, we believe there is little to choose between 
+the i860 and R-3000 microprocessors. We have not implemented a quantized-ALBA serial simulator.) The 
+average call block­ing is 6.146~0. Preliminary performance results of our MasPar simula­tion are given 
+in Table 3. As expected the call blocking figure generally approaches the figure (6. 146%) for continu­ous 
+ALBA as the number of checkpoints increases. In gen­eral, we found the simulation rate decreases quite 
+slowly as a function of the number of checkpoints. The incremental cost of adding additional checkpoints 
+is small because: check­points where no aggregate state changes occur are skipped over, most events do 
+not change the aggregate states, and updating aggregate state information using the x-net is fast. In 
+addition, note that a small number of outer and inner iter­ations are needed to reach convergence. The 
+average number of inner iterations is smaller than that needed for random­routing. On the negative side, 
+the simulation rate decreased significantly over the rate for random-routing. On looking at profile data, 
+we found the reason to be load imbalance across the processors. This imbalance significantly inflated 
+the time to solve the one-link simulation problems in the first pass of each iteration, and forced us 
+to use a relatively small window size A = 0.06, lest the imbalance worsen. Work is in progress on modifying 
+the data structures and the heuristic used to determine the number of processors assigned to each link 
+so as to improve load balance. # avg. avg. # iter. /window rate (105 checkpoints blocking inner outer 
+calls/rein. 1 6.32% 4.36 1.0 1.656 2 6.29% 3.40 2.98 0.752 4 6.30% 3.47 4.04 0.687 8 6.17% 3.45 4.50 
+0.650 16 6.14% 3.46 4.61 0.708 Table 3: Performance of the MasP.. implementation on the 114 node fiber-cut 
+scenario, under the ALBA routing policy, with window length A = 0.06. Acknowledgment [15] D. Mitra, R.J. 
+Gibbens, and B.D. Huang. Analysis It is a pleasure cussions. to thank Alan Weiss for several helpful 
+dis­ and optimal design of aggregated-least-busy-alternative routing on symmetric loss networks with 
+trunk reser­vations. In Isth International Teletrafjic Congress, Copenhagen, Denmark, June 1991. North 
+Holland. References [1] G.R. Ash, J.-S. Chen, A.E. Frey, and B.D. Huang. Real­time network routing in 
+a dynamic class-of-service net­work. In Thirteenth International Teletrafic Congress (ITC-15 ), Copenhagen, 
+June 1991. [2] T. Blank. The MasPar MP-1 architecture. In Compcon Spring 1990, San Francisco, CA, February 
+1990. IEEE Computer Society Press. [3] K. M. Chandy and B. Sherman. Space-time and simula­tion. In Distributed 
+Simulation 1989, pages 53-57. The Society for Computer Simulation, 1989. [4] S. Eick, A.G. Greenberg, 
+B.D. Lubachevsky, and A. Weiss. Synchronous relaxation for parallel simu­lations with applications to 
+circuit-switched uetworks. ACM Transactions on Modeling and Computer Simula­tion, 1992. A preliminary 
+version appeared in the 1991 SCS Multiconference, Simulation Series; vol. 23, no. 1. [5] T. Feder, A.G. 
+Greenberg, M. Rausch, V. Ramachan­dran, and L.-C. Wang. Circuit-switched link simulation: algorithms, 
+complexity, implementation. in prepara­tion, 1992. [6] R.M. Fujimoto. Parallel discrete event simulation. 
+Cornmurwcations o-f the ACM, 33(10):31-53, 1991. [7] B. Gaujal, A.G. Greenberg, and D.M. Nicol. A sweep 
+algorithm for massively parallel simulation of circuit­switched networks. Journal of Parallel and Distributed 
+Computing, 1993. to appear. [8] L. M. Goldschlager. The monotone and planar circuit value problem are 
+log space complete for P. SIGA CT News, 9:25-29, 1977. [9] A.G. Greenberg, A.M. Odlyzko, J. Rexford, 
+and D. Es­pinosa. Massively parallel algorithms for fixed point ap­proximations for evaluating the performance 
+of circuit­switched networks. unpublished, December 1992. [10] D.R. Jefferson. Virtual time. ACM Transactions 
+on Programming Languages and Systems, 7(3):404-425, July 1985. [11] F.P. Kelly. Loss networks. The Annals 
+of Apphed Prob­ability, 1(3):319-378, August 1991. [12] R. E. Ladner and M.J. Fischer. Parallel prefix 
+compu­tation. Journal of the ACM, 27:831 838, 1980. [13] J. Van Leeuwen, editor. Handbook of Theoretical 
+Com­puter Science, volume A. MIT Press, Cambridge, MA, 199o. See Chapter 17, Parallel Algorithms for 
+Shared-Memory Machines, by R.M. Karp and V. Ramachan­dran. [14] E. W. Mayr and A. Subramanian. The complexity 
+of circuit value and network stability. In Proceedings ~ th Annual Conference on Structure in Complexity 
+Theory, pages 114 123, Eugene, Oregon, June 1989. [161 D.M. Nicol, A.G. Greenberg, and B.D. Lubachevsky. 
+--MIMD parallel simulation of circuit-switched networks. In 199.2 Winter Simulation Conference, Arlington, 
+VA, December 1992. [17] R. B. Wolf. Advanced techniques for managing telecom­munications networks. IEEE 
+Communications Maga­zine, 28(2):76-81, October 1990.
+			

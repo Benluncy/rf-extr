@@ -1,0 +1,416 @@
+
+ PIFT: Ef.cient Dynamic Information Flow Tracking Using Secure Page Allocation Juan Carlos Martinez 
+Yunsi Fei Zhijie Jerry Shi Santos University of Connecticut University of Connecticut University of Connecticut 
+Department of Electrical and Department of Computer Department of Electrical and Computer Engineering 
+Science and Engineering Computer Engineering Storrs, CT Storrs, CT Storrs, CT yfei@engr.uconn.edu zshi@engr.uconn.edu 
+ jsm07006@engr.uconn.edu ABSTRACT Dynamic information .ow tracking (DIFT) has been an effective security 
+countermeasure for both low-level memory corruptions and high-level semantic attacks. However, many software 
+approaches suffers from large performance degradation and hardware approaches have great logic and storage 
+overhead. In this paper, we propose a .exible, ef.cient, and light-weight approach to perform DIFT based 
+on secure page allocation, PIFT. Instead of associating each data value with a taint tag, we aggregate 
+data according to their taints, i.e., putting data with different attributes in different types of memory 
+pages. Our approach is a compile-aided process that allows the compiler to allocate trusted/untrusted 
+information into different memory pages. Our implementation and analysis show that the memory overhead 
+is little, and the approach can protect critical information, like return address, indirect jump address, 
+and system call arguments, from being overwritten by malicious data.  Categories and Subject Descriptors 
+ D.2.4 [Software/Program Veri.cation]: Validation; K.6.5 [Computing Milieux]: Security and Protection 
+ General Terms Security, Veri.cation  Keywords Program Validation, Control Flow Validation, Security 
+Attacks 1. INTRODUCTION Software security has become a critical consideration for a com­puter system. 
+Various software vulnerabilities can be exploited by attackers to corrupt the program s memory space 
+with malicious code and control .ow entities, e.g., through buffer over.ows or format string vulnerabilities. 
+Many countermeasures have been de­vised to prevent code injection attacks, or address a certain vulner- 
+Permission to make digital or hard copies of all or part of this work for personal or classroom use is 
+granted without fee provided that copies are not made or distributed for pro.t or commercial advantage 
+and that copies bear this notice and the full citation on the .rst page. To copy otherwise, to republish, 
+to post on servers or to redistribute to lists, requires prior speci.c permission and/or a fee. WESS 
+2009 Grenoble, France Copyright 2009 ACM 978-1-60558-700-4 ...$10.00. ability speci.cally. In addition 
+to low-level memory corruption at­tacks, high-level semantic attacks, such as cross-site scripting, SQL 
+injection, and Java Script hijacking [16], are emerging as another major category of security threats. 
+One essential common feature of both the low-level and high-level attacks is that they often cause illegitimate 
+use of untrusted data so as to hijack the normal program control .ow. Recently, a number of dynamic information 
+.ow tracking (DIFT) approaches have been presented to check and track propagation of taints associated 
+with every data value at run-time. A taint is usu­ally a one-bit .eld that tags the data value as trusted 
+(untainted) or untrusted (tainted). Data taints are initialized according to their input sources | data 
+from trusted sources, like disks, starts out as untainted and data from untrusted sources, like networks 
+and key­boards, starts out as tainted. Taints are then propagated along the program execution and stored 
+in memory and registers. To detect potential attacks, critical control instruction sites are checked 
+for use of tainted values, e.g., address for function returns, system call arguments, or control .ow 
+transfer target address. Using tainted value in these places is considered unsafe because they may allow 
+the attacker to hijack the control .ow of the application. The DIFT technique has been widely adopted 
+and implemented in both software [8, 20, 12] and hardware [15, 4, 19, 17, 14]. Software-based approaches 
+are .exible with taint propagation and checking policies. However, they incur large performance over­head 
+and could not handle cases like self-modifying code, JIT com­pilation, and multi-threaded application 
+[18]. Hardware-based ap­proaches address these drawbacks and reduce the performance degra­dation, but 
+require dramatic redesign of the processor core for taint storage and processing, and they are limited 
+to pre-set rules to avoid false alarms without much .exibility to countermeasure new emerging attacks. 
+Most of the hardware-assisted DIFT schemes couple the taint storage tightly with the data, e.g., extend 
+the width of memory, cache, and register .le to accommodate the extra taint bits, or sep­arate taint 
+information from the corresponding data and dedicate a packed array in virtual memory for taints, e.g., 
+look up the taint ar­ray in memory for the taint for a speci.c data value. In this paper, we propose 
+a .exible, ef.cient, and light-weight approach to per­form DIFT based on secure page allocation, PIFT. 
+It differs from previous approaches in two ways. First, instead of associating each data value with a 
+taint bit (either tightly coupled with the data loca­tion or mapped into another location in a special 
+array), we aggre­gate data according to their taints, i.e., putting trusted data in trusted memory pages, 
+and untrusted data in untrusted memory pages. The whole page has only one taint bit stored in the page 
+table entry. In this way, the memory (space) overhead is reduced signi.cantly. Second, rather than performing 
+identi.cation and tracking of spu­rious information only at run-time by the hardware and Operating System 
+(OS), our approach is a compile-time process that allows the compiler to allocate trusted/untrusted information 
+into different memory pages. We can expect little hardware augmentation for the proposed DIFT taint processing. 
+The paper is structured as follows. Section 2 reviews the re­lated work on DIFT. Section 3 describes 
+our approach. Section 4 presents the security analysis and the experimental results. Sec­tions 5 and 
+6 give more discussions about our approach and con­clude the paper, respectively.  2. RELATED WORK Buffer 
+over.ow is one of the most well-known low-level vul­nerabilities of applications, because the current 
+programming lan­guages generally do not check boundaries on buffers [6]. This vul­nerability can be exploited 
+by attackers to inject malicious code and change the return address to point to the injected code, and 
+hence take control over the application. However, protecting the return address only is not suf.cient 
+to guard against such attacks. Other indirect media, like frame pointers, function and data point­ers, 
+memory allocation information, can be utilized to exploit stack or heap over.ows to take control of the 
+program [21]. Examples of various buffer over.ows are shown in detail in [13]. A systematic approach 
+is needed to protect various critical data in programs. A lot of research work has been done for enforcing 
+secure pro­gram execution through DIFT. Software approaches allow much .exibility in policies, taint 
+bits, etc., and cover most of the known vulnerabilities [8, 20, 12]. However, they suffer from signi.cant 
+performance slowdown. In addition, they do not track information through binary libraries or system call 
+functions [20], and in gen­eral, they do not support multi-threaded code [8, 12]. Hardware-assisted approaches 
+reduce the execution time over­head by introducing changes inside the processor core to support storage 
+and processing of the taints. The changes include widening the memory, register .le, and buses, and introducing 
+logic to ini­tialize, propagate, and check these taints [15, 5, 3]. The taint tag initialization could 
+be done by the Operating System [15] or by new instructions [5]. The policies for propagation and checking 
+could be set up at the beginning of the execution [15], or recon.gured at run-time [5]. Other approaches 
+use a special memory to store the taints [18, 3] instead of widening the memory and buses. They do not 
+reduce the memory space overhead. In fact, they may introduce more latencies for cache misses at each 
+time the processor needs to retrieve the taint for a data and hence accesses the special memory space. 
+ To reduce the performance degradation of DIFT process, one ap­proach is to separately run the normal 
+application and the DIFT mechanism on different cores in a multi-core architecture [11, 3]. The application 
+runs simultaneously on at least two processor cores [11]. On one of the cores, the application runs speculatively 
+without any security check. On the other one, the application runs with DIFT. The system checks if the 
+results of the two cores are the same. If they differ from each other, the system will roll the application 
+back to a previous checkpoint. In [3], one core is used as a centralized lifeguard of the whole system, 
+which is in charge of propagating the taints and checking the usage of them while the other cores are 
+executing the applications. Both of the approaches do not support shared memory for multi-threaded programs 
+running on multiple cores.In addition, they pose high requirements on system resources, e.g., additional 
+cores. On the other hand, there is some work on avoiding mandating hardware design changes to the core 
+processors or memory sys­tem. An approach presented in [2] attempts to leverage the specula­tive execution 
+and hardware support in modern commodity proces­sors like the Itanium processor for DIFT. They utilize 
+the deferred exceptions mechanism, using the exception token bit extended on each general purpose register 
+for the taint bit. However, they have to set up a bitmap for data memory to indicate whether each loca­tion 
+is tainted or not. They use software-assigned policies to specify security violations, and software techniques 
+for taint propagation between the processor and memory system. Moreover, the appli­cations require re-compilation, 
+and the approach does not support multi-thread applications.  3. OUR APPROACH As analyzed before, the 
+current hardware-assisted DIFT approaches inherently have large memory space overhead, e.g., the overhead 
+of 3.125% in the memory, inside processor including the cache and register .le, and bus for tagging at 
+the word (4-byte) level [5, 10], or incur great execution overhead caused by accessing the dedi­cated 
+memory for taints in addition to normal data access [18, 3]. We propose a novel approach, PIFT (Page-level 
+Information Flow Tracking), to taint the memory system at the granularity of page, i.e., normally at 
+the size of 4KB, and allocate memory according to the data attribute, trusted (TR) or untrusted (UTR), 
+at compile-time rather than run-time. The attribute is de.ned by the programmer or obtained from pro.ling 
+to differentiate information from different sources. Trusted and untrusted data are allocated into trusted 
+and untrusted memory page, respectively. In this mechanism, only one bit is needed for a whole page, 
+which takes one unused bit in the page table. Hence, overhead of our approach in taint storage is zero. 
+In this way, we do not need to widen the buses or access the memory twice, one for data and one for tag 
+if they are stored sep­arately. Because the taint tag processing is done in parallel with the normal 
+instruction execution, we can expect little effect on the performance. 3.1 General Idea The compiler 
+or the programmer statically splits all the data into two categories: trusted (TR) and untrusted (UTR). 
+At program load time, the OS stores the data variables in different types of pages. At execution time, 
+the OS allocates dynamic pages in the same fashion. By default, the text segment, containing instructions, 
+is trusted (TR). The data segment, the stack, and the heap are di­vided into two types of regions, according 
+to the information that they will store. Trusted/untrusted information will be allocated into trusted/untrusted 
+pages accordingly. To propagate taints between the off-chip memory and register .le inside a processor, 
+we have to augment the processor architec­ture accordingly1. The register .le is widened by one bit to 
+hold the taint bit. We also include logic to calculate the propagation of the taints. Many propagation 
+rules, e.g., those in [5], can be adopted and selected through a con.guration register. In this paper, 
+we adopt the OR-rule on all the involved operands. This conser­vative rule allows us to capture more 
+suspicious activities. Differ­ent from other DIFT approaches, our system also checks abnormal conditions 
+during program taint propagation, for example, the case of untrusted information .owing into a trusted 
+memory location. This kind of situation indicates possible attacks and the processor will raise an exception, 
+which allows OS or other service routine to examine the situation further, or terminate the application 
+directly. At the stage of taint checking, if tainted data is used for return address, indirect jumps 
+target address, or system call arguments, 1Details about architectural changes are given in Section 3.2.3 
+security alarms will be raised and system recovery or exception handling mechanisms will be invoked. 
+ 3.2 Design Issues In this section, we discuss several salient design issues in PIFT, including program 
+memory map and attributes for data values, and required architectural changes. 3.2.1 Memory Map and Attributes 
+Normally the memory space is classi.ed into four segments for different types of data: text, data, heap, 
+and stack. We handle each segment speci.cally in order to support dynamic information .ow tracking without 
+false alarms, adhering to overwriting policy. In this paper we adopt a policy that does not allow data 
+to be ex­changed between trusted and untrusted memory pages. In some applications, a different policy 
+may be adopted to allow trusted data to be written to untrusted memory pages. By default, the text or 
+code segment is set up as trusted. There­fore, it is allocated on memory pages whose taints are trusted. 
+In general, this segment is read-only for program instruction fetching. In the case of self-modifying 
+applications, the text segment could be overwritten and the new generated code must be from trusted sources. 
+In the case that a piece of code is invoked from another section (i.e., the stack segment), a similar 
+policy is applied, i.e., the code must come from trusted pages. The data segment normally contains constants 
+used by the pro­gram and global variables2. The constants are known at compile time and will keep their 
+values throughout execution. Hence, they will be tagged as trusted and allocated on trusted memory pages. 
+In contrast, although global variables may be initialized to some values, the values may change at execution 
+time, and the sources of values could be either trusted or untrusted at different times. If the data 
+stored in a global variable have the same attribute, trusted or untrusted, during program execution, 
+we can .x the taint for the variable and allocate it to a proper trusted or untrusted page. How­ever, 
+if attributes of the data are variable, i.e, trusted at some time and untrusted in other time, we need 
+to duplicate the global vari­able, one copy for trusted uses and the other for untrusted uses. A pro.ler 
+could be used to identify which global variables need to be declared twice. At the same time, the compiler 
+has to identify the de.nition and usage of different variables. This duplication results in memory overhead 
+and slight code size increase. However, dupli­cating data helps us protect critical information, like 
+data pointers in the data segment, from being overwritten by malicious untrusted information. The heap 
+segment is a memory section dynamically allocated to store temporary information. If the information 
+comes from a trusted source, a trusted page (or pages) will be allocated. Oth­erwise, untrusted pages 
+will be allocated. The taint is associated with the pages until the pages are released. In a similar 
+manner as in handling the data segment, if the sources could be variable in terms of the attribute, i.e., 
+sometimes trusted and sometimes un­trusted, the allocator will need to allocate memory in different types 
+of pages. In addition to dynamic data, the heap also holds critical meta-data used to handle free memory 
+chunks. Attackers can ex­ploit programming errors to overwrite meta-data like forward and backward links 
+which point to available memory chunks, and such overwrites can change the execution .ow. If we store 
+these critical pointers in a trusted page, we avoid the possibility that they can be corrupted by a heap 
+over.ow or double free. In [22], they show that by modifying the memory allocator manager and using a 
+lookup ta­ 2Sometimes this section is also called Block-Started-by-Symbol, BSS segment. ble, this chunk 
+of information can be stored in a different memory region. We propose to hold the link list in trusted 
+pages instead of using guard pages between memory chunks as employed in [22]. The last segment, the stack, 
+requires special considerations. First of all, for a functional call, we may need two stacks, one to 
+hold trusted information and other to hold untrusted information. There­fore, hardware for maintaining 
+stacks, including the stack pointer and stack frame, is doubled. Second, we need to identify at com­pile 
+time what information goes to each stack according to the type of data stored on the stack. As attackers 
+try to smash the stack to take over the control of program execution, critical data, including return 
+address, system call arguments, and function call pointers, may be the target of attack. These critical 
+data should be protected by putting them on the trusted stack. Other data, like array of char­acters, 
+can be overwritten by users and thus may be easily exploited as an attack vector (e.g., misused to perform 
+a buffer over.ow at­tack). They should be placed on the untrusted stack. The idea of multiple stacks 
+has been presented in the previous work [23], where data are placed on different stacks according to 
+their type. They do not consider security properties. The general overwriting pol­icy that data with 
+different attributes (on different types of stacks) could not be exchanged is enforced as well for stacks. 
+Any attacks violating this policy will be detected. Finally, local variables will be stored on-demand 
+on appropriate stacks according to their data attributes. 3.2.2 Handling Function Arguments As we mentioned 
+above, the programmer or compiler needs to specify the attribute of each variable, so that it can be 
+stored in the appropriate memory page. However, there is an issue with func­tion calls, when a function 
+argument may be trusted or untrusted at different times. If the arguments are passed using registers, 
+our ap­proach works without any modi.cation; however, if the arguments are passed through the local variables 
+stored on the stack, we need to make some changes to the functions. This issue can be addressed with 
+two methods. The .rst method duplicates the function, each copy having different argument attributes. 
+At different calling sites, the compiler decides which copy should be invoked according to the argument 
+attributes. The second method does not duplicate the whole function. Instead, the function code is augmented 
+with ex­tra instructions to access different types of pages depending on the function arguments attributes. 
+Although the code size overhead may be smaller, making partial changes inside functions is very complicated. 
+We adopt the .rst method for functions with argu­ments on the stack.  3.2.3 Architectural Changes In 
+the above sections, we explained how taints are initialized in each segment of the memory map. Next, 
+we will show what changes we need to introduce inside the processor to support taint propagation and 
+processing for PIFT, so as to detect malicious at­tacks on the application. Fig. 1 shows the architecture 
+design of PIFT. Our approach al­lows the compiler to aggregate data based on their taints, i.e., trusted 
+data and untrusted data will be put in different pages. At run time, when the Operating System (OS) allocates 
+memory for the current process, it labels the page taint accordingly in the PageTable (in memory). Each 
+time the processor fetches an instruction from the memory, the MemoryController checks the PageTable 
+for the cor­responding taint. The taint for the instruction has to be trusted in order to prevent malicious 
+code injection and execution. During in­struction execution, the tag is propagated inside the processor. 
+The TaintPropagationandusageChecking module is in charge of prop­  Figure 1: Architecture design of 
+PIFT agating and checking the usage of the tag. For usage checking, this module ensures the critical 
+sites use trusted data, like return address, target address, and system call arguments. When writing 
+data to the memory, the MemoryController checks that the com­bination of the tag of the source and destination 
+is allowed by the overwriting policy. Otherwise, an exception is raised. Details about architectural 
+changes are given below. Wider Register File: Each register is widened by one bit to hold the taint tag. 
+For taint propagation, we include logic to read and write these taints. Some special cases have to be 
+considered. First, when the instruction has only one source operand, the taint is prop­agated directly 
+without performing the OR operation. Other spe­cial case is when a destination register is cleared using 
+the XOR instruction xor r1, r1, r1 or the AND instruction and r1, r1, 0. In these corner cases, the register 
+becomes trusted and its taint is in­dependent on the source operands taints. In addition, the program 
+counter register is always trusted. When the program counter reg­ister is a source operand, e.g., in 
+function call sites like jal and jalr3, the return address register is set as trusted. Finally, when 
+an instruction loads an immediate value (ld $7,4096), the destination register is always trusted. These 
+special cases are all considered in the Taint Propagation and Checking Logic, as shown in Fig. 1. The 
+Taint Checking module with memory controller is enforcing the overwriting policy for memory access instructions, 
+like LOAD and STORE. The Taint Propagation and Usage Checking module is dealing with taint propagation 
+between registers and special cases, and also checking usage of tainted data for critical program sites. 
+Memory Taint Bit Retrieval: During taint propagation between registers and memory, the taint tag associated 
+with a variable (in fact the memory page that holds the variable) should be retrieved on any LOAD or 
+STORE instruction. At sites of LOAD instruc­tions, when the memory location address is used to look up 
+the data memory/cache for data, it is used to look up the page table for 3jal and jalr are control .ow 
+transfer instructions for PISA archi­tecture, where the return address register stores the address of 
+the following instruction, obtained by incrementing the current pro­gram counter by 4 (for a 4-byte memory 
+word). the taint as well. At sites of STORE instructions, the taint for the memory location is retrieved 
+in a similar manner, and the overwrit­ing policy of no trusted/untrusted data to untrusted/trusted page 
+is enforced with security alarms raised on violations. In systems that support virtual memory and page 
+tables, there already exists a page table look-up mechanism whenever the instruction directs to access 
+the memory. Therefore, there is no extra overhead for retrieving the taint bit stored in the page table. 
+In addition to the overwriting policy, PIFT can be extended to protect the program execution by allowing 
+executing only instructions from a trusted page. The sys­tem supports self-modifying code if and only 
+if the generated code satis.es the trusted policies. Extra Registers to Handle Double Stacks: We normally 
+use two registers to maintain the stack during a function call, the Stack Pointer and Frame Pointer, 
+which refer to the top of the stack and the bot­tom of the current frame, respectively. In certain computer 
+archi­tectures, like PISA, two general purpose registers (GPRs) are re­served for handling stacks. With 
+two stacks possibly introduced for each function, a simple solution is to allocate more GPRs for maintaining 
+stacks, i.e., two for each stack. This solution reduces the number of registers that the compiler can 
+use for other purposes. An alternative solution is to use the generic registers for the trusted stack, 
+and add two special registers for the untrusted stack.   4. SECURITY ANALYSIS AND RESULTS In this section, 
+we will analyze the security strength of our ap­proach, and perform experiments to evaluate the effect 
+of our ap­proach on performance, storage, etc. 4.1 Security Analysis There are two issues in evaluating 
+the effectiveness of our ap­proach. First, the approach should not produce false alarms when no attack 
+is introduced upon the system. Second, the approach should be able to detect attacks that attempt to 
+overwrite critical information. We .rst pro.le several benchmarks from MiBench [7] to identify the changes 
+that we need to add into each program. Then, we assign the correct attribute to each data item in the 
+program, and at the same time we know what variables and functions need to duplicate with different attributes, 
+in order to run the application without false alarms. To evaluate the security effectiveness of our approach, 
+we used three micro-benchmarks to test if our system can detect overwrite of a critical memory positions 
+by untrusted information. These benchmark were used in a previous work to show the effectiveness of DIFT[19]. 
+The .rst micro benchmark intends to experiment with stack buffer over.ow attacks. As shown in Fig. 2, 
+it reads and prints an array of 10 elements (by de.nition). Because the function f scan f does not check 
+the size, the program can read more inputs to overwrite the stack of function main. As a result, the 
+stack can be smashed and the return address can be overwritten. Details of the attack are shown in Fig. 
+3. In our approach, the overwrite is prohibited be­cause the return address is put on a trusted page. 
+The array is on another untrusted stack, and the out-of-boundary overwrite could not affect return address. 
+ Figure 3: Detail of stack buffer over.ow The second micro benchmark, shown in Fig. 4, demonstrates 
+how to exploit the format string vulnerability when the function print f is invoked incorrectly. This 
+vulnerability allows an attacker to send a format string like 1111 %p %p , to reveal information on the 
+process memory. With other format strings like 1111 %p %n , the attacker can even overwrite the process 
+memory. In this exam­ple, the attacker overwrites the memory location pointed by 0x31313131. Our approach 
+catches the attack when the system tries to use the format directive %p for the .rst time. In normal 
+conditions, the for­mat directive %p is stored in a register that is used to indirectly call a function 
+to handle the formatted printing. With DIFT, this regis­ter is tainted (untrusted) because the content 
+comes from the user input. Therefore, the attack is detected when the function print f tries to jump 
+using an untrusted register, whose taint is propagated from the register that holds the format directive. 
+ Figure 4: Format string vulnerability The third micro benchmark, shown in Fig. 5, shows a heap cor­ruption 
+attack. Two arrays of 8 elements are allocated. One of them, array, is used to hold a string. Because 
+the function scan f does not check the size of input, an attacker can introduce more elements and overwrite 
+critical information (forward and backward link) held in the next chunk of memory. Details of the attack 
+are shown in Fig. 6. The attack is prevented by our approach because the critical meta-data is now put 
+in a trusted heap, and the untrusted array cannot overwrite it. This is similar to buffer over.ow attacks. 
+ Figure 5: Program vulnerable to heap corruption attack Previous works have shown that doing DIFT is 
+possible to detect both low-level and high-level attacks [15, 5, 18]. Our approach, based on DIFT, can 
+prevent the attacks that intend to take control of the application by overwriting critical information 
+like return address, system call arguments, and function pointers. Even if the attacker overwrites some 
+memory positions, no critical information will be changed, due to different page allocation and security 
+poli­cies. We also remark that our approach can be complemented with other techniques that watch the 
+normal execution of a program [9]. For system calls and return-to-libc attacks, our approach is also 
+effective in detecting them. The system ensures that the arguments for system calls and library functions 
+are always trusted.  4.2 Results 4.2.1 Implementation Figure 6: Detail of heap corruption attack For 
+the implementation, we modi.ed the gcc-2.7.2.3 cross-compiler for PISA processor to implement PIFT. Currently, 
+we have dealt with data segments, stacks, and functions. We implement our ap­proach by specifying the 
+location placed according to their taint tags. Based on pro.ling results, variables in the program source 
+code that need to be duplicated are labelled. The compilation pro­cess then duplicates and separates 
+these variables. At compiler­time, the compiler calculates the offset of global variables to a global 
+pointer, and the offset of local variables to their frame point­ers. The compiler uses these offsets 
+for placing and accessing these variables. We implement PIFT on some benchmarks from the MiBench suite 
+[7] and employ a modi.ed version of SimpleScalar simulator [1] to simulate the performance. 4.2.2 Memory 
+Overhead As mentioned earlier, a function s arguments may have different taints at different call sites. 
+If an argument s taint is not consis­tent among all calls, we may duplicate the function: one copy for 
+passing trusted data and the other for passing untrusted data. We .rst examine the memory overhead introduced 
+by duplicating func­tions. The results in Table 1 show the memory overhead for func­tion duplication 
+is 1.181% on average. Very often, the applications functions themselves do not require function duplication. 
+Some li­brary functions like _ f ree_internal and _wordcopy_ f wd_aligned | used in the process of moving 
+a chunk of information from a memory place to another one | have to be duplicated in order to address 
+trusted and untrusted arguments. Hence, the applications that use these library functions have extra 
+text, like rijndael and susan. Table 1: Memory overhead due to function duplication Benchmark Text Segment 
+(in words) size extra overhead   rijndael 126.628 2.220 1.753% susan 137.236 524 0.381% sha 78.564 
+0 0% dijkstra 99.380 2.220 2.233% stringsearch 80.532 0 0% qsort 101.044 2.744 2.715%   Average 
+1.181% Another source of memory overhead is the global data duplica­tion. When a global variable sometimes 
+stores a trusted value and sometimes stores an untrusted value, we duplicate the variable and allocate 
+one in the trusted space and the other in the untrusted. Ta­ble 2 shows that this extra space is 0.1% 
+on average. Note that this overhead remains constant, independent of the size of the input. Table 2: 
+Memory overhead due to global data duplication  Benchmark Data Segment (in words) size extra overhead 
+  rijndael 29.808 3 0.010% susan 12.979 6 0.046% sha 8.368 6 0.072% dijkstra 52.704 207 0.393% 
+stringsearch 15.280 3 0.020% qsort 12.288 7 0.057%  Average 0.100% Similar to global variables on 
+the data segment with different sources, dynamically allocated space from the heap may be used to store 
+both trusted and untrusted data. Thus we may have to du­plicate the variables, and allocate two spaces, 
+one from the trusted heap and the other from the untrusted heap. Table 3 shows the num­ber of locations 
+that we need to duplicate. The average overhead is only 0.024%. The total amount of memory dynamically 
+allo­cated is now variable, depending on both the input and the program parameters. However, the extra 
+heap memory space is the same for different size of input. For example, susan, an image recogni­tion 
+package, contains three tasks with different program parame­ters settings: smooths the image (-s), recognizes 
+edges (-e), and recognizes corners (-c). With each program parameter, the total memory allocated (in 
+Column 2 of Table 3) is different for differ­ent size of input. However, the extra memory space to separate 
+trusted and untrusted information (shown in Column 3 of Table 3) is the same for different size of input. 
+Table 3: Memory overhead due to dynamic data on heap  Benchmark Heap Segment (in words) size extra 
+ overhead rijndael-e 19.344 16 0.082% rijndael-d 23.440 14 0.060% susan-s-small 44.368 20 0.045% susan-s-large 
+235.264 20 0.009% susan-e-small 73.040 19 0.026% susan-e-large 687.440 19 0.003% susan-c-small 130.384 
+22 0.008% susan-c-large 1.461.584 22 0.017% sha 24.400 0 0 % dijkstra 29.232 16 0.055% stringsearch-small 
+13.392 2 0.015% stringsearch-large 13.088 2 0.015% qsort-small 1.302.528 12 0.001% qsort-large 622.592 
+12 0.002% Average 0.024% Finally, the last source of memory overhead is the stack segment. Our approach 
+uses two stacks, one for holding trusted information and other for untrusted information. Table 4 shows 
+that the stack used in an application does not change signi.cantly. The number of locations that the 
+system requires to duplicate is small. It also depends on how much temporary information needs to be 
+stored on the stack. On average, the overhead for using double stack is small, about 5.37%. However, 
+there are exceptions like di jkstra where the overhead is greater than 60%.  4.2.3 Performance Overhead 
+Table 4: Memory overhead due to use two stacks Benchmark Stack Segment (in words)  size extra words 
+ overhead rijndael-e 32 2 6.250% rijndael-d 32 1 3.125% susan-s-small 360.464 1 0.000% susan-s-large 
+360.440 1 0.000% susan-e-small 370.488 9 0.002% susan-e-large 360.440 9 0.002% susan-c-small 370.488 
+1 0.000% susan-c-large 360.440 1 0.000% sha 8.400 16 0.190% dijkstra 32 21 65.63% stringsearch-small 
+32 0 0 % stringsearch-large 13.280 0 0 % qsort-small 7680.080 0 0 % qsort-large 1442.664 0 0 % Average 
+5.371% We expect a small effect on performance degradation because of cache misses. When data with different 
+attributes are allocated into different pages, data that used to have high spatial locality may now be 
+stored on separate pages, and hence there will be more capacity­limit cache misses [21]. At the same 
+time, code size may get larger with multiple function copies, and average memory access time to code 
+pages may increase as well. In order to evaluate performance, we ran two sets of program simulations 
+and compared the number of clock cycles in each case. One set was done without any modi.cation on the 
+program, and the other set with the needed modi.cation to support PIFT. The modi.cations include changes 
+in the source code for function and variable duplication, and double stack. The results are tabulated 
+in the second and third column in Table 5. The results show that our approach slightly increases the 
+execution cycles con.rming that the performance degradation for using our approach is negligible. Table 
+5: Performance overhead Benchmark Simulation Cycles Original PIFT rijndael-e 18.353.817 18.353.818 rijndael-d 
+28.794.031 28.794.039 susan-s 1.082.949 1.082.955 susan-e 817.503 817.513 susan-c 413.560 413.567 sha 
+4.658.263 4.658.294 dijkstra 28.972.899 28.976.846 stringsearch 132.759 132.759 qsort 27.038.809 27.043.953 
+   5. DISCUSSIONS Using a taint bit for each page helps us to check data structure boundaries indirectly. 
+We enforce that trusted memory can never be overwritten with untrusted information and vice versa. Most 
+information read from disk like program instructions, initialized variables, and constant tables are 
+trusted, and the attacker cannot overwrite it with information obtained from untrusted sources, like 
+input/output (I/O) ports. Although splitting the memory pages into trusted and untrusted does not avoid 
+attacks like buffer over.ows, our proposed approach can protect valuable information which otherwise 
+could be used to take control over the application. The critical information, like re­turn address, indirect 
+jump target address, and system call argu­ments will be stored in trusted pages. When attackers attempt 
+to modify them, the input sources are usually untrusted and our ap­proach detects the attacks by enforcing 
+the overwriting policy. The system will either raise an exception or stall the execution directly. Our 
+approach can support self-modifying code and executable stack. It will be valid to overwrite the trusted 
+memory text segment with trusted new code. In addition, with the checking process, at­tackers cannot 
+utilize a return-into-libc attack using arguments that they change, because these arguments will be stored 
+into an un­trusted page, and the usage of them for function arguments will be captured by our security 
+checking policy. The limitation of the ap­proach is that we cannot detect decision data attack, which 
+is to change critical local data for making decision (i.e., the data that determines whether to jump 
+or fall through at a branch site). Under the case of more than one application running on the sys­tem, 
+the OS needs to be changed in order to support PIFT. At each context switch, the OS needs to not only 
+save the current .le de­scriptor and processor status registers, but also the several new reg­isters 
+for handling two stacks, e.g., two stack pointers. We assume that the saving procedure is secure and 
+transparent to our approach. 6. CONCLUSIONS In summary, in this project we propose a .exible, ef.cient, 
+and light-weight solution for Dynamic Information Flow Tracking with compile-time page allocation. We 
+reduce the overhead for tag stor­age to almost zero without sacri.cing security. There is some mem­ory 
+overhead for implementing the proposed page-level taint tag­ging. Although our approach does not address 
+issues related with decision data attacks, we believe that our approach can be comple­mented with other 
+signature-based solutions which protect applica­tions based on their legitimate behavior or control .ows. 
+ 7. ACKNOWLEDGMENTS This work was supported by NSF under grants CCF-0541102 and CNS-0845871. 8. REFERENCES 
+[1] T. Austin, E. Larson, and D. Ernst. SimpleScalar: An infrastructure for computer system modeling. 
+IEEE MICRO, 35(2):59 67, Feb. 2002. [2] H. Chen, X. Wu, L. Yuan, B. Zang, P.-c. Yew, and F. T. Chong. 
+From speculation to security: Practical and ef.cient information .ow tracking using speculative hardware. 
+In Proc. Int. Symp. Computer Architecture, pages 401 412, June 2008. [3] S. Chen, M. Kozuch, T. Strigkos, 
+B. Falsa., P. B. Gibbons, T. C. Mowry, V. Ramachandran, O. Ruwase, M. Ryan, and E. Vlachos. Flexible 
+hardware acceleration for instruction-grain program monitoring. In Proc. Int. Symp. Computer Architecture, 
+pages 377 388, 2008. [4] J. R. Crandall, S. F. Wu, and F. T. Chong. Minos: Architectural support for 
+protecting control data. ACM Tran. Architecture &#38; Code Optimization, 3(4):359 389, Dec. 2006. [5] 
+M. Dalton, H. Kannan, , and C. Kozyrakis. Raksha: A .exible .ow architecture for software security. In 
+Proc. Int. Symp. Computer Architecture, pages 482 293, June 2007. [6] M. Georg Grasser. Embedded security 
+solution for digital safe-guard ecosystems. In Digital EcoSystems and Technologies Conf., pages 529 534, 
+Feb. 2007. [7] M. Guthaus, J. Ringenberg, T. Austin, T. Mudge, and R. Brown. MiBench: A free, commercially 
+representative embedded benchmark suite. In IEEE Int. WkShp on Workload Characterization, pages 3 14, 
+Dec. 2001. [8] B. Livshits, M. Martin, and M. S. Lam. Securi.y: Runtime protection and recovery from 
+web application vulnerabilities. Technical report, Stanford University, 2006. [9] J. C. Martinez Santos 
+and Y. Fei. Leveraging speculative architectures for run-time program validation. In Proc. Int. Conf. 
+Computer Design, pages 498 505, Oct. 2008. [10] J. Newsome. Dynamic taint analysis for automatic detection, 
+analysis, and signature generation of exploits on commodity software. In Int. Symp. on Software Testing 
+&#38; Analysis, 2005. [11] E. B. Nightingale, D. Peek, P. M. Chen, and J. Flinn. Parallelizing security 
+checks on commodity hardware. In Proc. Int. Conf. Architectural Support for Programming Languages &#38; 
+Operating Systems, pages 308 318, 2008. [12] F. Qin, C. Wang, Z. Li, H. seop Kim, Y. Zhou, and Y. Wu. 
+Lift: A low-overhead practical information .ow tracking system for detecting security attacks. In IEEE/ACM 
+Int. Symposium on Microarchitecture, pages 135 148, 2006. [13] Z. Shao, C. Xue, Q. Zhuge, M. Qiu, B. 
+Xiao, and E. H.-M. Sha. Security protection and checking for embedded system integration against buffer 
+over.ow attacks via hardware/software. IEEE Trans. on Computers, 55(4):443 453, 2006. [14] W. Shi, J. 
+Fryman, G. Gu, H.-H. Lee, Y. Zhang, and J. Yang. InfoShield: A security architecture for protecting information 
+usage in memory. Int. Symp. on High-Performance Computer Architecture, pages 222 231, Feb. 2006. [15] 
+G. E. Suh, J. W. Lee, D. Zhang, and S. Devadas. Secure program execution via dynamic information .ow 
+tracking. In Proc. Int. Conf. on Architectural Support for Programming Languages &#38; Operating Systems, 
+pages 85 96, 2004. [16] Top ten application and database vulnerabilities. [17] N. Vachharajani, M. J. 
+Bridges, J. Chang, R. Rangan, G. Ottoni, J. A. Blome, G. A. Reis, M. Vachharajani, and D. I. August. 
+RIFLE: An architectural framework for user-centric information-.ow security. In Proc. Int. Symp. Microarchitecture, 
+pages 243 254, 2004. [18] G. Venkataramani, I. Doudalis, Y. Solihin, and M. Prvulovic. Flexitaint: A 
+programmable accelerator for dynamic taint propagation. In Proc. Int. Symp. High-Performance Computer 
+Architecture, pages 173 184, Feb. 2008. [19] J. Xu and N. Nakka. Defeating memory corruption attacks 
+via pointer taintedness detection. In Proc. Int. Conf. on Dependable Systems &#38; Networks, pages 378 
+387, 2005. [20] W. Xu, S. Bhatkar, and R. Sekar. Taint-enhanced policy enforcement: a practical approach 
+to defeat a wide range of attacks. In Proc. USENIX Security Symp., pages 121 136, July-Aug. 2006. [21] 
+Y. Younan, W. Joosen, and F. Piessens. A methodology for designing countermeasures against current and 
+future code injection attacks. In Int. WkShp on Information Assurance, pages 3 20, Mar. 2005. [22] Y. 
+Younan, W. Joosen, and F. Piessens. Ef.cient protection against heap-based buffer over.ows without resorting 
+to magic. In Proc. Int. Conf. on Information &#38; Communication Security, Dec. 2006. [23] Y. Younan, 
+D. Pozza, F. Piessens, and W. Joosen. Extended protection against stack smashing attacks without performance 
+loss. In Proc. Annual Computer Security Applications Conf., 2006.  
+			

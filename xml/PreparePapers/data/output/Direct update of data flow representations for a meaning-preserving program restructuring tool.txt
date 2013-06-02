@@ -1,0 +1,695 @@
+
+ Direct Update of Data Flow Representations for a Meaning-Preserving Program Restructuring Tool * William 
+G. Griswold Department of Computer Science&#38; Engineering,0114 University of California, San Diego 
+San Diego, CA 92093-0114 USA wgg(?cs .ucsd. edu Abstract Automated assistance for meaning-preserving 
+global restruc­turing is an approach for helping software engineers improve the structure of programs, 
+thus lowering the costs of main­tenance. The construction of a restructuring tool encounters many conflicting 
+goals-such as simplicity, extensibility, and good performance-that carmot be met without some com­promise. 
+In particular, the current technique for assisting re­structuring uses a costly program representation-a 
+Program Dependence Graph (PDG) with alias information-thatis not practical to recompute from scratch 
+after each restructuring transformation. There are at least two possible solutions. A commonly suggested 
+approach for efficiently updating data flow representations is to use a generic incremental algorithm 
+that does not make use of the special nature of the restruc­turing. This approach is general, but it 
+does not yet handle aliasing fully. By taking advantage of the special nature of the restructuring transformations 
+it is possible to implement a more efficient update than generic update that also handles aliasing. The 
+idea is to implement direct updates to the PDG that are analogous to the changes on the program text. 
+The downsides to direct update are that it is application-specific, applies only to semantically restricted 
+applications like re­ structuring, and may be more complex. The choice between the two techniques requires 
+an understanding of the current and future needs of the tool s users. This paper describes the direct 
+approach of updating the PDG and related representations for restructuring, provides techniques for managing 
+its complexity, critiques its advan­tages and shortcomings relative to generic incremental up­date, and 
+presents performance results. *This work was supported in part by an IBM Graduate FeUowstup, NSF Grants 
+CCR-8858804 and CCR-921 1002, a DEC External Research Program Grant, and the Xerox Corporation. Permission 
+to copy without fee all or part of this material IS granted provided that the copies are not made or 
+distributed for direct commercial advantage, the ACM copyright notice and the title of the publication 
+and its date appear, and notice IS given that copying is by permission of the Association for Computing 
+Machinery. To copy otherwise, or to republish, requires a fee and/or specific permission. SIGSOFT 93/121931CA, 
+USA @ 1993 ACM 0-89791-625-5/93/001 2...$1.50 1 Introduction The unacceptably high cost of software 
+is dominated by the cost of software maintenance, which can reach 70% of the total software cost Kientz 
+&#38; Swanson 80]. Belady and Lehman concluded from their studies that degraded software structure---due 
+to the layering of user-driven changes dur­ing maintenance-is the primary cause [Belady &#38; Lehman 
+76][Belady &#38; Lehman 71, p. 113]. Poor structure is mani­fested by the number of modules that must 
+be examined or modfied to perform a single coherent change. One solution to this problem is to restructure 
+the system to improve the locality of the changes being made. However, restructuring is a complex task 
+because the textual changes required to make a structural change are dispersed throughout the sys­tem, 
+yet must be kept consistent with each other to preserve the original behavior of the software. Automated 
+assistance of program restructting can over­come key aspects of this complexity [Griswold &#38; Notkin 
+93]. A tool based on this technique takes a locally-specified structural software change from the software 
+engineer and performs additional compensating changes throughout the program to ensure that the meaning 
+of the program does not change. If the tool cannot make meaning-preserving com­pensating changes, the 
+engineer s change is disallowed and the problem is reported to assist in circumventing it. An implementation 
+of such a tool benefits from manag­ing the tradeoffs between simplicity, extensibility, and good performance. 
+These goals are hard to meet simultaneously beeause the tool uses data flow representations such as a 
+Con­trol Flow Graph (CFG) and a Program Dependence Graph (PDG) to compute the information needed to perform 
+the semantic checks and compensating changes. The required interprocedural data flow analysis with alias 
+(i.e., pointer) information is typically expensive to compute, and needs to be updated after each transformation 
+applied by the tool user. Consequently, the simple approach of reconstructing the information from scratch 
+is inadequate. One possibility for improving performance is to use an incremental update algorithm that 
+exploits the quiescence of the propagation of the effects of syntactic changes to a program representation 
+[Reps &#38; Teitelbaum 87][Pollock &#38; Soffa 89] Narlowe &#38; Ryder 90]. The approach is general, 
+al­lowing the extension of a restructuring tool to other activities without necessarily sacrificing performance. 
+Also, the ap­proach builds on standard batch algorithms, minimizing the additional complexity. However, 
+current incremental tech­niques have not yet been applied to general side-effect (e.g., alias) analysis 
+lhudi et al. 93], although they can handle aliasing due to reference parameters llvfarlowe &#38; Ryder 
+91]. Alternatively, directly applying the equivalent of the syn­tactic change to the data flow representation 
+is likely to be faster and can handle aliasing. However, such an approach is application-specific, limited 
+to applications that semantically restrict changes (such as meaning-preserving restructuring), and perhaps 
+more complicated to implement. The direct update approach requires the translation of each Abstract Syntax 
+Tree (AST) transformation procedure into an equiva­lent data flow representation transformation procedure. 
+This translation task is performed by the transformation builder by examining the procedure implementing 
+the AST transforma­tion and deriving an equivalent procedure for the data flow representation. This process 
+requires that the builder know the semantics of both representations and know the nature of the transformation 
+Wing translated. Then when the tool is used, applying an AST transformation to a program also invokes 
+the matching data flow transformation. In practice the cost of the direct update is proportional to the 
+cost of the update to the AST. Constructing an AST transformation and its matching data flow direct update 
+routine are each complicated, as is com­bining them to work together. A naive approach to imple­menting 
+the updates yields monolithic transformations that unnecessarily mix the concerns of updating the AST 
+and the data flow representations, resulting in an ad hoc and error­prone approach to building the tool. 
+The transformation builder can benefit from designing the restructuring tool in layers and separating 
+the handling of the AST and the data flow representations until the highest layer. This approach provides 
+more meaningful abstractions to the transformation builder and results in reuse of function in lower 
+layers. Split­ting the handling of the representations not only enhances reuse, but also simplifies coding 
+and design by separating the handling of the rather different representations. Two aids assist in correctly 
+building and composing these layers. Frost, a procedural skeleton simplifies composing lo­cal AST update 
+operations into a global meaning-preserving AST operation. The skeleton also helps to map the AST data 
+elements to data flow elements. Second, a meaning­preserving transformation algebra guides the design 
+of atomic PDG subgraph update operations. The transformation builder is also indirectly assisted by emulating 
+aspects of batch up­date in the direct update implementation. Less help is avail­able in putting them 
+together into a complete PDG update. In the following, the principles and techniques of incre­mental 
+and direct update are compared; the layers and aids for designing direct updates for restructuring are 
+described, and performance results of direct update for restructuring are presented. First, however, 
+a restructuring tool and its use are described. 2 A Restructuring Tool A prototype restructuring tool 
+provides a set of meaning­preserving transformations that can be applied-by a tool user to restructure 
+a program. The set of transformations includes: inlining a variable binding s expression, which replaces 
+the variable s uses with the defining expression (called var-to-expr); abstracting a binding (roughly 
+the inverse of inlining), which moves an expression into a variable binding, as­signs the result of the 
+expression to the new binding variable, and puts a reference to the variable in the old location of the 
+expression (expr-to-var); removing an embedded expression from a function body and abstracting it as 
+a parameter of the function, so that the removed expression must be passed as an argument to calls on 
+the function (also expr-to-var); extracting a function, which turns a sequence of state­ments into a 
+function, and replaces the extracted state­ments with a call on the function (extract-function); as a 
+complement to function extraction, replacing re­peated sequences of statements with calls on a func­tion 
+containing that sequence of statements (scope­substitute-call); call substitution sinverse, call inlining 
+(inline-cali); and moving a component from one location to another (move). These transformations extend 
+naturally to the manipulation of module and class interfaces. This property was demon­strated to some 
+degree by an assisted restmcturing of Par­nas s functional decomposition of the KWIC program (Key Word 
+in Context) to his preferred data decomposition [Parnas 72][Griswold 91]. The tool assists restructuring 
+programs written in the im­perative programming language Scheme. It does not support features like function 
+parameters, closures, and macros, but does support lists and their aliasing properties. The tool is implemented 
+in Common Lisp [Steele 91], and uses a modified version of the interprocedural CFG and PDG from Curare 
+@irus 89] and the Picasso window sys­tem [Rowe et al. 91]. The tool currently supports a simple command-line 
+user interface, a text-based windowing inter­face, and a graphical interface for restructuring programs 
+via design-level manipulation [Griswold &#38; Bowdidge 93]. As an example, consider the transformation 
+var-to-expr, which takes a variable binding and replaces the uses of the variable definition with the 
+defining expression. (An alter­nate version of the transformation takes a single variable use and inlines 
+only the single use, not others from the same definition.) Successfully applying var-to-expr to a vari­able 
+definition generates multiple instances of the defining expression--one for each syntactic reference 
+to the vari­able definition-allowing individual instances to be modified without affecting others. The 
+tool must perform several checks to ensure that the transformation preserves meaning. As a consequence 
+of the movement of the expression, no variable referenced in the inlined expression can have the sources 
+of its value changq the change in the evaluation order of expressions caused by inlining the defining 
+expression cannot change the values re­turned from expressions, and the moved expression must be evaluated 
+under the same circumstances-the same condi­tional branches-as before. If the result will allow multiple 
+evaluations of the expression, the tool must ensure that there are no side-effects in the expression, 
+since repeating the side effects can change the meaning of the program. Similarly, if there are multiple 
+uses to be inlined, the expression cannot, in general, have side-effects. Finally, if a use has two potential 
+definitions-as can occur with a conditional assignment-the transformation is prohibited. As a small example, 
+consider the matrix multiply proce­dure in Figure la. In the process of restructuring the pro­cedure 
+to expose several functions hidden in its body, its inner-loop is bekg extracted as an inner-product 
+function. However, some preparatory transformation is required. For instance, the interface for the inner 
+product should have two parameters for the matrices and two parameters for the row and column to be multiplied. 
+However, the reference to nr 2 in the inner loop is not one of these four parameters, nor is it local 
+to the loop, so it must be eliminated by calling var-to­expr on it. When the tool user does so, the tool 
+successfully performs the semantic checks and the program in Figure lb results.  3 Incremental and Direct 
+Update Techniques A data flow representation explicitly represents relations be­tween program components 
+that must be inferred from the names and locations of symbols in the program (See the Ap­pendix for a 
+description of the CFG and PDG). This inference is especially difficult if the programming language supports 
+pointers in some form, because many symbols or different expressions can at some point during the program 
+s execution denote the same memory location, but at other times not. Be­cause creating a data flow representation 
+from a program text is complicated, keeping them consistent is also complicated. Even without alias information, 
+a naive (batch) approach to maintaining the data flow information must have at least a linear cost in 
+the number of 3-address statements in the program, rather than a cost proportional to the size of the 
+change. A batch algorithm B is a simple function from a program input p to a a data flow representation 
+output d: B(p) -d. It is undesirable to pay linear cost (or more) when a large program is repeatedly 
+updated in an interactive setting. For other applications this cost may be acceptable. This informa­tion 
+can be maintained more efficiently in at least two ways: incremental update and direct update. 3.1 Incremental 
+Data Flow Analysis An incremental data flow analysis algorithm takes the exist­ing data flow information 
+and a list of the program statements that have been modhied since the information was last com­puted 
+and recomputes the information required to bring the data Up to date [Burke&#38; Ryder 90] [Burke 90] 
+Marlowe 8L Ryder 90]. This technique can be used in virtually any con­text because it does not rely on 
+any semantic relationship between the original program and the chang-d one. The improvement in performance, 
+however, is dependent on the types of changes made [Ryder et al. 90] Narlowe &#38; Ryder 90] . Commonly, 
+an incremental algorithm is created by modi­fying an existing batch algorithm. A typical batch algorithm 
+propagates information about individual statements through intraprocedural CFGS and a call graph (for 
+interprocedu­ral analysis) to determine program statement relationships.1 An incremental version first 
+recomputes the local informa­tion for each statement that is directly affected by the ed­its to the program, 
+and then recomputes any data that are dependent on the changed parts of that information. In­crementalization 
+exploits the hierarchical or graph structure of the representation-a linkage implies potential semantic 
+dependence-to accurately determine what information has to be recomputed. (However, if the graph itself 
+is changed by the edits, these dependence must be reconstructed,) Many techniques specialize how a changed 
+statement s information is propagated based on how it has been modified, yielding a more efficient algorithm. 
+For example, a statement mod­ification can be classified as a statement insertion, deletion or change 
+[Burke 90]. With a more refined classification of changes, a more efficient algorithm may be possible. 
+Conceptually, an incremental algorithm can be modeled as a function from the old output plus changes 
+to the old input to a new output: I(d.rd, ~F(Po/d, Pn.w)) -dnew It is straightforward to derive a PDG 
+from these representations and the analyses on them, so it can be assumed that the PDG can he reconstructed 
+cheaply if the incremental algorithm successfully reduces recomputation. (clef ine matrix-multiply ( 
+labda (ml m2) (define matrix-multlply (lambda (ml m2) (letrec (letrec ( (matrix-rows ( lambda (x) (vector-length 
+x) ) ) ( (matrix-rows (lambda (x) (vector-length x) ) ) (matrix-columns (lambda (x) (matrix-columns (lambda 
+(x) (vector-length (vector-ref x O)) ) ) ) (vector-length (vector-ref x O) ) ) ) ) (let* ( (nrl (matrix-rows 
+ml) ) (let* ( (nrl (matrix-rows ml) ) (nr2 Jmatrix-rows m2) ) (nr2 Jmatrix-rows m2) ) (nc2 (matrix-columns 
+m2) ) (nc2 (matrix-columns m2) ) (r (make-matrix nrl nc2 ) ) ) (r (make-matrix nrl nc2) ) ) (if (not 
+(= (matrix-columns ml) nr2) ) (if (not (= (matrix-columns ml) nr2) ) (match-error ml m2 ) ) (match-error 
+ml m2) ) (do ((i O (1+ i))) (do ((IO (I+ i))) ((= i nrl) nil) ((= i nrl) nil) (do ((j O (1+ j))) (do 
+((j O (1+ j))) ((= j nc2) nil) ((= j nc2) nil) (do ((k O (1+ k)) (do ((k O (1+ k)) (a O (+ a (* (matrix-ref 
+ml i k) (a O (+ a (* (matrix-ref ml i k) (matrix-ref m2 k j) ) ) ) ) (matrix-ref m2 k j) ) ) ) ) ((= 
+k Q (matrix-set! r i j a)) ( (= k (matrix-rOws m2) ) (matrix-set! r i j a) ) nil))) nil))) r)))) r)))) 
+(a) (b) Figure 1: The matrix multiply procedure before (a) and after (b) inlining nr2 where 6F COmpUteS 
+the SYUtaCtiC difference btXWeen POM and the pnew, and 1 propagates the effects of those changes through 
+dofd tO create c&#38;w. There are two basic kinds of (incremental) data flow anal­ysis techniques: iterative 
+fixed point techniques and elimina­tion techniques (e.g., interval analysis). Iterative incremental techniques 
+are relatively simple but can suffer from impreci­sion by starting the reiteration with the old fixed 
+point [Ryder et al. 88] [Pollock &#38; Soffa 89], Elimination techniques do not suffer from this problem, 
+but are slightly more complex, having only recently been generalized to handle all kinds of program changes 
+well Narlowe &#38; Ryder 90]. An empirical study suggests that an incremental elimina­tion technique 
+can yield, on average, a linear improvement in performance over its parent batch method [Ryder et al. 
+90]. The improvement persists even when multiple random changes are made to the program before recomputing 
+the data flow information, although the results are less impressive. However, it is unknown how the multiple 
+changes performed by a restructuring transformation-being textually dispersed but semantically related-would 
+affect incremental perfor­ mance. Unfortunately, incremental algorithms for general alias analysis (e.g., 
+including pointer structures) are still under development? Existing incremental techniques Warlowe &#38; 
+Ryder 91] focus on aliasing due to reference parameters. 3.2 Direct Update To improve performance and 
+handle aliases, an alternative is to take into account exactly what operation is being per­formed on 
+the program. This approach takes advantage of the aggregate effects of the operation in order to implement 
+a more succinct update to the data flow representations; with 2Bab~a Ryder, Personal Commiidim sufficient 
+knowledge, the cost of the update can be propor­tional to the change to the program.3 On the other hand, 
+this technique is application-specific and requires that a tool s in­dividual operations be semantically 
+meaningful or that some meaning can be derived from their use. The program re­structuring tool has such 
+operations: each transformation guarantees to preserve the input-output behavior of the pro­gram. Moreover, 
+a transformation s update is rather stylized in structure. A direct update algorithm can be modeled as 
+the applica­tion of two equivalent functions to two different represen­tations, one for the program text 
+and one for the data flow information: (~ast(pold), ~pdg(~old)) -(%w , ~new) Although conceptually simple, 
+this approach may be more complicated than generic incremental update because each operation Fast must 
+be translated by hand and implemented as art operation Fpd~. Nominally, a restructuring tool consists 
+of four major com­ponents: an AST module for internally representing the pro­gram text, a CFG/PDG4 module 
+that encodes semantic re­lationships not present in the AST, a module for mapping from AST components 
+to CFG/PDG components and back, and a restructuring module (See Figure 2). However, this approach tends 
+to create monolithic transformations that mix low-level data structure maintenance with the concerns 
+of program semantics, as well as mix issues concerning ASTS and CFG/PDGs, which is ad hoc and error-prone. 
+To overcome these problems, a layered software structure that hides low-level concerns and separates 
+AST updates 3~~ aPProach is not unlike an operation-based technique for merging program versions [Lippe 
+92]. 4Since these two representations are intimately hnked, they are often merged together m the discussion. 
+F+ restructuring layer II representation layer \r AST-CFG ~ CFG/PDG~AST mapping Figure 2: Relatively 
+Unstructured Tool Design from data flow updates is introduced. Additionally, concep­tual aids are introduced 
+to assist building some of the lay­ers. These techniques apply to any direct update application, although 
+the nature of direct update requires an application­specific solution to translating the operations from 
+the source representation to the target representation. n restructuring layer Restructure direct MP update 
+:;;;;; (Fa,~) AST ,., ............... . ....... I I atomic dpalate layer @@@ 4 ... ....................... 
+ represe ation layer t Figure 3: Layered Tool Design The principaJ layers for program restructuring were 
+cho­sen as follows, from bottom to top: the basic representation layer for the AST and CFG/PDG, a layer 
+on top for per­forming atomic updates on the AST and CFG/PDG, a layer for meaning-preserving updates 
+on the AST and CFG/PDG (that is, F.., and FP~g), and a layer combining the separate AST and CFG/PDG transformations 
+(See Figure 3). Each layer builds on the layer below, adding one additional level of function. By supporting 
+only one additional functional re­quirement per layer and keeping AST and CFG/PDG updates separate, the 
+functions in each layer are smaller, and hence easier to understand and combine in the next layer. These 
+separation of concerns yield the following benefits: Reuse. Because of the stylized nature of the restmc­turing 
+transformations, there are just a few atomic CFG/PDG updates. With this layering, these atomic updates 
+are repeatedly used in the meaning-preserving update layer. Reuse allows the transformation builder to 
+spend more time on the design and implementation of a few atomic update procedures, which is advantageous 
+because of their complexity. Step-wise design and implementation. Until a direct up­date for an AST transformation 
+is implemented, batch update can be used. Because an AST transformation initially evolves according to 
+the tool user s needs, us­ing batch update as a fallback minimizes the amount of software that must evolve 
+in the early phase of a transformation s development. Also, if an AST trans­formation and a CFGiPDG direct 
+update are interacting in a confusing way during development, the direct up­date can be replaced quickly 
+with batch update to help isolate the problem. Even with the advantages provided by this layered stmc­tnre, 
+each layer is not simple to construct. In particu­lar, designing a restructuring transformation to be 
+meaning­preserving without being trivial is difficult. An array of issues, semantic and syntactic, must 
+be managed. To assist the transformation builder in defining an AST transforma­tion and translating it 
+to a direct update procedure on the CFG/PDG, a procedural skeleton describes how local AST updates from 
+the atomic update layer should be combined to construct a global meaning-preserving AST transformation. 
+Mapping the affected AST components to the PDG yields the PDG subgraph that needs to be likewise updated. 
+To assist in designing the CFGPDG updates, a small number of meaning-preserving PDG subgraph substitution 
+rules are provided. These rules are implemented as CFG/PDG oper­ations in the atomic update layer. Several 
+of these rules are combined to describe a complete update that corresponds to the AST update. These two 
+aids are the focus of the next section. Fhxdly, direct update mimics batch update wherever pos­sible. 
+For example, the direct updates are performed in the order that the representations are initially constructed. 
+This ordering prevents an update from needing information when it might be awkward to obtain or compute. 
+MiMcking the batch update process also allows examining the batch up­date s design and implementation 
+to answer questions about creating representation relationships.  4 A Model for Mapping AST Changes 
+to the PDG The paradigm for global meaning-preserving restructuring is that the tool user applies an 
+initial local change to a com­ponent c in the program, and the tool applies compensating changes to the 
+program components that are behaviorally affected by the initial change (or vice versa) to preserve the 
+program s input-output behavior. In practice, however, the tool user s initial change and the compensating 
+changes are packaged into a single transformation procedurealong with semantic checks that ensure the 
+completeness of the transformation-that is invoked by the tool user on c. When a user of the restructuring 
+tool applies a transforma­tion to some component c, the transformation tirst computes the behaviorally 
+affected program components by mapping c into the CFG/PDG, traversing some dependence edges, and mapping 
+back resulting vertices to the AST. The transforma­tion then checks to make sure that the planned compensating 
+actions on the affected components are sufficient to preserve meaning. If so, the transformation is performed. 
+At this point, the CFG/PDG is not consistent with the AST, and some updates must be performed. To define 
+an AST transformation and its CFG/PDG direct update, three primary tasks must be performed by the trans­formation 
+builder. First, the AST transformation must be defined. Second, mapping between the AST and CFG/PDG must 
+be possible. Finally, the analogous update to the CFG/PDG must be defined. Mapping between the repre­sentations 
+is handled perfunctorily by the runtime system of the tool, although the maps need to be updated when 
+trans­formations are performed. Restructuring transformations on program text, however, are global and 
+consequently difficult to reason about. Also, relating a change in the AST to an efficient change in 
+the CFG/PDG is complicated because the CFG/PDG is a significantly different representation than the AST. 
+Lacking automated techniques to overcome these two dif­ ficulties, a practical technique that relies 
+on the tool builder s knowledge of the programming language and CFG/PDGs is attractive. The tool builder 
+is assisted by two conceptual tools a procedural skeleton for defining AST transforma­ tions and PDG 
+subgraph substitution rules for describing the analogous PDG updates. 4.1 Defining an AST llansformation 
+The restructuring paradigm simplifies the definition of a global AST transformation by describing it 
+in small local parts connected by a function describing their relationship. The globalization skeleton 
+describes the relationship between the tool user s initial change on c and the tool s compensat­ing changes 
+to preserve behavior-and between c and the components affected by a change to ic procedure delta+(c) 
+for LL E affected do COrn~t?fW2tk.VLflZZ~S(Ui ) initial.lrans(c) end where inirial~rans is the tool 
+user s local change to C, af­fecred retrieves the set of components that are affected by the application 
+of initial-trans to c, and compensation~rans is the change to each of those references. With the appropriate 
+choice of initialdrans, affected, and compensation~rans and combining them to change c and the affected 
+components in concert, the meaning of the program can be preserved. Both initiallrans and cornpensation~rans 
+are typically simp­ le movements, copies, and substitutions, along with some deletion and creation of 
+syntax to represent the new struc­ ture. Mapping c and the u~ to the CFG/PDG identifies the analogous 
+CFG/PDG components being affected. The globalization procedure of var-to-expr looks like the following, 
+where [v,e] is the expression that defines w procedure var-to-expr([v,e]) for ui c uses([v,e]) do substitute(copy 
+(e),ui) remove([v,e]) end The function uses retrieves the references to the value gen­erated by the 
+assignment to v. When the transformation is invoked, v, e, and the ui can be mapped to the CFG/PDG (along 
+with the edges denoted by uses) for the direct update. 4.2 PDG Subgraph Substitution Rules When invoking 
+a transformation such as var-to-expr, the CFG/PDG needs to be updated to reflect the new AST struc­ ture. 
+Implementing the procedure for the update requires the tool builder to understand the manipulation of 
+the original untransformed components and their connection by affected. Because the PDG syntactically 
+encodes the key semantic and structural relationships with edges between vertices, the required meaning-preserving 
+changes are appropriately de­ scribed as a modification of a PDG (and CFG) subgraph. In fact, such modifications 
+can be designed to preserve mean­ ing in a fashion similar to the globalization skeleton: that a change 
+in the relationship between two vertices must be compensated by another change that creates a behaviorally 
+equivalent graph. In practice, the changed relationship is the a~ected relationship of the globalization 
+skeleton, and the af­ fected vertices are the ones that map to the AST components manipulated by initial~rans 
+and compensation~rans. A key difference from the globalization skeleton, however, is that since the related 
+PDG components are directly connected, the update is most easily described as a single subgraph update 
+rather than two updates connected by an abstract relation. To assist in describing such a CFG/PDG update 
+and ensur­ ing that they are meaning-preserving, a small number of PDG q<-< * x Yx z :=j+k .­,­:=X*1 
+Y z :=j+k :=(j+k)xl Figure 4: A data flow diagram demonstrating the dkributive rule for an application 
+of var-to-expr to the assignment of x. subgraph substitution rules are provided. To map an AST transformation 
+(as described with a globalization procedure) to the PDG, the tool builder selects a combination of PDG 
+substitution rules that exactly describe the changes to the PDG that are needed to reflect the changes 
+in the AST! If the translation from globalization procedure to PDG substitution routine cannot be performed, 
+then the AST transformation is either not meaning-preserving or falls outside the domain of the substitution 
+rules. Although frequently two or more rules must be used to describe the required update, each rule 
+alone describes a meaning-preserving change. Thus, in contrast to the global­ization skeleton, which 
+decomposes an AST transformation according to the syntactic separation of its changes, the PDG substitution 
+rules divide the work according to structural and semantic responsibilities. For instance, there are 
+different rules for changing data flow dependence and control depen­dence. When applied together to describe 
+a single complete update, their substitutions change different aspects of the same subgraph. This approach 
+to dividing a complex PDG update into smaller pieces eases understanding because it ensures the semantic 
+integrity of each piece. The rules also specify preconditions for their correct application. These pre­conditions 
+are the basis for the semantic checks performed before a tool transformation is applied. Some of the 
+substitution rules replace a vertex or edge by an equivalent one to achieve a structural change. The 
+Sequence-Congruence algorithm [Yang et al. 89][Yang 90] provides a conservative definition of an equivalent 
+vertex or edge. It computes equivalence classes of programs or subpro­grams that over the course of a 
+program execution produce the same sequence of visible states.6 The Sequence-Congruence s~e~e~IeSmede.q~ribedin 
+of the rather tie solely terms pW than combined CFG/PDG, because the substitutions on the CFG portion 
+are straightforward due of ita structural relationships to the AST and PDG. 6At~ough the definition of 
+the Sequence-congruence algorithm uses a variant of the PDG called a Program Representation Graph (PRG), 
+with appropriate modifications the algorithm strll applies to PDGs. The key difference between the PDG 
+and PRG is tiat the PRG uses normalized variables in the style of static single assignment (SSA) form 
+[Cytron et al. algorithm determines the equivalence of two PDG compo­nents based on three properties, 
+(1) the equivalence of their operators, (2) the equivalence of their inputs, and (3) the equivalence 
+of the predicates controlling their evaluation. By definition, subgraphs of a PDG may be modified by 
+the substitution of sequence-congruent vertices without chang­ing the PDG s meaning. For example, creating 
+common subexpressions [Allen &#38; Cocke 72] in a PDG by replicating a vertex and its incoming edges 
+(so the result by definition is sequence-congruent to the original), and splitting the outgo­ing edges 
+between the two copies, preserves meaning. The definitions of the substitution rules benefit from some 
+additional notation (based on notation developed for clef-use graphs [Podgurski &#38; Clarke 90]). For 
+a dependence edge e = (u, v), v is a successor of u, and u a predecessor of v. A traversal in a PDG from 
+V1 to V. via dependence edges cart be described by an ordered list of the visited vertices called a walk, 
+W = VI V2.. .vn. A data jiow dependence walk (or subgraph) is a walk consisting solely of data flow dependence. 
+By using a variable subscript (i orj) on a vertex or walk symbol, several walks (a subgraph) are described 
+concisely. For example W, = uu describes all the walks from u to its immediate successors. If two vertices, 
+u and v, have the same variable subscript in a walk description, the variables are iterated in step. 
+Thus walk w vi denotes the walks {Ulvl, U2V2, ...unvn } . Walks extend to edge visits as well. Given 
+vertex walk W = Vovl . . . V., then the edge walk E=e1e2. . . en demonstrates W iff Vui, O < ~ ~ n, ~ei 
+= (vi-1, vi ). Edge and vertex walks may be interleaved to describe the exact path traversed on a walk. 
+Thus W = voe1v1e2 v. is a traversal of the graph such that el == (vo, Vi), and so forth. By convention, 
+e denotes an edge, p a control (predicate) vertex, u, v, and w normal operator vertices, and s and r 
+program variable names. For complex 88] (eliminating anti-deperrdences and output dependence) to make 
+tie Sequence-Congruence algorrthm faster. The PRG form might be useful for restnrcturing. However, the 
+normalization process introduces new variables that appmr to either cornphcate mapping between the source 
+and tie PRG or else compromise the readabdlt y of the restructured source. PDG subgraphs it is beneficial 
+to combine walk and graphical notation. An edge or vertex label in a graphic has the same denotations 
+as in walk notation. Now three of the more common substitution rules can be introduced. In these rules 
+only data flow and control dependence are shown. The handling of other edges is not dh%cult, but their 
+inclusion here would obscure the algebra. In general, these PDG substitutions work in both dwections. 
+The Dktributivity Rule. The distributivityrule is used, for example, to replace a variable reference 
+with the expression that defines it (See Figure 4), or vice versa. Intuitively, the rule states that 
+if an expression s result is assigned to a variable, then a copy of that expression may replace a subsequence 
+reference to that variable definition. In the PDG, it states that if vertices u and u are sequence-congruent, 
+then any successor flow dependence edge of u can be made a dependence out of u . Given the data jlow 
+dependence subgraph ueaivi, and u sequence-congruent to u, then u! may acquire the jlow de­pendence successor 
+es of u for any of the vi (Figure 5). The label on the edge must be changed to r, a unique variable. 
+Furthermore, there must not exist we~v, w # u. Figure 5: The Distributive Rule This last qualifier disallows 
+a second assignment to s from flowing to v. When implementing the distributive rule, this restriction 
+must be implemented as a rnntime check that will prohibit the transformation if it fails. Multiple edges 
+can be moved from u to u by applying the rule to other v;. The rule naturally extends to a cluster of 
+vertices (i.e., to u and its flow predecessors) by transitively applying the rule backwards through the 
+graph. The vertex-equality part of the rule can be applied constructively by copying u and its incoming 
+edges, creating a trivially sequence-congruent u , as is done in Figure 4. However, because replicating 
+a vertex is essentially multiple evaluation of the vertex, it could redefine the output variable. This 
+is the reason why the rule changes the edge variable label froms to r. The Asymmetric Control Distributivity 
+Rule. Infor­mally referred to as the Control Rule, it describes how an expression can be moved into a 
+conditional statement. The rule asserts that if an expression (vertex u, below) is outside of a conditional 
+(vertex PI ) that contains all of the uses of the expression s results (vi), then that expression can 
+be moved under the control of the conditional. The new placement puts stronger condh.ions on the expression 
+s execution, so there are now instances in which it is not executed where before it was. However, these 
+are exactly the cases in which the expression s results are not needed. Except when moving a constant 
+(or perhaps with the tool user s approval), this rule is not invertible, since loosening a control-dependence 
+on an expression may allow it to be executed when its inputs are undefined or its side-effects are undesired. 
+This rule can be extended to apply to loops. Given the datajlow dependence subgraph uvi and an if ver­te~ 
+both with control predecessor p, then u can be de a control successor of p by the substitution in Figure 
+6. b b Figure 6: The Asymmetric Control Rule. Boxes denote pred­icates nodes. The labels b and b are 
+unspecified conditional labels. The fkansitivity Rule. The transitivity rule allows, for example, adding 
+an assignment of an existing variable to a new variable and using the new variable in place of the original 
+one. The rule states that a variables that is assigned the value of another variable, r, has the same 
+value and hence the same meaning as r until one or the other is changed. The following describes the 
+case for inserting or removing a transitive assignment on the lefthand side: Given the subgraph ue~i 
+vi, an identity (assignment) vertex with the same control dependence predecessor as u may be inserted 
+between u and the vi as shown in Figure 7.  @- o @resi@ Figure 7: Left Transitive Rule Each rule, 
+then, describes an atomic meaning-preserving change to a PDG and the conditions for its correct application. 
+TK theremeinstancesin which the expression does not terminate, mOv­ing it inside a conditional may allow 
+the program to terminate in more instances. This change in behavior can be considered beneficial, or 
+at worst benign [Hoare et al. 87]. Several rules are combined to describe the change required to keep 
+the PDG s structure consistent with the AST S. These rules benefit the tool builder because the change, 
+although it may be large, can be dissected into smaller, meaning­preserving components. Returning to 
+the example, the tool builder examines the var-to-expr globalization procedure and notes that expres­sion 
+e is being successively replicated and moved to replace variable references to the value of e (Refer 
+to Figure 4). The uses function corresponds to data flow dependence edges in the PDG. The replication 
+and inlining of the expression along flow dependence edges implies an application of the distributivity 
+rule. This rule replicates the associated vertices and edges constituting e, and moves the outgoing edges 
+of the original e to its copies and relabels them (e.g., inlining j + k and removing the references to 
+x because the result is now directly transmitted.s The null labels for the edges are dictated by the 
+source transformation s inlining of e.) Also, the movement caused by inlining e requires using the control 
+rule for modifying its vertices control dependence if e is moved inside a conditional. The conditions 
+of the selected substitution rules require some runtirne checks to ensure the substitutions are actually 
+applied as specified and hence meaning-preserving. For in­stance, using the distributivernle for var-to-expr 
+requires the transformation to check that there is only a single variable definition ofs that reaches 
+the uses to be replaced. For the example in Figure 4, this check is applied to the uses of x. 5 Direct 
+Update of the CFG and PDG To implement a CFG/PDG direct update for an AST trans­formation, tirst the 
+chosen PDG substitution rules need to be implemented in the atomic update layer (See Figure 3). These 
+routines are the building blocks for the direct update routines that correspond to the meaning-preserving 
+AST transforma­tions, Fhtally, the AST transformation and a direct update are combkd in the restructuring 
+layer. For example, as a consequence of the reasoning process for mapping a transformation such as var-to-expr 
+to the PDG, the transformation builder learns that the routine for the direct update of the PDG can be 
+implemented by using the distribu­ tive substitution rule to replicate the expression vertex and move 
+the edges, and the control substitution rule to change the control predecessor of the vertex, if necessary. 
+Of course, the transformation builder must also implement routines to update the CFG and the mappings 
+between the AST and the CFG/PDG. The design and implementation of a direct update to the CFG, PDG, and 
+mappings is mostly a matter of match­ ing the elements and actions of the chosen substitution rules to 
+the analogous concrete program data structures. Note that 8Becau~e ~ ~~ignment is being deleted in the 
+program text, it aPPems that the tmnsitivity mle is being applied, but in the graph the associated edge 
+is not deleted, just relabeled. the updates are done roughly in the order that the represen­tations were 
+originally created: the AST transformation is tirst performed, followed by the CFG update, then the PDG 
+update, and finally the AST<FG mapping update. This or­dering ensures, with minimum effort, that a structure 
+is up to date before another structure needs to access it. Inevitably, the implementation of direct updates 
+is system­specific and appropriate adjustments must be made for the particular system design. The discussion 
+below is based on the restructuring prototype sketched in Section 2. The steps that need to be implemented 
+by a direct update procedure are demonstrated by an example using var-to­expr. The updates described 
+are for inlining one use of the definition. Repeating the process can inline them all. When all are inlined, 
+the original expression and its assignment to the variable can be deleted if desired. The direct update 
+for the deletion is analogous to the inverse of the copy-insert steps described below. The description 
+is presented bottom­up from the atomic update layer to the restructuring layer. 5.1 Instantiating the 
+PDG Substitution Rules Each substitution rule handles both the CFG and PDG up­dates. The PDG updates 
+are a straightforward applica­tion of the rules, with appropriate extensions to handle anti-dependences, 
+output dependence and clef-order de­pendence. The CFG S clef-use chains, uses-reaching-clefs chains, 
+and defs-reaching-defs chains are analogous to the data dependence edges in the PDG; updates to PDG objects 
+suggest analogous updates to the related CFG objects. Typi­cally, the updates are first performed on 
+the CFG and then the PDG. This is the order that the representations are originally created, easing emulation 
+of the batch algorithm and pre­venting an update from needing information when it might be awkward to 
+obtain or compute. However, the presentation here describes the PDG update and then the CFG update to 
+make the relation to the substitution rules clearer. The Distributive Rule. The PDG and CFG updates for 
+the distributive rule look like the following: 1. Copy and insert PDG subgraph. Copy all vertices and 
+edges associated with the expression e being inlined. All incoming edges to the subgraph are also copied 
+and redirected to point to the copy. The outgoing edge in the original subgraph (corresponding to the 
+target use, denoted UV, of the inlined expression) is moved so that it originates from the copied graph. 
+Except for limited cases, the copied expression contains just the definition of v, so no output-or anti-dependences 
+are generated. Note that since aliases are generated by expressions not variable references-the copying 
+of the expression and its incoming and outgoing arcs maintains any alias information. 2. Copy and insert 
+CFG blocks and statements. Copying the statements is analogous to the PDG copy, except that the statements 
+must be inserted into new basic blocks. The statements clef-use chains are copied in the same manner 
+that their analogous PDG data dependence edges are copied. 3. Replace PDG target variable and its dependence. 
+Since the replicated expression is no longer being as­signed to the original variable v, but used in-place, 
+the dmect update finds the outgoing flow-dependence edge of the subgraph denoted by e and replaces the 
+v label with a label denoting a new temporary variable, say tkfor unique k. Any incoming anti-dependenee 
+edgeS associated with the replaeed use of v are deleted. 4. Replace CFG target variable and update chains. 
+Mim­ic~ng the change in the PIE, find the assignment to v in the copied statements (dv) and change it 
+to be an assignment to tk. Find the statement containing uv by traversing clef-use chain (dv, UV), and 
+change uv to be W,. Now replace the old (dv, UV) clef-use chain in the old statements with (dt~, u~~) 
+in the new statements. Analogously to the PDG update of anti-dependenees, delete the uses-reaching-clefs 
+chains.  The Control Rule. The PDG and CFG updates for the control rule look like the following: 1. 
+Update the control dependence. If the inlined expres­sion is moved so that it is inside a different condh.ional 
+than before (this is determined by comparing the copied subgraph s control-dependence c, against the 
+control­dependence of the use of its value Cu), change all in­coming control dependence in the copied 
+subgraph that are equal to c. to be CU. (A complex inlined expression may itself contain conditionals; 
+any vertices dependent on a contained conditional do not have their immediate control dependence changed.) 
+ 2. Move lhe copied blocks. The copied blocks in the CFG are moved to reflect the exact execution order 
+specified by the expression s placement in the AST. This is ac­complished by finding the expressions 
+neighboring the newly copied expression in the AST, mapping them to the CFG, and moving the copied blocks 
+to reflect that  new ordering. Within each substitution rule procedure, then, there is a call to update 
+the CFG and PDG. So the procedures for the two calls above look something like # Copy the expr and replace 
+the variable with It. procedure di stribut e_out ( old_expr, new_exPr, Old-var ) new_blocks :. copy_cfg 
+(get_blocks ( old_expr) ) copy_pdg ( new_bl ocks ) new_t_var :. replace_var_c f g (01 d_var, new_expr 
+) repl ace_var>dg ( old_var, new_expr ) end procedure move_update ( new_expr ) move_bl ocks ( new_expr 
+) update_cont rol_dependence ( new_expr ) end Note in dist r i but e.out how the PDG updates use the 
+values returned from the CFG updates (new_blocks and newt _var). This approach is natural since it is 
+the same way (and order) that the original objects are created. The move_updat e procedure requires no 
+positioning parameter because it uses new.expr s new position in the AST to infer the update in the CFG 
+and PDG. 5.2 Updating the AST-CFG Mappings The nature of the mapping updates are driven by both the 
+AST and the CFG/PDG updates. Updating the mappings consists of making connections between new AST and 
+new CFG/PDG objects, deleting the mappings of deleted objects, and trans­ferring the mappings of modified 
+objects. Mappings are tirst constructed in the initial CFG/PDG-construction phase, which traverses the 
+AST and builds CFG/PDG objects from it. A mapping from every AST objeet to the CFG object it creates 
+is established, as is the inverse mapping from the CFG objeet back to the AST object. In the prototype 
+implementation there are two low-level invertible mappings that support the needed mappings. The tint 
+is an AST-variableto-CFG-variable mapping. The sec­ond is an AST-expression to-CFG-variable mapping: 
+every value-producing expression in the AST has a mapping to the CFG variables that get assigned its 
+value. The target CFG variable is frequently a temporary variable used to transmit the expression s value 
+direetly to another expression. There are two component mappings of interest in var-to­expc the removed 
+variable use UV and the copied expression that replaces ic 1. Delete removed variable s mappings. Clear 
+the forward and backward mappings of the deleted AST variable. 2. Map copied expression. Create the 
+maps for each copied AST expression to its associated newly named variable (t~) in the CFG. The map is 
+isomorphic to the maps for the original expression and its associated CFG variables.  For the prototype, 
+one other aspect of the mappings re­quires attention. CFG statements are normalized so that each contains 
+exactly one reference to a program-visible (con­temporary) variable. This structure eases implementing 
+well­defined mappings from the AST to the CFG and back (e.g., two program variables cannot map to the 
+same CFG state­ment). To maintain the invariant during direet update, however, requires some additional 
+direct updates. When the distribu­tive rule is applied in var-to-expr, for example, the program variable 
+v is replaced by tk in the source and destination state­ments. This substitution means that these two 
+statements will no longer contain program variables. To reestablish the in­variant, the two statements, 
+which are variable-to-variable assignments, are removed with the low-level atomic update routine eliminate-t 
+ransitive-assignment. Since these state­ments are not represented in the program text, the update is 
+applied completely within the CFG/PDG. 5.3 Direct Update and Restructuring Layers Implementing a duect 
+update for an AST transformation is primarily a matter of combining the substitution rule routines described 
+above. For example, var-to-expr s direct update calls two routines, one for the distribution rule, and 
+one for the control rule. In pseudo-code it looks something like procedure var_to_expr_update ( 01 d_expr, 
+new_expr, 01 d_var ) distribute_out ( old_expr, new_expr, olcLvar) move_update ( new_expr ) end This 
+decomposition of tasks supports substantial reuse, be­cause, for instamx, nearly all transformations 
+perform a move, and so move.updat e is needed in ahnost every direct update transformation. Finally, 
+in the restructuring layer the direct update routine is combined with the AST transformation and mapping 
+up­dates to form a complete, consistent update. Because the AST and PDG manipulations are combined only 
+at the high­est level, it is possible to call the batch update as a fallback if the direct update is 
+not implemented. This flexibility allows separately developing an AST transformation and its direct update 
+counterpart.  Discussion Prototype IYansformations. The prototype implemen­tation of the dkect update 
+techniques supports var-to-expr, expr-to-var, move, rename, inline-call, extract-function and several 
+transformations that create, delete, and manip­ulate scopes. Since naming and scopes are largely AST 
+issues, they only require transforming the AST and updating the maps to the CFG/PDG. The move transformation 
+is a basic component of var-to-expr, so it is basically described above. Transformation expr-to-var is 
+essentially the inverse of var-to-expr the same substitution rules are applied, but in the other direction. 
+However, there is some additional complexity. For example, when expr-to-var is instructed by the tool 
+user to abstract all expressions equivalent to the one selected by the user into one binding, it must 
+recognize the equivalent expressions. This is not a straightforward task for a number of reasons [Griswold 
+&#38; Notkin 93], but the Sequence-Congruence algorithm (See Section 4.2) em be used as starting point. 
+Manipulating parameters is also complicated in these transformations. For instance, when an expression 
+embedded in a function is abstracted as a param­eter to the function, the expression must be replicated 
+and passed in all the calls on the function. However, the PDG ~ Mat. Mul. batch batch (no alias) direct 
+var-to-expr 69.32 15.28 2.02 expr-to-var 74.45 12.93 1.05 move 71.93 13.27 0.57  Table 1: Performance 
+comparisons of batch update versus direct update (in seconds). substitution rules extend to describe 
+the effect of parame­ter manipulation. The direct updates for the transformations that manipulate functions, 
+inline-call and extract-f unct ion, are handled with the same basic techniques as var-to-expr and expr-to-var 
+and impose similar challenges. Fortunately, moving functions and manipulating their parameters is im­plemented 
+by reusing code from the atomic update layer. Performance. Empirical comparison with the more gen­eral 
+incremental techniques is not currently feasible due to the effort involved in implementing an update 
+technique. Also, the current prototype s batch implementation is a straw-man for comparison since the 
+tool is implemented in Common Lisp and designed for flexibility, not speed. Also, the batch alias computation 
+technique marus &#38; Hilfinger 88] may not be the fastest possible [Chase et al. 90]mandi &#38; Ryder 
+92] and has not been carefully tuned. However, some compar­ison is insightful. Using the matrix multiply 
+program and KWIC [Parnas 72] [Griswold 91], performance comparisons can be made not only for the batch 
+case against the direct up­date, but also against batch update with no alias analysis (See Table 1). 
+Although this latter case can produce incorrect pro­grams, the timings give a sense of the possible performance 
+differences if a faster alias analysis technique or a generic in­cremental technique had been used. Matrix 
+multiply is about 60 lines long and has 8 functions. Its PDG has 209 vertices. KWIC is twice as large 
+as matrix multiply, with about 200 lines and 15 functions. Its PDG has 458 vertices. The table shows 
+the timing for a typical application of three basic transformations that require CFG/PDG updates. (A 
+more complicated transformation like extract-function takes longer because it performs a combination 
+of these ba­sic transformations.) The move transformations are moving local functions to the top-level, 
+and the other two are manip­ulating expressions local to a function. More global ex­amples of var-to-expr 
+and expr-to-var are lacking in these programs, although in principle the performance should be similar. 
+Comparing between matrix multiply and KWIC, the roughly constant time of the direct updates contrasted 
+with the rapid degradation of the batch update times, both aliased and not, suggests that direct update 
+is a significant improve­ ment. Even in this prototype, the transformations are now fast enough to use 
+interactively. Remaining questions. One outstanding question is whether there are PDG substitution rules 
+for applications other than meaning-preserving restructuring. There are rel­atively simple updates for 
+deleting a statement-since all dmectly affected statements are directly connected to it but inserting 
+a statement is not so simple. Another question is whether there is a more formal (and more automatable) 
+method for deriving direct up­date transformations from source transformations. Deno­tational, operational, 
+and data flow semantics techniques are promising [Cartwright &#38; Felleisen 89][Ramalingam &#38; Reps 
+89][Selke 90] [Venkatesh 91][Parsons 92], but still in their early stages. Also, it will be interesting 
+to see how these techniques scale to richer program structures. Although the PDG nor­malizes many rich 
+language structures into a simpler form, function variables and other exotic control structures have 
+been dkicussed only recently [Shivers 88] [Shivers 91]. A possible alternative to either incremental 
+or direct up­date techniques is lazy [Choi et al. 91] or even conservative analysis. It is not known 
+how much of the PDG s infor­mation is needed for any particular transformation. If the requirement is 
+minimal, then the overhead of computing the required information as it is needed (and perhaps caching 
+it) could yield substantial performance savings. Conclusion The construction of a meaning-preserving 
+restructuring tool faces many conflicting goals-including simplicity, exten­sibility, and good performance-that 
+cannot be met without some compromise. Using batch, incremental or direct update data flow algorithms 
+represent a spectrum of choices that can be made wisely when the particular demands of the applica­tion 
+are understood the batch technique is simple, but too slow if the information is frequently updated; 
+the incremen­tal approach is general, but effective incremental techniques for handling general aliasing 
+are still under development; the direct update approach is fast but task-specific and not generat. This 
+spectrum is defined by how each technique exploits the program s history to perform the update. A batch 
+tech­nique recomputes all information, using no knowledge of the program s history. A generic incremental 
+technique reprop­agates information only from syntactically affected compo­nents. Some generic techniques 
+[Burke 90] also categorize the syntactic changes to narrow the kind of information prop­agated, thus 
+executing more efficiently than a similar non-Categorizing technique. This approach, if extended to further 
+classify each kind of change could take advantage of state­ment interrelationships-much like the direct 
+update tech­nique for program restructuring-to produce an even more efficient update. At the extreme 
+is the pure direct up­date technique, which thoroughly exploits the type of change made to recompute 
+almost no information, but cannot handle all kinds of changes. With some assistance the direct update 
+approach is prac­tical. Dividing the systems into layers simplifies coding the updates by breaking function 
+into small pieces, providing the right abstractions to the transformation builder, and en­couraging reuse. 
+Implementing the updates in batch order further simplifies the design. For restructuring, the global­ization 
+skeleton helps the transformation builder identify the changes to be performed and the program components 
+in­volvd, the PDG substitution rules map the changes onto the PDG and CFG, The result is a systematic 
+approach to imple­menting efficient direct updates of data flow representations for program restructuring. 
+Acknowledgments. David Notkin s advice from the in­ception of this project has been invaluable. Thanks 
+to James Larus for providing the Curare system. Thanks also to Ken­neth Zadeck for sharing his knowledge 
+of dap flow analy­sis. Barbara Ryder s guidance on incremental and alias data flow analysis was essential 
+to the presentation in Section 3. Comments from the referees, especially on Sections 4 and 5, helped 
+improve the paper. Lori Clarke s and Harold Os­sher s detailed comments improved the presentation of 
+direct update. Thanks to Darren Atkinson, Thomas Marlowe, and J. David Morgenthaler for their comments 
+on drafts of this paper. References [Aho et al. 86] A. V. Aho, R. Sethi, and J. D. Ulhnan. Compilers, 
+Principles, Techniques, and Tools. Addison-Wesley, Reading, Mass., 1986. [Allen &#38; Cocke 72] F. E. 
+Alten and J. Cocke. A catalogue of op­timizing transformations. In R. Rustin, editor, Design and Op­timization 
+of Compilers. Prentice-Hall, Englewood Cliffs, NJ, 1972. [Allen 70] F. E. Allen. Control flow analysis. 
+In Proceedings ofa Symposium on Compiler Optimization, pages 1-19, July 1970. SIGPLAN Notices 5(7). ~elady 
+&#38; Lehman 71] L. A. Belady and M. M. J..ehman. Pro­gramming system dynamics or the metadynamics of 
+systems in maintenance and growth. Research Report RC3546, IBM, 1971. Page citations from reprint in 
+M. M. Lehman, L. A. Belady, ed­itors, Program Evolution: Processes of Sojiware Change, Ch. 5, APIC Studies 
+in Data Processing No. 27. Academic Press, London, 1985. ~elady &#38; Lehman 76] L, A. Belady and M. 
+M. Lehman. A model of large program development. IBh4Sys?enrs .lournal, 15(3) :225 252, 1976. Reprinted 
+in M. M. Lehman, L. A. Belady, editors, Program Evolution: Processes of Sojiware Change, Ch. 8, APIC 
+Studies in Data Processing No. 27. Academic Press, London, 1985. ~urke &#38; Ryder 90] M. Burke and B. 
+G. Ryder. A critical analysis of incremental iterative data-flow algorithms. IEEE Transactions on Software 
+Engineering, SE-16(7), July, 1990. ~urke 90] M. Burke. An interval-based approach to exhaustive and incremental 
+interprocedural data-flow analysis. ACM Trans­actions on Programming Languages and Systems, 12(3 ):341 
+395, July 1990. [Cartwright &#38; Felleisen 89] R. Cartwright and M. Felleisen. The semantics of program 
+dependence. Jrr Proceedings of the SIG-PLAN 89 Conference on Programming Languages Design and Implementation, 
+July 1989. SIGPLAN Notices 24(7). [Chase et al. 90] D. R. Chase, M. Wegman, and F. K. Zadeck. Anal­ysis 
+of pointers and structures. In Proceedings of the SIGPLAN 90 Conference on Programming Languages Design 
+and Imple­mentation, June 1990. SIGPLAN Notices 25(6). [Choi et al. 91] J. D. Choi, R. Cytron, and J. 
+Ferrante. Automatic construction of sparse data flow evaluation graphs. Proceedings of the 18th ACM Symposium 
+on Principles of Programming Languages, January 1991. [Cytron et al. 88] R. Cytron, J. Ferrante, B. Rosen, 
+M. Wegman, and K. Zadeck. An efficient method of computing static single assignment form. In Proceedings 
+of the 16th Symposium on Principles of Programming .!.unguages, pages 25 35, January 1988. [Ferrante 
+et al. 87] J. Ferrante, K. J. Ottensteiu, and J. D. War­ren. The program dependence graph and its use 
+in optimization. ACM Transactions on Programming Lzmguages and Systems, 9(3):319 349, July 1987. [Griswold 
+&#38; Bowdidge 93] W. G. Griswold and R. W. Bowdidge. Program restructuring via design-level manipulation. 
+In Pro­ceedings of the Workshop on Studies of Software Design, Bak­more MD, May 1993. Proceedings available 
+as Queen s Univer­sity Department of Computing and Information Science, Exter­nal TR No. ISSN-0836-0227-93 
+-352. [Griswold &#38; Notkin 93] W. Griswold and D. Notkin. Automated assistance for program restructuring. 
+ACM Transactions on Soft­ware Engineering and Methodology, July 1993. [Griswold 91] W. G. Griswold. Program 
+Restructuring to Aid Soft­ware Maintenance. PhD dissertation, University of Washington, Dept. of Computer 
+Science&#38; Engineering, August 1991. Tech­nical Report No. 91-08-04. [Hoare et al. 87] C. A. R. Hoare, 
+I. J. Hayes, H. Jifeng, C. C. Mor­gan, A. W. Roscoe, J. W. Sanders, I. H. Sorensen, J. M. Spivey, and 
+B. A. Sufrin. Laws of programming g. Communications of the ACM, 30(2):672 686, August 1987. [Kuck et 
+al. 81] D. J. Kuck, R. H. Kuhn, B. Leasure, D. A. Padua, and M. Wolfe. Dependence graphs and compiler 
+optimizations. In Proceedings of the 8th Symposium on Principles of Program­ming Languages. pages 207 
+218, January 1981. [Landi &#38; Ryder 92] W. Landi and B. G. Ryder. A safe approximate algorithm for 
+interprocedural pointer aliasing. In Proceedings of the SIGPLAN 92 Conference on Programming Languages 
+De­sign and Implementation, July 1992. SIGPLAN Notices 27(7). [Landi et al. 93] W. Landi, B. G. Ryder 
+and S. Zhang. Interproce­dural modification side effect analysis with pointer aliasing. In Proceedings 
+of the SIGPLAN 93 Conference on Programming Lunguages Design and Implementation, June 1993. SIGPLAN Notices 
+28(6). [Larus &#38; Hiltinger 88] J. R. Larus and P. N. Hilfinger. Detecting conflicts between structure 
+accesses. In Proceedings of the SIG-PLAN 88 Conference on Programming Languages Design and Implementation, 
+June 1988. SIGPL4N Notices, 23(7). [Larus 89] J. R. Larus. Restructuring Symbolic Programs for Con­current 
+Execution on Multiprocessors. PhD dissertation, UC Berkeley Computer Science, May 1989. Also Technical 
+Report No. UCB/CSD 89/502. [Llentz &#38; Swanson 80] B. Lientz and E. Swanson. So~are Main­tenance Management: 
+A Study of the Maintenance of Computer Application Sojiware in 487 Data Processing Organizations. Addison-Wesley, 
+Reading, MA, 1980. [Lippe 92] E. Lippe. Operation-based merging. In Proceedings of the SIGSOFT 92 Fl@h 
+Symposium on Software Development Environments, December 1992. [Marlowe &#38; Ryder 90] T. J. Marlowe 
+and B. G. Ryder. An ef­ficient hybrid algorithm for incremtnal data flow analysis. In Proceedings of 
+the 17th Symposium on Principles of Program­ming Lunguages, pages 184-196, January 1990, [Marlowe &#38; 
+Ryder 91] T. J. Marlowe and B. G. Ryder. Hybrid in­cremental alias algorithms. In Hawaii International 
+Conference on Systems Sojiware, January 1991. [Parnas 72] D. L. Parrsas. On the criteria to be used in 
+decom­posing systems into modules. Communicatioris of the ACM, 15(12):1053 58, December 1972. [Parsons 
+92] R. Parsons. Semantic Program Dependence Graphs. PhD dissertation, Rice University, Dept. of Computer 
+Science, April 1992. Technical Report No. Rice COMP TR93-202. [Podgurski &#38; Clarke 90] A. Podgurski 
+and L. A. Clarke. A formal model of prograsn dependence and its implications for software testing, debugging, 
+and maintenance. IEEE Transactions on Software Engineering, SE-16(9):965 979, 1990. [Pollock &#38; Soffa 
+89] L. Pollock and M. Sofia. An incremental version of iterative data flow analysis. IEEE Transactions 
+on Soj2ware Engineering, 15(12), December 1989. [Ramalingam &#38; Reps 89] G. Ramalingam and T. Reps. 
+Semantics of program representation graphs. Technical Report 900, Com­puter Sciences Departrnen~ University 
+of Wisconsirr, Madison WI, December 1989. Reps &#38; Teitelbaum 87] T. Reps and T. Teitelbaum. Language 
+processing in program editors. IEEE Computer, pages 2940, November 1987. Rowe et al. 91] L. A. Rowe, 
+J. A. Konstan, B. C. Smith, S. Seitz, and C. Liu. The PICASSO application framework. In Proceed­ings 
+of the 14th ACM Symposium on User Interjbce So@are and Technology, 1991. [Ryder et al. 88] B. G. Ryder, 
+T. J. Marlowe, and M. C. Paull. Conditions for incremental iteration: Examples and counterex­amples. 
+Science of Computer Programming, 11: 1 15, 1988. [Ryder et al. 90] B. G, Ryder, W. Landi, and H. Pande. 
+Profiling an incremental data flow analysis algorithm. IEEE Transactions on Software Engineering, 16(2): 
+129 140, February 1990. [Selke 90] R. P. Selke. Transforming program dependence graphs. Technical Report 
+TR90-131, Department of Computer Science, Rice University, Houston, Texas, 1990. [Shivers 88] O. Shivers. 
+Control flow analysis in Scheme. In Proceedings of the SIGPL4N 88 Conference on Programming Iznguages 
+Design and Implementation, pages 164-174, July 1988. SIGPLAN Notices 23(7). [Shivers 91] O. Shivers. 
+Control-Flow Analysis of Higher-Order Zxznguages. PhD dissertation, Carnegie-Mellon University, De­partment 
+of Computer Science, 1991. Avaitable as Technical Report CMU-CS-91-145. [Steele 91] G. L. Steele. COMMON 
+LZSP, the Language. Digital Press, Burlington, MA, 2nd edition, 1991. ~enkatesh 91] G. A. Venkatesh. 
+The semantic approach to pro­gram sticing. In Proceedings of the SIGPL4N 91 Conference on Programming 
+Languages Design and Implementation, June 1991. SIGPLAN Notices 26(6). [Yang 90] W. Yang. A New Algorithm 
+for Semantics-Based Pro­gram Integration. PhD dissertation, University of Wk.consin, August 1990. Computer 
+Sciences Technical Report No. 962. [Yang et at. 89] W. Yang, S. Horwitz, and T. Reps. Detecting pro­gram 
+components with equivalent behaviors. Technical Report 840, Computer Sciences Department University of 
+Wisconsin, Madison WI, Aprit 1989. Appendix: The CFG and PDG The CFG of a program is a set of vertices 
+and a set of di­rected edges that represent the potential sequential flows of program execution between 
+the vertices [Aho et al. 86, Allen 70]. In the CFG definition used here, each vertex is be a se­quence 
+of unconditionally executed statements called a ba$ic-Mock. The block is entered at the fist statement 
+and exited at the last statemen~ only the last statement may execute a branch. The statements are primitive 
+operations derived from the program s expressions, represented as triples of the form (operation, result, 
+arguments), where operation is either operator call, function call, or a predicate, result is a variable 
+to hold the result, and arguments are the variables that contain the inputs to the operation. A predicate 
+state­ment defines two outgoing edges for its block, one with the label true, the other false, indicating 
+that the respective suc­cessor block is conditionally evaluated based on the success or failure of the 
+predicate. A block not ending in a predicate statement is linked by an unlabeled edge, indicating uncon­ditional 
+transfer to the successor block. Two statements S1 and 52 are linked by a clef-use chain if the variable 
+defined in S1 is used in sz and there is a traversal of the graph from S1 to 52 that contains no other 
+definition of the variable. A program dependence graph [Kuck et al. 81, Ferrante et rd. 87] is a set 
+of vertiees that represent the primitive operations in the program (i.e., the statements of the CFG), 
+and a set of directed edges that connect the vertices. An edge e representing the flow of data between 
+two operations u and v is called aflow dependence, and is denoted e = FD(u, v). There is such an edge 
+if and only if, in the CFG, the result operand of u is an argument to v, and there exists a traversal 
+of theCFG from u to v that has no vertex w whose result operand is the same as u s [Podgurski &#38; Clarke 
+90]. If the data flow dependence is due to a variables being set in u and used in v, the edge is labeled 
+by the variable definition carrying the flow, es = FD(u, v)s. By convention, if the variable is not a 
+variable that appears in the program text, it may be omitted from a figure. A control dependence edge 
+represents an on off switch for its destination vertex. It denotes the success or failure of the predicate 
+vertex at its source. A control dependence edge is labeled true or false to denote whether the destination 
+vertex is activated on success or failure of the predicate vertex. Thus a true branch of predicate vertex 
+p to v is denoted CD(P, v)true. By definition, in the program only one of the paths denoted by etrue 
+or efa l~e can execute on evaluation of the predkate denoted by p. local x:=1 begin local y if x< 5then 
+x.-2 .-Yx .- end u :xDO AD:x 2 FD :y+ Figure 8: A program and its program dependence graph Some operation 
+vertices generate a constant data flow­dependence. In the figure they are denoted as a constant value 
+on the flow-dependence with no source vertex. Another special class of vertices are the input and output 
+vertices, which denote the read and write statements of the program. These are different from other vertices 
+because the value on an output edge is not entirely dependent on the values on the input edge. They are 
+treated conservatively as modifying a eornmon global variable (i.e., the file system). A PDG may also 
+support some additional edge types: anti­dependences (edges denoted by AD in Figure 8), def-order dependence 
+(denoted by DO), and output dependence (de­noted by OD). Each, for a different reason, implies that the 
+source vertex is necessarily executed before the destination vertex in the program, even though there 
+is no explicit flow of data or control between them. 
+			
